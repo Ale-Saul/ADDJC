@@ -11,6 +11,7 @@ export default function Header() {
     { label: 'Inicio', path: '/' },
     { label: 'Clubes', path: '/clubes' },
     { label: 'Senseis', path: '/senseis' },
+    { label: 'Judokas', path: '/judokas' },
     { label: 'Árbitros', path: '/arbitros' },
   ]
 
