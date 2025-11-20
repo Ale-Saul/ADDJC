@@ -29,7 +29,6 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
     apellidos: '',
     fecha_nacimiento: null,
     nivel_arbitraje: '',
-    certificacion: '',
     foto_perfil: null,
     activo: true
   })
@@ -44,7 +43,6 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
         apellidos: arbitro.apellidos,
         fecha_nacimiento: arbitro.fecha_nacimiento || null,
         nivel_arbitraje: arbitro.nivel_arbitraje || '',
-        certificacion: arbitro.certificacion || '',
         foto_perfil: arbitro.foto_perfil || null,
         activo: arbitro.activo
       })
@@ -176,18 +174,6 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
             <MenuItem value="Internacional">Internacional</MenuItem>
           </Select>
         </FormControl>
-
-        <TextField
-          fullWidth
-          label="Certificación"
-          name="certificacion"
-          value={formData.certificacion || ''}
-          onChange={handleChange}
-          multiline
-          rows={3}
-          disabled={loading}
-          placeholder="Detalles sobre la certificación del árbitro"
-        />
 
         {/* TODO: Agregar campo para subir foto_perfil */}
       </Box>

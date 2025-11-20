@@ -32,7 +32,6 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
     apellidos: '',
     fecha_nacimiento: null,
     grado_dan: '',
-    certificacion: '',
     especialidad: '',
     foto_perfil: null,
     activo: true
@@ -63,7 +62,6 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
         apellidos: sensei.apellidos,
         fecha_nacimiento: sensei.fecha_nacimiento || null,
         grado_dan: sensei.grado_dan || '',
-        certificacion: sensei.certificacion || '',
         especialidad: sensei.especialidad || '',
         foto_perfil: sensei.foto_perfil || null,
         activo: sensei.activo
@@ -232,18 +230,6 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
           onChange={handleChange}
           disabled={loading}
           placeholder="Área de especialización del sensei"
-        />
-
-        <TextField
-          fullWidth
-          label="Certificación"
-          name="certificacion"
-          value={formData.certificacion || ''}
-          onChange={handleChange}
-          multiline
-          rows={3}
-          disabled={loading}
-          placeholder="Detalles sobre la certificación del sensei"
         />
 
         {/* TODO: Agregar campo para subir foto_perfil */}
