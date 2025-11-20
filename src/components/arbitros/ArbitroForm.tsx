@@ -53,7 +53,7 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: value || null
+      [name]: value
     }))
     setError(null)
     setSuccess(false)
@@ -64,7 +64,7 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
     if (!name) return
     setFormData(prev => ({
       ...prev,
-      [name]: value === '' ? null : value
+      [name]: value
     }))
     setError(null)
     setSuccess(false)

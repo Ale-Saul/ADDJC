@@ -53,6 +53,7 @@ src/
 - ✅ `clubController.test.ts` - Pruebas para el controlador de clubes
 - ✅ `senseiController.test.ts` - Pruebas para el controlador de senseis
 - ✅ `judokaController.test.ts` - Pruebas para el controlador de judokas
+- ✅ `arbitroController.test.ts` - Pruebas para el controlador de árbitros
 
 ### Componentes
 
@@ -68,6 +69,11 @@ src/
 - ✅ `JudokaCard.test.tsx` - Pruebas para tarjeta de judoka
 - ✅ `JudokaForm.test.tsx` - Pruebas para formulario de judoka
 - ✅ `JudokaList.test.tsx` - Pruebas para lista de judokas
+
+#### Componentes de Árbitros
+- ✅ `ArbitroCard.test.tsx` - Pruebas para tarjeta de árbitro
+- ✅ `ArbitroForm.test.tsx` - Pruebas para formulario de árbitro
+- ✅ `ArbitroList.test.tsx` - Pruebas para lista de árbitros
   
 
 ## Notas sobre los Mocks
@@ -86,15 +92,9 @@ Para completar la cobertura de pruebas, se recomienda agregar:
    - `userService.test.ts`
 
 2. **Controladores restantes:**
-   - `arbitroController.test.ts`
    - `certificacionController.test.ts`
 
-3. **Componentes de Árbitros:**
-   - `ArbitroCard.test.tsx`
-   - `ArbitroForm.test.tsx`
-   - `ArbitroList.test.tsx`
-
-4. **Componentes de Clubes:**
+3. **Componentes de Clubes:**
    - `ClubCard.test.tsx`
    - `ClubForm.test.tsx`
    - `ClubList.test.tsx`
