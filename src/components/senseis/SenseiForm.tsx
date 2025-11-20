@@ -5,7 +5,6 @@ import {
   TextField,
   Button,
   Box,
-  Grid,
   Alert,
   CircularProgress,
   MenuItem,
@@ -13,6 +12,7 @@ import {
   FormControl,
   InputLabel
 } from '@mui/material'
+import type { SelectChangeEvent } from '@mui/material/Select'
 import { Sensei, SenseiCreate, SenseiUpdate } from '@/models/sensei'
 import { senseiController } from '@/controllers/senseiController'
 import { clubController } from '@/controllers/clubController'
@@ -81,8 +81,9 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
     setSuccess(false)
   }
 
-  const handleSelectChange = (e: any) => {
+  const handleSelectChange = (e: SelectChangeEvent<string>) => {
     const { name, value } = e.target
+    if (!name) return
     setFormData(prev => ({
       ...prev,
       [name]: value === '' ? null : value
@@ -143,108 +144,95 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
         </Alert>
       )}
 
-      <Grid container spacing={2}>
-        <Grid item xs={12}>
-          <FormControl fullWidth>
-            <InputLabel>Club</InputLabel>
-            <Select
-              name="club_id"
-              value={formData.club_id || ''}
-              onChange={handleSelectChange}
-              disabled={loading || loadingClubes}
-              label="Club"
-            >
-              <MenuItem value="">
-                <em>Sin club</em>
+      {/* Contenedor en columna para que todos los campos tengan mismo ancho y estén uno debajo del otro */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <FormControl fullWidth>
+          <InputLabel>Club</InputLabel>
+          <Select
+            name="club_id"
+            value={formData.club_id || ''}
+            onChange={handleSelectChange}
+            disabled={loading || loadingClubes}
+            label="Club"
+          >
+            <MenuItem value="">
+              <em>Sin club</em>
+            </MenuItem>
+            {clubes.map((club) => (
+              <MenuItem key={club.id} value={club.id}>
+                {club.nombre_club}
               </MenuItem>
-              {clubes.map((club) => (
-                <MenuItem key={club.id} value={club.id}>
-                  {club.nombre_club}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Grid>
+            ))}
+          </Select>
+        </FormControl>
 
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Nombres"
-            name="nombres"
-            value={formData.nombres}
-            onChange={handleChange}
-            required
-            disabled={loading}
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Nombres"
+          name="nombres"
+          value={formData.nombres}
+          onChange={handleChange}
+          required
+          disabled={loading}
+        />
 
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Apellidos"
-            name="apellidos"
-            value={formData.apellidos}
-            onChange={handleChange}
-            required
-            disabled={loading}
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Apellidos"
+          name="apellidos"
+          value={formData.apellidos}
+          onChange={handleChange}
+          required
+          disabled={loading}
+        />
 
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Fecha de Nacimiento"
-            name="fecha_nacimiento"
-            type="date"
-            value={formData.fecha_nacimiento || ''}
-            onChange={handleChange}
-            disabled={loading}
-            InputLabelProps={{
-              shrink: true,
-            }}
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Fecha de Nacimiento"
+          name="fecha_nacimiento"
+          type="date"
+          value={formData.fecha_nacimiento || ''}
+          onChange={handleChange}
+          disabled={loading}
+          InputLabelProps={{
+            shrink: true,
+          }}
+        />
 
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Grado Dan"
-            name="grado_dan"
-            value={formData.grado_dan || ''}
-            onChange={handleChange}
-            disabled={loading}
-            placeholder="Ej: 1er Dan, 2do Dan, etc."
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Grado Dan"
+          name="grado_dan"
+          value={formData.grado_dan || ''}
+          onChange={handleChange}
+          disabled={loading}
+          placeholder="Ej: 1er Dan, 2do Dan, etc."
+        />
 
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Especialidad"
-            name="especialidad"
-            value={formData.especialidad || ''}
-            onChange={handleChange}
-            disabled={loading}
-            placeholder="Área de especialización del sensei"
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Especialidad"
+          name="especialidad"
+          value={formData.especialidad || ''}
+          onChange={handleChange}
+          disabled={loading}
+          placeholder="Área de especialización del sensei"
+        />
 
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Certificación"
-            name="certificacion"
-            value={formData.certificacion || ''}
-            onChange={handleChange}
-            multiline
-            rows={3}
-            disabled={loading}
-            placeholder="Detalles sobre la certificación del sensei"
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Certificación"
+          name="certificacion"
+          value={formData.certificacion || ''}
+          onChange={handleChange}
+          multiline
+          rows={3}
+          disabled={loading}
+          placeholder="Detalles sobre la certificación del sensei"
+        />
 
         {/* TODO: Agregar campo para subir foto_perfil */}
-      </Grid>
+      </Box>
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
         {onCancel && (

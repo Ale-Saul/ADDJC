@@ -5,7 +5,6 @@ import {
   TextField,
   Button,
   Box,
-  Grid,
   Alert,
   CircularProgress,
   MenuItem,
@@ -14,6 +13,7 @@ import {
   InputLabel,
   Typography
 } from '@mui/material'
+import type { SelectChangeEvent } from '@mui/material/Select'
 import { Judoka, JudokaCreate, JudokaUpdate } from '@/models/judoka'
 import { judokaController } from '@/controllers/judokaController'
 import { clubController } from '@/controllers/clubController'
@@ -108,8 +108,9 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     setSuccess(false)
   }
 
-  const handleSelectChange = (e: any) => {
+  const handleSelectChange = (e: SelectChangeEvent<string>) => {
     const { name, value } = e.target
+    if (!name) return
     setFormData(prev => ({
       ...prev,
       [name]: value === '' ? null : value
@@ -171,135 +172,120 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         </Alert>
       )}
 
-      <Grid container spacing={2}>
-        <Grid item xs={12}>
-          <FormControl fullWidth>
-            <InputLabel>Club</InputLabel>
-            <Select
-              name="club_id"
-              value={formData.club_id || ''}
-              onChange={handleSelectChange}
-              disabled={loading || loadingClubes}
-              label="Club"
-            >
-              <MenuItem value="">
-                <em>Sin club</em>
+      {/* Contenedor en columna para que todos los campos tengan mismo ancho y estén uno debajo del otro */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <FormControl fullWidth>
+          <InputLabel>Club</InputLabel>
+          <Select
+            name="club_id"
+            value={formData.club_id || ''}
+            onChange={handleSelectChange}
+            disabled={loading || loadingClubes}
+            label="Club"
+          >
+            <MenuItem value="">
+              <em>Sin club</em>
+            </MenuItem>
+            {clubes.map((club) => (
+              <MenuItem key={club.id} value={club.id}>
+                {club.nombre_club}
               </MenuItem>
-              {clubes.map((club) => (
-                <MenuItem key={club.id} value={club.id}>
-                  {club.nombre_club}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Grid>
+            ))}
+          </Select>
+        </FormControl>
 
-        <Grid item xs={12}>
-          <FormControl fullWidth>
-            <InputLabel>Entrenador</InputLabel>
-            <Select
-              name="entrenador_id"
-              value={formData.entrenador_id || ''}
-              onChange={handleSelectChange}
-              disabled={loading || loadingSenseis || !formData.club_id}
-              label="Entrenador"
-            >
-              <MenuItem value="">
-                <em>Sin entrenador</em>
+        <FormControl fullWidth>
+          <InputLabel>Entrenador</InputLabel>
+          <Select
+            name="entrenador_id"
+            value={formData.entrenador_id || ''}
+            onChange={handleSelectChange}
+            disabled={loading || loadingSenseis || !formData.club_id}
+            label="Entrenador"
+          >
+            <MenuItem value="">
+              <em>Sin entrenador</em>
+            </MenuItem>
+            {senseis.map((sensei) => (
+              <MenuItem key={sensei.id} value={sensei.usuario_id}>
+                {sensei.nombres} {sensei.apellidos}
               </MenuItem>
-              {senseis.map((sensei) => (
-                <MenuItem key={sensei.id} value={sensei.usuario_id}>
-                  {sensei.nombres} {sensei.apellidos}
-                </MenuItem>
-              ))}
-            </Select>
-            {!formData.club_id && (
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                Selecciona un club primero para ver los entrenadores disponibles
-              </Typography>
-            )}
-          </FormControl>
-        </Grid>
+            ))}
+          </Select>
+          {!formData.club_id && (
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+              Selecciona un club primero para ver los entrenadores disponibles
+            </Typography>
+          )}
+        </FormControl>
 
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Nombres"
-            name="nombres"
-            value={formData.nombres}
-            onChange={handleChange}
-            required
-            disabled={loading}
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Nombres"
+          name="nombres"
+          value={formData.nombres}
+          onChange={handleChange}
+          required
+          disabled={loading}
+        />
 
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Apellidos"
-            name="apellidos"
-            value={formData.apellidos}
-            onChange={handleChange}
-            required
-            disabled={loading}
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Apellidos"
+          name="apellidos"
+          value={formData.apellidos}
+          onChange={handleChange}
+          required
+          disabled={loading}
+        />
 
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Fecha de Nacimiento"
-            name="fecha_nacimiento"
-            type="date"
-            value={formData.fecha_nacimiento || ''}
-            onChange={handleChange}
-            required
-            disabled={loading}
-            InputLabelProps={{
-              shrink: true,
-            }}
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Fecha de Nacimiento"
+          name="fecha_nacimiento"
+          type="date"
+          value={formData.fecha_nacimiento || ''}
+          onChange={handleChange}
+          required
+          disabled={loading}
+          InputLabelProps={{
+            shrink: true,
+          }}
+        />
 
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            label="Categoría"
-            name="categoria"
-            value={formData.categoria || ''}
-            onChange={handleChange}
-            disabled={loading}
-            placeholder="Ej: Menores, Juveniles, Adultos"
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Categoría"
+          name="categoria"
+          value={formData.categoria || ''}
+          onChange={handleChange}
+          disabled={loading}
+          placeholder="Ej: Menores, Juveniles, Adultos"
+        />
 
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            label="Cinturón Actual"
-            name="cinturon_actual"
-            value={formData.cinturon_actual || ''}
-            onChange={handleChange}
-            disabled={loading}
-            placeholder="Ej: Blanco, Amarillo, Naranja, etc."
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Cinturón Actual"
+          name="cinturon_actual"
+          value={formData.cinturon_actual || ''}
+          onChange={handleChange}
+          disabled={loading}
+          placeholder="Ej: Blanco, Amarillo, Naranja, etc."
+        />
 
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            label="Peso Competitivo (kg)"
-            name="peso_competitivo"
-            type="number"
-            value={formData.peso_competitivo || ''}
-            onChange={handleChange}
-            disabled={loading}
-            inputProps={{ min: 0, max: 300, step: 0.1 }}
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Peso Competitivo (kg)"
+          name="peso_competitivo"
+          type="number"
+          value={formData.peso_competitivo || ''}
+          onChange={handleChange}
+          disabled={loading}
+          inputProps={{ min: 0, max: 300, step: 0.1 }}
+        />
 
         {/* TODO: Agregar campo para subir foto_perfil */}
-      </Grid>
+      </Box>
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
         {onCancel && (

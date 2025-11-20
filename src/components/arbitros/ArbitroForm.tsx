@@ -5,7 +5,6 @@ import {
   TextField,
   Button,
   Box,
-  Grid,
   Alert,
   CircularProgress
 } from '@mui/material'
@@ -109,74 +108,65 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
         </Alert>
       )}
 
-      <Grid container spacing={2}>
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Nombres"
-            name="nombres"
-            value={formData.nombres}
-            onChange={handleChange}
-            required
-            disabled={loading}
-          />
-        </Grid>
+      {/* Contenedor en columna para que todos los campos tengan mismo ancho y estén uno debajo del otro */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <TextField
+          fullWidth
+          label="Nombres"
+          name="nombres"
+          value={formData.nombres}
+          onChange={handleChange}
+          required
+          disabled={loading}
+        />
 
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Apellidos"
-            name="apellidos"
-            value={formData.apellidos}
-            onChange={handleChange}
-            required
-            disabled={loading}
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Apellidos"
+          name="apellidos"
+          value={formData.apellidos}
+          onChange={handleChange}
+          required
+          disabled={loading}
+        />
 
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Fecha de Nacimiento"
-            name="fecha_nacimiento"
-            type="date"
-            value={formData.fecha_nacimiento || ''}
-            onChange={handleChange}
-            disabled={loading}
-            InputLabelProps={{
-              shrink: true,
-            }}
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Fecha de Nacimiento"
+          name="fecha_nacimiento"
+          type="date"
+          value={formData.fecha_nacimiento || ''}
+          onChange={handleChange}
+          disabled={loading}
+          InputLabelProps={{
+            shrink: true,
+          }}
+        />
 
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Nivel de Arbitraje"
-            name="nivel_arbitraje"
-            value={formData.nivel_arbitraje || ''}
-            onChange={handleChange}
-            disabled={loading}
-            placeholder="Ej: Nacional, Regional, Internacional"
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Nivel de Arbitraje"
+          name="nivel_arbitraje"
+          value={formData.nivel_arbitraje || ''}
+          onChange={handleChange}
+          disabled={loading}
+          placeholder="Ej: Nacional, Regional, Internacional"
+        />
 
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Certificación"
-            name="certificacion"
-            value={formData.certificacion || ''}
-            onChange={handleChange}
-            multiline
-            rows={3}
-            disabled={loading}
-            placeholder="Detalles sobre la certificación del árbitro"
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Certificación"
+          name="certificacion"
+          value={formData.certificacion || ''}
+          onChange={handleChange}
+          multiline
+          rows={3}
+          disabled={loading}
+          placeholder="Detalles sobre la certificación del árbitro"
+        />
 
         {/* TODO: Agregar campo para subir foto_perfil */}
-      </Grid>
+      </Box>
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
         {onCancel && (

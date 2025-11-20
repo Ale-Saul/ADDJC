@@ -5,12 +5,18 @@ import {
   TextField,
   Button,
   Box,
-  Grid,
   Alert,
-  CircularProgress
+  CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material'
+import type { SelectChangeEvent } from '@mui/material/Select'
 import { Club, ClubCreate, ClubUpdate } from '@/models/club'
 import { clubController } from '@/controllers/clubController'
+import { senseiController } from '@/controllers/senseiController'
+import { Sensei } from '@/models/sensei'
 
 interface ClubFormProps {
   club?: Club | null
@@ -27,9 +33,23 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
     director_tecnico_id: null,
     activo: true
   })
+  const [senseis, setSenseis] = useState<Sensei[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingSenseis, setLoadingSenseis] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    // Cargar senseis activos
+    const loadSenseis = async () => {
+      const response = await senseiController.getAllSenseis(false)
+      if (response.success && response.data) {
+        setSenseis(response.data)
+      }
+      setLoadingSenseis(false)
+    }
+    loadSenseis()
+  }, [])
 
   useEffect(() => {
     if (club) {
@@ -49,6 +69,17 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }))
+    setError(null)
+    setSuccess(false)
+  }
+
+  const handleSelectChange = (e: SelectChangeEvent<string>) => {
+    const { name, value } = e.target
+    if (!name) return
+    setFormData(prev => ({
+      ...prev,
+      [name]: value === '' ? null : value
     }))
     setError(null)
     setSuccess(false)
@@ -81,8 +112,9 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
       } else {
         setError(response.error || 'Error al guardar el club')
       }
-    } catch (err: any) {
-      setError(err.message || 'Error inesperado')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error inesperado'
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -102,56 +134,68 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
         </Alert>
       )}
 
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            label="Nombre del Club"
-            name="nombre_club"
-            value={formData.nombre_club}
-            onChange={handleChange}
-            required
-            disabled={loading}
-          />
-        </Grid>
+      {/* Contenedor en columna para que todos los campos ocupen el mismo ancho */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <TextField
+          fullWidth
+          label="Nombre del Club"
+          name="nombre_club"
+          value={formData.nombre_club}
+          onChange={handleChange}
+          required
+          disabled={loading}
+        />
 
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            label="Municipio"
-            name="municipio"
-            value={formData.municipio}
-            onChange={handleChange}
-            disabled={loading}
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Municipio"
+          name="municipio"
+          value={formData.municipio}
+          onChange={handleChange}
+          disabled={loading}
+        />
 
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Dirección"
-            name="direccion"
-            value={formData.direccion}
-            onChange={handleChange}
-            multiline
-            rows={2}
-            disabled={loading}
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Dirección"
+          name="direccion"
+          value={formData.direccion}
+          onChange={handleChange}
+          multiline
+          rows={3}
+          disabled={loading}
+        />
 
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            label="Teléfono de Contacto"
-            name="telefono_contacto"
-            value={formData.telefono_contacto}
-            onChange={handleChange}
-            disabled={loading}
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Teléfono de Contacto"
+          name="telefono_contacto"
+          value={formData.telefono_contacto}
+          onChange={handleChange}
+          disabled={loading}
+        />
 
-        {/* TODO: Agregar selector de director técnico cuando tengamos la tabla de senseis */}
-      </Grid>
+        <FormControl fullWidth>
+          <InputLabel>Director Técnico</InputLabel>
+          <Select
+            name="director_tecnico_id"
+            value={formData.director_tecnico_id || ''}
+            onChange={handleSelectChange}
+            disabled={loading || loadingSenseis}
+            label="Director Técnico"
+          >
+            <MenuItem value="">
+              <em>Sin director técnico</em>
+            </MenuItem>
+            {senseis.map((sensei) => (
+              <MenuItem key={sensei.id} value={sensei.usuario_id}>
+                {sensei.nombres} {sensei.apellidos}
+                {sensei.grado_dan && ` - ${sensei.grado_dan}`}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
         {onCancel && (
