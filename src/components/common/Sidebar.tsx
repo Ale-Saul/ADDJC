@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Drawer,
   List,
@@ -12,8 +12,7 @@ import {
   Box,
   Typography,
   Divider,
-  useTheme,
-  useMediaQuery
+  useTheme
 } from '@mui/material'
 import { useRouter, usePathname } from 'next/navigation'
 import HomeIcon from '@mui/icons-material/Home'
@@ -31,8 +30,14 @@ export default function Sidebar() {
   const router = useRouter()
   const pathname = usePathname()
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-  const [openAfiliados, setOpenAfiliados] = useState(true)
+  const [openAfiliados, setOpenAfiliados] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Evitar problemas de hidratación
+  useEffect(() => {
+    setMounted(true)
+    setOpenAfiliados(true)
+  }, [])
 
   const handleAfiliadosClick = () => {
     setOpenAfiliados(!openAfiliados)
@@ -73,6 +78,28 @@ export default function Sidebar() {
     }
   ]
 
+  // Evitar renderizar hasta que esté montado en el cliente
+  if (!mounted) {
+    return (
+      <Drawer
+        variant="permanent"
+        sx={{
+          width: DRAWER_WIDTH,
+          flexShrink: 0,
+          '& .MuiDrawer-paper': {
+            width: DRAWER_WIDTH,
+            boxSizing: 'border-box',
+            position: 'relative',
+            height: '100vh',
+            overflow: 'hidden'
+          }
+        }}
+      >
+        <Box sx={{ width: DRAWER_WIDTH, height: '100%' }} />
+      </Drawer>
+    )
+  }
+
   const drawerContent = (
     <Box sx={{ width: DRAWER_WIDTH, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <Box sx={{ p: 1.5, backgroundColor: theme.palette.primary.main, color: 'white', flexShrink: 0 }}>
@@ -91,19 +118,22 @@ export default function Sidebar() {
               sx={{
                 py: 1,
                 minHeight: 40,
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.08)'
+                },
                 '&.Mui-selected': {
-                  backgroundColor: theme.palette.primary.light,
-                  color: theme.palette.primary.main,
+                  backgroundColor: 'rgba(0, 0, 0, 0.12)',
+                  color: theme.palette.text.primary,
                   '&:hover': {
-                    backgroundColor: theme.palette.primary.light
+                    backgroundColor: 'rgba(0, 0, 0, 0.16)'
                   },
                   '& .MuiListItemIcon-root': {
-                    color: theme.palette.primary.main
+                    color: theme.palette.text.primary
                   }
                 }
               }}
             >
-              <ListItemIcon sx={{ color: isActive(item.path) ? theme.palette.primary.main : 'inherit', minWidth: 36 }}>
+              <ListItemIcon sx={{ color: 'inherit', minWidth: 36 }}>
                 {item.icon}
               </ListItemIcon>
               <ListItemText 
@@ -120,7 +150,13 @@ export default function Sidebar() {
         <ListItem disablePadding sx={{ mb: 0.5 }}>
           <ListItemButton 
             onClick={handleAfiliadosClick}
-            sx={{ py: 1, minHeight: 40 }}
+            sx={{ 
+              py: 1, 
+              minHeight: 40,
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.08)'
+              }
+            }}
           >
             <ListItemIcon sx={{ minWidth: 36 }}>
               <GroupsIcon />
@@ -144,19 +180,22 @@ export default function Sidebar() {
                     pl: 3.5,
                     py: 0.75,
                     minHeight: 36,
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.08)'
+                    },
                     '&.Mui-selected': {
-                      backgroundColor: theme.palette.primary.light,
-                      color: theme.palette.primary.main,
+                      backgroundColor: 'rgba(0, 0, 0, 0.12)',
+                      color: theme.palette.text.primary,
                       '&:hover': {
-                        backgroundColor: theme.palette.primary.light
+                        backgroundColor: 'rgba(0, 0, 0, 0.16)'
                       },
                       '& .MuiListItemIcon-root': {
-                        color: theme.palette.primary.main
+                        color: theme.palette.text.primary
                       }
                     }
                   }}
                 >
-                  <ListItemIcon sx={{ color: isActive(item.path) ? theme.palette.primary.main : 'inherit', minWidth: 32 }}>
+                  <ListItemIcon sx={{ color: 'inherit', minWidth: 32 }}>
                     {item.icon}
                   </ListItemIcon>
                   <ListItemText 
