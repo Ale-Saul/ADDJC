@@ -48,6 +48,7 @@ src/
 - ✅ `arbitroService.test.ts` - Pruebas para el servicio de árbitros 
 - ✅ `senseiService.test.ts` - Pruebas para el servicio de senseis 
 - ✅ `judokaService.test.ts` - Pruebas para el servicio de judokas
+- ✅ `userService.test.ts` - Pruebas para el servicio de usuarios (12 tests)
 
 ### Controladores
 - ✅ `clubController.test.ts` - Pruebas para el controlador de clubes
@@ -93,7 +94,6 @@ Para completar la cobertura de pruebas, se recomienda agregar:
 
 1. **Servicios restantes:**
    - `certificacionService.test.ts`
-   - `userService.test.ts`
 
 2. **Controladores restantes:**
    - `certificacionController.test.ts`
@@ -101,27 +101,3 @@ Para completar la cobertura de pruebas, se recomienda agregar:
 3. **Componentes de Certificaciones:**
    - `CertificacionForm.test.tsx`
    - `CertificacionList.test.tsx`
-
-## Problemas Conocidos y Soluciones
-
-### MUI Select en Modo de Edición
-Al ejecutar tests de formularios en modo edición con valores pre-cargados, MUI Select puede mostrar advertencias sobre valores fuera de rango si las opciones aún no se han cargado. Esto no afecta la funcionalidad de los tests y es un comportamiento esperado cuando se trabaja con datos asíncronos.
-
-**Ejemplo de advertencia:**
-```
-MUI: You have provided an out-of-range value `user-s1` for the select component.
-Consider providing a value that matches one of the available options or ''.
-```
-
-**Solución:** Los tests esperan a que los datos se carguen usando `waitFor` antes de hacer aserciones sobre el Select.
-
-### Accesibilidad de MUI Select
-Los componentes MUI Select no tienen un nombre accesible cuando están deshabilitados o antes de que los datos se carguen. 
-
-**Solución:** En lugar de buscar por `getByRole('combobox', { name: /Label/ })`, usar:
-```typescript
-const selectButton = screen.getByRole('combobox')
-await userEvent.click(selectButton)
-expect(await screen.findByText(/Option/)).toBeInTheDocument()
-```
-
