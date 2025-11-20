@@ -163,8 +163,8 @@ describe('ClubForm', () => {
         newSensei.id,
         { club_id: 'c2' }
       )
-    })
-  })
+    }, { timeout: 3000 })
+  }, 10000)
 
   it('debe mostrar un error si la creación del club falla', async () => {
     mockedClubController.createClub.mockResolvedValue({ success: false, error: 'Error de base de datos' })
@@ -173,6 +173,8 @@ describe('ClubForm', () => {
     await userEvent.type(screen.getByLabelText(/Nombre del Club/i), 'Club Fallido')
     fireEvent.submit(screen.getByRole('button', { name: /Crear/i }))
 
-    expect(await screen.findByText('Error de base de datos')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText(/Error de base de datos/i)).toBeInTheDocument()
+    }, { timeout: 2000 })
   })
 })

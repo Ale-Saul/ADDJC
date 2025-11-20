@@ -49,12 +49,14 @@ src/
 - ✅ `senseiService.test.ts` - Pruebas para el servicio de senseis 
 - ✅ `judokaService.test.ts` - Pruebas para el servicio de judokas
 - ✅ `userService.test.ts` - Pruebas para el servicio de usuarios (12 tests)
+- ✅ `certificacionService.test.ts` - Pruebas para el servicio de certificaciones (16 tests)
 
 ### Controladores
 - ✅ `clubController.test.ts` - Pruebas para el controlador de clubes
 - ✅ `senseiController.test.ts` - Pruebas para el controlador de senseis
 - ✅ `judokaController.test.ts` - Pruebas para el controlador de judokas
 - ✅ `arbitroController.test.ts` - Pruebas para el controlador de árbitros
+- ✅ `certificacionController.test.ts` - Pruebas para el controlador de certificaciones (22 tests)
 
 ### Componentes
 
@@ -81,6 +83,10 @@ src/
 - ✅ `ClubForm.test.tsx` - Pruebas para formulario de club (6 tests)
 - ✅ `ClubList.test.tsx` - Pruebas para lista de clubes (3 tests)
 
+#### Componentes de Certificaciones
+- ✅ `CertificacionForm.test.tsx` - Pruebas para formulario de certificación (19 tests)
+- ✅ `CertificacionList.test.tsx` - Pruebas para lista de certificaciones (10 tests)
+
 ## Notas sobre los Mocks
 
 Los servicios usan Supabase, por lo que se han creado mocks en `jest.setup.js` para:
@@ -88,16 +94,19 @@ Los servicios usan Supabase, por lo que se han creado mocks en `jest.setup.js` p
 - Operaciones de base de datos (select, insert, update, delete)
 - Operaciones de storage (upload, delete)
 
-## Próximos Pasos
+### Mocks Especiales
 
-Para completar la cobertura de pruebas, se recomienda agregar:
+#### CertificacionForm Tests
+- **FileReader**: Se mockea FileReader para simular la lectura de archivos en tests
+- **Validación de archivos**: Se prueban validaciones de tipo (PDF/imágenes) y tamaño (máximo 10MB)
+- **MUI Select**: Los componentes Select de Material-UI se acceden mediante `getByRole('combobox')` debido a limitaciones de accesibilidad
 
-1. **Servicios restantes:**
-   - `certificacionService.test.ts`
+## Resumen de Cobertura
 
-2. **Controladores restantes:**
-   - `certificacionController.test.ts`
+### Total de Tests por Categoría
+- **Servicios**: 6 archivos de prueba con 88+ tests
+- **Controladores**: 5 archivos de prueba con 110+ tests
+- **Componentes**: 15 archivos de prueba con 100+ tests
 
-3. **Componentes de Certificaciones:**
-   - `CertificacionForm.test.tsx`
-   - `CertificacionList.test.tsx`
+**Total**: ~300 tests implementados
+

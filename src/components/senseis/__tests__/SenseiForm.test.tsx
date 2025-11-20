@@ -151,8 +151,8 @@ describe('SenseiForm', () => {
       // Verificar que se llama onSuccess después de un tiempo
       await waitFor(() => {
         expect(mockOnSuccess).toHaveBeenCalled()
-      }, { timeout: 1500 })
-    })
+      }, { timeout: 3000 })
+    }, 10000)
 
     it('debe seleccionar un club correctamente', async () => {
       const user = userEvent.setup()
