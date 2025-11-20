@@ -22,8 +22,9 @@ export const clubService = {
       if (error) throw error
 
       return { success: true, data: data || [] }
-    } catch (error: any) {
-      return { success: false, error: error.message }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+      return { success: false, error: errorMessage }
     }
   },
 
