@@ -199,15 +199,30 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
           }}
         />
 
-        <TextField
-          fullWidth
-          label="Grado Dan"
-          name="grado_dan"
-          value={formData.grado_dan || ''}
-          onChange={handleChange}
-          disabled={loading}
-          placeholder="Ej: 1er Dan, 2do Dan, etc."
-        />
+        <FormControl fullWidth>
+          <InputLabel>Grado Dan</InputLabel>
+          <Select
+            name="grado_dan"
+            value={formData.grado_dan || ''}
+            onChange={handleSelectChange}
+            disabled={loading}
+            label="Grado Dan"
+          >
+            <MenuItem value="">
+              <em>Sin definir</em>
+            </MenuItem>
+            <MenuItem value="1er Dan">1er Dan</MenuItem>
+            <MenuItem value="2do Dan">2do Dan</MenuItem>
+            <MenuItem value="3er Dan">3er Dan</MenuItem>
+            <MenuItem value="4to Dan">4to Dan</MenuItem>
+            <MenuItem value="5to Dan">5to Dan</MenuItem>
+            <MenuItem value="6to Dan">6to Dan</MenuItem>
+            <MenuItem value="7mo Dan">7mo Dan</MenuItem>
+            <MenuItem value="8vo Dan">8vo Dan</MenuItem>
+            <MenuItem value="9no Dan">9no Dan</MenuItem>
+            <MenuItem value="10mo Dan">10mo Dan</MenuItem>
+          </Select>
+        </FormControl>
 
         <TextField
           fullWidth

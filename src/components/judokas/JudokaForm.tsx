@@ -253,25 +253,47 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
           }}
         />
 
-        <TextField
-          fullWidth
-          label="Categoría"
-          name="categoria"
-          value={formData.categoria || ''}
-          onChange={handleChange}
-          disabled={loading}
-          placeholder="Ej: Menores, Juveniles, Adultos"
-        />
+        <FormControl fullWidth>
+          <InputLabel>Categoría</InputLabel>
+          <Select
+            name="categoria"
+            value={formData.categoria || ''}
+            onChange={handleSelectChange}
+            disabled={loading}
+            label="Categoría"
+          >
+            <MenuItem value="">
+              <em>Sin definir</em>
+            </MenuItem>
+            <MenuItem value="Preinfantil">Preinfantil</MenuItem>
+            <MenuItem value="Infantil">Infantil</MenuItem>
+            <MenuItem value="Cadete">Cadete</MenuItem>
+            <MenuItem value="Junior">Junior</MenuItem>
+            <MenuItem value="Senior">Senior</MenuItem>
+          </Select>
+        </FormControl>
 
-        <TextField
-          fullWidth
-          label="Cinturón Actual"
-          name="cinturon_actual"
-          value={formData.cinturon_actual || ''}
-          onChange={handleChange}
-          disabled={loading}
-          placeholder="Ej: Blanco, Amarillo, Naranja, etc."
-        />
+        <FormControl fullWidth>
+          <InputLabel>Cinturón Actual</InputLabel>
+          <Select
+            name="cinturon_actual"
+            value={formData.cinturon_actual || ''}
+            onChange={handleSelectChange}
+            disabled={loading}
+            label="Cinturón Actual"
+          >
+            <MenuItem value="">
+              <em>Sin definir</em>
+            </MenuItem>
+            <MenuItem value="Blanco">Blanco</MenuItem>
+            <MenuItem value="Amarillo">Amarillo</MenuItem>
+            <MenuItem value="Naranja">Naranja</MenuItem>
+            <MenuItem value="Verde">Verde</MenuItem>
+            <MenuItem value="Azul">Azul</MenuItem>
+            <MenuItem value="Café">Café</MenuItem>
+            <MenuItem value="Negro">Negro</MenuItem>
+          </Select>
+        </FormControl>
 
         <TextField
           fullWidth

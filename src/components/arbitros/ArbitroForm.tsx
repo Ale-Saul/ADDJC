@@ -6,8 +6,13 @@ import {
   Button,
   Box,
   Alert,
-  CircularProgress
+  CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material'
+import type { SelectChangeEvent } from '@mui/material/Select'
 import { Arbitro, ArbitroCreate, ArbitroUpdate } from '@/models/arbitro'
 import { arbitroController } from '@/controllers/arbitroController'
 
@@ -51,6 +56,17 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
     setFormData(prev => ({
       ...prev,
       [name]: value || null
+    }))
+    setError(null)
+    setSuccess(false)
+  }
+
+  const handleSelectChange = (e: SelectChangeEvent<string>) => {
+    const { name, value } = e.target
+    if (!name) return
+    setFormData(prev => ({
+      ...prev,
+      [name]: value === '' ? null : value
     }))
     setError(null)
     setSuccess(false)
@@ -143,15 +159,23 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
           }}
         />
 
-        <TextField
-          fullWidth
-          label="Nivel de Arbitraje"
-          name="nivel_arbitraje"
-          value={formData.nivel_arbitraje || ''}
-          onChange={handleChange}
-          disabled={loading}
-          placeholder="Ej: Nacional, Regional, Internacional"
-        />
+        <FormControl fullWidth>
+          <InputLabel>Nivel de Arbitraje</InputLabel>
+          <Select
+            name="nivel_arbitraje"
+            value={formData.nivel_arbitraje || ''}
+            onChange={handleSelectChange}
+            disabled={loading}
+            label="Nivel de Arbitraje"
+          >
+            <MenuItem value="">
+              <em>Sin definir</em>
+            </MenuItem>
+            <MenuItem value="Regional">Regional</MenuItem>
+            <MenuItem value="Nacional">Nacional</MenuItem>
+            <MenuItem value="Internacional">Internacional</MenuItem>
+          </Select>
+        </FormControl>
 
         <TextField
           fullWidth
