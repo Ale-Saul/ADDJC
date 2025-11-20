@@ -23,10 +23,6 @@ export default function SenseisPage() {
     router.push(`/senseis/${sensei.id}/editar`)
   }
 
-  const handleView = (sensei: Sensei) => {
-    router.push(`/senseis/${sensei.id}`)
-  }
-
   const handleDelete = async (sensei: Sensei) => {
     if (confirm(`¿Estás seguro de eliminar al sensei "${sensei.nombres} ${sensei.apellidos}"?`)) {
       // TODO: Implementar eliminación
@@ -51,7 +47,6 @@ export default function SenseisPage() {
 
       <SenseiList
         onEdit={handleEdit}
-        onView={handleView}
         onDelete={handleDelete}
         refreshTrigger={refreshTrigger}
       />

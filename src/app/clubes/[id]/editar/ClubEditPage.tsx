@@ -42,7 +42,7 @@ export default function ClubEditPage({ params }: ClubEditPageProps) {
   }, [id])
 
   const handleSuccess = () => {
-    router.push(`/clubes/${id}`)
+    router.push(`/clubes`)
   }
 
   if (loading) {
@@ -68,10 +68,10 @@ export default function ClubEditPage({ params }: ClubEditPageProps) {
       <Box mb={3}>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => router.push(`/clubes/${id}`)}
+          onClick={() => router.push(`/clubes`)}
           sx={{ mb: 2 }}
         >
-          Volver al Detalle
+          Volver a la Lista
         </Button>
         
         <Typography variant="h4" component="h1">
@@ -83,7 +83,7 @@ export default function ClubEditPage({ params }: ClubEditPageProps) {
         <ClubForm
           club={club}
           onSuccess={handleSuccess}
-          onCancel={() => router.push(`/clubes/${id}`)}
+          onCancel={() => router.push(`/clubes`)}
         />
       )}
     </Layout>

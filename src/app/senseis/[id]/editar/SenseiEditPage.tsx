@@ -42,7 +42,7 @@ export default function SenseiEditPage({ params }: SenseiEditPageProps) {
   }, [id])
 
   const handleSuccess = () => {
-    router.push(`/senseis/${id}`)
+    router.push(`/senseis`)
   }
 
   if (loading) {
@@ -68,10 +68,10 @@ export default function SenseiEditPage({ params }: SenseiEditPageProps) {
       <Box mb={3}>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => router.push(`/senseis/${id}`)}
+          onClick={() => router.push(`/senseis`)}
           sx={{ mb: 2 }}
         >
-          Volver al Detalle
+          Volver a la Lista
         </Button>
         
         <Typography variant="h4" component="h1">
@@ -83,7 +83,7 @@ export default function SenseiEditPage({ params }: SenseiEditPageProps) {
         <SenseiForm
           sensei={sensei}
           onSuccess={handleSuccess}
-          onCancel={() => router.push(`/senseis/${id}`)}
+          onCancel={() => router.push(`/senseis`)}
         />
       )}
     </Layout>

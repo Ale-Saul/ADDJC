@@ -18,19 +18,17 @@ import {
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
-import VisibilityIcon from '@mui/icons-material/Visibility'
 import { Sensei } from '@/models/sensei'
 import { senseiController } from '@/controllers/senseiController'
 
 interface SenseiListProps {
   onEdit?: (sensei: Sensei) => void
   onDelete?: (sensei: Sensei) => void
-  onView?: (sensei: Sensei) => void
   refreshTrigger?: number
   clubId?: string // Opcional: filtrar por club
 }
 
-export default function SenseiList({ onEdit, onDelete, onView, refreshTrigger, clubId }: SenseiListProps) {
+export default function SenseiList({ onEdit, onDelete, refreshTrigger, clubId }: SenseiListProps) {
   const [senseis, setSenseis] = useState<Sensei[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -110,16 +108,6 @@ export default function SenseiList({ onEdit, onDelete, onView, refreshTrigger, c
                 />
               </TableCell>
               <TableCell align="right">
-                {onView && (
-                  <IconButton 
-                    size="small" 
-                    color="primary" 
-                    onClick={() => onView(sensei)}
-                    title="Ver detalle"
-                  >
-                    <VisibilityIcon />
-                  </IconButton>
-                )}
                 {onEdit && (
                   <IconButton 
                     size="small" 

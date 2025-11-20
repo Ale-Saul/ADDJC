@@ -42,7 +42,7 @@ export default function ArbitroEditPage({ params }: ArbitroEditPageProps) {
   }, [id])
 
   const handleSuccess = () => {
-    router.push(`/arbitros/${id}`)
+    router.push(`/arbitros`)
   }
 
   if (loading) {
@@ -68,10 +68,10 @@ export default function ArbitroEditPage({ params }: ArbitroEditPageProps) {
       <Box mb={3}>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => router.push(`/arbitros/${id}`)}
+          onClick={() => router.push(`/arbitros`)}
           sx={{ mb: 2 }}
         >
-          Volver al Detalle
+          Volver a la Lista
         </Button>
         
         <Typography variant="h4" component="h1">
@@ -83,7 +83,7 @@ export default function ArbitroEditPage({ params }: ArbitroEditPageProps) {
         <ArbitroForm
           arbitro={arbitro}
           onSuccess={handleSuccess}
-          onCancel={() => router.push(`/arbitros/${id}`)}
+          onCancel={() => router.push(`/arbitros`)}
         />
       )}
     </Layout>

@@ -23,10 +23,6 @@ export default function JudokasPage() {
     router.push(`/judokas/${judoka.id}/editar`)
   }
 
-  const handleView = (judoka: Judoka) => {
-    router.push(`/judokas/${judoka.id}`)
-  }
-
   const handleDelete = async (judoka: Judoka) => {
     if (confirm(`¿Estás seguro de eliminar al judoka "${judoka.nombres} ${judoka.apellidos}"?`)) {
       // TODO: Implementar eliminación
@@ -51,7 +47,6 @@ export default function JudokasPage() {
 
       <JudokaList
         onEdit={handleEdit}
-        onView={handleView}
         onDelete={handleDelete}
         refreshTrigger={refreshTrigger}
       />

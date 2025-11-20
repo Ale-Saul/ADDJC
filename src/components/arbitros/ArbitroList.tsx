@@ -18,18 +18,16 @@ import {
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
-import VisibilityIcon from '@mui/icons-material/Visibility'
 import { Arbitro } from '@/models/arbitro'
 import { arbitroController } from '@/controllers/arbitroController'
 
 interface ArbitroListProps {
   onEdit?: (arbitro: Arbitro) => void
   onDelete?: (arbitro: Arbitro) => void
-  onView?: (arbitro: Arbitro) => void
   refreshTrigger?: number
 }
 
-export default function ArbitroList({ onEdit, onDelete, onView, refreshTrigger }: ArbitroListProps) {
+export default function ArbitroList({ onEdit, onDelete, refreshTrigger }: ArbitroListProps) {
   const [arbitros, setArbitros] = useState<Arbitro[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -105,16 +103,6 @@ export default function ArbitroList({ onEdit, onDelete, onView, refreshTrigger }
                 />
               </TableCell>
               <TableCell align="right">
-                {onView && (
-                  <IconButton 
-                    size="small" 
-                    color="primary" 
-                    onClick={() => onView(arbitro)}
-                    title="Ver detalle"
-                  >
-                    <VisibilityIcon />
-                  </IconButton>
-                )}
                 {onEdit && (
                   <IconButton 
                     size="small" 

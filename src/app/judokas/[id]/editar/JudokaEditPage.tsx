@@ -42,7 +42,7 @@ export default function JudokaEditPage({ params }: JudokaEditPageProps) {
   }, [id])
 
   const handleSuccess = () => {
-    router.push(`/judokas/${id}`)
+    router.push(`/judokas`)
   }
 
   if (loading) {
@@ -68,10 +68,10 @@ export default function JudokaEditPage({ params }: JudokaEditPageProps) {
       <Box mb={3}>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => router.push(`/judokas/${id}`)}
+          onClick={() => router.push(`/judokas`)}
           sx={{ mb: 2 }}
         >
-          Volver al Detalle
+          Volver a la Lista
         </Button>
         
         <Typography variant="h4" component="h1">
@@ -83,7 +83,7 @@ export default function JudokaEditPage({ params }: JudokaEditPageProps) {
         <JudokaForm
           judoka={judoka}
           onSuccess={handleSuccess}
-          onCancel={() => router.push(`/judokas/${id}`)}
+          onCancel={() => router.push(`/judokas`)}
         />
       )}
     </Layout>

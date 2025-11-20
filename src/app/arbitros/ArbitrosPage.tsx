@@ -23,10 +23,6 @@ export default function ArbitrosPage() {
     router.push(`/arbitros/${arbitro.id}/editar`)
   }
 
-  const handleView = (arbitro: Arbitro) => {
-    router.push(`/arbitros/${arbitro.id}`)
-  }
-
   const handleDelete = async (arbitro: Arbitro) => {
     if (confirm(`¿Estás seguro de eliminar al árbitro "${arbitro.nombres} ${arbitro.apellidos}"?`)) {
       // TODO: Implementar eliminación
@@ -51,7 +47,6 @@ export default function ArbitrosPage() {
 
       <ArbitroList
         onEdit={handleEdit}
-        onView={handleView}
         onDelete={handleDelete}
         refreshTrigger={refreshTrigger}
       />

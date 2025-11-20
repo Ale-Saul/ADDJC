@@ -18,20 +18,18 @@ import {
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
-import VisibilityIcon from '@mui/icons-material/Visibility'
 import { Judoka } from '@/models/judoka'
 import { judokaController } from '@/controllers/judokaController'
 
 interface JudokaListProps {
   onEdit?: (judoka: Judoka) => void
   onDelete?: (judoka: Judoka) => void
-  onView?: (judoka: Judoka) => void
   refreshTrigger?: number
   clubId?: string // Opcional: filtrar por club
   entrenadorId?: string // Opcional: filtrar por entrenador
 }
 
-export default function JudokaList({ onEdit, onDelete, onView, refreshTrigger, clubId, entrenadorId }: JudokaListProps) {
+export default function JudokaList({ onEdit, onDelete, refreshTrigger, clubId, entrenadorId }: JudokaListProps) {
   const [judokas, setJudokas] = useState<Judoka[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -118,16 +116,6 @@ export default function JudokaList({ onEdit, onDelete, onView, refreshTrigger, c
                 />
               </TableCell>
               <TableCell align="right">
-                {onView && (
-                  <IconButton 
-                    size="small" 
-                    color="primary" 
-                    onClick={() => onView(judoka)}
-                    title="Ver detalle"
-                  >
-                    <VisibilityIcon />
-                  </IconButton>
-                )}
                 {onEdit && (
                   <IconButton 
                     size="small" 
