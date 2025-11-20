@@ -74,7 +74,11 @@ src/
 - ✅ `ArbitroCard.test.tsx` - Pruebas para tarjeta de árbitro
 - ✅ `ArbitroForm.test.tsx` - Pruebas para formulario de árbitro
 - ✅ `ArbitroList.test.tsx` - Pruebas para lista de árbitros
-  
+
+#### Componentes de Clubes
+- ✅ `ClubCard.test.tsx` - Pruebas para tarjeta de club (3 tests)
+- ✅ `ClubForm.test.tsx` - Pruebas para formulario de club (6 tests)
+- ✅ `ClubList.test.tsx` - Pruebas para lista de clubes (3 tests)
 
 ## Notas sobre los Mocks
 
@@ -94,12 +98,30 @@ Para completar la cobertura de pruebas, se recomienda agregar:
 2. **Controladores restantes:**
    - `certificacionController.test.ts`
 
-3. **Componentes de Clubes:**
-   - `ClubCard.test.tsx`
-   - `ClubForm.test.tsx`
-   - `ClubList.test.tsx`
-
-5. **Componentes de Certificaciones:**
+3. **Componentes de Certificaciones:**
    - `CertificacionForm.test.tsx`
    - `CertificacionList.test.tsx`
+
+## Problemas Conocidos y Soluciones
+
+### MUI Select en Modo de Edición
+Al ejecutar tests de formularios en modo edición con valores pre-cargados, MUI Select puede mostrar advertencias sobre valores fuera de rango si las opciones aún no se han cargado. Esto no afecta la funcionalidad de los tests y es un comportamiento esperado cuando se trabaja con datos asíncronos.
+
+**Ejemplo de advertencia:**
+```
+MUI: You have provided an out-of-range value `user-s1` for the select component.
+Consider providing a value that matches one of the available options or ''.
+```
+
+**Solución:** Los tests esperan a que los datos se carguen usando `waitFor` antes de hacer aserciones sobre el Select.
+
+### Accesibilidad de MUI Select
+Los componentes MUI Select no tienen un nombre accesible cuando están deshabilitados o antes de que los datos se carguen. 
+
+**Solución:** En lugar de buscar por `getByRole('combobox', { name: /Label/ })`, usar:
+```typescript
+const selectButton = screen.getByRole('combobox')
+await userEvent.click(selectButton)
+expect(await screen.findByText(/Option/)).toBeInTheDocument()
+```
 
