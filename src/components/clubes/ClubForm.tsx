@@ -5,12 +5,18 @@ import {
   TextField,
   Button,
   Box,
-  Grid,
   Alert,
-  CircularProgress
+  CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material'
+import type { SelectChangeEvent } from '@mui/material/Select'
 import { Club, ClubCreate, ClubUpdate } from '@/models/club'
 import { clubController } from '@/controllers/clubController'
+import { senseiController } from '@/controllers/senseiController'
+import { Sensei, SenseiCreate } from '@/models/sensei'
 
 interface ClubFormProps {
   club?: Club | null
@@ -27,9 +33,25 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
     director_tecnico_id: null,
     activo: true
   })
+  const [senseis, setSenseis] = useState<Sensei[]>([])
+  const [newDirectorNombres, setNewDirectorNombres] = useState('')
+  const [newDirectorApellidos, setNewDirectorApellidos] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadingSenseis, setLoadingSenseis] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    // Cargar senseis activos
+    const loadSenseis = async () => {
+      const response = await senseiController.getAllSenseis(false)
+      if (response.success && response.data) {
+        setSenseis(response.data)
+      }
+      setLoadingSenseis(false)
+    }
+    loadSenseis()
+  }, [])
 
   useEffect(() => {
     if (club) {
@@ -41,6 +63,9 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
         director_tecnico_id: club.director_tecnico_id || null,
         activo: club.activo
       })
+      // Al editar un club no usamos los campos de nuevo director
+      setNewDirectorNombres('')
+      setNewDirectorApellidos('')
     }
   }, [club])
 
@@ -54,6 +79,17 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
     setSuccess(false)
   }
 
+  const handleSelectChange = (e: SelectChangeEvent<string>) => {
+    const { name, value } = e.target
+    if (!name) return
+    setFormData(prev => ({
+      ...prev,
+      [name]: value === '' ? null : value
+    }))
+    setError(null)
+    setSuccess(false)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -62,13 +98,67 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
 
     try {
       let response
-      
+      let directorTecnicoId = formData.director_tecnico_id || null
+      let createdSenseiId: string | null = null
+
+      // Si estamos creando un club y no hay director seleccionado,
+      // pero sí se ingresó nombre y apellido, crear automáticamente un Sensei
+      if (
+        !club &&
+        !directorTecnicoId &&
+        newDirectorNombres.trim() !== '' &&
+        newDirectorApellidos.trim() !== ''
+      ) {
+        const senseiToCreate: SenseiCreate = {
+          usuario_id: 'temp-user-id', // el servicio creará el usuario real
+          nombres: newDirectorNombres.trim(),
+          apellidos: newDirectorApellidos.trim(),
+          activo: true
+          // No asignamos club_id aquí porque el club aún no existe
+        }
+
+        const senseiResponse = await senseiController.createSensei(senseiToCreate)
+
+        if (!senseiResponse.success || !senseiResponse.data) {
+          const errorMessage = senseiResponse.error || 'Error al crear el director técnico (sensei)'
+          setError(errorMessage)
+          setLoading(false)
+          return
+        }
+
+        // Guardamos el ID del sensei creado para actualizarlo después con el club_id
+        createdSenseiId = senseiResponse.data.id
+
+        // En la tabla clubes guardamos el id de user_profiles,
+        // que coincide con usuario_id del sensei
+        directorTecnicoId = senseiResponse.data.usuario_id
+      }
+
+      const clubPayload: ClubCreate = {
+        ...(formData as ClubCreate),
+        director_tecnico_id: directorTecnicoId
+      }
+
       if (club) {
         // Actualizar
-        response = await clubController.updateClub(club.id, formData)
+        response = await clubController.updateClub(club.id, clubPayload)
       } else {
         // Crear
-        response = await clubController.createClub(formData as ClubCreate)
+        response = await clubController.createClub(clubPayload)
+
+        // Si se creó un sensei nuevo y el club se creó exitosamente,
+        // actualizar el sensei con el club_id del club recién creado
+        if (response.success && response.data && createdSenseiId) {
+          const updateSenseiResponse = await senseiController.updateSensei(
+            createdSenseiId,
+            { club_id: response.data.id }
+          )
+
+          if (!updateSenseiResponse.success) {
+            // No fallamos la creación del club, solo mostramos un warning
+            console.warn('Club creado pero no se pudo asociar al sensei:', updateSenseiResponse.error)
+          }
+        }
       }
 
       if (response.success) {
@@ -81,8 +171,9 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
       } else {
         setError(response.error || 'Error al guardar el club')
       }
-    } catch (err: any) {
-      setError(err.message || 'Error inesperado')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error inesperado'
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -102,56 +193,102 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
         </Alert>
       )}
 
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            label="Nombre del Club"
-            name="nombre_club"
-            value={formData.nombre_club}
-            onChange={handleChange}
-            required
-            disabled={loading}
-          />
-        </Grid>
+      {/* Contenedor en columna para que todos los campos ocupen el mismo ancho */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <TextField
+          fullWidth
+          label="Nombre del Club"
+          name="nombre_club"
+          value={formData.nombre_club}
+          onChange={handleChange}
+          required
+          disabled={loading}
+        />
 
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            label="Municipio"
-            name="municipio"
-            value={formData.municipio}
-            onChange={handleChange}
-            disabled={loading}
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Municipio"
+          name="municipio"
+          value={formData.municipio}
+          onChange={handleChange}
+          disabled={loading}
+        />
 
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Dirección"
-            name="direccion"
-            value={formData.direccion}
-            onChange={handleChange}
-            multiline
-            rows={2}
-            disabled={loading}
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Dirección"
+          name="direccion"
+          value={formData.direccion}
+          onChange={handleChange}
+          multiline
+          rows={3}
+          disabled={loading}
+        />
 
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            label="Teléfono de Contacto"
-            name="telefono_contacto"
-            value={formData.telefono_contacto}
-            onChange={handleChange}
-            disabled={loading}
-          />
-        </Grid>
+        <TextField
+          fullWidth
+          label="Teléfono de Contacto"
+          name="telefono_contacto"
+          value={formData.telefono_contacto}
+          onChange={handleChange}
+          disabled={loading}
+        />
 
-        {/* TODO: Agregar selector de director técnico cuando tengamos la tabla de senseis */}
-      </Grid>
+        <FormControl fullWidth>
+          <InputLabel>Director Técnico</InputLabel>
+          <Select
+            name="director_tecnico_id"
+            value={formData.director_tecnico_id || ''}
+            onChange={handleSelectChange}
+            disabled={loading || loadingSenseis}
+            label="Director Técnico"
+          >
+            <MenuItem value="">
+              <em>Sin director técnico</em>
+            </MenuItem>
+            {senseis.map((sensei) => (
+              <MenuItem key={sensei.id} value={sensei.usuario_id}>
+                {sensei.nombres} {sensei.apellidos}
+                {sensei.grado_dan && ` - ${sensei.grado_dan}`}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {!club && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Box sx={{ fontSize: 14, color: 'text.secondary' }}>
+              O crea un nuevo director técnico (se registrará como sensei automáticamente):
+            </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                fullWidth
+                label="Nombre del Director Técnico"
+                name="nuevo_director_nombres"
+                value={newDirectorNombres}
+                onChange={(e) => {
+                  setNewDirectorNombres(e.target.value)
+                  setError(null)
+                  setSuccess(false)
+                }}
+                disabled={loading}
+              />
+              <TextField
+                fullWidth
+                label="Apellidos del Director Técnico"
+                name="nuevo_director_apellidos"
+                value={newDirectorApellidos}
+                onChange={(e) => {
+                  setNewDirectorApellidos(e.target.value)
+                  setError(null)
+                  setSuccess(false)
+                }}
+                disabled={loading}
+              />
+            </Box>
+          </Box>
+        )}
+      </Box>
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
         {onCancel && (

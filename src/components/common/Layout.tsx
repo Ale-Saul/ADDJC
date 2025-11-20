@@ -1,7 +1,7 @@
 'use client'
 
-import { Container } from '@mui/material'
-import Header from './Header'
+import { Box, Container } from '@mui/material'
+import Sidebar from './Sidebar'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -9,12 +9,22 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   return (
-    <>
-      <Header />
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        {children}
-      </Container>
-    </>
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      <Sidebar />
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          p: 3,
+          width: { md: `calc(100% - 280px)` },
+          backgroundColor: (theme) => theme.palette.mode === 'light' ? '#f5f5f5' : theme.palette.background.default
+        }}
+      >
+        <Container maxWidth="xl">
+          {children}
+        </Container>
+      </Box>
+    </Box>
   )
 }
 

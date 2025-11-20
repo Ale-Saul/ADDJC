@@ -4,12 +4,12 @@ import { useState } from 'react'
 import { Box, Button, Typography, Dialog, DialogTitle, DialogContent } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import Layout from '@/components/common/Layout'
-import ArbitroList from '@/components/arbitros/ArbitroList'
-import ArbitroForm from '@/components/arbitros/ArbitroForm'
-import { Arbitro } from '@/models/arbitro'
+import JudokaList from '@/components/judokas/JudokaList'
+import JudokaForm from '@/components/judokas/JudokaForm'
+import { Judoka } from '@/models/judoka'
 import { useRouter } from 'next/navigation'
 
-export default function ArbitrosPage() {
+export default function JudokasPage() {
   const router = useRouter()
   const [openDialog, setOpenDialog] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -19,14 +19,14 @@ export default function ArbitrosPage() {
     setRefreshTrigger(prev => prev + 1)
   }
 
-  const handleEdit = (arbitro: Arbitro) => {
-    router.push(`/arbitros/${arbitro.id}/editar`)
+  const handleEdit = (judoka: Judoka) => {
+    router.push(`/judokas/${judoka.id}/editar`)
   }
 
-  const handleDelete = async (arbitro: Arbitro) => {
-    if (confirm(`¿Estás seguro de eliminar al árbitro "${arbitro.nombres} ${arbitro.apellidos}"?`)) {
+  const handleDelete = async (judoka: Judoka) => {
+    if (confirm(`¿Estás seguro de eliminar al judoka "${judoka.nombres} ${judoka.apellidos}"?`)) {
       // TODO: Implementar eliminación
-      console.log('Eliminar árbitro:', arbitro.id)
+      console.log('Eliminar judoka:', judoka.id)
     }
   }
 
@@ -34,27 +34,27 @@ export default function ArbitrosPage() {
     <Layout>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">
-          Gestión de Árbitros
+          Gestión de Judokas
         </Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => setOpenDialog(true)}
         >
-          Nuevo Árbitro
+          Nuevo Judoka
         </Button>
       </Box>
 
-      <ArbitroList
+      <JudokaList
         onEdit={handleEdit}
         onDelete={handleDelete}
         refreshTrigger={refreshTrigger}
       />
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Registrar Nuevo Árbitro</DialogTitle>
+        <DialogTitle>Registrar Nuevo Judoka</DialogTitle>
         <DialogContent>
-          <ArbitroForm
+          <JudokaForm
             onSuccess={handleCreateSuccess}
             onCancel={() => setOpenDialog(false)}
           />

@@ -18,18 +18,16 @@ import {
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
-import VisibilityIcon from '@mui/icons-material/Visibility'
 import { Club } from '@/models/club'
 import { clubController } from '@/controllers/clubController'
 
 interface ClubListProps {
   onEdit?: (club: Club) => void
   onDelete?: (club: Club) => void
-  onView?: (club: Club) => void
   refreshTrigger?: number
 }
 
-export default function ClubList({ onEdit, onDelete, onView, refreshTrigger }: ClubListProps) {
+export default function ClubList({ onEdit, onDelete, refreshTrigger }: ClubListProps) {
   const [clubes, setClubes] = useState<Club[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -105,16 +103,6 @@ export default function ClubList({ onEdit, onDelete, onView, refreshTrigger }: C
                 />
               </TableCell>
               <TableCell align="right">
-                {onView && (
-                  <IconButton 
-                    size="small" 
-                    color="primary" 
-                    onClick={() => onView(club)}
-                    title="Ver detalle"
-                  >
-                    <VisibilityIcon />
-                  </IconButton>
-                )}
                 {onEdit && (
                   <IconButton 
                     size="small" 

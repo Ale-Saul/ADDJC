@@ -4,23 +4,23 @@ import { use, useState, useEffect } from 'react'
 import { Box, Button, Typography, CircularProgress, Alert, Dialog, DialogTitle, DialogContent, Divider } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import Layout from '@/components/common/Layout'
-import ArbitroForm from '@/components/arbitros/ArbitroForm'
+import SenseiForm from '@/components/senseis/SenseiForm'
 import CertificacionList from '@/components/certificaciones/CertificacionList'
 import CertificacionForm from '@/components/certificaciones/CertificacionForm'
-import { Arbitro } from '@/models/arbitro'
+import { Sensei } from '@/models/sensei'
 import { Certificacion } from '@/models/certificacion'
-import { arbitroController } from '@/controllers/arbitroController'
+import { senseiController } from '@/controllers/senseiController'
 import { certificacionController } from '@/controllers/certificacionController'
 import { useRouter } from 'next/navigation'
 
-interface ArbitroEditPageProps {
+interface SenseiEditPageProps {
   params: Promise<{ id: string }>
 }
 
-export default function ArbitroEditPage({ params }: ArbitroEditPageProps) {
+export default function SenseiEditPage({ params }: SenseiEditPageProps) {
   const router = useRouter()
   const { id } = use(params)
-  const [arbitro, setArbitro] = useState<Arbitro | null>(null)
+  const [sensei, setSensei] = useState<Sensei | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [openCertificacionDialog, setOpenCertificacionDialog] = useState(false)
@@ -28,28 +28,28 @@ export default function ArbitroEditPage({ params }: ArbitroEditPageProps) {
   const [refreshCertificaciones, setRefreshCertificaciones] = useState(0)
 
   useEffect(() => {
-    const loadArbitro = async () => {
+    const loadSensei = async () => {
       setLoading(true)
       setError(null)
 
-      const response = await arbitroController.getArbitroById(id)
+      const response = await senseiController.getSenseiById(id)
 
       if (response.success && response.data) {
-        setArbitro(response.data)
+        setSensei(response.data)
       } else {
-        setError(response.error || 'Error al cargar el árbitro')
+        setError(response.error || 'Error al cargar el sensei')
       }
 
       setLoading(false)
     }
 
     if (id) {
-      loadArbitro()
+      loadSensei()
     }
   }, [id])
 
   const handleSuccess = () => {
-    router.push(`/arbitros`)
+    router.push(`/senseis`)
   }
 
   const handleAddCertificacion = () => {
@@ -102,23 +102,23 @@ export default function ArbitroEditPage({ params }: ArbitroEditPageProps) {
       <Box mb={3}>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => router.push(`/arbitros`)}
+          onClick={() => router.push(`/senseis`)}
           sx={{ mb: 2 }}
         >
           Volver a la Lista
         </Button>
         
         <Typography variant="h4" component="h1">
-          Editar Árbitro
+          Editar Sensei
         </Typography>
       </Box>
 
-      {arbitro && (
+      {sensei && (
         <>
-          <ArbitroForm
-            arbitro={arbitro}
+          <SenseiForm
+            sensei={sensei}
             onSuccess={handleSuccess}
-            onCancel={() => router.push(`/arbitros`)}
+            onCancel={() => router.push(`/senseis`)}
           />
 
           <Divider sx={{ my: 4 }} />
@@ -128,8 +128,8 @@ export default function ArbitroEditPage({ params }: ArbitroEditPageProps) {
               Certificaciones
             </Typography>
             <CertificacionList
-              usuarioId={arbitro.usuario_id}
-              tipoAfiliado="arbitro"
+              usuarioId={sensei.usuario_id}
+              tipoAfiliado="sensei"
               onAdd={handleAddCertificacion}
               onEdit={handleEditCertificacion}
               onDelete={handleDeleteCertificacion}
@@ -152,8 +152,8 @@ export default function ArbitroEditPage({ params }: ArbitroEditPageProps) {
             <DialogContent>
               <CertificacionForm
                 certificacion={certificacionEditando}
-                usuarioId={arbitro.usuario_id}
-                tipoAfiliado="arbitro"
+                usuarioId={sensei.usuario_id}
+                tipoAfiliado="sensei"
                 onSuccess={handleCertificacionSuccess}
                 onCancel={() => {
                   setOpenCertificacionDialog(false)

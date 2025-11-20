@@ -23,10 +23,6 @@ export default function ClubesPage() {
     router.push(`/clubes/${club.id}/editar`)
   }
 
-  const handleView = (club: Club) => {
-    router.push(`/clubes/${club.id}`)
-  }
-
   const handleDelete = async (club: Club) => {
     if (confirm(`¿Estás seguro de eliminar el club "${club.nombre_club}"?`)) {
       // TODO: Implementar eliminación
@@ -51,7 +47,6 @@ export default function ClubesPage() {
 
       <ClubList
         onEdit={handleEdit}
-        onView={handleView}
         onDelete={handleDelete}
         refreshTrigger={refreshTrigger}
       />

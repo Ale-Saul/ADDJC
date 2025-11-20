@@ -4,45 +4,45 @@ import { use, useState, useEffect } from 'react'
 import { Box, Button, Typography, CircularProgress, Alert } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import Layout from '@/components/common/Layout'
-import ClubForm from '@/components/clubes/ClubForm'
-import { Club } from '@/models/club'
-import { clubController } from '@/controllers/clubController'
+import JudokaForm from '@/components/judokas/JudokaForm'
+import { Judoka } from '@/models/judoka'
+import { judokaController } from '@/controllers/judokaController'
 import { useRouter } from 'next/navigation'
 
-interface ClubEditPageProps {
+interface JudokaEditPageProps {
   params: Promise<{ id: string }>
 }
 
-export default function ClubEditPage({ params }: ClubEditPageProps) {
+export default function JudokaEditPage({ params }: JudokaEditPageProps) {
   const router = useRouter()
   const { id } = use(params)
-  const [club, setClub] = useState<Club | null>(null)
+  const [judoka, setJudoka] = useState<Judoka | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const loadClub = async () => {
+    const loadJudoka = async () => {
       setLoading(true)
       setError(null)
 
-      const response = await clubController.getClubById(id)
+      const response = await judokaController.getJudokaById(id)
 
       if (response.success && response.data) {
-        setClub(response.data)
+        setJudoka(response.data)
       } else {
-        setError(response.error || 'Error al cargar el club')
+        setError(response.error || 'Error al cargar el judoka')
       }
 
       setLoading(false)
     }
 
     if (id) {
-      loadClub()
+      loadJudoka()
     }
   }, [id])
 
   const handleSuccess = () => {
-    router.push(`/clubes`)
+    router.push(`/judokas`)
   }
 
   if (loading) {
@@ -68,22 +68,22 @@ export default function ClubEditPage({ params }: ClubEditPageProps) {
       <Box mb={3}>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => router.push(`/clubes`)}
+          onClick={() => router.push(`/judokas`)}
           sx={{ mb: 2 }}
         >
           Volver a la Lista
         </Button>
         
         <Typography variant="h4" component="h1">
-          Editar Club
+          Editar Judoka
         </Typography>
       </Box>
 
-      {club && (
-        <ClubForm
-          club={club}
+      {judoka && (
+        <JudokaForm
+          judoka={judoka}
           onSuccess={handleSuccess}
-          onCancel={() => router.push(`/clubes`)}
+          onCancel={() => router.push(`/judokas`)}
         />
       )}
     </Layout>

@@ -18,38 +18,47 @@ import {
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
-import { Arbitro } from '@/models/arbitro'
-import { arbitroController } from '@/controllers/arbitroController'
+import { Judoka } from '@/models/judoka'
+import { judokaController } from '@/controllers/judokaController'
 
-interface ArbitroListProps {
-  onEdit?: (arbitro: Arbitro) => void
-  onDelete?: (arbitro: Arbitro) => void
+interface JudokaListProps {
+  onEdit?: (judoka: Judoka) => void
+  onDelete?: (judoka: Judoka) => void
   refreshTrigger?: number
+  clubId?: string // Opcional: filtrar por club
+  entrenadorId?: string // Opcional: filtrar por entrenador
 }
 
-export default function ArbitroList({ onEdit, onDelete, refreshTrigger }: ArbitroListProps) {
-  const [arbitros, setArbitros] = useState<Arbitro[]>([])
+export default function JudokaList({ onEdit, onDelete, refreshTrigger, clubId, entrenadorId }: JudokaListProps) {
+  const [judokas, setJudokas] = useState<Judoka[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const loadArbitros = async () => {
+  const loadJudokas = async () => {
     setLoading(true)
     setError(null)
     
-    const response = await arbitroController.getAllArbitros()
+    let response
+    if (clubId) {
+      response = await judokaController.getJudokasByClub(clubId)
+    } else if (entrenadorId) {
+      response = await judokaController.getJudokasByEntrenador(entrenadorId)
+    } else {
+      response = await judokaController.getAllJudokas()
+    }
     
     if (response.success && response.data) {
-      setArbitros(response.data)
+      setJudokas(response.data)
     } else {
-      setError(response.error || 'Error al cargar los árbitros')
+      setError(response.error || 'Error al cargar los judokas')
     }
     
     setLoading(false)
   }
 
   useEffect(() => {
-    loadArbitros()
-  }, [refreshTrigger])
+    loadJudokas()
+  }, [refreshTrigger, clubId, entrenadorId])
 
   if (loading) {
     return (
@@ -67,11 +76,11 @@ export default function ArbitroList({ onEdit, onDelete, refreshTrigger }: Arbitr
     )
   }
 
-  if (arbitros.length === 0) {
+  if (judokas.length === 0) {
     return (
       <Box textAlign="center" py={4}>
         <Typography variant="h6" color="text.secondary">
-          No hay árbitros registrados
+          No hay judokas registrados
         </Typography>
       </Box>
     )
@@ -84,21 +93,25 @@ export default function ArbitroList({ onEdit, onDelete, refreshTrigger }: Arbitr
           <TableRow>
             <TableCell><strong>Nombres</strong></TableCell>
             <TableCell><strong>Apellidos</strong></TableCell>
-            <TableCell><strong>Nivel de Arbitraje</strong></TableCell>
+            <TableCell><strong>Categoría</strong></TableCell>
+            <TableCell><strong>Cinturón</strong></TableCell>
+            <TableCell><strong>Peso (kg)</strong></TableCell>
             <TableCell><strong>Estado</strong></TableCell>
             <TableCell align="right"><strong>Acciones</strong></TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {arbitros.map((arbitro) => (
-            <TableRow key={arbitro.id} hover>
-              <TableCell>{arbitro.nombres}</TableCell>
-              <TableCell>{arbitro.apellidos}</TableCell>
-              <TableCell>{arbitro.nivel_arbitraje || '-'}</TableCell>
+          {judokas.map((judoka) => (
+            <TableRow key={judoka.id} hover>
+              <TableCell>{judoka.nombres}</TableCell>
+              <TableCell>{judoka.apellidos}</TableCell>
+              <TableCell>{judoka.categoria || '-'}</TableCell>
+              <TableCell>{judoka.cinturon_actual || '-'}</TableCell>
+              <TableCell>{judoka.peso_competitivo ? `${judoka.peso_competitivo} kg` : '-'}</TableCell>
               <TableCell>
                 <Chip 
-                  label={arbitro.activo ? 'Activo' : 'Inactivo'} 
-                  color={arbitro.activo ? 'success' : 'default'}
+                  label={judoka.activo ? 'Activo' : 'Inactivo'} 
+                  color={judoka.activo ? 'success' : 'default'}
                   size="small"
                 />
               </TableCell>
@@ -107,7 +120,7 @@ export default function ArbitroList({ onEdit, onDelete, refreshTrigger }: Arbitr
                   <IconButton 
                     size="small" 
                     color="primary" 
-                    onClick={() => onEdit(arbitro)}
+                    onClick={() => onEdit(judoka)}
                     title="Editar"
                   >
                     <EditIcon />
@@ -117,7 +130,7 @@ export default function ArbitroList({ onEdit, onDelete, refreshTrigger }: Arbitr
                   <IconButton 
                     size="small" 
                     color="error" 
-                    onClick={() => onDelete(arbitro)}
+                    onClick={() => onDelete(judoka)}
                     title="Eliminar"
                   >
                     <DeleteIcon />

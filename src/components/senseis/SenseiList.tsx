@@ -18,38 +18,41 @@ import {
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
-import { Arbitro } from '@/models/arbitro'
-import { arbitroController } from '@/controllers/arbitroController'
+import { Sensei } from '@/models/sensei'
+import { senseiController } from '@/controllers/senseiController'
 
-interface ArbitroListProps {
-  onEdit?: (arbitro: Arbitro) => void
-  onDelete?: (arbitro: Arbitro) => void
+interface SenseiListProps {
+  onEdit?: (sensei: Sensei) => void
+  onDelete?: (sensei: Sensei) => void
   refreshTrigger?: number
+  clubId?: string // Opcional: filtrar por club
 }
 
-export default function ArbitroList({ onEdit, onDelete, refreshTrigger }: ArbitroListProps) {
-  const [arbitros, setArbitros] = useState<Arbitro[]>([])
+export default function SenseiList({ onEdit, onDelete, refreshTrigger, clubId }: SenseiListProps) {
+  const [senseis, setSenseis] = useState<Sensei[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const loadArbitros = async () => {
+  const loadSenseis = async () => {
     setLoading(true)
     setError(null)
     
-    const response = await arbitroController.getAllArbitros()
+    const response = clubId 
+      ? await senseiController.getSenseisByClub(clubId)
+      : await senseiController.getAllSenseis()
     
     if (response.success && response.data) {
-      setArbitros(response.data)
+      setSenseis(response.data)
     } else {
-      setError(response.error || 'Error al cargar los árbitros')
+      setError(response.error || 'Error al cargar los senseis')
     }
     
     setLoading(false)
   }
 
   useEffect(() => {
-    loadArbitros()
-  }, [refreshTrigger])
+    loadSenseis()
+  }, [refreshTrigger, clubId])
 
   if (loading) {
     return (
@@ -67,11 +70,11 @@ export default function ArbitroList({ onEdit, onDelete, refreshTrigger }: Arbitr
     )
   }
 
-  if (arbitros.length === 0) {
+  if (senseis.length === 0) {
     return (
       <Box textAlign="center" py={4}>
         <Typography variant="h6" color="text.secondary">
-          No hay árbitros registrados
+          No hay senseis registrados
         </Typography>
       </Box>
     )
@@ -84,21 +87,23 @@ export default function ArbitroList({ onEdit, onDelete, refreshTrigger }: Arbitr
           <TableRow>
             <TableCell><strong>Nombres</strong></TableCell>
             <TableCell><strong>Apellidos</strong></TableCell>
-            <TableCell><strong>Nivel de Arbitraje</strong></TableCell>
+            <TableCell><strong>Grado Dan</strong></TableCell>
+            <TableCell><strong>Especialidad</strong></TableCell>
             <TableCell><strong>Estado</strong></TableCell>
             <TableCell align="right"><strong>Acciones</strong></TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {arbitros.map((arbitro) => (
-            <TableRow key={arbitro.id} hover>
-              <TableCell>{arbitro.nombres}</TableCell>
-              <TableCell>{arbitro.apellidos}</TableCell>
-              <TableCell>{arbitro.nivel_arbitraje || '-'}</TableCell>
+          {senseis.map((sensei) => (
+            <TableRow key={sensei.id} hover>
+              <TableCell>{sensei.nombres}</TableCell>
+              <TableCell>{sensei.apellidos}</TableCell>
+              <TableCell>{sensei.grado_dan || '-'}</TableCell>
+              <TableCell>{sensei.especialidad || '-'}</TableCell>
               <TableCell>
                 <Chip 
-                  label={arbitro.activo ? 'Activo' : 'Inactivo'} 
-                  color={arbitro.activo ? 'success' : 'default'}
+                  label={sensei.activo ? 'Activo' : 'Inactivo'} 
+                  color={sensei.activo ? 'success' : 'default'}
                   size="small"
                 />
               </TableCell>
@@ -107,7 +112,7 @@ export default function ArbitroList({ onEdit, onDelete, refreshTrigger }: Arbitr
                   <IconButton 
                     size="small" 
                     color="primary" 
-                    onClick={() => onEdit(arbitro)}
+                    onClick={() => onEdit(sensei)}
                     title="Editar"
                   >
                     <EditIcon />
@@ -117,7 +122,7 @@ export default function ArbitroList({ onEdit, onDelete, refreshTrigger }: Arbitr
                   <IconButton 
                     size="small" 
                     color="error" 
-                    onClick={() => onDelete(arbitro)}
+                    onClick={() => onDelete(sensei)}
                     title="Eliminar"
                   >
                     <DeleteIcon />

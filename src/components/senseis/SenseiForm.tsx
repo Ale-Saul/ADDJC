@@ -7,49 +7,69 @@ import {
   Box,
   Alert,
   CircularProgress,
-  FormControl,
-  InputLabel,
+  MenuItem,
   Select,
-  MenuItem
+  FormControl,
+  InputLabel
 } from '@mui/material'
 import type { SelectChangeEvent } from '@mui/material/Select'
-import { Arbitro, ArbitroCreate, ArbitroUpdate } from '@/models/arbitro'
-import { arbitroController } from '@/controllers/arbitroController'
+import { Sensei, SenseiCreate, SenseiUpdate } from '@/models/sensei'
+import { senseiController } from '@/controllers/senseiController'
+import { clubController } from '@/controllers/clubController'
+import { Club } from '@/models/club'
 
-interface ArbitroFormProps {
-  arbitro?: Arbitro | null
+interface SenseiFormProps {
+  sensei?: Sensei | null
   onSuccess?: () => void
   onCancel?: () => void
 }
 
-export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFormProps) {
-  const [formData, setFormData] = useState<ArbitroCreate | ArbitroUpdate>({
+export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormProps) {
+  const [formData, setFormData] = useState<SenseiCreate | SenseiUpdate>({
     usuario_id: '',
+    club_id: null,
     nombres: '',
     apellidos: '',
     fecha_nacimiento: null,
-    nivel_arbitraje: '',
+    grado_dan: '',
+    especialidad: '',
     foto_perfil: null,
     activo: true
   })
+  const [clubes, setClubes] = useState<Club[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingClubes, setLoadingClubes] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
   useEffect(() => {
-    if (arbitro) {
+    // Cargar clubes activos
+    const loadClubes = async () => {
+      const response = await clubController.getAllClubes(false)
+      if (response.success && response.data) {
+        setClubes(response.data)
+      }
+      setLoadingClubes(false)
+    }
+    loadClubes()
+  }, [])
+
+  useEffect(() => {
+    if (sensei) {
       setFormData({
-        nombres: arbitro.nombres,
-        apellidos: arbitro.apellidos,
-        fecha_nacimiento: arbitro.fecha_nacimiento || null,
-        nivel_arbitraje: arbitro.nivel_arbitraje || '',
-        foto_perfil: arbitro.foto_perfil || null,
-        activo: arbitro.activo
+        club_id: sensei.club_id || null,
+        nombres: sensei.nombres,
+        apellidos: sensei.apellidos,
+        fecha_nacimiento: sensei.fecha_nacimiento || null,
+        grado_dan: sensei.grado_dan || '',
+        especialidad: sensei.especialidad || '',
+        foto_perfil: sensei.foto_perfil || null,
+        activo: sensei.activo
       })
     }
-  }, [arbitro])
+  }, [sensei])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
@@ -79,16 +99,16 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
     try {
       let response
       
-      if (arbitro) {
+      if (sensei) {
         // Actualizar
-        response = await arbitroController.updateArbitro(arbitro.id, formData)
+        response = await senseiController.updateSensei(sensei.id, formData)
       } else {
         // Crear - El servicio creará automáticamente el usuario y perfil
-        const createData: ArbitroCreate = {
-          ...formData as ArbitroCreate,
+        const createData: SenseiCreate = {
+          ...formData as SenseiCreate,
           usuario_id: 'temp-user-id' // El servicio lo reemplazará automáticamente
         }
-        response = await arbitroController.createArbitro(createData)
+        response = await senseiController.createSensei(createData)
       }
 
       if (response.success) {
@@ -99,7 +119,7 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
           }, 1000)
         }
       } else {
-        setError(response.error || 'Error al guardar el árbitro')
+        setError(response.error || 'Error al guardar el sensei')
       }
     } catch (err: any) {
       setError(err.message || 'Error inesperado')
@@ -118,12 +138,32 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
       
       {success && (
         <Alert severity="success" sx={{ mb: 2 }}>
-          {arbitro ? 'Árbitro actualizado exitosamente' : 'Árbitro creado exitosamente'}
+          {sensei ? 'Sensei actualizado exitosamente' : 'Sensei creado exitosamente'}
         </Alert>
       )}
 
       {/* Contenedor en columna para que todos los campos tengan mismo ancho y estén uno debajo del otro */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <FormControl fullWidth>
+          <InputLabel>Club</InputLabel>
+          <Select
+            name="club_id"
+            value={formData.club_id || ''}
+            onChange={handleSelectChange}
+            disabled={loading || loadingClubes}
+            label="Club"
+          >
+            <MenuItem value="">
+              <em>Sin club</em>
+            </MenuItem>
+            {clubes.map((club) => (
+              <MenuItem key={club.id} value={club.id}>
+                {club.nombre_club}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
         <TextField
           fullWidth
           label="Nombres"
@@ -158,22 +198,39 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
         />
 
         <FormControl fullWidth>
-          <InputLabel>Nivel de Arbitraje</InputLabel>
+          <InputLabel>Grado Dan</InputLabel>
           <Select
-            name="nivel_arbitraje"
-            value={formData.nivel_arbitraje || ''}
+            name="grado_dan"
+            value={formData.grado_dan || ''}
             onChange={handleSelectChange}
             disabled={loading}
-            label="Nivel de Arbitraje"
+            label="Grado Dan"
           >
             <MenuItem value="">
               <em>Sin definir</em>
             </MenuItem>
-            <MenuItem value="Regional">Regional</MenuItem>
-            <MenuItem value="Nacional">Nacional</MenuItem>
-            <MenuItem value="Internacional">Internacional</MenuItem>
+            <MenuItem value="1er Dan">1er Dan</MenuItem>
+            <MenuItem value="2do Dan">2do Dan</MenuItem>
+            <MenuItem value="3er Dan">3er Dan</MenuItem>
+            <MenuItem value="4to Dan">4to Dan</MenuItem>
+            <MenuItem value="5to Dan">5to Dan</MenuItem>
+            <MenuItem value="6to Dan">6to Dan</MenuItem>
+            <MenuItem value="7mo Dan">7mo Dan</MenuItem>
+            <MenuItem value="8vo Dan">8vo Dan</MenuItem>
+            <MenuItem value="9no Dan">9no Dan</MenuItem>
+            <MenuItem value="10mo Dan">10mo Dan</MenuItem>
           </Select>
         </FormControl>
+
+        <TextField
+          fullWidth
+          label="Especialidad"
+          name="especialidad"
+          value={formData.especialidad || ''}
+          onChange={handleChange}
+          disabled={loading}
+          placeholder="Área de especialización del sensei"
+        />
 
         {/* TODO: Agregar campo para subir foto_perfil */}
       </Box>
@@ -194,7 +251,7 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
           disabled={loading}
           startIcon={loading ? <CircularProgress size={20} /> : null}
         >
-          {loading ? 'Guardando...' : arbitro ? 'Actualizar' : 'Crear'}
+          {loading ? 'Guardando...' : sensei ? 'Actualizar' : 'Crear'}
         </Button>
       </Box>
     </Box>

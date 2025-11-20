@@ -4,12 +4,12 @@ import { useState } from 'react'
 import { Box, Button, Typography, Dialog, DialogTitle, DialogContent } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import Layout from '@/components/common/Layout'
-import ArbitroList from '@/components/arbitros/ArbitroList'
-import ArbitroForm from '@/components/arbitros/ArbitroForm'
-import { Arbitro } from '@/models/arbitro'
+import SenseiList from '@/components/senseis/SenseiList'
+import SenseiForm from '@/components/senseis/SenseiForm'
+import { Sensei } from '@/models/sensei'
 import { useRouter } from 'next/navigation'
 
-export default function ArbitrosPage() {
+export default function SenseisPage() {
   const router = useRouter()
   const [openDialog, setOpenDialog] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -19,14 +19,14 @@ export default function ArbitrosPage() {
     setRefreshTrigger(prev => prev + 1)
   }
 
-  const handleEdit = (arbitro: Arbitro) => {
-    router.push(`/arbitros/${arbitro.id}/editar`)
+  const handleEdit = (sensei: Sensei) => {
+    router.push(`/senseis/${sensei.id}/editar`)
   }
 
-  const handleDelete = async (arbitro: Arbitro) => {
-    if (confirm(`¿Estás seguro de eliminar al árbitro "${arbitro.nombres} ${arbitro.apellidos}"?`)) {
+  const handleDelete = async (sensei: Sensei) => {
+    if (confirm(`¿Estás seguro de eliminar al sensei "${sensei.nombres} ${sensei.apellidos}"?`)) {
       // TODO: Implementar eliminación
-      console.log('Eliminar árbitro:', arbitro.id)
+      console.log('Eliminar sensei:', sensei.id)
     }
   }
 
@@ -34,27 +34,27 @@ export default function ArbitrosPage() {
     <Layout>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">
-          Gestión de Árbitros
+          Gestión de Senseis
         </Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => setOpenDialog(true)}
         >
-          Nuevo Árbitro
+          Nuevo Sensei
         </Button>
       </Box>
 
-      <ArbitroList
+      <SenseiList
         onEdit={handleEdit}
         onDelete={handleDelete}
         refreshTrigger={refreshTrigger}
       />
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Registrar Nuevo Árbitro</DialogTitle>
+        <DialogTitle>Registrar Nuevo Sensei</DialogTitle>
         <DialogContent>
-          <ArbitroForm
+          <SenseiForm
             onSuccess={handleCreateSuccess}
             onCancel={() => setOpenDialog(false)}
           />
