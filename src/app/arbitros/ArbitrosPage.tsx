@@ -6,6 +6,7 @@ import AddIcon from '@mui/icons-material/Add'
 import Layout from '@/components/common/Layout'
 import ArbitroList from '@/components/arbitros/ArbitroList'
 import ArbitroForm from '@/components/arbitros/ArbitroForm'
+import SearchBar from '@/components/common/SearchBar'
 import { Arbitro } from '@/models/arbitro'
 import { useRouter } from 'next/navigation'
 
@@ -13,6 +14,7 @@ export default function ArbitrosPage() {
   const router = useRouter()
   const [openDialog, setOpenDialog] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const handleCreateSuccess = () => {
     setOpenDialog(false)
@@ -45,10 +47,16 @@ export default function ArbitrosPage() {
         </Button>
       </Box>
 
+      <SearchBar
+        placeholder="Buscar por nombre, apellido o nivel de arbitraje..."
+        onSearch={setSearchTerm}
+      />
+
       <ArbitroList
         onEdit={handleEdit}
         onDelete={handleDelete}
         refreshTrigger={refreshTrigger}
+        searchTerm={searchTerm}
       />
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>

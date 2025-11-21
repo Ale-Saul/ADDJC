@@ -6,6 +6,7 @@ import AddIcon from '@mui/icons-material/Add'
 import Layout from '@/components/common/Layout'
 import SenseiList from '@/components/senseis/SenseiList'
 import SenseiForm from '@/components/senseis/SenseiForm'
+import SearchBar from '@/components/common/SearchBar'
 import { Sensei } from '@/models/sensei'
 import { useRouter } from 'next/navigation'
 
@@ -13,6 +14,7 @@ export default function SenseisPage() {
   const router = useRouter()
   const [openDialog, setOpenDialog] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const handleCreateSuccess = () => {
     setOpenDialog(false)
@@ -45,10 +47,16 @@ export default function SenseisPage() {
         </Button>
       </Box>
 
+      <SearchBar
+        placeholder="Buscar por nombre, apellido, grado dan o especialidad..."
+        onSearch={setSearchTerm}
+      />
+
       <SenseiList
         onEdit={handleEdit}
         onDelete={handleDelete}
         refreshTrigger={refreshTrigger}
+        searchTerm={searchTerm}
       />
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>

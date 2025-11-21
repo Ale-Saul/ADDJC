@@ -6,6 +6,7 @@ import AddIcon from '@mui/icons-material/Add'
 import Layout from '@/components/common/Layout'
 import JudokaList from '@/components/judokas/JudokaList'
 import JudokaForm from '@/components/judokas/JudokaForm'
+import SearchBar from '@/components/common/SearchBar'
 import { Judoka } from '@/models/judoka'
 import { useRouter } from 'next/navigation'
 
@@ -13,6 +14,7 @@ export default function JudokasPage() {
   const router = useRouter()
   const [openDialog, setOpenDialog] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const handleCreateSuccess = () => {
     setOpenDialog(false)
@@ -45,10 +47,16 @@ export default function JudokasPage() {
         </Button>
       </Box>
 
+      <SearchBar
+        placeholder="Buscar por nombre, apellido, categoría o cinturón..."
+        onSearch={setSearchTerm}
+      />
+
       <JudokaList
         onEdit={handleEdit}
         onDelete={handleDelete}
         refreshTrigger={refreshTrigger}
+        searchTerm={searchTerm}
       />
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>

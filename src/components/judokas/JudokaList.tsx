@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Table,
   TableBody,
@@ -20,6 +20,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import { Judoka } from '@/models/judoka'
 import { judokaController } from '@/controllers/judokaController'
+import Pagination from '@/components/common/Pagination'
 
 interface JudokaListProps {
   onEdit?: (judoka: Judoka) => void
@@ -27,12 +28,16 @@ interface JudokaListProps {
   refreshTrigger?: number
   clubId?: string // Opcional: filtrar por club
   entrenadorId?: string // Opcional: filtrar por entrenador
+  searchTerm?: string
+  itemsPerPage?: number
 }
 
-export default function JudokaList({ onEdit, onDelete, refreshTrigger, clubId, entrenadorId }: JudokaListProps) {
+export default function JudokaList({ onEdit, onDelete, refreshTrigger, clubId, entrenadorId, searchTerm = '', itemsPerPage: initialItemsPerPage = 10 }: JudokaListProps) {
   const [judokas, setJudokas] = useState<Judoka[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(initialItemsPerPage)
 
   const loadJudokas = async () => {
     setLoading(true)
@@ -60,6 +65,36 @@ export default function JudokaList({ onEdit, onDelete, refreshTrigger, clubId, e
     loadJudokas()
   }, [refreshTrigger, clubId, entrenadorId])
 
+  // Resetear a página 1 cuando cambia el término de búsqueda
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm])
+
+  // Filtrar judokas según el término de búsqueda
+  const filteredJudokas = useMemo(() => {
+    if (!searchTerm) return judokas
+    const search = searchTerm.toLowerCase()
+    return judokas.filter((judoka) => (
+      judoka.nombres?.toLowerCase().includes(search) ||
+      judoka.apellidos?.toLowerCase().includes(search) ||
+      judoka.categoria?.toLowerCase().includes(search) ||
+      judoka.cinturon_actual?.toLowerCase().includes(search)
+    ))
+  }, [judokas, searchTerm])
+
+  // Calcular paginación
+  const totalPages = Math.max(1, Math.ceil(filteredJudokas.length / itemsPerPage))
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedJudokas = filteredJudokas.slice(startIndex, endIndex)
+  
+  // Asegurar que currentPage no exceda totalPages
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1)
+    }
+  }, [totalPages, currentPage])
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
@@ -86,62 +121,80 @@ export default function JudokaList({ onEdit, onDelete, refreshTrigger, clubId, e
     )
   }
 
+  if (filteredJudokas.length === 0 && searchTerm) {
+    return (
+      <Box textAlign="center" py={4}>
+        <Typography variant="h6" color="text.secondary">
+          No se encontraron judokas que coincidan con "{searchTerm}"
+        </Typography>
+      </Box>
+    )
+  }
+
   return (
-    <TableContainer component={Paper}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell><strong>Nombres</strong></TableCell>
-            <TableCell><strong>Apellidos</strong></TableCell>
-            <TableCell><strong>Categoría</strong></TableCell>
-            <TableCell><strong>Cinturón</strong></TableCell>
-            <TableCell><strong>Peso (kg)</strong></TableCell>
-            <TableCell><strong>Estado</strong></TableCell>
-            <TableCell align="right"><strong>Acciones</strong></TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {judokas.map((judoka) => (
-            <TableRow key={judoka.id} hover>
-              <TableCell>{judoka.nombres}</TableCell>
-              <TableCell>{judoka.apellidos}</TableCell>
-              <TableCell>{judoka.categoria || '-'}</TableCell>
-              <TableCell>{judoka.cinturon_actual || '-'}</TableCell>
-              <TableCell>{judoka.peso_competitivo ? `${judoka.peso_competitivo} kg` : '-'}</TableCell>
-              <TableCell>
-                <Chip 
-                  label={judoka.activo ? 'Activo' : 'Inactivo'} 
-                  color={judoka.activo ? 'success' : 'default'}
-                  size="small"
-                />
-              </TableCell>
-              <TableCell align="right">
-                {onEdit && (
-                  <IconButton 
-                    size="small" 
-                    color="primary" 
-                    onClick={() => onEdit(judoka)}
-                    title="Editar"
-                  >
-                    <EditIcon />
-                  </IconButton>
-                )}
-                {onDelete && (
-                  <IconButton 
-                    size="small" 
-                    color="error" 
-                    onClick={() => onDelete(judoka)}
-                    title="Eliminar"
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                )}
-              </TableCell>
+    <>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell><strong>Nombres</strong></TableCell>
+              <TableCell><strong>Apellidos</strong></TableCell>
+              <TableCell><strong>Categoría</strong></TableCell>
+              <TableCell><strong>Cinturón</strong></TableCell>
+              <TableCell><strong>Estado</strong></TableCell>
+              <TableCell align="right"><strong>Acciones</strong></TableCell>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+          </TableHead>
+          <TableBody>
+            {paginatedJudokas.map((judoka) => (
+              <TableRow key={judoka.id} hover>
+                <TableCell>{judoka.nombres}</TableCell>
+                <TableCell>{judoka.apellidos}</TableCell>
+                <TableCell>{judoka.categoria || '-'}</TableCell>
+                <TableCell>{judoka.cinturon_actual || '-'}</TableCell>
+                <TableCell>
+                  <Chip 
+                    label={judoka.activo ? 'Activo' : 'Inactivo'} 
+                    color={judoka.activo ? 'success' : 'default'}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell align="right">
+                  {onEdit && (
+                    <IconButton 
+                      size="small" 
+                      color="primary" 
+                      onClick={() => onEdit(judoka)}
+                      title="Editar"
+                    >
+                      <EditIcon />
+                    </IconButton>
+                  )}
+                  {onDelete && (
+                    <IconButton 
+                      size="small" 
+                      color="error" 
+                      onClick={() => onDelete(judoka)}
+                      title="Eliminar"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={filteredJudokas.length}
+        itemsPerPage={itemsPerPage}
+        onPageChange={setCurrentPage}
+        onItemsPerPageChange={setItemsPerPage}
+      />
+    </>
   )
 }
 
