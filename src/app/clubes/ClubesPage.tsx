@@ -4,8 +4,10 @@ import { useState } from 'react'
 import { Box, Button, Typography, Dialog, DialogTitle, DialogContent } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import Layout from '@/components/common/Layout'
+import ProtectedRoute from '@/components/common/ProtectedRoute'
 import ClubList from '@/components/clubes/ClubList'
 import ClubForm from '@/components/clubes/ClubForm'
+import SearchBar from '@/components/common/SearchBar'
 import { Club } from '@/models/club'
 import { useRouter } from 'next/navigation'
 
@@ -13,6 +15,7 @@ export default function ClubesPage() {
   const router = useRouter()
   const [openDialog, setOpenDialog] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const handleCreateSuccess = () => {
     setOpenDialog(false)
@@ -31,7 +34,8 @@ export default function ClubesPage() {
   }
 
   return (
-    <Layout>
+    <ProtectedRoute allowedRoles={['asociacion']}>
+      <Layout>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">
           Gestión de Clubes
@@ -45,10 +49,16 @@ export default function ClubesPage() {
         </Button>
       </Box>
 
+      <SearchBar
+        placeholder="Buscar por nombre, municipio, dirección o teléfono..."
+        onSearch={setSearchTerm}
+      />
+
       <ClubList
         onEdit={handleEdit}
         onDelete={handleDelete}
         refreshTrigger={refreshTrigger}
+        searchTerm={searchTerm}
       />
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
@@ -61,6 +71,7 @@ export default function ClubesPage() {
         </DialogContent>
       </Dialog>
     </Layout>
+    </ProtectedRoute>
   )
 }
 

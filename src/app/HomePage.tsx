@@ -3,13 +3,15 @@
 import { Box, Typography, Button } from '@mui/material'
 import SportsKabaddiIcon from '@mui/icons-material/SportsKabaddi'
 import Layout from '@/components/common/Layout'
+import ProtectedRoute from '@/components/common/ProtectedRoute'
 import { useRouter } from 'next/navigation'
 
 export default function HomePage() {
   const router = useRouter()
 
   return (
-    <Layout>
+    <ProtectedRoute>
+      <Layout>
       <Box textAlign="center" py={8}>
         <SportsKabaddiIcon sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
         <Typography variant="h3" component="h1" gutterBottom fontWeight="bold">
@@ -30,6 +32,7 @@ export default function HomePage() {
         </Box>
       </Box>
     </Layout>
+    </ProtectedRoute>
   )
 }
 

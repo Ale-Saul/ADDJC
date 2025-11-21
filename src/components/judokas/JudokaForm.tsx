@@ -102,7 +102,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: value === '' ? null : (name === 'peso_competitivo' ? parseFloat(value) || null : value)
+      [name]: value === '' ? null : value
     }))
     setError(null)
     setSuccess(false)
@@ -294,17 +294,6 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
             <MenuItem value="Negro">Negro</MenuItem>
           </Select>
         </FormControl>
-
-        <TextField
-          fullWidth
-          label="Peso Competitivo (kg)"
-          name="peso_competitivo"
-          type="number"
-          value={formData.peso_competitivo || ''}
-          onChange={handleChange}
-          disabled={loading}
-          inputProps={{ min: 0, max: 300, step: 0.1 }}
-        />
 
         {/* TODO: Agregar campo para subir foto_perfil */}
       </Box>

@@ -12,7 +12,10 @@ import {
   Box,
   Typography,
   Divider,
-  useTheme
+  useTheme,
+  Button,
+  Avatar,
+  Chip
 } from '@mui/material'
 import { useRouter, usePathname } from 'next/navigation'
 import HomeIcon from '@mui/icons-material/Home'
@@ -23,6 +26,8 @@ import SportsKabaddiIcon from '@mui/icons-material/SportsKabaddi'
 import SchoolIcon from '@mui/icons-material/School'
 import GavelIcon from '@mui/icons-material/Gavel'
 import BusinessIcon from '@mui/icons-material/Business'
+import LogoutIcon from '@mui/icons-material/Logout'
+import { useAuth } from '@/contexts/AuthContext'
 
 const DRAWER_WIDTH = 280
 
@@ -30,6 +35,7 @@ export default function Sidebar() {
   const router = useRouter()
   const pathname = usePathname()
   const theme = useTheme()
+  const { user, signOut } = useAuth()
   const [openAfiliados, setOpenAfiliados] = useState(false)
   const [mounted, setMounted] = useState(false)
 
@@ -41,6 +47,21 @@ export default function Sidebar() {
 
   const handleAfiliadosClick = () => {
     setOpenAfiliados(!openAfiliados)
+  }
+
+  const handleLogout = async () => {
+    await signOut()
+    router.push('/login')
+  }
+
+  const getRoleLabel = (rol?: string) => {
+    const roles: Record<string, string> = {
+      asociacion: 'Asociación',
+      sensei: 'Sensei',
+      arbitro: 'Árbitro',
+      judoka: 'Judoka'
+    }
+    return roles[rol || ''] || rol || 'Usuario'
   }
 
   const isActive = (path: string) => {
@@ -208,6 +229,40 @@ export default function Sidebar() {
           </List>
         </Collapse>
       </List>
+
+      {/* Información del usuario y logout */}
+      <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}`, flexShrink: 0 }}>
+        {user && (
+          <>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+              <Avatar sx={{ width: 32, height: 32, mr: 1, bgcolor: theme.palette.primary.main }}>
+                {user.nombres.charAt(0).toUpperCase()}
+              </Avatar>
+              <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user.nombres} {user.apellidos}
+                </Typography>
+                <Chip 
+                  label={getRoleLabel(user.rol)} 
+                  size="small" 
+                  sx={{ height: 18, fontSize: '0.65rem', mt: 0.5 }}
+                  color={user.rol === 'asociacion' ? 'primary' : 'default'}
+                />
+              </Box>
+            </Box>
+            <Button
+              fullWidth
+              variant="outlined"
+              size="small"
+              startIcon={<LogoutIcon />}
+              onClick={handleLogout}
+              sx={{ mt: 1 }}
+            >
+              Cerrar Sesión
+            </Button>
+          </>
+        )}
+      </Box>
     </Box>
   )
 
