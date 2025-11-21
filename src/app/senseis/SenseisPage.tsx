@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Box, Button, Typography, Dialog, DialogTitle, DialogContent } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import Layout from '@/components/common/Layout'
+import ProtectedRoute from '@/components/common/ProtectedRoute'
 import SenseiList from '@/components/senseis/SenseiList'
 import SenseiForm from '@/components/senseis/SenseiForm'
 import SearchBar from '@/components/common/SearchBar'
@@ -33,7 +34,8 @@ export default function SenseisPage() {
   }
 
   return (
-    <Layout>
+    <ProtectedRoute allowedRoles={['asociacion', 'sensei']}>
+      <Layout>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">
           Gestión de Senseis
@@ -69,6 +71,7 @@ export default function SenseisPage() {
         </DialogContent>
       </Dialog>
     </Layout>
+    </ProtectedRoute>
   )
 }
 

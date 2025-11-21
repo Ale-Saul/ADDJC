@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Box, Button, Typography, Dialog, DialogTitle, DialogContent } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import Layout from '@/components/common/Layout'
+import ProtectedRoute from '@/components/common/ProtectedRoute'
 import JudokaList from '@/components/judokas/JudokaList'
 import JudokaForm from '@/components/judokas/JudokaForm'
 import SearchBar from '@/components/common/SearchBar'
@@ -33,7 +34,8 @@ export default function JudokasPage() {
   }
 
   return (
-    <Layout>
+    <ProtectedRoute allowedRoles={['asociacion', 'sensei', 'judoka']}>
+      <Layout>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">
           Gestión de Judokas
@@ -69,6 +71,7 @@ export default function JudokasPage() {
         </DialogContent>
       </Dialog>
     </Layout>
+    </ProtectedRoute>
   )
 }
 
