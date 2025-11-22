@@ -204,16 +204,80 @@ export const senseiService = {
 
   /**
    * Eliminar un sensei (soft delete - marca como inactivo)
+   * También limpia las referencias en otras tablas (clubes, judokas)
    */
   async delete(id: string): Promise<ApiResponse<void>> {
     try {
       const client = getSupabaseClient()
-      const { error } = await client
+      
+      // Primero obtener el sensei para conocer su usuario_id
+      const { data: sensei, error: getError } = await client
+        .from('senseis')
+        .select('id, usuario_id')
+        .eq('id', id)
+        .single()
+
+      if (getError) throw getError
+      if (!sensei) {
+        return { success: false, error: 'Sensei no encontrado' }
+      }
+
+      // Actualizar el sensei como inactivo
+      const { error: updateError } = await client
         .from('senseis')
         .update({ activo: false })
         .eq('id', id)
 
-      if (error) throw error
+      if (updateError) throw updateError
+
+      // Limpiar referencias en otras tablas
+      // 1. Limpiar director_tecnico_id en clubes (referencia al usuario_id)
+      if (sensei.usuario_id) {
+        const { error: clubesError } = await client
+          .from('clubes')
+          .update({ director_tecnico_id: null })
+          .eq('director_tecnico_id', sensei.usuario_id)
+
+        if (clubesError) {
+          console.warn('Error al limpiar referencias en clubes:', clubesError)
+          // No fallar la eliminación por esto, solo registrar el warning
+        }
+      }
+
+      // 2. Limpiar entrenador_id en judokas (referencia al id del sensei)
+      const { error: judokasError } = await client
+        .from('judokas')
+        .update({ entrenador_id: null })
+        .eq('entrenador_id', id)
+
+      if (judokasError) {
+        console.warn('Error al limpiar referencias en judokas:', judokasError)
+        // No fallar la eliminación por esto, solo registrar el warning
+      }
+
+      // 3. Deshabilitar/eliminar el usuario en auth.users para que el email se pueda reutilizar
+      if (sensei.usuario_id) {
+        try {
+          const response = await fetch('/api/admin/disable-user', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId: sensei.usuario_id,
+            }),
+          })
+
+          const result = await response.json()
+          if (!result.success) {
+            console.warn('Error al deshabilitar usuario en auth.users:', result.error)
+            // No fallar la eliminación por esto, solo registrar el warning
+          }
+        } catch (error) {
+          console.warn('Error al llamar API para deshabilitar usuario:', error)
+          // No fallar la eliminación por esto, solo registrar el warning
+        }
+      }
 
       return { success: true }
     } catch (error) {

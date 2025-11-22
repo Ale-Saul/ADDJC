@@ -167,16 +167,55 @@ export const arbitroService = {
 
   /**
    * Eliminar un árbitro (soft delete - marca como inactivo)
+   * También elimina el usuario en auth.users para que el email se pueda reutilizar
    */
   async delete(id: string): Promise<ApiResponse<void>> {
     try {
       const client = getSupabaseClient()
-      const { error } = await client
+      
+      // Primero obtener el árbitro para conocer su usuario_id
+      const { data: arbitro, error: getError } = await client
+        .from('arbitros')
+        .select('id, usuario_id')
+        .eq('id', id)
+        .single()
+
+      if (getError) throw getError
+      if (!arbitro) {
+        return { success: false, error: 'Árbitro no encontrado' }
+      }
+
+      // Marcar el árbitro como inactivo
+      const { error: updateError } = await client
         .from('arbitros')
         .update({ activo: false })
         .eq('id', id)
 
-      if (error) throw error
+      if (updateError) throw updateError
+
+      // Deshabilitar/eliminar el usuario en auth.users para que el email se pueda reutilizar
+      if (arbitro.usuario_id) {
+        try {
+          const response = await fetch('/api/admin/disable-user', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId: arbitro.usuario_id,
+            }),
+          })
+
+          const result = await response.json()
+          if (!result.success) {
+            console.warn('Error al deshabilitar usuario en auth.users:', result.error)
+            // No fallar la eliminación por esto, solo registrar el warning
+          }
+        } catch (error) {
+          console.warn('Error al llamar API para deshabilitar usuario:', error)
+          // No fallar la eliminación por esto, solo registrar el warning
+        }
+      }
 
       return { success: true }
     } catch (error) {
