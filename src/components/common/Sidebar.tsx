@@ -69,11 +69,18 @@ export default function Sidebar() {
     return pathname === path || pathname?.startsWith(path + '/')
   }
 
+  // Función para verificar si el usuario tiene acceso a una ruta
+  const hasAccess = (allowedRoles: string[]) => {
+    if (!user) return false
+    return allowedRoles.includes(user.rol)
+  }
+
   const menuItems = [
     {
       label: 'Inicio',
       path: '/',
-      icon: <HomeIcon />
+      icon: <HomeIcon />,
+      allowedRoles: ['asociacion', 'sensei', 'encargado', 'arbitro', 'judoka'] // Todos los roles
     }
   ]
 
@@ -81,24 +88,37 @@ export default function Sidebar() {
     {
       label: 'Clubes',
       path: '/clubes',
-      icon: <BusinessIcon />
+      icon: <BusinessIcon />,
+      allowedRoles: ['asociacion'] // Solo asociación
     },
     {
       label: 'Árbitros',
       path: '/arbitros',
-      icon: <GavelIcon />
+      icon: <GavelIcon />,
+      allowedRoles: ['asociacion', 'arbitro'] // Asociación y árbitros
     },
     {
       label: 'Senseis',
       path: '/senseis',
-      icon: <SchoolIcon />
+      icon: <SchoolIcon />,
+      allowedRoles: ['asociacion', 'sensei', 'encargado'] // Asociación, senseis y encargados
     },
     {
       label: 'Judokas',
       path: '/judokas',
-      icon: <SportsKabaddiIcon />
+      icon: <SportsKabaddiIcon />,
+      allowedRoles: ['asociacion', 'sensei', 'judoka', 'encargado'] // Todos excepto árbitros
     }
   ]
+
+  // Filtrar items del menú según los permisos del usuario
+  const visibleMenuItems = menuItems.filter(item => hasAccess(item.allowedRoles))
+  
+  // Filtrar items de afiliados según los permisos del usuario
+  const visibleAfiliadosItems = afiliadosItems.filter(item => hasAccess(item.allowedRoles))
+  
+  // Solo mostrar el menú "Afiliados" si hay al menos un item visible
+  const showAfiliadosMenu = visibleAfiliadosItems.length > 0
 
   // Evitar renderizar hasta que esté montado en el cliente
   if (!mounted) {
@@ -132,7 +152,7 @@ export default function Sidebar() {
       <Divider />
       <List sx={{ pt: 0.5, flexGrow: 1, overflowY: 'auto', overflowX: 'hidden' }}>
         {/* Inicio */}
-        {menuItems.map((item) => (
+        {visibleMenuItems.map((item) => (
           <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
             <ListItemButton
               selected={isActive(item.path)}
@@ -166,34 +186,37 @@ export default function Sidebar() {
           </ListItem>
         ))}
 
-        <Divider sx={{ my: 0.5 }} />
+        {/* Mostrar menú Afiliados solo si hay items visibles */}
+        {showAfiliadosMenu && (
+          <>
+            <Divider sx={{ my: 0.5 }} />
 
-        {/* Afiliados - Menú colapsable */}
-        <ListItem disablePadding sx={{ mb: 0.5 }}>
-          <ListItemButton 
-            onClick={handleAfiliadosClick}
-            sx={{ 
-              py: 1, 
-              minHeight: 40,
-              '&:hover': {
-                backgroundColor: 'rgba(0, 0, 0, 0.08)'
-              }
-            }}
-          >
-            <ListItemIcon sx={{ minWidth: 36 }}>
-              <GroupsIcon />
-            </ListItemIcon>
-            <ListItemText 
-              primary="Afiliados" 
-              primaryTypographyProps={{ fontSize: '0.9rem' }}
-            />
-            {openAfiliados ? <ExpandLess /> : <ExpandMore />}
-          </ListItemButton>
-        </ListItem>
+            {/* Afiliados - Menú colapsable */}
+            <ListItem disablePadding sx={{ mb: 0.5 }}>
+              <ListItemButton 
+                onClick={handleAfiliadosClick}
+                sx={{ 
+                  py: 1, 
+                  minHeight: 40,
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.08)'
+                  }
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 36 }}>
+                  <GroupsIcon />
+                </ListItemIcon>
+                <ListItemText 
+                  primary="Afiliados" 
+                  primaryTypographyProps={{ fontSize: '0.9rem' }}
+                />
+                {openAfiliados ? <ExpandLess /> : <ExpandMore />}
+              </ListItemButton>
+            </ListItem>
 
-        <Collapse in={openAfiliados} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            {afiliadosItems.map((item) => (
+            <Collapse in={openAfiliados} timeout="auto" unmountOnExit>
+              <List component="div" disablePadding>
+                {visibleAfiliadosItems.map((item) => (
               <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
                 <ListItemButton
                   selected={isActive(item.path)}
@@ -225,10 +248,12 @@ export default function Sidebar() {
                     primaryTypographyProps={{ fontSize: '0.85rem' }}
                   />
                 </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-        </Collapse>
+                </ListItem>
+                ))}
+              </List>
+            </Collapse>
+          </>
+        )}
       </List>
 
       {/* Información del usuario y logout */}
