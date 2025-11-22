@@ -9,6 +9,7 @@ import ClubList from '@/components/clubes/ClubList'
 import ClubForm from '@/components/clubes/ClubForm'
 import SearchBar from '@/components/common/SearchBar'
 import { Club } from '@/models/club'
+import { clubController } from '@/controllers/clubController'
 import { useRouter } from 'next/navigation'
 
 export default function ClubesPage() {
@@ -28,8 +29,18 @@ export default function ClubesPage() {
 
   const handleDelete = async (club: Club) => {
     if (confirm(`¿Estás seguro de eliminar el club "${club.nombre_club}"?`)) {
-      // TODO: Implementar eliminación
-      console.log('Eliminar club:', club.id)
+      try {
+        const response = await clubController.deleteClub(club.id)
+        if (response.success) {
+          setRefreshTrigger(prev => prev + 1)
+          alert('Club eliminado exitosamente')
+        } else {
+          alert(`Error al eliminar club: ${response.error}`)
+        }
+      } catch (error) {
+        console.error('Error al eliminar club:', error)
+        alert('Error inesperado al eliminar club')
+      }
     }
   }
 

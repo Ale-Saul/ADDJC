@@ -9,6 +9,7 @@ import ArbitroList from '@/components/arbitros/ArbitroList'
 import ArbitroForm from '@/components/arbitros/ArbitroForm'
 import SearchBar from '@/components/common/SearchBar'
 import { Arbitro } from '@/models/arbitro'
+import { arbitroController } from '@/controllers/arbitroController'
 import { useRouter } from 'next/navigation'
 
 export default function ArbitrosPage() {
@@ -28,8 +29,18 @@ export default function ArbitrosPage() {
 
   const handleDelete = async (arbitro: Arbitro) => {
     if (confirm(`¿Estás seguro de eliminar al árbitro "${arbitro.nombres} ${arbitro.apellidos}"?`)) {
-      // TODO: Implementar eliminación
-      console.log('Eliminar árbitro:', arbitro.id)
+      try {
+        const response = await arbitroController.deleteArbitro(arbitro.id)
+        if (response.success) {
+          setRefreshTrigger(prev => prev + 1)
+          alert('Árbitro eliminado exitosamente')
+        } else {
+          alert(`Error al eliminar árbitro: ${response.error}`)
+        }
+      } catch (error) {
+        console.error('Error al eliminar árbitro:', error)
+        alert('Error inesperado al eliminar árbitro')
+      }
     }
   }
 

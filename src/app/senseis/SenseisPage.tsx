@@ -9,6 +9,7 @@ import SenseiList from '@/components/senseis/SenseiList'
 import SenseiForm from '@/components/senseis/SenseiForm'
 import SearchBar from '@/components/common/SearchBar'
 import { Sensei } from '@/models/sensei'
+import { senseiController } from '@/controllers/senseiController'
 import { useRouter } from 'next/navigation'
 
 export default function SenseisPage() {
@@ -28,13 +29,23 @@ export default function SenseisPage() {
 
   const handleDelete = async (sensei: Sensei) => {
     if (confirm(`¿Estás seguro de eliminar al sensei "${sensei.nombres} ${sensei.apellidos}"?`)) {
-      // TODO: Implementar eliminación
-      console.log('Eliminar sensei:', sensei.id)
+      try {
+        const response = await senseiController.deleteSensei(sensei.id)
+        if (response.success) {
+          setRefreshTrigger(prev => prev + 1)
+          alert('Sensei eliminado exitosamente')
+        } else {
+          alert(`Error al eliminar sensei: ${response.error}`)
+        }
+      } catch (error) {
+        console.error('Error al eliminar sensei:', error)
+        alert('Error inesperado al eliminar sensei')
+      }
     }
   }
 
   return (
-    <ProtectedRoute allowedRoles={['asociacion', 'sensei']}>
+    <ProtectedRoute allowedRoles={['asociacion', 'sensei', 'encargado']}>
       <Layout>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">

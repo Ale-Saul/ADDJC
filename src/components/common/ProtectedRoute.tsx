@@ -1,14 +1,14 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Box, CircularProgress, Typography } from '@mui/material'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
-  requiredRole?: 'asociacion' | 'sensei' | 'arbitro' | 'judoka'
-  allowedRoles?: ('asociacion' | 'sensei' | 'arbitro' | 'judoka')[]
+  requiredRole?: 'asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka'
+  allowedRoles?: ('asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka')[]
 }
 
 export default function ProtectedRoute({
@@ -18,9 +18,15 @@ export default function ProtectedRoute({
 }: ProtectedRouteProps) {
   const router = useRouter()
   const { user, loading, isAuthenticated } = useAuth()
+  const [mounted, setMounted] = useState(false)
+
+  // Evitar problemas de hidratación - solo renderizar en el cliente
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
-    if (!loading) {
+    if (mounted && !loading) {
       if (!isAuthenticated) {
         router.push('/login')
         return
@@ -38,7 +44,27 @@ export default function ProtectedRoute({
         return
       }
     }
-  }, [loading, isAuthenticated, user, requiredRole, allowedRoles, router])
+  }, [mounted, loading, isAuthenticated, user, requiredRole, allowedRoles, router])
+
+  // No renderizar nada hasta que esté montado en el cliente
+  if (!mounted) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+        }}
+      >
+        <CircularProgress />
+        <Typography variant="body2" sx={{ mt: 2 }}>
+          Cargando...
+        </Typography>
+      </Box>
+    )
+  }
 
   // Mostrar loading mientras se verifica la autenticación
   if (loading) {
