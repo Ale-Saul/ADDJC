@@ -27,6 +27,7 @@ import SchoolIcon from '@mui/icons-material/School'
 import GavelIcon from '@mui/icons-material/Gavel'
 import BusinessIcon from '@mui/icons-material/Business'
 import LogoutIcon from '@mui/icons-material/Logout'
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
 import { useAuth } from '@/contexts/AuthContext'
 
 const DRAWER_WIDTH = 280
@@ -81,6 +82,12 @@ export default function Sidebar() {
       path: '/',
       icon: <HomeIcon />,
       allowedRoles: ['asociacion', 'sensei', 'encargado', 'arbitro', 'judoka'] // Todos los roles
+    },
+    {
+      label: 'Miembros de la Asociación',
+      path: '/asociacion',
+      icon: <AdminPanelSettingsIcon />,
+      allowedRoles: ['asociacion'] // Solo asociación
     }
   ]
 

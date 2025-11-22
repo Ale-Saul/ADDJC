@@ -25,13 +25,19 @@ export default function LoginPage() {
   })
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Evitar problemas de hidratación
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Redirigir si ya está autenticado
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
+    if (mounted && !authLoading && isAuthenticated) {
       router.push('/')
     }
-  }, [isAuthenticated, authLoading, router])
+  }, [mounted, isAuthenticated, authLoading, router])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -62,6 +68,22 @@ export default function LoginPage() {
     }
   }
 
+  // No renderizar hasta que esté montado en el cliente
+  if (!mounted) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    )
+  }
+
   // Mostrar loading mientras se verifica la autenticación
   if (authLoading) {
     return (
@@ -85,13 +107,13 @@ export default function LoginPage() {
 
   return (
     <Box
+      suppressHydrationWarning
       sx={{
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         minHeight: '100vh',
-        backgroundColor: (theme) =>
-          theme.palette.mode === 'light' ? '#f5f5f5' : theme.palette.background.default,
+        backgroundColor: '#f5f5f5',
       }}
     >
       <Container maxWidth="sm">
