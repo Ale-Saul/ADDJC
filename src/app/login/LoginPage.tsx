@@ -68,26 +68,16 @@ export default function LoginPage() {
     }
   }
 
-  // No renderizar hasta que esté montado en el cliente
+  // No renderizar Material UI hasta que esté montado en el cliente (evitar hidratación)
   if (!mounted) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-        }}
-      >
-        <CircularProgress />
-      </Box>
-    )
+    return null
   }
 
   // Mostrar loading mientras se verifica la autenticación
   if (authLoading) {
     return (
       <Box
+        suppressHydrationWarning
         sx={{
           display: 'flex',
           justifyContent: 'center',
