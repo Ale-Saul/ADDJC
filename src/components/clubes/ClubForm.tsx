@@ -36,6 +36,8 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
   const [senseis, setSenseis] = useState<Sensei[]>([])
   const [newDirectorNombres, setNewDirectorNombres] = useState('')
   const [newDirectorApellidos, setNewDirectorApellidos] = useState('')
+  const [newDirectorEmail, setNewDirectorEmail] = useState('')
+  const [newDirectorPassword, setNewDirectorPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadingSenseis, setLoadingSenseis] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -66,6 +68,8 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
       // Al editar un club no usamos los campos de nuevo director
       setNewDirectorNombres('')
       setNewDirectorApellidos('')
+      setNewDirectorEmail('')
+      setNewDirectorPassword('')
     }
   }, [club])
 
@@ -102,17 +106,27 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
       let createdSenseiId: string | null = null
 
       // Si estamos creando un club y no hay director seleccionado,
-      // pero sí se ingresó nombre y apellido, crear automáticamente un Sensei
+      // pero sí se ingresó nombre y apellido, crear automáticamente un Sensei como Encargado
       if (
         !club &&
         !directorTecnicoId &&
         newDirectorNombres.trim() !== '' &&
         newDirectorApellidos.trim() !== ''
       ) {
+        // Validar email y password para el nuevo director técnico
+        if (!newDirectorEmail.trim() || !newDirectorPassword.trim()) {
+          setError('Email y contraseña son requeridos para crear un nuevo Director Técnico')
+          setLoading(false)
+          return
+        }
+
         const senseiToCreate: SenseiCreate = {
           usuario_id: 'temp-user-id', // el servicio creará el usuario real
           nombres: newDirectorNombres.trim(),
           apellidos: newDirectorApellidos.trim(),
+          email: newDirectorEmail.trim(),
+          password: newDirectorPassword.trim(),
+          isEncargado: true, // Marcar como encargado para asignar el rol correcto
           activo: true
           // No asignamos club_id aquí porque el club aún no existe
         }
@@ -257,8 +271,8 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
 
         {!club && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Box sx={{ fontSize: 14, color: 'text.secondary' }}>
-              O crea un nuevo director técnico (se registrará como sensei automáticamente):
+            <Box sx={{ fontSize: 14, color: 'text.secondary', mb: 1 }}>
+              O crea un nuevo director técnico (se registrará como encargado automáticamente):
             </Box>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <TextField
@@ -284,6 +298,37 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                   setSuccess(false)
                 }}
                 disabled={loading}
+              />
+              <TextField
+                fullWidth
+                label="Email del Director Técnico"
+                name="nuevo_director_email"
+                type="email"
+                value={newDirectorEmail}
+                onChange={(e) => {
+                  setNewDirectorEmail(e.target.value)
+                  setError(null)
+                  setSuccess(false)
+                }}
+                disabled={loading}
+                required={newDirectorNombres.trim() !== '' || newDirectorApellidos.trim() !== ''}
+                helperText="Email para iniciar sesión en el sistema"
+              />
+              <TextField
+                fullWidth
+                label="Contraseña del Director Técnico"
+                name="nuevo_director_password"
+                type="password"
+                value={newDirectorPassword}
+                onChange={(e) => {
+                  setNewDirectorPassword(e.target.value)
+                  setError(null)
+                  setSuccess(false)
+                }}
+                disabled={loading}
+                required={newDirectorNombres.trim() !== '' || newDirectorApellidos.trim() !== ''}
+                helperText="Mínimo 8 caracteres"
+                inputProps={{ minLength: 8 }}
               />
             </Box>
           </Box>

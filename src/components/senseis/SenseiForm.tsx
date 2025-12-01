@@ -30,11 +30,14 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
     club_id: null,
     nombres: '',
     apellidos: '',
+    email: '',
+    password: '',
     fecha_nacimiento: null,
     grado_dan: '',
     especialidad: '',
     foto_perfil: null,
-    activo: true
+    activo: true,
+    isEncargado: false
   })
   const [clubes, setClubes] = useState<Club[]>([])
   const [loading, setLoading] = useState(false)
@@ -104,9 +107,18 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
         response = await senseiController.updateSensei(sensei.id, formData)
       } else {
         // Crear - El servicio creará automáticamente el usuario y perfil
+        // Validar email y password si se está creando un nuevo sensei
+        if (!formData.email || !formData.password) {
+          setError('Email y contraseña son requeridos para crear un nuevo sensei')
+          setLoading(false)
+          return
+        }
+
         const createData: SenseiCreate = {
           ...formData as SenseiCreate,
-          usuario_id: 'temp-user-id' // El servicio lo reemplazará automáticamente
+          usuario_id: 'temp-user-id', // El servicio lo reemplazará automáticamente
+          email: formData.email,
+          password: formData.password
         }
         response = await senseiController.createSensei(createData)
       }
@@ -183,6 +195,35 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
           required
           disabled={loading}
         />
+
+        {!sensei && (
+          <>
+            <TextField
+              fullWidth
+              label="Email"
+              name="email"
+              type="email"
+              value={formData.email || ''}
+              onChange={handleChange}
+              required
+              disabled={loading}
+              helperText="Email para iniciar sesión en el sistema"
+            />
+
+            <TextField
+              fullWidth
+              label="Contraseña"
+              name="password"
+              type="password"
+              value={formData.password || ''}
+              onChange={handleChange}
+              required
+              disabled={loading}
+              helperText="Mínimo 8 caracteres"
+              inputProps={{ minLength: 8 }}
+            />
+          </>
+        )}
 
         <TextField
           fullWidth

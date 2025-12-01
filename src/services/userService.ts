@@ -1,63 +1,95 @@
 import { supabase } from '@/lib/supabase'
 import { ApiResponse } from '@/types'
 
+/**
+ * Crear usuario usando Admin API (auto-confirmado)
+ * Esto evita el problema de "Email not confirmed"
+ */
+async function createUserWithAdminAPI(
+  email: string,
+  password: string,
+  nombres: string,
+  apellidos: string,
+  rol: 'asociacion' | 'sensei' | 'arbitro' | 'judoka' | 'encargado',
+  clubId?: string
+): Promise<ApiResponse<{ userId: string }>> {
+  try {
+    const response = await fetch('/api/admin/create-user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        password,
+        nombres,
+        apellidos,
+        rol,
+        club_id: clubId,
+      }),
+    })
+
+    const result = await response.json()
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || 'Error al crear usuario',
+      }
+    }
+
+    return {
+      success: true,
+      data: { userId: result.data.userId },
+    }
+  } catch (error) {
+    console.error('Error al crear usuario con Admin API:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+    return {
+      success: false,
+      error: errorMessage,
+    }
+  }
+}
+
 export const userService = {
   /**
    * Crear usuario y perfil para un árbitro
    */
-  async createArbitroUser(nombres: string, apellidos: string): Promise<ApiResponse<{ userId: string }>> {
+  async createArbitroUser(
+    nombres: string, 
+    apellidos: string, 
+    email: string, 
+    password: string
+  ): Promise<ApiResponse<{ userId: string }>> {
     try {
-      // Generar email temporal único
-      const tempEmail = `arbitro_${Date.now()}_${Math.random().toString(36).substring(7)}@temp.com`
-      const tempPassword = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + 'A1!'
-
-      // Crear usuario en auth.users usando signUp
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: tempEmail,
-        password: tempPassword,
-        options: {
-          data: {
-            nombres,
-            apellidos,
-            user_type: 'arbitro'
-          }
-        }
-      })
-
-      if (authError) {
-        return { 
-          success: false, 
-          error: `Error al crear usuario: ${authError.message}` 
+      // Validar email y password
+      if (!email || !password) {
+        return {
+          success: false,
+          error: 'Email y contraseña son requeridos'
         }
       }
 
-      if (!authData.user) {
-        return { 
-          success: false, 
-          error: 'Error: No se pudo crear el usuario' 
+      // Validar formato de email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email)) {
+        return {
+          success: false,
+          error: 'El formato del email no es válido'
         }
       }
 
-      const userId = authData.user.id
-
-      // Crear perfil de usuario
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          id: userId,
-          user_type: 'arbitro',
-          nombres,
-          apellidos,
-          activo: true
-        })
-
-      if (profileError) {
-        // Si falla crear el perfil, intentar continuar de todas formas
-        console.warn('Error al crear perfil de usuario:', profileError.message)
-        // El perfil se puede crear después manualmente
+      // Validar longitud de contraseña
+      if (password.length < 8) {
+        return {
+          success: false,
+          error: 'La contraseña debe tener al menos 8 caracteres'
+        }
       }
 
-      return { success: true, data: { userId } }
+      // Crear usuario usando Admin API (auto-confirmado)
+      return await createUserWithAdminAPI(email, password, nombres, apellidos, 'arbitro')
     } catch (error) {
       console.error('Error al crear usuario de árbitro:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear usuario'
@@ -68,61 +100,87 @@ export const userService = {
   /**
    * Crear usuario y perfil para un sensei
    */
-  async createSenseiUser(nombres: string, apellidos: string): Promise<ApiResponse<{ userId: string }>> {
+  async createSenseiUser(
+    nombres: string, 
+    apellidos: string, 
+    email: string, 
+    password: string
+  ): Promise<ApiResponse<{ userId: string }>> {
     try {
-      // Generar email temporal único
-      const tempEmail = `sensei_${Date.now()}_${Math.random().toString(36).substring(7)}@temp.com`
-      const tempPassword = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + 'A1!'
-
-      // Crear usuario en auth.users usando signUp
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: tempEmail,
-        password: tempPassword,
-        options: {
-          data: {
-            nombres,
-            apellidos,
-            user_type: 'sensei'
-          }
-        }
-      })
-
-      if (authError) {
-        return { 
-          success: false, 
-          error: `Error al crear usuario: ${authError.message}` 
+      // Validar email y password
+      if (!email || !password) {
+        return {
+          success: false,
+          error: 'Email y contraseña son requeridos'
         }
       }
 
-      if (!authData.user) {
-        return { 
-          success: false, 
-          error: 'Error: No se pudo crear el usuario' 
+      // Validar formato de email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email)) {
+        return {
+          success: false,
+          error: 'El formato del email no es válido'
         }
       }
 
-      const userId = authData.user.id
-
-      // Crear perfil de usuario
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          id: userId,
-          user_type: 'sensei',
-          nombres,
-          apellidos,
-          activo: true
-        })
-
-      if (profileError) {
-        // Si falla crear el perfil, intentar continuar de todas formas
-        console.warn('Error al crear perfil de usuario:', profileError.message)
-        // El perfil se puede crear después manualmente
+      // Validar longitud de contraseña
+      if (password.length < 8) {
+        return {
+          success: false,
+          error: 'La contraseña debe tener al menos 8 caracteres'
+        }
       }
 
-      return { success: true, data: { userId } }
+      // Crear usuario usando Admin API (auto-confirmado)
+      return await createUserWithAdminAPI(email, password, nombres, apellidos, 'sensei')
     } catch (error) {
       console.error('Error al crear usuario de sensei:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear usuario'
+      return { success: false, error: errorMessage }
+    }
+  },
+
+  /**
+   * Crear usuario y perfil para un encargado (Director Técnico)
+   */
+  async createEncargadoUser(
+    nombres: string, 
+    apellidos: string, 
+    email: string, 
+    password: string,
+    clubId?: string
+  ): Promise<ApiResponse<{ userId: string }>> {
+    try {
+      // Validar email y password
+      if (!email || !password) {
+        return {
+          success: false,
+          error: 'Email y contraseña son requeridos'
+        }
+      }
+
+      // Validar formato de email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email)) {
+        return {
+          success: false,
+          error: 'El formato del email no es válido'
+        }
+      }
+
+      // Validar longitud de contraseña
+      if (password.length < 8) {
+        return {
+          success: false,
+          error: 'La contraseña debe tener al menos 8 caracteres'
+        }
+      }
+
+      // Crear usuario usando Admin API (auto-confirmado)
+      return await createUserWithAdminAPI(email, password, nombres, apellidos, 'encargado', clubId)
+    } catch (error) {
+      console.error('Error al crear usuario de encargado:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear usuario'
       return { success: false, error: errorMessage }
     }

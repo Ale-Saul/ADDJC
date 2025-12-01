@@ -27,6 +27,8 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
     usuario_id: '',
     nombres: '',
     apellidos: '',
+    email: '',
+    password: '',
     fecha_nacimiento: null,
     nivel_arbitraje: '',
     foto_perfil: null,
@@ -84,9 +86,18 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
         response = await arbitroController.updateArbitro(arbitro.id, formData)
       } else {
         // Crear - El servicio creará automáticamente el usuario y perfil
+        // Validar email y password si se está creando un nuevo árbitro
+        if (!formData.email || !formData.password) {
+          setError('Email y contraseña son requeridos para crear un nuevo árbitro')
+          setLoading(false)
+          return
+        }
+
         const createData: ArbitroCreate = {
           ...formData as ArbitroCreate,
-          usuario_id: 'temp-user-id' // El servicio lo reemplazará automáticamente
+          usuario_id: 'temp-user-id', // El servicio lo reemplazará automáticamente
+          email: formData.email,
+          password: formData.password
         }
         response = await arbitroController.createArbitro(createData)
       }
@@ -143,6 +154,35 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
           required
           disabled={loading}
         />
+
+        {!arbitro && (
+          <>
+            <TextField
+              fullWidth
+              label="Email"
+              name="email"
+              type="email"
+              value={formData.email || ''}
+              onChange={handleChange}
+              required
+              disabled={loading}
+              helperText="Email para iniciar sesión en el sistema"
+            />
+
+            <TextField
+              fullWidth
+              label="Contraseña"
+              name="password"
+              type="password"
+              value={formData.password || ''}
+              onChange={handleChange}
+              required
+              disabled={loading}
+              helperText="Mínimo 8 caracteres"
+              inputProps={{ minLength: 8 }}
+            />
+          </>
+        )}
 
         <TextField
           fullWidth

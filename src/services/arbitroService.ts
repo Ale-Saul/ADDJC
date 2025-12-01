@@ -1,7 +1,16 @@
 import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { Arbitro, ArbitroCreate, ArbitroUpdate } from '@/models/arbitro'
 import { ApiResponse } from '@/types'
 import { userService } from './userService'
+
+// Helper para obtener el cliente correcto (navegador si está disponible, básico si no)
+function getSupabaseClient() {
+  if (typeof window !== 'undefined') {
+    return createClient()
+  }
+  return supabase
+}
 
 export const arbitroService = {
   /**
@@ -9,7 +18,8 @@ export const arbitroService = {
    */
   async getAll(includeInactive: boolean = false): Promise<ApiResponse<Arbitro[]>> {
     try {
-      let query = supabase
+      const client = getSupabaseClient()
+      let query = client
         .from('arbitros')
         .select('*')
         .order('created_at', { ascending: false })
@@ -34,7 +44,8 @@ export const arbitroService = {
    */
   async getById(id: string): Promise<ApiResponse<Arbitro>> {
     try {
-      const { data, error } = await supabase
+      const client = getSupabaseClient()
+      const { data, error } = await client
         .from('arbitros')
         .select('*')
         .eq('id', id)
@@ -58,7 +69,20 @@ export const arbitroService = {
 
       // Si no hay usuario_id o es temporal, crear usuario y perfil automáticamente
       if (!userId || userId === 'temp-user-id') {
-        const userResult = await userService.createArbitroUser(arbitro.nombres, arbitro.apellidos)
+        // Validar que se proporcionen email y password
+        if (!arbitro.email || !arbitro.password) {
+          return {
+            success: false,
+            error: 'Email y contraseña son requeridos para crear un nuevo árbitro'
+          }
+        }
+
+        const userResult = await userService.createArbitroUser(
+          arbitro.nombres, 
+          arbitro.apellidos, 
+          arbitro.email, 
+          arbitro.password
+        )
         
         if (!userResult.success || !userResult.data) {
           return { 
@@ -80,12 +104,15 @@ export const arbitroService = {
       }
 
       // Crear el árbitro con el usuario_id correcto
+      // Excluir email y password ya que no existen en la tabla arbitros
+      const { email, password, ...arbitroData } = arbitro
       const arbitroConUsuario = {
-        ...arbitro,
+        ...arbitroData,
         usuario_id: userId
       }
 
-      const { data, error } = await supabase
+      const client = getSupabaseClient()
+      const { data, error } = await client
         .from('arbitros')
         .insert(arbitroConUsuario)
         .select()
@@ -121,7 +148,8 @@ export const arbitroService = {
    */
   async update(id: string, arbitro: ArbitroUpdate): Promise<ApiResponse<Arbitro>> {
     try {
-      const { data, error } = await supabase
+      const client = getSupabaseClient()
+      const { data, error } = await client
         .from('arbitros')
         .update(arbitro)
         .eq('id', id)
@@ -139,15 +167,55 @@ export const arbitroService = {
 
   /**
    * Eliminar un árbitro (soft delete - marca como inactivo)
+   * También elimina el usuario en auth.users para que el email se pueda reutilizar
    */
   async delete(id: string): Promise<ApiResponse<void>> {
     try {
-      const { error } = await supabase
+      const client = getSupabaseClient()
+      
+      // Primero obtener el árbitro para conocer su usuario_id
+      const { data: arbitro, error: getError } = await client
+        .from('arbitros')
+        .select('id, usuario_id')
+        .eq('id', id)
+        .single()
+
+      if (getError) throw getError
+      if (!arbitro) {
+        return { success: false, error: 'Árbitro no encontrado' }
+      }
+
+      // Marcar el árbitro como inactivo
+      const { error: updateError } = await client
         .from('arbitros')
         .update({ activo: false })
         .eq('id', id)
 
-      if (error) throw error
+      if (updateError) throw updateError
+
+      // Deshabilitar/eliminar el usuario en auth.users para que el email se pueda reutilizar
+      if (arbitro.usuario_id) {
+        try {
+          const response = await fetch('/api/admin/disable-user', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId: arbitro.usuario_id,
+            }),
+          })
+
+          const result = await response.json()
+          if (!result.success) {
+            console.warn('Error al deshabilitar usuario en auth.users:', result.error)
+            // No fallar la eliminación por esto, solo registrar el warning
+          }
+        } catch (error) {
+          console.warn('Error al llamar API para deshabilitar usuario:', error)
+          // No fallar la eliminación por esto, solo registrar el warning
+        }
+      }
 
       return { success: true }
     } catch (error) {
@@ -161,7 +229,8 @@ export const arbitroService = {
    */
   async restore(id: string): Promise<ApiResponse<Arbitro>> {
     try {
-      const { data, error } = await supabase
+      const client = getSupabaseClient()
+      const { data, error } = await client
         .from('arbitros')
         .update({ activo: true })
         .eq('id', id)

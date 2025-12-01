@@ -9,6 +9,7 @@ import JudokaList from '@/components/judokas/JudokaList'
 import JudokaForm from '@/components/judokas/JudokaForm'
 import SearchBar from '@/components/common/SearchBar'
 import { Judoka } from '@/models/judoka'
+import { judokaController } from '@/controllers/judokaController'
 import { useRouter } from 'next/navigation'
 
 export default function JudokasPage() {
@@ -28,13 +29,23 @@ export default function JudokasPage() {
 
   const handleDelete = async (judoka: Judoka) => {
     if (confirm(`¿Estás seguro de eliminar al judoka "${judoka.nombres} ${judoka.apellidos}"?`)) {
-      // TODO: Implementar eliminación
-      console.log('Eliminar judoka:', judoka.id)
+      try {
+        const response = await judokaController.deleteJudoka(judoka.id)
+        if (response.success) {
+          setRefreshTrigger(prev => prev + 1)
+          alert('Judoka eliminado exitosamente')
+        } else {
+          alert(`Error al eliminar judoka: ${response.error}`)
+        }
+      } catch (error) {
+        console.error('Error al eliminar judoka:', error)
+        alert('Error inesperado al eliminar judoka')
+      }
     }
   }
 
   return (
-    <ProtectedRoute allowedRoles={['asociacion', 'sensei', 'judoka']}>
+    <ProtectedRoute allowedRoles={['asociacion', 'sensei', 'encargado', 'judoka']}>
       <Layout>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">

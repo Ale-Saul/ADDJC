@@ -1,7 +1,16 @@
 import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { Judoka, JudokaCreate, JudokaUpdate } from '@/models/judoka'
 import { ApiResponse } from '@/types'
 import { userService } from './userService'
+
+// Helper para obtener el cliente correcto (navegador si está disponible, básico si no)
+function getSupabaseClient() {
+  if (typeof window !== 'undefined') {
+    return createClient()
+  }
+  return supabase
+}
 
 export const judokaService = {
   /**
@@ -9,7 +18,8 @@ export const judokaService = {
    */
   async getAll(includeInactive: boolean = false): Promise<ApiResponse<Judoka[]>> {
     try {
-      let query = supabase
+      const client = getSupabaseClient()
+      let query = client
         .from('judokas')
         .select('*')
         .order('created_at', { ascending: false })
@@ -34,7 +44,8 @@ export const judokaService = {
    */
   async getByClub(clubId: string): Promise<ApiResponse<Judoka[]>> {
     try {
-      const { data, error } = await supabase
+      const client = getSupabaseClient()
+      const { data, error } = await client
         .from('judokas')
         .select('*')
         .eq('club_id', clubId)
@@ -55,7 +66,8 @@ export const judokaService = {
    */
   async getByEntrenador(entrenadorId: string): Promise<ApiResponse<Judoka[]>> {
     try {
-      const { data, error } = await supabase
+      const client = getSupabaseClient()
+      const { data, error } = await client
         .from('judokas')
         .select('*')
         .eq('entrenador_id', entrenadorId)
@@ -76,7 +88,8 @@ export const judokaService = {
    */
   async getById(id: string): Promise<ApiResponse<Judoka>> {
     try {
-      const { data, error } = await supabase
+      const client = getSupabaseClient()
+      const { data, error } = await client
         .from('judokas')
         .select('*')
         .eq('id', id)
@@ -127,7 +140,8 @@ export const judokaService = {
         usuario_id: userId
       }
 
-      const { data, error } = await supabase
+      const client = getSupabaseClient()
+      const { data, error } = await client
         .from('judokas')
         .insert(judokaConUsuario)
         .select()
@@ -171,7 +185,8 @@ export const judokaService = {
    */
   async update(id: string, judoka: JudokaUpdate): Promise<ApiResponse<Judoka>> {
     try {
-      const { data, error } = await supabase
+      const client = getSupabaseClient()
+      const { data, error } = await client
         .from('judokas')
         .update(judoka)
         .eq('id', id)
@@ -192,7 +207,8 @@ export const judokaService = {
    */
   async delete(id: string): Promise<ApiResponse<void>> {
     try {
-      const { error } = await supabase
+      const client = getSupabaseClient()
+      const { error } = await client
         .from('judokas')
         .update({ activo: false })
         .eq('id', id)
@@ -211,7 +227,8 @@ export const judokaService = {
    */
   async restore(id: string): Promise<ApiResponse<Judoka>> {
     try {
-      const { data, error } = await supabase
+      const client = getSupabaseClient()
+      const { data, error } = await client
         .from('judokas')
         .update({ activo: true })
         .eq('id', id)

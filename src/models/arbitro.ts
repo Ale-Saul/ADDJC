@@ -13,9 +13,11 @@ export interface Arbitro {
 }
 
 export interface ArbitroCreate {
-  usuario_id: string
+  usuario_id?: string // Opcional: si no se proporciona, se creará automáticamente
   nombres: string
   apellidos: string
+  email?: string // Opcional: requerido si se crea nuevo usuario
+  password?: string // Opcional: requerido si se crea nuevo usuario
   fecha_nacimiento?: string | null
   nivel_arbitraje?: string | null
   certificacion?: string | null
