@@ -259,5 +259,60 @@ export const authService = {
       }
     }
   },
+
+  /**
+   * Actualizar perfil de usuario
+   */
+  async updateProfile(userId: string, data: Partial<User>): Promise<ApiResponse<User>> {
+    try {
+      const supabase = createClient()
+      
+      // Campos permitidos para actualización por el usuario
+      const updates: any = {
+        updated_at: new Date().toISOString(),
+      }
+      
+      if (data.nombres) updates.nombres = data.nombres
+      if (data.apellidos) updates.apellidos = data.apellidos
+      
+      // Nota: Email, rol y club_id no se actualizan aquí por seguridad
+      
+      const { data: updatedData, error } = await supabase
+        .from('user_profiles')
+        .update(updates)
+        .eq('id', userId)
+        .select('*')
+        .single()
+
+      if (error) {
+        return {
+          success: false,
+          error: error.message || 'Error al actualizar el perfil',
+        }
+      }
+
+      return {
+        success: true,
+        data: {
+          id: updatedData.id,
+          email: updatedData.email || '',
+          nombres: updatedData.nombres || '',
+          apellidos: updatedData.apellidos || '',
+          rol: updatedData.rol || 'judoka',
+          club_id: updatedData.club_id || null,
+          activo: updatedData.activo ?? true,
+          created_at: updatedData.created_at,
+          updated_at: updatedData.updated_at,
+        },
+      }
+    } catch (error) {
+      console.error('Error en updateProfile:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Error desconocido al actualizar perfil',
+      }
+    }
+  },
 }
+
 

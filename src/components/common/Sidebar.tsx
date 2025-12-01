@@ -267,7 +267,21 @@ export default function Sidebar() {
       <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}`, flexShrink: 0 }}>
         {user && (
           <>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+            <Box 
+              onClick={() => router.push('/perfil')}
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                mb: 1.5,
+                cursor: 'pointer',
+                p: 0.5,
+                borderRadius: 1,
+                transition: 'background-color 0.2s',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.08)'
+                }
+              }}
+            >
               <Avatar sx={{ width: 32, height: 32, mr: 1, bgcolor: theme.palette.primary.main }}>
                 {user.nombres.charAt(0).toUpperCase()}
               </Avatar>
@@ -278,7 +292,7 @@ export default function Sidebar() {
                 <Chip 
                   label={getRoleLabel(user.rol)} 
                   size="small" 
-                  sx={{ height: 18, fontSize: '0.65rem', mt: 0.5 }}
+                  sx={{ height: 18, fontSize: '0.65rem', mt: 0.5, cursor: 'pointer' }}
                   color={user.rol === 'asociacion' ? 'primary' : 'default'}
                 />
               </Box>
