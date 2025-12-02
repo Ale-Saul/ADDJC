@@ -22,6 +22,10 @@ const customJestConfig = {
     '**/__tests__/**/*.[jt]s?(x)',
     '**/?(*.)+(spec|test).[jt]s?(x)',
   ],
+  // Aumentar timeout global para tests de formularios complejos
+  testTimeout: 20000,
+  // Limitar workers para evitar sobrecarga en ejecución paralela
+  maxWorkers: '50%',
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

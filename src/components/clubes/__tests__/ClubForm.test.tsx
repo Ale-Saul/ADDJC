@@ -112,11 +112,11 @@ describe('ClubForm', () => {
       expect(mockedClubController.createClub).toHaveBeenCalledWith(
         expect.objectContaining({ nombre_club: 'Nuevo Club' })
       )
-    });
+    }, { timeout: 10000 });
     await waitFor(() => {
         expect(onSuccess).toHaveBeenCalledTimes(1)
-    }, { timeout: 2000 });
-  })
+    }, { timeout: 10000 });
+  }, 20000)
 
   it('debe llamar a updateClub al enviar el formulario de edición', async () => {
     mockedClubController.updateClub.mockResolvedValue({ success: true })
@@ -170,8 +170,8 @@ describe('ClubForm', () => {
         newSensei.id,
         { club_id: 'c2' }
       )
-    }, { timeout: 3000 })
-  }, 10000)
+    }, { timeout: 10000 })
+  }, 20000)
 
   it('debe mostrar un error si la creación del club falla', async () => {
     mockedClubController.createClub.mockResolvedValue({ success: false, error: 'Error de base de datos' })

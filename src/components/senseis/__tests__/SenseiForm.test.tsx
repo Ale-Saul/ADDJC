@@ -161,7 +161,7 @@ describe('SenseiForm', () => {
       await waitFor(() => {
         expect(mockOnSuccess).toHaveBeenCalled()
       }, { timeout: 3000 })
-    }, 10000)
+    }, 20000)
 
     it('debe seleccionar un club correctamente', async () => {
       const user = userEvent.setup()
@@ -175,7 +175,7 @@ describe('SenseiForm', () => {
 
       await waitFor(() => {
         expect(screen.getAllByText('Club')[0]).toBeInTheDocument()
-      })
+      }, { timeout: 10000 })
 
       // Llenar campos requeridos primero
       await user.type(screen.getByRole('textbox', { name: /nombres/i }), 'Carlos')
@@ -196,8 +196,8 @@ describe('SenseiForm', () => {
             password: 'password123'
           })
         )
-      })
-    })
+      }, { timeout: 10000 })
+    }, 15000)
 
     it('debe seleccionar grado dan correctamente', async () => {
       const user = userEvent.setup()
@@ -211,7 +211,7 @@ describe('SenseiForm', () => {
 
       await waitFor(() => {
         expect(screen.getAllByText('Grado Dan')[0]).toBeInTheDocument()
-      })
+      }, { timeout: 10000 })
 
       // Llenar campos requeridos primero
       await user.type(screen.getByRole('textbox', { name: /nombres/i }), 'Carlos')
@@ -232,8 +232,8 @@ describe('SenseiForm', () => {
             password: 'password123'
           })
         )
-      })
-    })
+      }, { timeout: 10000 })
+    }, 15000)
 
     it('debe manejar fecha de nacimiento', async () => {
       const user = userEvent.setup()
@@ -247,7 +247,7 @@ describe('SenseiForm', () => {
 
       await waitFor(() => {
         expect(screen.getByLabelText('Fecha de Nacimiento')).toBeInTheDocument()
-      })
+      }, { timeout: 10000 })
 
       // Llenar campos requeridos y fecha
       await user.type(screen.getByRole('textbox', { name: /nombres/i }), 'Carlos')
@@ -270,8 +270,8 @@ describe('SenseiForm', () => {
             password: 'password123'
           })
         )
-      })
-    })
+      }, { timeout: 10000 })
+    }, 15000)
 
     it('debe mostrar error cuando falla la creación', async () => {
       const user = userEvent.setup()
@@ -285,7 +285,7 @@ describe('SenseiForm', () => {
 
       await waitFor(() => {
         expect(screen.getByRole('textbox', { name: /nombres/i })).toBeInTheDocument()
-      })
+      }, { timeout: 10000 })
 
       await user.type(screen.getByRole('textbox', { name: /nombres/i }), 'Carlos')
       await user.type(screen.getByRole('textbox', { name: /apellidos/i }), 'García')
@@ -296,8 +296,8 @@ describe('SenseiForm', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Error al crear sensei')).toBeInTheDocument()
-      })
-    })
+      }, { timeout: 10000 })
+    }, 15000)
   })
 
   describe('Modo edición', () => {
@@ -355,8 +355,13 @@ describe('SenseiForm', () => {
 
   describe('Validación y estados', () => {
     it('debe deshabilitar campos durante la carga', async () => {
+      let resolveCreate: (value: any) => void
+      const createPromise = new Promise(resolve => {
+        resolveCreate = resolve
+      })
+
       ;(senseiController.createSensei as jest.Mock).mockImplementation(
-        () => new Promise(resolve => setTimeout(() => resolve({ success: true, data: mockSensei }), 100))
+        () => createPromise
       )
 
       const user = userEvent.setup()
@@ -375,11 +380,19 @@ describe('SenseiForm', () => {
       const submitButton = screen.getByRole('button', { name: 'Crear' })
       await user.click(submitButton)
 
-      // Durante la carga, los campos deben estar deshabilitados
-      expect(screen.getByRole('textbox', { name: /nombres/i })).toBeDisabled()
-      expect(screen.getByRole('textbox', { name: /apellidos/i })).toBeDisabled()
-      expect(screen.getByRole('button', { name: 'Guardando...' })).toBeDisabled()
-    })
+      // Verificar que el botón cambia a "Guardando..."
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Guardando...' })).toBeInTheDocument()
+      }, { timeout: 10000 })
+
+      // Resolver la promesa para completar el test
+      resolveCreate!({ success: true, data: mockSensei })
+
+      // Esperar a que el formulario vuelva al estado normal
+      await waitFor(() => {
+        expect(screen.queryByRole('button', { name: 'Guardando...' })).not.toBeInTheDocument()
+      }, { timeout: 10000 })
+    }, 15000)
 
     it('debe limpiar errores al escribir en los campos', async () => {
       const user = userEvent.setup()

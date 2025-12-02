@@ -1,9 +1,19 @@
 import { userService } from '../userService'
 
-// Mock global de fetch
-global.fetch = jest.fn()
-
 describe('userService', () => {
+  // Guardar el fetch original
+  const originalFetch = global.fetch
+
+  beforeAll(() => {
+    // Mock global de fetch solo para estos tests
+    global.fetch = jest.fn()
+  })
+
+  afterAll(() => {
+    // Restaurar fetch original después de todos los tests
+    global.fetch = originalFetch
+  })
+
   beforeEach(() => {
     jest.clearAllMocks()
     // Suprimir console.warn y console.error en los tests
