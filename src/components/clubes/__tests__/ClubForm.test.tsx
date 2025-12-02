@@ -149,12 +149,19 @@ describe('ClubForm', () => {
     await userEvent.type(screen.getByLabelText(/Nombre del Club/i), 'Club con Nuevo Sensei')
     await userEvent.type(screen.getByLabelText(/Nombre del Director Técnico/i), 'Nuevo')
     await userEvent.type(screen.getByLabelText(/Apellidos del Director Técnico/i), 'Sensei')
+    await userEvent.type(screen.getByLabelText(/Email del Director Técnico/i), 'nuevo.sensei@test.com')
+    await userEvent.type(screen.getByLabelText(/Contraseña del Director Técnico/i), 'password123')
 
     fireEvent.submit(screen.getByRole('button', { name: /Crear/i }))
 
     await waitFor(() => {
       expect(mockedSenseiController.createSensei).toHaveBeenCalledWith(
-        expect.objectContaining({ nombres: 'Nuevo', apellidos: 'Sensei' })
+        expect.objectContaining({ 
+          nombres: 'Nuevo', 
+          apellidos: 'Sensei',
+          email: 'nuevo.sensei@test.com',
+          password: 'password123'
+        })
       )
       expect(mockedClubController.createClub).toHaveBeenCalledWith(
         expect.objectContaining({ director_tecnico_id: newSensei.usuario_id })

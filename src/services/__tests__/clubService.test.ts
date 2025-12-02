@@ -1,13 +1,18 @@
 import { clubService } from '../clubService'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { Club, ClubCreate } from '@/models/club'
 
 // Mock de Supabase
-jest.mock('@/lib/supabase', () => ({
-  supabase: {
-    from: jest.fn(),
-  },
+jest.mock('@/lib/supabase/client', () => ({
+  createClient: jest.fn(),
 }))
+
+const mockSupabase = {
+  from: jest.fn(),
+}
+
+const mockCreateClient = require('@/lib/supabase/client').createClient as jest.Mock
+mockCreateClient.mockReturnValue(mockSupabase)
 
 describe('clubService', () => {
   const mockClub: Club = {
@@ -43,7 +48,7 @@ describe('clubService', () => {
         order: mockOrder
       })
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         select: mockSelect,
       })
 
@@ -51,7 +56,7 @@ describe('clubService', () => {
 
       expect(result.success).toBe(true)
       expect(result.data).toEqual([mockClub])
-      expect(supabase.from).toHaveBeenCalledWith('clubes')
+      expect(mockSupabase.from).toHaveBeenCalledWith('clubes')
     })
 
     it('debe retornar todos los clubes incluyendo inactivos cuando includeInactive es true', async () => {
@@ -66,7 +71,7 @@ describe('clubService', () => {
         order: mockOrder
       })
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         select: mockSelect,
       })
 
@@ -93,7 +98,7 @@ describe('clubService', () => {
         order: mockOrder
       })
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         select: mockSelect,
       })
 
@@ -114,7 +119,7 @@ describe('clubService', () => {
         }),
       }
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue(mockQuery),
       })
 
@@ -135,7 +140,7 @@ describe('clubService', () => {
         }),
       }
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue(mockQuery),
       })
 
@@ -162,7 +167,7 @@ describe('clubService', () => {
         }),
       }
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         insert: jest.fn().mockReturnValue(mockQuery),
       })
 
@@ -170,7 +175,7 @@ describe('clubService', () => {
 
       expect(result.success).toBe(true)
       expect(result.data?.nombre_club).toBe('Nuevo Club')
-      expect(supabase.from).toHaveBeenCalledWith('clubes')
+      expect(mockSupabase.from).toHaveBeenCalledWith('clubes')
     })
 
     it('debe manejar errores al crear un club', async () => {
@@ -187,7 +192,7 @@ describe('clubService', () => {
         }),
       }
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         insert: jest.fn().mockReturnValue(mockQuery),
       })
 
