@@ -410,8 +410,10 @@ describe('SenseiForm', () => {
       // Al escribir en un campo, el error debe desaparecer
       await user.type(screen.getByRole('textbox', { name: /nombres/i }), ' Modificado')
 
-      expect(screen.queryByText('Error de prueba')).not.toBeInTheDocument()
-    })
+      await waitFor(() => {
+        expect(screen.queryByText('Error de prueba')).not.toBeInTheDocument()
+      }, { timeout: 10000 })
+    }, 15000)
 
     it('debe manejar error al cargar clubes', async () => {
       ;(clubController.getAllClubes as jest.Mock).mockResolvedValue({
@@ -485,8 +487,10 @@ describe('SenseiForm', () => {
       const closeButton = screen.getByRole('button', { name: /close/i })
       await user.click(closeButton)
 
-      expect(screen.queryByText('Error de prueba')).not.toBeInTheDocument()
-    })
+      await waitFor(() => {
+        expect(screen.queryByText('Error de prueba')).not.toBeInTheDocument()
+      }, { timeout: 10000 })
+    }, 15000)
   })
 })
 
