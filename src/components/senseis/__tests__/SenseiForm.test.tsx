@@ -127,6 +127,12 @@ describe('SenseiForm', () => {
       // Llenar el formulario
       await user.type(screen.getByRole('textbox', { name: /nombres/i }), 'Carlos')
       await user.type(screen.getByRole('textbox', { name: /apellidos/i }), 'García')
+      await user.type(screen.getByRole('textbox', { name: /email/i }), 'carlos@test.com')
+      
+      // Campo de contraseña (type=password no es textbox, usar name attribute)
+      const passwordField = document.querySelector('input[name="password"]')
+      if (passwordField) await user.type(passwordField, 'password123')
+      
       await user.type(screen.getByRole('textbox', { name: /especialidad/i }), 'Kata')
 
       // Enviar formulario
@@ -138,11 +144,14 @@ describe('SenseiForm', () => {
           club_id: null,
           nombres: 'Carlos',
           apellidos: 'García',
+          email: 'carlos@test.com',
+          password: 'password123',
           fecha_nacimiento: null,
           grado_dan: '',
           especialidad: 'Kata',
           foto_perfil: null,
-          activo: true
+          activo: true,
+          isEncargado: false
         })
       })
 
@@ -171,6 +180,9 @@ describe('SenseiForm', () => {
       // Llenar campos requeridos primero
       await user.type(screen.getByRole('textbox', { name: /nombres/i }), 'Carlos')
       await user.type(screen.getByRole('textbox', { name: /apellidos/i }), 'García')
+      await user.type(screen.getByRole('textbox', { name: /email/i }), 'carlos@test.com')
+      const passwordField = document.querySelector('input[name="password"]') as HTMLInputElement
+      if (passwordField) await user.type(passwordField, 'password123')
 
       // Enviar formulario
       await user.click(screen.getByRole('button', { name: 'Crear' }))
@@ -179,7 +191,9 @@ describe('SenseiForm', () => {
         expect(senseiController.createSensei).toHaveBeenCalledWith(
           expect.objectContaining({
             nombres: 'Carlos',
-            apellidos: 'García'
+            apellidos: 'García',
+            email: 'carlos@test.com',
+            password: 'password123'
           })
         )
       })
@@ -202,6 +216,9 @@ describe('SenseiForm', () => {
       // Llenar campos requeridos primero
       await user.type(screen.getByRole('textbox', { name: /nombres/i }), 'Carlos')
       await user.type(screen.getByRole('textbox', { name: /apellidos/i }), 'García')
+      await user.type(screen.getByRole('textbox', { name: /email/i }), 'carlos@test.com')
+      const passwordField = document.querySelector('input[name="password"]') as HTMLInputElement
+      if (passwordField) await user.type(passwordField, 'password123')
 
       // Enviar formulario
       await user.click(screen.getByRole('button', { name: 'Crear' }))
@@ -210,7 +227,9 @@ describe('SenseiForm', () => {
         expect(senseiController.createSensei).toHaveBeenCalledWith(
           expect.objectContaining({
             nombres: 'Carlos',
-            apellidos: 'García'
+            apellidos: 'García',
+            email: 'carlos@test.com',
+            password: 'password123'
           })
         )
       })
@@ -233,6 +252,9 @@ describe('SenseiForm', () => {
       // Llenar campos requeridos y fecha
       await user.type(screen.getByRole('textbox', { name: /nombres/i }), 'Carlos')
       await user.type(screen.getByRole('textbox', { name: /apellidos/i }), 'García')
+      await user.type(screen.getByRole('textbox', { name: /email/i }), 'carlos@test.com')
+      const passwordField = document.querySelector('input[name="password"]') as HTMLInputElement
+      if (passwordField) await user.type(passwordField, 'password123')
       
       const fechaInput = screen.getByLabelText('Fecha de Nacimiento')
       await user.type(fechaInput, '1980-05-15')
@@ -243,7 +265,9 @@ describe('SenseiForm', () => {
       await waitFor(() => {
         expect(senseiController.createSensei).toHaveBeenCalledWith(
           expect.objectContaining({
-            fecha_nacimiento: '1980-05-15'
+            fecha_nacimiento: '1980-05-15',
+            email: 'carlos@test.com',
+            password: 'password123'
           })
         )
       })
@@ -265,6 +289,9 @@ describe('SenseiForm', () => {
 
       await user.type(screen.getByRole('textbox', { name: /nombres/i }), 'Carlos')
       await user.type(screen.getByRole('textbox', { name: /apellidos/i }), 'García')
+      await user.type(screen.getByRole('textbox', { name: /email/i }), 'carlos@test.com')
+      const passwordField = document.querySelector('input[name="password"]') as HTMLInputElement
+      if (passwordField) await user.type(passwordField, 'password123')
       await user.click(screen.getByRole('button', { name: 'Crear' }))
 
       await waitFor(() => {
@@ -341,6 +368,9 @@ describe('SenseiForm', () => {
 
       await user.type(screen.getByRole('textbox', { name: /nombres/i }), 'Carlos')
       await user.type(screen.getByRole('textbox', { name: /apellidos/i }), 'García')
+      await user.type(screen.getByRole('textbox', { name: /email/i }), 'carlos@test.com')
+      const passwordField = document.querySelector('input[name="password"]') as HTMLInputElement
+      if (passwordField) await user.type(passwordField, 'password123')
       
       const submitButton = screen.getByRole('button', { name: 'Crear' })
       await user.click(submitButton)
@@ -368,6 +398,9 @@ describe('SenseiForm', () => {
       // Generar error
       await user.type(screen.getByRole('textbox', { name: /nombres/i }), 'Carlos')
       await user.type(screen.getByRole('textbox', { name: /apellidos/i }), 'García')
+      await user.type(screen.getByRole('textbox', { name: /email/i }), 'carlos@test.com')
+      const passwordField = document.querySelector('input[name="password"]') as HTMLInputElement
+      if (passwordField) await user.type(passwordField, 'password123')
       await user.click(screen.getByRole('button', { name: 'Crear' }))
 
       await waitFor(() => {
@@ -439,6 +472,9 @@ describe('SenseiForm', () => {
 
       await user.type(screen.getByRole('textbox', { name: /nombres/i }), 'Carlos')
       await user.type(screen.getByRole('textbox', { name: /apellidos/i }), 'García')
+      await user.type(screen.getByRole('textbox', { name: /email/i }), 'carlos@test.com')
+      const passwordField = document.querySelector('input[name="password"]') as HTMLInputElement
+      if (passwordField) await user.type(passwordField, 'password123')
       await user.click(screen.getByRole('button', { name: 'Crear' }))
 
       await waitFor(() => {
@@ -453,3 +489,4 @@ describe('SenseiForm', () => {
     })
   })
 })
+
