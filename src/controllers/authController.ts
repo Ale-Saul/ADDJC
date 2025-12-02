@@ -209,5 +209,18 @@ export const authController = {
 
     return await authService.updateProfile(userId, data)
   },
+
+  /**
+   * Subir avatar de usuario
+   */
+  async uploadAvatar(userId: string, file: File): Promise<ApiResponse<string>> {
+    if (!userId || !file) {
+      return {
+        success: false,
+        error: 'Datos incompletos para subir imagen',
+      }
+    }
+    return await authService.uploadAvatar(userId, file)
+  },
 }
 
