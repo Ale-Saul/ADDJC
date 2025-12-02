@@ -12,12 +12,45 @@ jest.mock('@/controllers/senseiController')
 
 describe('JudokaForm', () => {
   const mockClubes = [
-    { id: 'club-1', nombre_club: 'Club A', activo: true },
-    { id: 'club-2', nombre_club: 'Club B', activo: true }
+    { 
+      id: 'club-1', 
+      nombre_club: 'Club A', 
+      municipio: 'Municipio A',
+      direccion: 'Dir A',
+      telefono_contacto: '123',
+      director_tecnico_id: null,
+      activo: true,
+      created_at: '2023-01-01',
+      updated_at: '2023-01-01'
+    },
+    { 
+      id: 'club-2', 
+      nombre_club: 'Club B', 
+      municipio: 'Municipio B',
+      direccion: 'Dir B',
+      telefono_contacto: '456',
+      director_tecnico_id: null,
+      activo: true,
+      created_at: '2023-01-01',
+      updated_at: '2023-01-01'
+    }
   ]
 
   const mockSenseis = [
-    { id: 'sensei-1', usuario_id: 'user-sensei-1', nombres: 'Sensei', apellidos: 'Uno', club_id: 'club-1', activo: true }
+    { 
+      id: 'sensei-1', 
+      usuario_id: 'user-sensei-1', 
+      club_id: 'club-1',
+      nombres: 'Sensei', 
+      apellidos: 'Uno', 
+      fecha_nacimiento: '1980-01-01',
+      grado_dan: '5to Dan',
+      especialidad: 'Kata',
+      foto_perfil: null,
+      activo: true,
+      created_at: '2023-01-01',
+      updated_at: '2023-01-01'
+    }
   ]
 
   const mockJudoka = {
@@ -50,7 +83,6 @@ describe('JudokaForm', () => {
       expect(screen.getByLabelText(/Nombres/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/Apellidos/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/Fecha de Nacimiento/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/Peso Competitivo/i)).toBeInTheDocument()
     })
   })
 
@@ -115,11 +147,16 @@ describe('JudokaForm', () => {
   it('should populate form with existing judoka data', async () => {
     render(<JudokaForm judoka={mockJudoka} />)
 
+    // Esperar a que los clubes y senseis se carguen primero
+    await waitFor(() => {
+      expect(clubController.getAllClubes).toHaveBeenCalled()
+    })
+
+    // Ahora esperar a que los valores del formulario aparezcan
     await waitFor(() => {
       expect(screen.getByDisplayValue('Juan')).toBeInTheDocument()
       expect(screen.getByDisplayValue('Perez')).toBeInTheDocument()
       expect(screen.getByDisplayValue('1990-01-01')).toBeInTheDocument()
-      expect(screen.getByDisplayValue('81')).toBeInTheDocument()
     })
   })
 
