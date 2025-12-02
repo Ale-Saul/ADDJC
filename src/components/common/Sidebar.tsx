@@ -43,7 +43,7 @@ export default function Sidebar() {
   // Evitar problemas de hidratación
   useEffect(() => {
     setMounted(true)
-    setOpenAfiliados(true)
+    // El menú Afiliados comienza cerrado por defecto
   }, [])
 
   const handleAfiliadosClick = () => {
@@ -282,7 +282,10 @@ export default function Sidebar() {
                 }
               }}
             >
-              <Avatar sx={{ width: 32, height: 32, mr: 1, bgcolor: theme.palette.primary.main }}>
+              <Avatar 
+                src={user.avatar_url || undefined}
+                sx={{ width: 32, height: 32, mr: 1, bgcolor: theme.palette.primary.main }}
+              >
                 {user.nombres.charAt(0).toUpperCase()}
               </Avatar>
               <Box sx={{ flexGrow: 1, minWidth: 0 }}>

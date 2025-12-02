@@ -7,7 +7,6 @@ import {
   Paper,
   TextField,
   Button,
-  Grid,
   CircularProgress,
   Alert,
   Divider,
@@ -16,7 +15,6 @@ import {
   IconButton,
 } from '@mui/material'
 import SaveIcon from '@mui/icons-material/Save'
-import PersonIcon from '@mui/icons-material/Person'
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
@@ -149,8 +147,7 @@ export default function PerfilPage() {
     <ProtectedRoute>
       <Layout>
         <Box mb={4}>
-          <Typography variant="h4" component="h1" gutterBottom display="flex" alignItems="center">
-            <PersonIcon sx={{ mr: 2, fontSize: 40 }} color="primary" />
+          <Typography variant="h4" component="h1" gutterBottom>
             Mi Perfil
           </Typography>
           <Typography variant="body1" color="text.secondary">
@@ -235,46 +232,43 @@ export default function PerfilPage() {
                 </Typography>
                 <Divider sx={{ mb: 4 }} />
                 
-                <Grid container spacing={3}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Nombres"
-                      name="nombres"
-                      fullWidth
-                      required
-                      value={formData.nombres}
-                      onChange={handleChange}
-                      disabled={loading}
-                      variant="outlined"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          '&:hover fieldset': {
-                            borderColor: 'primary.main',
-                          },
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <TextField
+                    label="Nombres"
+                    name="nombres"
+                    fullWidth
+                    required
+                    value={formData.nombres}
+                    onChange={handleChange}
+                    disabled={loading}
+                    variant="outlined"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover fieldset': {
+                          borderColor: 'primary.main',
                         },
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Apellidos"
-                      name="apellidos"
-                      fullWidth
-                      required
-                      value={formData.apellidos}
-                      onChange={handleChange}
-                      disabled={loading}
-                      variant="outlined"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          '&:hover fieldset': {
-                            borderColor: 'primary.main',
-                          },
+                      },
+                    }}
+                  />
+
+                  <TextField
+                    label="Apellidos"
+                    name="apellidos"
+                    fullWidth
+                    required
+                    value={formData.apellidos}
+                    onChange={handleChange}
+                    disabled={loading}
+                    variant="outlined"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover fieldset': {
+                          borderColor: 'primary.main',
                         },
-                      }}
-                    />
-                  </Grid>
-                </Grid>
+                      },
+                    }}
+                  />
+                </Box>
               </Box>
 
               <Box mb={4}>
@@ -283,46 +277,43 @@ export default function PerfilPage() {
                 </Typography>
                 <Divider sx={{ mb: 4 }} />
 
-                <Grid container spacing={3}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Correo Electrónico"
-                      fullWidth
-                      value={formData.email}
-                      disabled
-                      variant="outlined"
-                      helperText="Este campo no se puede modificar"
-                      InputProps={{
-                        readOnly: true,
-                        sx: { 
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <TextField
+                    label="Correo Electrónico"
+                    fullWidth
+                    value={formData.email}
+                    disabled
+                    variant="outlined"
+                    helperText="Este campo no se puede modificar"
+                    InputProps={{
+                      readOnly: true,
+                      sx: { 
+                        bgcolor: 'grey.100',
+                        '&.Mui-disabled': {
                           bgcolor: 'grey.100',
-                          '&.Mui-disabled': {
-                            bgcolor: 'grey.100',
-                          }
                         }
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Rol"
-                      fullWidth
-                      value={getRoleLabel(formData.rol)}
-                      disabled
-                      variant="outlined"
-                      helperText="Asignado por el administrador"
-                      InputProps={{
-                        readOnly: true,
-                        sx: { 
+                      }
+                    }}
+                  />
+
+                  <TextField
+                    label="Rol"
+                    fullWidth
+                    value={getRoleLabel(formData.rol)}
+                    disabled
+                    variant="outlined"
+                    helperText="Asignado por el administrador"
+                    InputProps={{
+                      readOnly: true,
+                      sx: { 
+                        bgcolor: 'grey.100',
+                        '&.Mui-disabled': {
                           bgcolor: 'grey.100',
-                          '&.Mui-disabled': {
-                            bgcolor: 'grey.100',
-                          }
                         }
-                      }}
-                    />
-                  </Grid>
-                </Grid>
+                      }
+                    }}
+                  />
+                </Box>
               </Box>
 
               <Divider sx={{ my: 4 }} />
