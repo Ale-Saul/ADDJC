@@ -187,6 +187,7 @@ export const authService = {
           apellidos: data.apellidos || '',
           rol: data.rol || 'judoka',
           club_id: data.club_id || null,
+          avatar_url: data.avatar_url || null,
           activo: data.activo ?? true,
           created_at: data.created_at,
           updated_at: data.updated_at,
@@ -259,5 +260,135 @@ export const authService = {
       }
     }
   },
+
+  /**
+   * Actualizar perfil de usuario
+   */
+  async updateProfile(userId: string, data: Partial<User>): Promise<ApiResponse<User>> {
+    try {
+      const supabase = createClient()
+      
+      // Campos permitidos para actualización por el usuario
+      const updates: any = {
+        updated_at: new Date().toISOString(),
+      }
+      
+      if (data.nombres) updates.nombres = data.nombres
+      if (data.apellidos) updates.apellidos = data.apellidos
+      
+      // Nota: Email, rol y club_id no se actualizan aquí por seguridad
+      
+      const { data: updatedData, error } = await supabase
+        .from('user_profiles')
+        .update(updates)
+        .eq('id', userId)
+        .select('*')
+        .single()
+
+      if (error) {
+        return {
+          success: false,
+          error: error.message || 'Error al actualizar el perfil',
+        }
+      }
+
+      return {
+        success: true,
+        data: {
+          id: updatedData.id,
+          email: updatedData.email || '',
+          nombres: updatedData.nombres || '',
+          apellidos: updatedData.apellidos || '',
+          rol: updatedData.rol || 'judoka',
+          club_id: updatedData.club_id || null,
+          activo: updatedData.activo ?? true,
+          created_at: updatedData.created_at,
+          updated_at: updatedData.updated_at,
+        },
+      }
+    } catch (error) {
+      console.error('Error en updateProfile:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Error desconocido al actualizar perfil',
+      }
+    }
+  },
+
+  /**
+   * Subir imagen de avatar
+   */
+  async uploadAvatar(userId: string, file: File): Promise<ApiResponse<string>> {
+    try {
+      const supabase = createClient()
+      
+      // 1. Validar archivo (tamaño y tipo)
+      if (file.size > 2 * 1024 * 1024) { // 2MB
+        return {
+          success: false,
+          error: 'La imagen no debe superar los 2MB',
+        }
+      }
+
+      if (!file.type.startsWith('image/')) {
+        return {
+          success: false,
+          error: 'El archivo debe ser una imagen',
+        }
+      }
+
+      // 2. Subir archivo al bucket 'avatars'
+      // Nota: Esto requiere que el bucket 'avatars' exista en Supabase y tenga policies públicas
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${userId}-${Date.now()}.${fileExt}`
+      const filePath = `${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          upsert: true,
+        })
+
+      if (uploadError) {
+        console.error('Error subiendo avatar:', uploadError)
+        return {
+          success: false,
+          error: 'Error al subir la imagen. Asegúrate de que el bucket "avatars" exista y sea público.'
+        }
+      }
+
+      // 3. Obtener URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath)
+
+      // 4. Actualizar perfil con la nueva URL
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({ 
+          avatar_url: publicUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+
+      if (updateError) {
+        console.warn('Imagen subida pero falló actualización de perfil:', updateError)
+        // No retornamos error aquí porque la imagen sí se subió, solo advertimos
+      }
+
+      return {
+        success: true,
+        data: publicUrl
+      }
+    } catch (error) {
+      console.error('Error en uploadAvatar:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Error desconocido al subir avatar'
+      }
+    }
+  },
 }
+
+
 

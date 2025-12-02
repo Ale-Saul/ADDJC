@@ -180,5 +180,47 @@ export const authController = {
 
     return await authService.updatePassword(newPassword)
   },
+
+  /**
+   * Actualizar perfil de usuario
+   */
+  async updateProfile(userId: string, data: Partial<User>): Promise<ApiResponse<User>> {
+    if (!userId) {
+      return {
+        success: false,
+        error: 'ID de usuario requerido',
+      }
+    }
+
+    // Validaciones básicas
+    if (data.nombres && data.nombres.trim().length < 2) {
+      return {
+        success: false,
+        error: 'El nombre debe tener al menos 2 caracteres',
+      }
+    }
+
+    if (data.apellidos && data.apellidos.trim().length < 2) {
+      return {
+        success: false,
+        error: 'Los apellidos deben tener al menos 2 caracteres',
+      }
+    }
+
+    return await authService.updateProfile(userId, data)
+  },
+
+  /**
+   * Subir avatar de usuario
+   */
+  async uploadAvatar(userId: string, file: File): Promise<ApiResponse<string>> {
+    if (!userId || !file) {
+      return {
+        success: false,
+        error: 'Datos incompletos para subir imagen',
+      }
+    }
+    return await authService.uploadAvatar(userId, file)
+  },
 }
 

@@ -23,6 +23,7 @@ export interface User {
   apellidos: string
   rol: 'asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka'
   club_id?: string | null
+  avatar_url?: string | null
   activo: boolean
   created_at?: string
   updated_at?: string
