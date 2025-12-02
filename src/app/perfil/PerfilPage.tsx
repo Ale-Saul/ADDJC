@@ -70,15 +70,26 @@ export default function PerfilPage() {
       const response = await authController.uploadAvatar(user.id, file)
       
       if (response.success && response.data) {
-        setAvatarUrl(response.data)
-        setSuccess('Foto de perfil actualizada correctamente')
+        // Precargar la imagen antes de mostrarla y el mensaje de éxito
+        const img = new Image()
+        img.onload = () => {
+          setAvatarUrl(response.data)
+          setUploading(false)
+          setSuccess('Foto de perfil actualizada correctamente')
+        }
+        img.onerror = () => {
+          setAvatarUrl(response.data)
+          setUploading(false)
+          setSuccess('Foto de perfil actualizada correctamente')
+        }
+        img.src = response.data
       } else {
         setError(response.error || 'Error al subir la imagen')
+        setUploading(false)
       }
     } catch (error) {
       console.error('Error al subir avatar:', error)
       setError('Error inesperado al subir la imagen')
-    } finally {
       setUploading(false)
     }
   }
