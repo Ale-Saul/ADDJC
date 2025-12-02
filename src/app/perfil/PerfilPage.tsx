@@ -73,7 +73,6 @@ export default function PerfilPage() {
       
       if (response.success && response.data) {
         setAvatarUrl(response.data)
-        await refreshUser()
         setSuccess('Foto de perfil actualizada correctamente')
       } else {
         setError(response.error || 'Error al subir la imagen')

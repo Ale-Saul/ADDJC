@@ -138,7 +138,7 @@ export default function Sidebar() {
           '& .MuiDrawer-paper': {
             width: DRAWER_WIDTH,
             boxSizing: 'border-box',
-            position: 'relative',
+            position: 'fixed',
             height: '100vh',
             overflow: 'hidden'
           }
@@ -322,7 +322,7 @@ export default function Sidebar() {
         '& .MuiDrawer-paper': {
           width: DRAWER_WIDTH,
           boxSizing: 'border-box',
-          position: 'relative',
+          position: 'fixed',
           height: '100vh',
           overflow: 'hidden'
         }
