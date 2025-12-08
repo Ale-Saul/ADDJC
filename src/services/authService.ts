@@ -158,6 +158,8 @@ export const authService = {
   async getUserProfile(userId: string): Promise<ApiResponse<User>> {
     try {
       const supabase = createClient()
+      
+      // Primero obtenemos el perfil base del usuario
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -178,20 +180,75 @@ export const authService = {
         }
       }
 
+      let clubId = data.club_id
+      let clubNombre = null
+
+      // Si es sensei o encargado, obtener el club desde la tabla senseis
+      if (data.rol === 'sensei' || data.rol === 'encargado') {
+        const { data: senseiData, error: senseiError } = await supabase
+          .from('senseis')
+          .select(`
+            club_id,
+            clubes:club_id (
+              nombre_club
+            )
+          `)
+          .eq('usuario_id', userId)
+          .single()
+
+        if (!senseiError && senseiData) {
+          clubId = senseiData.club_id
+          clubNombre = senseiData.clubes?.nombre_club || null
+        }
+      } 
+      // Si es judoka, obtener el club desde la tabla judokas
+      else if (data.rol === 'judoka') {
+        const { data: judokaData, error: judokaError } = await supabase
+          .from('judokas')
+          .select(`
+            club_id,
+            clubes:club_id (
+              nombre_club
+            )
+          `)
+          .eq('usuario_id', userId)
+          .single()
+
+        if (!judokaError && judokaData) {
+          clubId = judokaData.club_id
+          clubNombre = judokaData.clubes?.nombre_club || null
+        }
+      }
+      // Si tiene club_id directamente en user_profiles (caso legacy)
+      else if (data.club_id) {
+        const { data: clubData } = await supabase
+          .from('clubes')
+          .select('nombre_club')
+          .eq('id', data.club_id)
+          .single()
+
+        if (clubData) {
+          clubNombre = clubData.nombre_club
+        }
+      }
+
+      const userData = {
+        id: data.id,
+        email: data.email || '',
+        nombres: data.nombres || '',
+        apellidos: data.apellidos || '',
+        rol: data.rol || 'judoka',
+        club_id: clubId || null,
+        club_nombre: clubNombre,
+        avatar_url: data.avatar_url || null,
+        activo: data.activo ?? true,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+      }
+
       return {
         success: true,
-        data: {
-          id: data.id,
-          email: data.email || '',
-          nombres: data.nombres || '',
-          apellidos: data.apellidos || '',
-          rol: data.rol || 'judoka',
-          club_id: data.club_id || null,
-          avatar_url: data.avatar_url || null,
-          activo: data.activo ?? true,
-          created_at: data.created_at,
-          updated_at: data.updated_at,
-        },
+        data: userData,
       }
     } catch (error) {
       console.error('Error en getUserProfile:', error)
@@ -282,7 +339,12 @@ export const authService = {
         .from('user_profiles')
         .update(updates)
         .eq('id', userId)
-        .select('*')
+        .select(`
+          *,
+          clubes:club_id (
+            nombre_club
+          )
+        `)
         .single()
 
       if (error) {
@@ -301,6 +363,8 @@ export const authService = {
           apellidos: updatedData.apellidos || '',
           rol: updatedData.rol || 'judoka',
           club_id: updatedData.club_id || null,
+          club_nombre: updatedData.clubes?.nombre_club || null,
+          avatar_url: updatedData.avatar_url || null,
           activo: updatedData.activo ?? true,
           created_at: updatedData.created_at,
           updated_at: updatedData.updated_at,
