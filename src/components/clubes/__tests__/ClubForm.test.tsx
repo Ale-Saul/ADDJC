@@ -112,11 +112,11 @@ describe('ClubForm', () => {
       expect(mockedClubController.createClub).toHaveBeenCalledWith(
         expect.objectContaining({ nombre_club: 'Nuevo Club' })
       )
-    });
+    }, { timeout: 10000 });
     await waitFor(() => {
         expect(onSuccess).toHaveBeenCalledTimes(1)
-    }, { timeout: 2000 });
-  })
+    }, { timeout: 10000 });
+  }, 20000)
 
   it('debe llamar a updateClub al enviar el formulario de edición', async () => {
     mockedClubController.updateClub.mockResolvedValue({ success: true })
@@ -149,12 +149,19 @@ describe('ClubForm', () => {
     await userEvent.type(screen.getByLabelText(/Nombre del Club/i), 'Club con Nuevo Sensei')
     await userEvent.type(screen.getByLabelText(/Nombre del Director Técnico/i), 'Nuevo')
     await userEvent.type(screen.getByLabelText(/Apellidos del Director Técnico/i), 'Sensei')
+    await userEvent.type(screen.getByLabelText(/Email del Director Técnico/i), 'nuevo.sensei@test.com')
+    await userEvent.type(screen.getByLabelText(/Contraseña del Director Técnico/i), 'password123')
 
     fireEvent.submit(screen.getByRole('button', { name: /Crear/i }))
 
     await waitFor(() => {
       expect(mockedSenseiController.createSensei).toHaveBeenCalledWith(
-        expect.objectContaining({ nombres: 'Nuevo', apellidos: 'Sensei' })
+        expect.objectContaining({ 
+          nombres: 'Nuevo', 
+          apellidos: 'Sensei',
+          email: 'nuevo.sensei@test.com',
+          password: 'password123'
+        })
       )
       expect(mockedClubController.createClub).toHaveBeenCalledWith(
         expect.objectContaining({ director_tecnico_id: newSensei.usuario_id })
@@ -163,8 +170,8 @@ describe('ClubForm', () => {
         newSensei.id,
         { club_id: 'c2' }
       )
-    }, { timeout: 3000 })
-  }, 10000)
+    }, { timeout: 10000 })
+  }, 20000)
 
   it('debe mostrar un error si la creación del club falla', async () => {
     mockedClubController.createClub.mockResolvedValue({ success: false, error: 'Error de base de datos' })

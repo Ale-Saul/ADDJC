@@ -1,11 +1,20 @@
 import { arbitroService } from '../arbitroService'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { userService } from '../userService'
 import { Arbitro, ArbitroCreate } from '@/models/arbitro'
 
 // Mocks
-jest.mock('@/lib/supabase')
+jest.mock('@/lib/supabase/client', () => ({
+  createClient: jest.fn(),
+}))
 jest.mock('../userService')
+
+const mockSupabase = {
+  from: jest.fn(),
+}
+
+const mockCreateClient = require('@/lib/supabase/client').createClient as jest.Mock
+mockCreateClient.mockReturnValue(mockSupabase)
 
 describe('arbitroService', () => {
   const mockArbitro: Arbitro = {
@@ -50,7 +59,7 @@ describe('arbitroService', () => {
         select: mockSelect,
       })
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         insert: mockInsert,
       })
 
@@ -69,6 +78,8 @@ describe('arbitroService', () => {
         apellidos: 'Pérez',
         nivel_arbitraje: 'Nacional',
         activo: true,
+        email: 'juan@test.com',
+        password: 'password123',
       }
 
       ;(userService.createArbitroUser as jest.Mock).mockResolvedValue({
@@ -89,14 +100,14 @@ describe('arbitroService', () => {
         select: mockSelect,
       })
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         insert: mockInsert,
       })
 
       const result = await arbitroService.create(newArbitro)
 
       expect(result.success).toBe(true)
-      expect(userService.createArbitroUser).toHaveBeenCalledWith('Juan', 'Pérez')
+      expect(userService.createArbitroUser).toHaveBeenCalledWith('Juan', 'Pérez', 'juan@test.com', 'password123')
       expect(result.data?.usuario_id).toBe(validUUID)
     })
 
@@ -105,6 +116,8 @@ describe('arbitroService', () => {
         usuario_id: 'temp-user-id',
         nombres: 'Juan',
         apellidos: 'Pérez',
+        email: 'juan@test.com',
+        password: 'password123',
       }
 
       ;(userService.createArbitroUser as jest.Mock).mockResolvedValue({
@@ -116,7 +129,7 @@ describe('arbitroService', () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('Error al crear usuario')
-      expect(supabase.from).not.toHaveBeenCalled()
+      expect(mockSupabase.from).not.toHaveBeenCalled()
     })
   })
 
@@ -137,7 +150,7 @@ describe('arbitroService', () => {
         order: mockOrder
       })
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         select: mockSelect,
       })
 
@@ -145,7 +158,7 @@ describe('arbitroService', () => {
 
       expect(result.success).toBe(true)
       expect(result.data).toEqual([mockArbitro])
-      expect(supabase.from).toHaveBeenCalledWith('arbitros')
+      expect(mockSupabase.from).toHaveBeenCalledWith('arbitros')
       expect(mockSelect).toHaveBeenCalledWith('*')
       expect(mockOrder).toHaveBeenCalledWith('created_at', { ascending: false })
       expect(mockChain.eq).toHaveBeenCalledWith('activo', true)

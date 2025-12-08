@@ -1,21 +1,19 @@
 import { userService } from '../userService'
-import { supabase } from '@/lib/supabase'
-
-// Mock de Supabase
-jest.mock('@/lib/supabase', () => ({
-  supabase: {
-    auth: {
-      signUp: jest.fn()
-    },
-    from: jest.fn(() => ({
-      insert: jest.fn()
-    }))
-  }
-}))
 
 describe('userService', () => {
-  const mockSupabase = supabase as jest.Mocked<typeof supabase>
-  
+  // Guardar el fetch original
+  const originalFetch = global.fetch
+
+  beforeAll(() => {
+    // Mock global de fetch solo para estos tests
+    global.fetch = jest.fn()
+  })
+
+  afterAll(() => {
+    // Restaurar fetch original después de todos los tests
+    global.fetch = originalFetch
+  })
+
   beforeEach(() => {
     jest.clearAllMocks()
     // Suprimir console.warn y console.error en los tests
@@ -32,132 +30,97 @@ describe('userService', () => {
       const mockUserId = 'user-arbitro-123'
       const nombres = 'Juan'
       const apellidos = 'Pérez'
+      const email = 'juan.perez@test.com'
+      const password = 'password123'
 
-      // Mock de signUp
-      mockSupabase.auth.signUp = jest.fn().mockResolvedValue({
-        data: {
-          user: {
-            id: mockUserId,
-            email: 'arbitro_test@temp.com'
-          }
-        },
-        error: null
+      // Mock de fetch para Admin API
+      ;(global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          success: true,
+          data: { userId: mockUserId }
+        })
       })
 
-      // Mock de insert
-      const mockInsert = jest.fn().mockResolvedValue({
-        data: null,
-        error: null
-      })
-      mockSupabase.from = jest.fn().mockReturnValue({
-        insert: mockInsert
-      })
-
-      const result = await userService.createArbitroUser(nombres, apellidos)
+      const result = await userService.createArbitroUser(nombres, apellidos, email, password)
 
       expect(result.success).toBe(true)
       expect(result.data).toEqual({ userId: mockUserId })
-      expect(mockSupabase.auth.signUp).toHaveBeenCalledWith(
-        expect.objectContaining({
-          email: expect.stringContaining('arbitro_'),
-          password: expect.any(String),
-          options: {
-            data: {
-              nombres,
-              apellidos,
-              user_type: 'arbitro'
-            }
-          }
-        })
-      )
-      expect(mockSupabase.from).toHaveBeenCalledWith('user_profiles')
-      expect(mockInsert).toHaveBeenCalledWith({
-        id: mockUserId,
-        user_type: 'arbitro',
-        nombres,
-        apellidos,
-        activo: true
+      expect(global.fetch).toHaveBeenCalledWith('/api/admin/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          nombres,
+          apellidos,
+          rol: 'arbitro',
+          club_id: undefined,
+        }),
       })
     })
 
     it('debe manejar error al crear usuario en auth', async () => {
       const nombres = 'Juan'
       const apellidos = 'Pérez'
+      const email = 'juan@test.com'
+      const password = 'password123'
 
-      mockSupabase.auth.signUp = jest.fn().mockResolvedValue({
-        data: { user: null },
-        error: { message: 'Error de autenticación' }
+      ;(global.fetch as jest.Mock).mockResolvedValue({
+        json: jest.fn().mockResolvedValue({
+          success: false,
+          error: 'Error de autenticación'
+        })
       })
 
-      const result = await userService.createArbitroUser(nombres, apellidos)
+      const result = await userService.createArbitroUser(nombres, apellidos, email, password)
 
       expect(result.success).toBe(false)
-      expect(result.error).toBe('Error al crear usuario: Error de autenticación')
+      expect(result.error).toBe('Error de autenticación')
     })
 
-    it('debe manejar cuando no se crea el usuario', async () => {
+    it('debe validar que se requiere email y password', async () => {
       const nombres = 'Juan'
       const apellidos = 'Pérez'
 
-      mockSupabase.auth.signUp = jest.fn().mockResolvedValue({
-        data: { user: null },
-        error: null
-      })
+      const result1 = await userService.createArbitroUser(nombres, apellidos, '', 'password123')
+      expect(result1.success).toBe(false)
+      expect(result1.error).toBe('Email y contraseña son requeridos')
 
-      const result = await userService.createArbitroUser(nombres, apellidos)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Error: No se pudo crear el usuario')
+      const result2 = await userService.createArbitroUser(nombres, apellidos, 'test@test.com', '')
+      expect(result2.success).toBe(false)
+      expect(result2.error).toBe('Email y contraseña son requeridos')
     })
 
-    it('debe continuar si falla la creación del perfil', async () => {
-      const mockUserId = 'user-arbitro-123'
+    it('debe validar formato de email', async () => {
       const nombres = 'Juan'
       const apellidos = 'Pérez'
+      const password = 'password123'
 
-      mockSupabase.auth.signUp = jest.fn().mockResolvedValue({
-        data: {
-          user: {
-            id: mockUserId,
-            email: 'arbitro_test@temp.com'
-          }
-        },
-        error: null
-      })
-
-      const mockInsert = jest.fn().mockResolvedValue({
-        data: null,
-        error: { message: 'Error al insertar perfil' }
-      })
-      mockSupabase.from = jest.fn().mockReturnValue({
-        insert: mockInsert
-      })
-
-      const result = await userService.createArbitroUser(nombres, apellidos)
-
-      // El servicio continúa a pesar del error en el perfil
-      expect(result.success).toBe(true)
-      expect(result.data).toEqual({ userId: mockUserId })
-      expect(console.warn).toHaveBeenCalledWith(
-        'Error al crear perfil de usuario:',
-        'Error al insertar perfil'
-      )
+      const result = await userService.createArbitroUser(nombres, apellidos, 'invalid-email', password)
+      
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('El formato del email no es válido')
     })
 
     it('debe manejar excepciones inesperadas', async () => {
       const nombres = 'Juan'
       const apellidos = 'Pérez'
+      const email = 'juan@test.com'
+      const password = 'password123'
 
-      mockSupabase.auth.signUp = jest.fn().mockRejectedValue(
+      ;(global.fetch as jest.Mock).mockRejectedValue(
         new Error('Error de red')
       )
 
-      const result = await userService.createArbitroUser(nombres, apellidos)
+      const result = await userService.createArbitroUser(nombres, apellidos, email, password)
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('Error de red')
       expect(console.error).toHaveBeenCalledWith(
-        'Error al crear usuario de árbitro:',
+        'Error al crear usuario con Admin API:',
         expect.any(Error)
       )
     })
@@ -168,75 +131,67 @@ describe('userService', () => {
       const mockUserId = 'user-sensei-456'
       const nombres = 'María'
       const apellidos = 'González'
+      const email = 'maria@test.com'
+      const password = 'password123'
 
-      mockSupabase.auth.signUp = jest.fn().mockResolvedValue({
-        data: {
-          user: {
-            id: mockUserId,
-            email: 'sensei_test@temp.com'
-          }
-        },
-        error: null
+      ;(global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          success: true,
+          data: { userId: mockUserId }
+        })
       })
 
-      const mockInsert = jest.fn().mockResolvedValue({
-        data: null,
-        error: null
-      })
-      mockSupabase.from = jest.fn().mockReturnValue({
-        insert: mockInsert
-      })
-
-      const result = await userService.createSenseiUser(nombres, apellidos)
+      const result = await userService.createSenseiUser(nombres, apellidos, email, password)
 
       expect(result.success).toBe(true)
       expect(result.data).toEqual({ userId: mockUserId })
-      expect(mockSupabase.auth.signUp).toHaveBeenCalledWith(
-        expect.objectContaining({
-          email: expect.stringContaining('sensei_'),
-          password: expect.any(String),
-          options: {
-            data: {
-              nombres,
-              apellidos,
-              user_type: 'sensei'
-            }
-          }
-        })
-      )
-      expect(mockInsert).toHaveBeenCalledWith({
-        id: mockUserId,
-        user_type: 'sensei',
-        nombres,
-        apellidos,
-        activo: true
+      expect(global.fetch).toHaveBeenCalledWith('/api/admin/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          nombres,
+          apellidos,
+          rol: 'sensei',
+          club_id: undefined,
+        }),
       })
     })
 
     it('debe manejar error al crear usuario sensei en auth', async () => {
       const nombres = 'María'
       const apellidos = 'González'
+      const email = 'maria@test.com'
+      const password = 'password123'
 
-      mockSupabase.auth.signUp = jest.fn().mockResolvedValue({
-        data: { user: null },
-        error: { message: 'Email ya existe' }
+      ;(global.fetch as jest.Mock).mockResolvedValue({
+        json: jest.fn().mockResolvedValue({
+          success: false,
+          error: 'Email ya existe'
+        })
       })
 
-      const result = await userService.createSenseiUser(nombres, apellidos)
+      const result = await userService.createSenseiUser(nombres, apellidos, email, password)
 
       expect(result.success).toBe(false)
-      expect(result.error).toBe('Error al crear usuario: Email ya existe')
+      expect(result.error).toBe('Email ya existe')
     })
 
     it('debe manejar excepciones al crear sensei', async () => {
       const nombres = 'María'
       const apellidos = 'González'
+      const email = 'maria@test.com'
+      const password = 'password123'
 
-      mockSupabase.auth.signUp = jest.fn().mockRejectedValue(
+      ;(global.fetch as jest.Mock).mockRejectedValue(
         new Error('Timeout de red')
       )
 
-      const result = await userService.createSenseiUser(nombres, apellidos)
+      const result = await userService.createSenseiUser(nombres, apellidos, email, password)
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('Timeout de red')
@@ -248,115 +203,72 @@ describe('userService', () => {
       const mockUserId = 'user-judoka-789'
       const nombres = 'Pedro'
       const apellidos = 'Ramírez'
+      const email = 'pedro@test.com'
+      const password = 'password123'
 
-      mockSupabase.auth.signUp = jest.fn().mockResolvedValue({
-        data: {
-          user: {
-            id: mockUserId,
-            email: 'judoka_test@temp.com'
-          }
-        },
-        error: null
+      ;(global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          success: true,
+          data: { userId: mockUserId }
+        })
       })
 
-      const mockInsert = jest.fn().mockResolvedValue({
-        data: null,
-        error: null
-      })
-      mockSupabase.from = jest.fn().mockReturnValue({
-        insert: mockInsert
-      })
-
-      const result = await userService.createJudokaUser(nombres, apellidos)
+      const result = await userService.createJudokaUser(nombres, apellidos, email, password)
 
       expect(result.success).toBe(true)
       expect(result.data).toEqual({ userId: mockUserId })
-      expect(mockSupabase.auth.signUp).toHaveBeenCalledWith(
-        expect.objectContaining({
-          email: expect.stringContaining('judoka_'),
-          password: expect.any(String),
-          options: {
-            data: {
-              nombres,
-              apellidos,
-              user_type: 'judoka'
-            }
-          }
-        })
-      )
-      expect(mockInsert).toHaveBeenCalledWith({
-        id: mockUserId,
-        user_type: 'judoka',
-        nombres,
-        apellidos,
-        activo: true
+      expect(global.fetch).toHaveBeenCalledWith('/api/admin/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          nombres,
+          apellidos,
+          rol: 'judoka',
+          club_id: undefined,
+        }),
       })
     })
 
     it('debe manejar error al crear usuario judoka en auth', async () => {
       const nombres = 'Pedro'
       const apellidos = 'Ramírez'
+      const email = 'pedro@test.com'
+      const password = 'password123'
 
-      mockSupabase.auth.signUp = jest.fn().mockResolvedValue({
-        data: { user: null },
-        error: { message: 'Servicio no disponible' }
+      ;(global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          success: false,
+          error: 'Servicio no disponible'
+        })
       })
 
-      const result = await userService.createJudokaUser(nombres, apellidos)
+      const result = await userService.createJudokaUser(nombres, apellidos, email, password)
 
       expect(result.success).toBe(false)
-      expect(result.error).toBe('Error al crear usuario: Servicio no disponible')
-    })
-
-    it('debe continuar si falla la creación del perfil de judoka', async () => {
-      const mockUserId = 'user-judoka-789'
-      const nombres = 'Pedro'
-      const apellidos = 'Ramírez'
-
-      mockSupabase.auth.signUp = jest.fn().mockResolvedValue({
-        data: {
-          user: {
-            id: mockUserId,
-            email: 'judoka_test@temp.com'
-          }
-        },
-        error: null
-      })
-
-      const mockInsert = jest.fn().mockResolvedValue({
-        data: null,
-        error: { message: 'Conflicto con perfil existente' }
-      })
-      mockSupabase.from = jest.fn().mockReturnValue({
-        insert: mockInsert
-      })
-
-      const result = await userService.createJudokaUser(nombres, apellidos)
-
-      expect(result.success).toBe(true)
-      expect(result.data).toEqual({ userId: mockUserId })
-      expect(console.warn).toHaveBeenCalledWith(
-        'Error al crear perfil de usuario:',
-        'Conflicto con perfil existente'
-      )
+      expect(result.error).toBe('Servicio no disponible')
     })
 
     it('debe manejar excepciones al crear judoka', async () => {
       const nombres = 'Pedro'
       const apellidos = 'Ramírez'
+      const email = 'pedro@test.com'
+      const password = 'password123'
 
-      mockSupabase.auth.signUp = jest.fn().mockRejectedValue(
+      // Mock fetch que lanza excepción
+      ;(global.fetch as jest.Mock).mockRejectedValue(
         new Error('Error crítico del servidor')
       )
 
-      const result = await userService.createJudokaUser(nombres, apellidos)
+      const result = await userService.createJudokaUser(nombres, apellidos, email, password)
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('Error crítico del servidor')
-      expect(console.error).toHaveBeenCalledWith(
-        'Error al crear usuario de judoka:',
-        expect.any(Error)
-      )
     })
   })
 })

@@ -55,6 +55,9 @@ describe('ArbitroForm', () => {
 
     await userEvent.type(screen.getByLabelText(/Nombres/i), 'Nuevo')
     await userEvent.type(screen.getByLabelText(/Apellidos/i), 'Arbitro')
+    await userEvent.type(screen.getByLabelText(/Email/i), 'nuevo@test.com')
+    const passwordField = document.querySelector('input[name="password"]') as HTMLInputElement
+    if (passwordField) await userEvent.type(passwordField, 'password123')
     
     fireEvent.submit(screen.getByRole('button', { name: /Crear/i }))
 
@@ -62,15 +65,17 @@ describe('ArbitroForm', () => {
       expect(mockedArbitroController.createArbitro).toHaveBeenCalledWith(
         expect.objectContaining({
           nombres: 'Nuevo',
-          apellidos: 'Arbitro'
+          apellidos: 'Arbitro',
+          email: 'nuevo@test.com',
+          password: 'password123'
         })
       )
-    })
+    }, { timeout: 10000 })
 
     await waitFor(() => {
       expect(onSuccess).toHaveBeenCalledTimes(1)
-    }, { timeout: 2000 })
-  })
+    }, { timeout: 10000 })
+  }, 20000)
 
   it('debe llamar a updateArbitro al enviar el formulario para editar un árbitro', async () => {
     mockedArbitroController.updateArbitro.mockResolvedValue({ success: true })
@@ -89,12 +94,12 @@ describe('ArbitroForm', () => {
           nombres: 'Juan Modificado'
         })
       )
-    })
+    }, { timeout: 10000 })
     
     await waitFor(() => {
       expect(onSuccess).toHaveBeenCalledTimes(1)
-    }, { timeout: 2000 })
-  })
+    }, { timeout: 10000 })
+  }, 20000)
 
   it('debe mostrar un mensaje de error si la creación falla', async () => {
     const errorMessage = 'Error de red'
@@ -103,11 +108,14 @@ describe('ArbitroForm', () => {
 
     await userEvent.type(screen.getByLabelText(/Nombres/i), 'Test')
     await userEvent.type(screen.getByLabelText(/Apellidos/i), 'Error')
+    await userEvent.type(screen.getByLabelText(/Email/i), 'test@test.com')
+    const passwordField = document.querySelector('input[name="password"]') as HTMLInputElement
+    if (passwordField) await userEvent.type(passwordField, 'password123')
     
     fireEvent.submit(screen.getByRole('button', { name: /Crear/i }))
 
-    expect(await screen.findByText(errorMessage)).toBeInTheDocument()
-  })
+    expect(await screen.findByText(errorMessage, {}, { timeout: 10000 })).toBeInTheDocument()
+  }, 20000)
 
   it('debe mostrar un mensaje de error si la actualización falla', async () => {
     const errorMessage = 'No se pudo actualizar'

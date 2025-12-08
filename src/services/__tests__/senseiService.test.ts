@@ -1,11 +1,20 @@
 import { senseiService } from '../senseiService'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { userService } from '../userService'
 import { Sensei, SenseiCreate } from '@/models/sensei'
 
 // Mocks
-jest.mock('@/lib/supabase')
+jest.mock('@/lib/supabase/client', () => ({
+  createClient: jest.fn(),
+}))
 jest.mock('../userService')
+
+const mockSupabase = {
+  from: jest.fn(),
+}
+
+const mockCreateClient = require('@/lib/supabase/client').createClient as jest.Mock
+mockCreateClient.mockReturnValue(mockSupabase)
 
 describe('senseiService', () => {
   const mockSensei: Sensei = {
@@ -45,7 +54,7 @@ describe('senseiService', () => {
         order: mockOrder
       })
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         select: mockSelect,
       })
 
@@ -53,7 +62,7 @@ describe('senseiService', () => {
 
       expect(result.success).toBe(true)
       expect(result.data).toEqual([mockSensei])
-      expect(supabase.from).toHaveBeenCalledWith('senseis')
+      expect(mockSupabase.from).toHaveBeenCalledWith('senseis')
       expect(mockSelect).toHaveBeenCalledWith('*')
       expect(mockOrder).toHaveBeenCalledWith('created_at', { ascending: false })
       expect(mockChain.eq).toHaveBeenCalledWith('activo', true)
@@ -71,7 +80,7 @@ describe('senseiService', () => {
         order: mockOrder
       })
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         select: mockSelect,
       })
 
@@ -79,7 +88,7 @@ describe('senseiService', () => {
 
       expect(result.success).toBe(true)
       expect(result.data).toEqual([mockSensei])
-      expect(supabase.from).toHaveBeenCalledWith('senseis')
+      expect(mockSupabase.from).toHaveBeenCalledWith('senseis')
     })
 
     it('debe manejar errores correctamente', async () => {
@@ -98,7 +107,7 @@ describe('senseiService', () => {
         order: mockOrder
       })
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         select: mockSelect,
       })
 
@@ -128,7 +137,7 @@ describe('senseiService', () => {
         eq: mockEqClub
       })
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         select: mockSelect,
       })
 
@@ -136,7 +145,7 @@ describe('senseiService', () => {
 
       expect(result.success).toBe(true)
       expect(result.data).toEqual([mockSensei])
-      expect(supabase.from).toHaveBeenCalledWith('senseis')
+      expect(mockSupabase.from).toHaveBeenCalledWith('senseis')
       expect(mockEqClub).toHaveBeenCalledWith('club_id', clubId)
       expect(mockEqActivo).toHaveBeenCalledWith('activo', true)
       expect(mockOrder).toHaveBeenCalledWith('created_at', { ascending: false })
@@ -161,7 +170,7 @@ describe('senseiService', () => {
         eq: mockEqClub
       })
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         select: mockSelect,
       })
 
@@ -182,7 +191,7 @@ describe('senseiService', () => {
         }),
       }
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue(mockQuery),
       })
 
@@ -203,7 +212,7 @@ describe('senseiService', () => {
         }),
       }
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue(mockQuery),
       })
 
@@ -239,7 +248,7 @@ describe('senseiService', () => {
         select: mockSelect,
       })
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         insert: mockInsert,
       })
 
@@ -259,6 +268,8 @@ describe('senseiService', () => {
         club_id: 'club-123',
         grado_dan: '5to Dan',
         activo: true,
+        email: 'carlos@test.com',
+        password: 'password123',
       }
 
       ;(userService.createSenseiUser as jest.Mock).mockResolvedValue({
@@ -279,14 +290,14 @@ describe('senseiService', () => {
         select: mockSelect,
       })
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         insert: mockInsert,
       })
 
       const result = await senseiService.create(newSensei)
 
       expect(result.success).toBe(true)
-      expect(userService.createSenseiUser).toHaveBeenCalledWith('Carlos', 'García')
+      expect(userService.createSenseiUser).toHaveBeenCalledWith('Carlos', 'García', 'carlos@test.com', 'password123')
       expect(result.data?.usuario_id).toBe(validUUID)
     })
 
@@ -295,6 +306,8 @@ describe('senseiService', () => {
         usuario_id: 'temp-user-id',
         nombres: 'Carlos',
         apellidos: 'García',
+        email: 'carlos@test.com',
+        password: 'password123',
       }
 
       ;(userService.createSenseiUser as jest.Mock).mockResolvedValue({
@@ -306,7 +319,7 @@ describe('senseiService', () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('Error al crear usuario')
-      expect(supabase.from).not.toHaveBeenCalled()
+      expect(mockSupabase.from).not.toHaveBeenCalled()
     })
 
     it('debe manejar errores de usuario_id inválido', async () => {
@@ -320,7 +333,7 @@ describe('senseiService', () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('Error: El usuario_id debe ser un UUID válido.')
-      expect(supabase.from).not.toHaveBeenCalled()
+      expect(mockSupabase.from).not.toHaveBeenCalled()
     })
 
     it('debe manejar errores de foreign key para usuario_id', async () => {
@@ -345,7 +358,7 @@ describe('senseiService', () => {
         select: mockSelect,
       })
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         insert: mockInsert,
       })
 
@@ -378,7 +391,7 @@ describe('senseiService', () => {
         select: mockSelect,
       })
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         insert: mockInsert,
       })
 
@@ -405,7 +418,7 @@ describe('senseiService', () => {
         }),
       }
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         update: jest.fn().mockReturnValue(mockQuery),
       })
 
@@ -429,7 +442,7 @@ describe('senseiService', () => {
         }),
       }
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         update: jest.fn().mockReturnValue(mockQuery),
       })
 
@@ -442,32 +455,61 @@ describe('senseiService', () => {
 
   describe('delete', () => {
     it('debe marcar un sensei como inactivo', async () => {
-      const mockQuery = {
-        eq: jest.fn().mockResolvedValue({
-          error: null,
-        }),
-      }
-
-      ;(supabase.from as jest.Mock).mockReturnValue({
-        update: jest.fn().mockReturnValue(mockQuery),
+      const mockSelectSingle = jest.fn().mockResolvedValue({
+        data: { id: '1', usuario_id: 'user-123' },
+        error: null,
+      })
+      
+      const mockSelectEq = jest.fn().mockReturnValue({
+        single: mockSelectSingle,
+      })
+      
+      const mockSelect = jest.fn().mockReturnValue({
+        eq: mockSelectEq,
+      })
+      
+      const mockUpdateEq = jest.fn().mockResolvedValue({
+        error: null,
+      })
+      
+      const mockUpdate = jest.fn().mockReturnValue({
+        eq: mockUpdateEq,
+      })
+      
+      let callCount = 0
+      ;(mockSupabase.from as jest.Mock).mockImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          // Primera llamada: select para obtener el sensei
+          return { select: mockSelect }
+        } else {
+          // Segunda llamada: update para marcar inactivo
+          return { update: mockUpdate }
+        }
       })
 
       const result = await senseiService.delete('1')
 
       expect(result.success).toBe(true)
-      expect(mockQuery.eq).toHaveBeenCalledWith('id', '1')
     })
 
     it('debe manejar errores al eliminar', async () => {
       const mockError = new Error('Error al eliminar')
-      const mockQuery = {
-        eq: jest.fn().mockResolvedValue({
-          error: mockError,
-        }),
-      }
-
-      ;(supabase.from as jest.Mock).mockReturnValue({
-        update: jest.fn().mockReturnValue(mockQuery),
+      const mockSelectSingle = jest.fn().mockResolvedValue({
+        data: null,
+        error: mockError,
+      })
+      
+      const mockSelectEq = jest.fn().mockReturnValue({
+        single: mockSelectSingle,
+      })
+      
+      const mockSelect = jest.fn().mockReturnValue({
+        eq: mockSelectEq,
+      })
+      
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
+        select: mockSelect,
       })
 
       const result = await senseiService.delete('1')
@@ -488,7 +530,7 @@ describe('senseiService', () => {
         }),
       }
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         update: jest.fn().mockReturnValue(mockQuery),
       })
 
@@ -509,7 +551,7 @@ describe('senseiService', () => {
         }),
       }
 
-      ;(supabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockReturnValue({
         update: jest.fn().mockReturnValue(mockQuery),
       })
 

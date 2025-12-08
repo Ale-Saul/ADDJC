@@ -186,10 +186,10 @@ describe('CertificacionForm', () => {
             nombre_certificacion: 'Certificación Actualizada'
           })
         )
-      })
+      }, { timeout: 10000 })
 
-      expect(await screen.findByText(/Certificación actualizada exitosamente/i)).toBeInTheDocument()
-    })
+      expect(await screen.findByText(/Certificación actualizada exitosamente/i, {}, { timeout: 10000 })).toBeInTheDocument()
+    }, 20000)
   })
 
   describe('Subida de archivos', () => {

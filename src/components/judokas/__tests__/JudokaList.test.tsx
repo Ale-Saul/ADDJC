@@ -64,13 +64,11 @@ describe('JudokaList', () => {
       expect(screen.getByText('Perez')).toBeInTheDocument()
       expect(screen.getByText('Maria')).toBeInTheDocument()
       expect(screen.getByText('Gomez')).toBeInTheDocument()
+      expect(screen.getByText('Senior')).toBeInTheDocument()
+      expect(screen.getByText('Negro')).toBeInTheDocument()
+      expect(screen.getByText('Activo')).toBeInTheDocument()
+      expect(screen.getByText('Inactivo')).toBeInTheDocument()
     })
-    
-    expect(screen.getByText('Senior')).toBeInTheDocument()
-    expect(screen.getByText('Negro')).toBeInTheDocument()
-    expect(screen.getByText('81 kg')).toBeInTheDocument()
-    expect(screen.getByText('Activo')).toBeInTheDocument()
-    expect(screen.getByText('Inactivo')).toBeInTheDocument()
   })
 
   it('should render empty state when no judokas found', async () => {

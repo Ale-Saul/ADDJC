@@ -1,12 +1,10 @@
 import { judokaService } from '../judokaService'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { userService } from '../userService'
 
-// Mock supabase
-jest.mock('@/lib/supabase', () => ({
-  supabase: {
-    from: jest.fn()
-  }
+// Mock supabase client
+jest.mock('@/lib/supabase/client', () => ({
+  createClient: jest.fn()
 }))
 
 // Mock userService
@@ -17,6 +15,9 @@ jest.mock('../userService', () => ({
 }))
 
 describe('judokaService', () => {
+  const mockCreateClient = createClient as jest.MockedFunction<typeof createClient>
+  let mockSupabase: any
+
   const mockJudoka = {
     id: '1',
     usuario_id: '12345678-1234-1234-1234-123456789012',
@@ -31,36 +32,28 @@ describe('judokaService', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     
-    // Setup default mock chain
-    const createMockQuery = (resultData: any = { data: [mockJudoka], error: null }) => {
-      const query: any = {}
-      query.then = (resolve: any) => Promise.resolve(resultData).then(resolve)
-      
-      query.select = jest.fn().mockReturnValue(query)
-      query.insert = jest.fn().mockReturnValue(query)
-      query.update = jest.fn().mockReturnValue(query)
-      query.eq = jest.fn().mockReturnValue(query)
-      query.order = jest.fn().mockReturnValue(query)
-      query.single = jest.fn().mockReturnValue({
-        ...query,
-        then: (resolve: any) => Promise.resolve({ 
-          data: Array.isArray(resultData.data) ? resultData.data[0] : resultData.data, 
-          error: resultData.error 
-        }).then(resolve)
-      })
-      
-      return query
+    // Mock básico de Supabase
+    mockSupabase = {
+      from: jest.fn(() => ({
+        select: jest.fn().mockReturnThis(),
+        insert: jest.fn().mockReturnThis(),
+        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({ data: mockJudoka, error: null }),
+        then: jest.fn((callback) => callback({ data: [mockJudoka], error: null }))
+      }))
     }
 
-    (supabase.from as jest.Mock).mockImplementation(() => createMockQuery())
+    mockCreateClient.mockReturnValue(mockSupabase)
   })
 
   describe('getAll', () => {
     it('should return all active judokas by default', async () => {
       const result = await judokaService.getAll()
       
-      expect(supabase.from).toHaveBeenCalledWith('judokas')
-      const query = (supabase.from as jest.Mock).mock.results[0].value
+      expect(mockSupabase.from).toHaveBeenCalledWith('judokas')
+      const query = (mockSupabase.from as jest.Mock).mock.results[0].value
       expect(query.select).toHaveBeenCalledWith('*')
       expect(query.eq).toHaveBeenCalledWith('activo', true)
       expect(result.success).toBe(true)
@@ -70,7 +63,7 @@ describe('judokaService', () => {
     it('should return all judokas including inactive when specified', async () => {
       const result = await judokaService.getAll(true)
       
-      const query = (supabase.from as jest.Mock).mock.results[0].value
+      const query = (mockSupabase.from as jest.Mock).mock.results[0].value
       expect(query.eq).not.toHaveBeenCalledWith('activo', true)
       expect(result.success).toBe(true)
     })
@@ -82,7 +75,7 @@ describe('judokaService', () => {
         order: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis()
       }
-      ;(supabase.from as jest.Mock).mockReturnValue(errorQuery)
+      ;(mockSupabase.from as jest.Mock).mockReturnValue(errorQuery)
       
       const result = await judokaService.getAll()
       
@@ -95,7 +88,7 @@ describe('judokaService', () => {
     it('should return a judoka by id', async () => {
       const result = await judokaService.getById('1')
       
-      const query = (supabase.from as jest.Mock).mock.results[0].value
+      const query = (mockSupabase.from as jest.Mock).mock.results[0].value
       expect(query.select).toHaveBeenCalledWith('*')
       expect(query.eq).toHaveBeenCalledWith('id', '1')
       expect(query.single).toHaveBeenCalled()
@@ -111,7 +104,7 @@ describe('judokaService', () => {
           then: (resolve: any) => Promise.resolve({ data: null, error: new Error('Not found') }).then(resolve)
         })
       }
-      ;(supabase.from as jest.Mock).mockReturnValue(errorQuery)
+      ;(mockSupabase.from as jest.Mock).mockReturnValue(errorQuery)
       
       const result = await judokaService.getById('999')
       
@@ -132,7 +125,7 @@ describe('judokaService', () => {
     it('should create a judoka with existing user_id', async () => {
       const result = await judokaService.create(newJudoka)
       
-      const query = (supabase.from as jest.Mock).mock.results[0].value
+      const query = (mockSupabase.from as jest.Mock).mock.results[0].value
       expect(query.insert).toHaveBeenCalledWith(expect.objectContaining({
         nombres: 'Nuevo',
         usuario_id: validUUID
@@ -151,7 +144,7 @@ describe('judokaService', () => {
       const result = await judokaService.create(judokaTemp)
 
       expect(userService.createJudokaUser).toHaveBeenCalledWith('Nuevo', 'Judoka')
-      const query = (supabase.from as jest.Mock).mock.results[0].value
+      const query = (mockSupabase.from as jest.Mock).mock.results[0].value
       expect(query.insert).toHaveBeenCalledWith(expect.objectContaining({
         usuario_id: validUUID
       }))
@@ -174,7 +167,7 @@ describe('judokaService', () => {
       
       const result = await judokaService.update('1', updateData)
       
-      const query = (supabase.from as jest.Mock).mock.results[0].value
+      const query = (mockSupabase.from as jest.Mock).mock.results[0].value
       expect(query.update).toHaveBeenCalledWith(updateData)
       expect(query.eq).toHaveBeenCalledWith('id', '1')
       expect(result.success).toBe(true)
@@ -185,7 +178,7 @@ describe('judokaService', () => {
     it('should soft delete a judoka', async () => {
       const result = await judokaService.delete('1')
       
-      const query = (supabase.from as jest.Mock).mock.results[0].value
+      const query = (mockSupabase.from as jest.Mock).mock.results[0].value
       expect(query.update).toHaveBeenCalledWith({ activo: false })
       expect(query.eq).toHaveBeenCalledWith('id', '1')
       expect(result.success).toBe(true)
@@ -196,7 +189,7 @@ describe('judokaService', () => {
     it('should restore a judoka', async () => {
       const result = await judokaService.restore('1')
       
-      const query = (supabase.from as jest.Mock).mock.results[0].value
+      const query = (mockSupabase.from as jest.Mock).mock.results[0].value
       expect(query.update).toHaveBeenCalledWith({ activo: true })
       expect(query.eq).toHaveBeenCalledWith('id', '1')
       expect(result.success).toBe(true)
@@ -207,7 +200,7 @@ describe('judokaService', () => {
     it('should return judokas by club', async () => {
       const result = await judokaService.getByClub('club-1')
       
-      const query = (supabase.from as jest.Mock).mock.results[0].value
+      const query = (mockSupabase.from as jest.Mock).mock.results[0].value
       expect(query.eq).toHaveBeenCalledWith('club_id', 'club-1')
       expect(query.eq).toHaveBeenCalledWith('activo', true)
       expect(result.success).toBe(true)
@@ -218,10 +211,11 @@ describe('judokaService', () => {
     it('should return judokas by entrenador', async () => {
       const result = await judokaService.getByEntrenador('entrenador-1')
       
-      const query = (supabase.from as jest.Mock).mock.results[0].value
+      const query = (mockSupabase.from as jest.Mock).mock.results[0].value
       expect(query.eq).toHaveBeenCalledWith('entrenador_id', 'entrenador-1')
       expect(query.eq).toHaveBeenCalledWith('activo', true)
       expect(result.success).toBe(true)
     })
   })
 })
+
