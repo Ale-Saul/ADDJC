@@ -74,11 +74,21 @@ export const clubService = {
 
       if (error) throw error
 
-      // Si se asignó un director técnico, actualizar su rol a 'encargado'
-      if (club.director_tecnico_id) {
+      // Si se asignó un director técnico, actualizar su rol a 'encargado' y club_id
+      if (club.director_tecnico_id && data) {
+        // Obtener el club_id del sensei en la tabla senseis
+        const { data: senseiData } = await client
+          .from('senseis')
+          .select('club_id')
+          .eq('usuario_id', club.director_tecnico_id)
+          .single()
+        
         await client
           .from('user_profiles')
-          .update({ rol: 'encargado' })
+          .update({ 
+            rol: 'encargado',
+            club_id: senseiData?.club_id || data.id // Usar el club del sensei o el club recién creado
+          })
           .eq('id', club.director_tecnico_id)
       }
 
@@ -109,19 +119,39 @@ export const clubService = {
 
         // Si cambió el director técnico
         if (directorAnterior !== directorNuevo) {
-          // Si había un director anterior, cambiar su rol a 'sensei'
+          // Si había un director anterior, cambiar su rol a 'sensei' y limpiar club_id
           if (directorAnterior) {
+            // Obtener el club_id del sensei en la tabla senseis
+            const { data: senseiAnterior } = await client
+              .from('senseis')
+              .select('club_id')
+              .eq('usuario_id', directorAnterior)
+              .single()
+            
             await client
               .from('user_profiles')
-              .update({ rol: 'sensei' })
+              .update({ 
+                rol: 'sensei',
+                club_id: senseiAnterior?.club_id || null // Mantener el club del sensei
+              })
               .eq('id', directorAnterior)
           }
 
-          // Si hay un nuevo director, cambiar su rol a 'encargado'
+          // Si hay un nuevo director, cambiar su rol a 'encargado' y actualizar club_id
           if (directorNuevo) {
+            // Obtener el club_id del sensei en la tabla senseis
+            const { data: senseiNuevo } = await client
+              .from('senseis')
+              .select('club_id')
+              .eq('usuario_id', directorNuevo)
+              .single()
+            
             await client
               .from('user_profiles')
-              .update({ rol: 'encargado' })
+              .update({ 
+                rol: 'encargado',
+                club_id: senseiNuevo?.club_id || id // Usar el club actual
+              })
               .eq('id', directorNuevo)
           }
         }

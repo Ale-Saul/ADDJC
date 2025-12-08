@@ -11,12 +11,17 @@ import SearchBar from '@/components/common/SearchBar'
 import { Sensei } from '@/models/sensei'
 import { senseiController } from '@/controllers/senseiController'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function SenseisPage() {
   const router = useRouter()
+  const { user } = useAuth()
   const [openDialog, setOpenDialog] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
+
+  // Si es encargado o sensei, filtrar por su club
+  const clubId = (user?.rol === 'encargado' || user?.rol === 'sensei') ? user.club_id : undefined
 
   const handleCreateSuccess = () => {
     setOpenDialog(false)
@@ -70,6 +75,7 @@ export default function SenseisPage() {
         onDelete={handleDelete}
         refreshTrigger={refreshTrigger}
         searchTerm={searchTerm}
+        clubId={clubId}
       />
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
