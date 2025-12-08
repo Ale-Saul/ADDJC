@@ -422,6 +422,7 @@ export default function ResetPasswordPage() {
               label="Nueva Contraseña"
               type="password"
               id="password"
+              inputProps={{ 'data-testid': 'password' }}
               autoComplete="new-password"
               autoFocus
               value={password}
@@ -437,6 +438,7 @@ export default function ResetPasswordPage() {
               label="Confirmar Nueva Contraseña"
               type="password"
               id="confirmPassword"
+              inputProps={{ 'data-testid': 'confirmPassword' }}
               autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
