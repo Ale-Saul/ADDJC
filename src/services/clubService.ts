@@ -64,6 +64,8 @@ export const clubService = {
   async create(club: ClubCreate): Promise<ApiResponse<Club>> {
     try {
       const client = getSupabaseClient()
+      
+      // Crear el club
       const { data, error } = await client
         .from('clubes')
         .insert(club)
@@ -71,6 +73,14 @@ export const clubService = {
         .single()
 
       if (error) throw error
+
+      // Si se asignó un director técnico, actualizar su rol a 'encargado'
+      if (club.director_tecnico_id) {
+        await client
+          .from('user_profiles')
+          .update({ rol: 'encargado' })
+          .eq('id', club.director_tecnico_id)
+      }
 
       return { success: true, data }
     } catch (error: any) {
@@ -84,6 +94,40 @@ export const clubService = {
   async update(id: string, club: ClubUpdate): Promise<ApiResponse<Club>> {
     try {
       const client = getSupabaseClient()
+      
+      // Si se está actualizando el director técnico, manejar cambios de rol
+      if (club.director_tecnico_id !== undefined) {
+        // Obtener el director técnico anterior
+        const { data: clubAnterior } = await client
+          .from('clubes')
+          .select('director_tecnico_id')
+          .eq('id', id)
+          .single()
+
+        const directorAnterior = clubAnterior?.director_tecnico_id
+        const directorNuevo = club.director_tecnico_id
+
+        // Si cambió el director técnico
+        if (directorAnterior !== directorNuevo) {
+          // Si había un director anterior, cambiar su rol a 'sensei'
+          if (directorAnterior) {
+            await client
+              .from('user_profiles')
+              .update({ rol: 'sensei' })
+              .eq('id', directorAnterior)
+          }
+
+          // Si hay un nuevo director, cambiar su rol a 'encargado'
+          if (directorNuevo) {
+            await client
+              .from('user_profiles')
+              .update({ rol: 'encargado' })
+              .eq('id', directorNuevo)
+          }
+        }
+      }
+
+      // Actualizar el club
       const { data, error } = await client
         .from('clubes')
         .update(club)

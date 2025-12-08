@@ -58,7 +58,7 @@ export default function Sidebar() {
     const roles: Record<string, string> = {
       asociacion: 'Asociación',
       sensei: 'Sensei',
-      encargado: 'Encargado',
+      encargado: 'Encargado-Sensei',
       arbitro: 'Árbitro',
       judoka: 'Judoka'
     }

@@ -48,12 +48,21 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
     const loadSenseis = async () => {
       const response = await senseiController.getAllSenseis(false)
       if (response.success && response.data) {
-        setSenseis(response.data)
+        // Si estamos editando un club, filtrar solo senseis del club o sin club
+        if (club) {
+          const senseisDisponibles = response.data.filter(
+            sensei => sensei.club_id === club.id || sensei.club_id === null
+          )
+          setSenseis(senseisDisponibles)
+        } else {
+          // Si estamos creando un club nuevo, mostrar todos los senseis
+          setSenseis(response.data)
+        }
       }
       setLoadingSenseis(false)
     }
     loadSenseis()
-  }, [])
+  }, [club])
 
   useEffect(() => {
     if (club) {
