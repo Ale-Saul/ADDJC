@@ -172,6 +172,14 @@ export const senseiService = {
         return { success: false, error: errorMessage }
       }
 
+      // Actualizar club_id en user_profiles si el sensei tiene un club asignado
+      if (data && data.club_id) {
+        await client
+          .from('user_profiles')
+          .update({ club_id: data.club_id, updated_at: new Date().toISOString() })
+          .eq('id', userId)
+      }
+
       return { success: true, data }
     } catch (error) {
       console.error('Error al crear sensei:', error)
@@ -194,6 +202,14 @@ export const senseiService = {
         .single()
 
       if (error) throw error
+
+      // Si se actualizó el club_id del sensei, actualizar también en user_profiles
+      if (data && sensei.club_id !== undefined) {
+        await client
+          .from('user_profiles')
+          .update({ club_id: sensei.club_id, updated_at: new Date().toISOString() })
+          .eq('id', data.usuario_id)
+      }
 
       return { success: true, data }
     } catch (error) {

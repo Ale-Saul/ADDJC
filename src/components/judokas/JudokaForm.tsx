@@ -20,6 +20,7 @@ import { clubController } from '@/controllers/clubController'
 import { senseiController } from '@/controllers/senseiController'
 import { Club } from '@/models/club'
 import { Sensei } from '@/models/sensei'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface JudokaFormProps {
   judoka?: Judoka | null
@@ -28,6 +29,7 @@ interface JudokaFormProps {
 }
 
 export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormProps) {
+  const { user } = useAuth()
   const [formData, setFormData] = useState<JudokaCreate | JudokaUpdate>({
     usuario_id: '',
     club_id: null,
@@ -97,6 +99,17 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
       })
     }
   }, [judoka])
+
+  // Si es un sensei creando un nuevo judoka, pre-completar club y entrenador
+  useEffect(() => {
+    if (!judoka && user?.rol === 'sensei' && user.club_id && user.id) {
+      setFormData(prev => ({
+        ...prev,
+        club_id: user.club_id,
+        entrenador_id: user.id
+      }))
+    }
+  }, [judoka, user])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -180,7 +193,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
             name="club_id"
             value={formData.club_id || ''}
             onChange={handleSelectChange}
-            disabled={loading || loadingClubes}
+            disabled={loading || loadingClubes || user?.rol === 'sensei'}
             label="Club"
           >
             <MenuItem value="">
@@ -192,6 +205,11 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               </MenuItem>
             ))}
           </Select>
+          {user?.rol === 'sensei' && (
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+              Los judokas se crearán automáticamente en tu club
+            </Typography>
+          )}
         </FormControl>
 
         <FormControl fullWidth>
@@ -200,7 +218,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
             name="entrenador_id"
             value={formData.entrenador_id || ''}
             onChange={handleSelectChange}
-            disabled={loading || loadingSenseis || !formData.club_id}
+            disabled={loading || loadingSenseis || !formData.club_id || user?.rol === 'sensei'}
             label="Entrenador"
           >
             <MenuItem value="">
@@ -212,7 +230,11 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               </MenuItem>
             ))}
           </Select>
-          {!formData.club_id && (
+          {user?.rol === 'sensei' ? (
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+              Serás asignado automáticamente como entrenador
+            </Typography>
+          ) : !formData.club_id && (
             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
               Selecciona un club primero para ver los entrenadores disponibles
             </Typography>
