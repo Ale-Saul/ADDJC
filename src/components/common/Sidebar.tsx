@@ -107,7 +107,7 @@ export default function Sidebar() {
       label: 'Senseis',
       path: '/senseis',
       icon: <SchoolIcon />,
-      allowedRoles: ['asociacion', 'sensei', 'encargado'] // Asociación, senseis y encargados
+      allowedRoles: ['asociacion', 'encargado'] // Solo asociación y encargados
     },
     {
       label: 'Judokas',
