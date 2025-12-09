@@ -4,11 +4,37 @@ import JudokaForm from '../JudokaForm'
 import { judokaController } from '@/controllers/judokaController'
 import { clubController } from '@/controllers/clubController'
 import { senseiController } from '@/controllers/senseiController'
+import { AuthProvider } from '@/contexts/AuthContext'
 
 // Mocks
 jest.mock('@/controllers/judokaController')
 jest.mock('@/controllers/clubController')
 jest.mock('@/controllers/senseiController')
+
+// Mock de useAuth
+jest.mock('@/contexts/AuthContext', () => ({
+  ...jest.requireActual('@/contexts/AuthContext'),
+  useAuth: () => ({
+    user: {
+      id: 'user-admin',
+      email: 'admin@test.com',
+      nombres: 'Admin',
+      apellidos: 'Test',
+      rol: 'admin',
+      club_id: null,
+      club_nombre: null,
+      avatar_url: null,
+      activo: true,
+      created_at: '2023-01-01',
+      updated_at: '2023-01-01',
+    },
+    loading: false,
+    signIn: jest.fn(),
+    signOut: jest.fn(),
+    signUp: jest.fn(),
+  }),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
 
 describe('JudokaForm', () => {
   const mockClubes = [
