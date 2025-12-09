@@ -64,8 +64,11 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
           )
           setSenseis(senseisDisponibles)
         } else {
-          // Si estamos creando un club nuevo, mostrar todos los senseis
-          setSenseis(response.data)
+          // Si estamos creando un club nuevo, mostrar solo senseis sin club
+          const senseisSinClub = response.data.filter(
+            sensei => sensei.club_id === null
+          )
+          setSenseis(senseisSinClub)
         }
       }
       setLoadingSenseis(false)
