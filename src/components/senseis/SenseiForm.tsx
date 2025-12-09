@@ -10,13 +10,19 @@ import {
   MenuItem,
   Select,
   FormControl,
-  InputLabel
+  InputLabel,
+  Typography,
+  InputAdornment,
+  IconButton,
 } from '@mui/material'
+import Visibility from '@mui/icons-material/Visibility'
+import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import type { SelectChangeEvent } from '@mui/material/Select'
 import { Sensei, SenseiCreate, SenseiUpdate } from '@/models/sensei'
 import { senseiController } from '@/controllers/senseiController'
 import { clubController } from '@/controllers/clubController'
 import { Club } from '@/models/club'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface SenseiFormProps {
   sensei?: Sensei | null
@@ -25,6 +31,7 @@ interface SenseiFormProps {
 }
 
 export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormProps) {
+  const { user } = useAuth()
   const [formData, setFormData] = useState<SenseiCreate | SenseiUpdate>({
     usuario_id: '',
     club_id: null,
@@ -44,6 +51,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
   const [loadingClubes, setLoadingClubes] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
     // Cargar clubes activos
@@ -71,6 +79,16 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
       })
     }
   }, [sensei])
+
+  // Si es un encargado creando un nuevo sensei, pre-completar el club
+  useEffect(() => {
+    if (!sensei && user?.rol === 'encargado' && user.club_id) {
+      setFormData(prev => ({
+        ...prev,
+        club_id: user.club_id
+      }))
+    }
+  }, [sensei, user])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -162,7 +180,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
             name="club_id"
             value={formData.club_id || ''}
             onChange={handleSelectChange}
-            disabled={loading || loadingClubes}
+            disabled={loading || loadingClubes || user?.rol === 'encargado'}
             label="Club"
           >
             <MenuItem value="">
@@ -174,6 +192,11 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               </MenuItem>
             ))}
           </Select>
+          {user?.rol === 'encargado' && (
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+              Los senseis se crearán automáticamente en tu club
+            </Typography>
+          )}
         </FormControl>
 
         <TextField
@@ -214,13 +237,27 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               fullWidth
               label="Contraseña"
               name="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={formData.password || ''}
               onChange={handleChange}
               required
               disabled={loading}
               helperText="Mínimo 8 caracteres"
               inputProps={{ minLength: 8 }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={() => setShowPassword(!showPassword)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
           </>
         )}

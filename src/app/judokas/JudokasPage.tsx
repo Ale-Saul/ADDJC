@@ -11,12 +11,27 @@ import SearchBar from '@/components/common/SearchBar'
 import { Judoka } from '@/models/judoka'
 import { judokaController } from '@/controllers/judokaController'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function JudokasPage() {
   const router = useRouter()
+  const { user } = useAuth()
   const [openDialog, setOpenDialog] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
+
+  // Determinar qué filtro usar según el rol
+  let clubId: string | undefined
+  let entrenadorId: string | undefined
+
+  if (user?.rol === 'encargado') {
+    // Encargado: ver todos los judokas del club
+    clubId = user.club_id || undefined
+  } else if (user?.rol === 'sensei') {
+    // Sensei normal: ver solo sus estudiantes
+    entrenadorId = user.id
+  }
+  // Si es 'asociacion', no se filtra (ve todos)
 
   const handleCreateSuccess = () => {
     setOpenDialog(false)
@@ -70,6 +85,8 @@ export default function JudokasPage() {
         onDelete={handleDelete}
         refreshTrigger={refreshTrigger}
         searchTerm={searchTerm}
+        clubId={clubId}
+        entrenadorId={entrenadorId}
       />
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>

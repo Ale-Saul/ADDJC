@@ -40,7 +40,6 @@ export default function Sidebar() {
   const [openAfiliados, setOpenAfiliados] = useState(false)
   const [mounted, setMounted] = useState(false)
 
-  // Evitar problemas de hidratación
   useEffect(() => {
     setMounted(true)
     // El menú Afiliados comienza cerrado por defecto
@@ -59,7 +58,7 @@ export default function Sidebar() {
     const roles: Record<string, string> = {
       asociacion: 'Asociación',
       sensei: 'Sensei',
-      encargado: 'Encargado',
+      encargado: 'Encargado-Sensei',
       arbitro: 'Árbitro',
       judoka: 'Judoka'
     }
@@ -108,7 +107,7 @@ export default function Sidebar() {
       label: 'Senseis',
       path: '/senseis',
       icon: <SchoolIcon />,
-      allowedRoles: ['asociacion', 'sensei', 'encargado'] // Asociación, senseis y encargados
+      allowedRoles: ['asociacion', 'encargado'] // Solo asociación y encargados
     },
     {
       label: 'Judokas',
@@ -292,12 +291,32 @@ export default function Sidebar() {
                 <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {user.nombres} {user.apellidos}
                 </Typography>
-                <Chip 
-                  label={getRoleLabel(user.rol)} 
-                  size="small" 
-                  sx={{ height: 18, fontSize: '0.65rem', mt: 0.5, cursor: 'pointer' }}
-                  color={user.rol === 'asociacion' ? 'primary' : 'default'}
-                />
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 0.5 }}>
+                  <Chip 
+                    label={getRoleLabel(user.rol)} 
+                    size="small" 
+                    sx={{ height: 18, fontSize: '0.65rem', cursor: 'pointer', alignSelf: 'flex-start' }}
+                    color={user.rol === 'asociacion' ? 'primary' : 'default'}
+                  />
+                  {user.club_nombre && (user.rol === 'sensei' || user.rol === 'encargado') && (
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        fontSize: '0.65rem', 
+                        color: 'text.secondary',
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.5
+                      }}
+                    >
+                      <BusinessIcon sx={{ fontSize: '0.75rem' }} />
+                      {user.club_nombre}
+                    </Typography>
+                  )}
+                </Box>
               </Box>
             </Box>
             <Button

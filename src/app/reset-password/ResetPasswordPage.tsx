@@ -12,7 +12,11 @@ import {
   Alert,
   CircularProgress,
   Link,
+  InputAdornment,
+  IconButton,
 } from '@mui/material'
+import Visibility from '@mui/icons-material/Visibility'
+import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import { authController } from '@/controllers/authController'
 import { createClient } from '@/lib/supabase/client'
 
@@ -27,6 +31,8 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
   const [checkingToken, setCheckingToken] = useState(true)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   // Verificar si hay un token en la URL (cuando el usuario viene del email)
   useEffect(() => {
@@ -420,14 +426,29 @@ export default function ResetPasswordPage() {
               fullWidth
               name="password"
               label="Nueva Contraseña"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               id="password"
+              inputProps={{ 'data-testid': 'password' }}
               autoComplete="new-password"
               autoFocus
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading || success}
               helperText="Mínimo 8 caracteres, debe incluir mayúscula, minúscula y número"
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={() => setShowPassword(!showPassword)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
             <TextField
               margin="normal"
@@ -435,12 +456,27 @@ export default function ResetPasswordPage() {
               fullWidth
               name="confirmPassword"
               label="Confirmar Nueva Contraseña"
-              type="password"
+              type={showConfirmPassword ? 'text' : 'password'}
               id="confirmPassword"
+              inputProps={{ 'data-testid': 'confirmPassword' }}
               autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               disabled={loading || success}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle confirm password visibility"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      edge="end"
+                    >
+                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
             <Button
               type="submit"

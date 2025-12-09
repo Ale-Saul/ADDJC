@@ -236,7 +236,7 @@ describe('senseiService', () => {
       }
 
       const mockSingle = jest.fn().mockResolvedValue({
-        data: { ...mockSensei, usuario_id: validUUID },
+        data: { ...mockSensei, usuario_id: validUUID, club_id: 'club-123' },
         error: null,
       })
 
@@ -248,12 +248,35 @@ describe('senseiService', () => {
         select: mockSelect,
       })
 
-      ;(mockSupabase.from as jest.Mock).mockReturnValue({
-        insert: mockInsert,
+      // Mock para actualizar user_profiles
+      const mockEq = jest.fn().mockResolvedValue({
+        data: null,
+        error: null,
+      })
+
+      const mockUpdate = jest.fn().mockReturnValue({
+        eq: mockEq,
+      })
+
+      ;(mockSupabase.from as jest.Mock).mockImplementation((table: string) => {
+        if (table === 'senseis') {
+          return { insert: mockInsert }
+        } else if (table === 'user_profiles') {
+          return { update: mockUpdate }
+        }
+        return {}
       })
 
       const result = await senseiService.create(newSensei)
 
+      expect(mockInsert).toHaveBeenCalledWith({
+        usuario_id: validUUID,
+        nombres: 'Carlos',
+        apellidos: 'García',
+        club_id: 'club-123',
+        grado_dan: '5to Dan',
+        activo: true,
+      })
       expect(result.success).toBe(true)
       expect(result.data?.usuario_id).toBe(validUUID)
       expect(userService.createSenseiUser).not.toHaveBeenCalled()
@@ -270,6 +293,7 @@ describe('senseiService', () => {
         activo: true,
         email: 'carlos@test.com',
         password: 'password123',
+        isEncargado: false,
       }
 
       ;(userService.createSenseiUser as jest.Mock).mockResolvedValue({
@@ -278,7 +302,7 @@ describe('senseiService', () => {
       })
 
       const mockSingle = jest.fn().mockResolvedValue({
-        data: { ...mockSensei, usuario_id: validUUID },
+        data: { ...mockSensei, usuario_id: validUUID, club_id: null },
         error: null,
       })
 
@@ -290,8 +314,11 @@ describe('senseiService', () => {
         select: mockSelect,
       })
 
-      ;(mockSupabase.from as jest.Mock).mockReturnValue({
-        insert: mockInsert,
+      ;(mockSupabase.from as jest.Mock).mockImplementation((table: string) => {
+        if (table === 'senseis') {
+          return { insert: mockInsert }
+        }
+        return {}
       })
 
       const result = await senseiService.create(newSensei)

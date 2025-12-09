@@ -192,22 +192,31 @@ export const userService = {
   async createJudokaUser(
     nombres: string, 
     apellidos: string, 
-    email: string, 
-    password: string,
+    email?: string, 
+    password?: string,
     clubId?: string
   ): Promise<ApiResponse<{ userId: string }>> {
     try {
-      // Validar email y password
-      if (!email || !password) {
-        return {
-          success: false,
-          error: 'Email y contraseña son requeridos'
-        }
+      // Si no se proporciona email, generar uno automático
+      let finalEmail = email
+      let finalPassword = password
+
+      if (!finalEmail) {
+        // Generar email automático basado en nombres y apellidos
+        const nombreLimpio = nombres.toLowerCase().replace(/\s+/g, '')
+        const apellidoLimpio = apellidos.toLowerCase().replace(/\s+/g, '')
+        const timestamp = Date.now()
+        finalEmail = `${nombreLimpio}.${apellidoLimpio}.${timestamp}@judoka.local`
+      }
+
+      if (!finalPassword) {
+        // Generar contraseña temporal aleatoria
+        finalPassword = `Judoka${Date.now()}!`
       }
 
       // Validar formato de email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(email)) {
+      if (!emailRegex.test(finalEmail)) {
         return {
           success: false,
           error: 'El formato del email no es válido'
@@ -215,7 +224,7 @@ export const userService = {
       }
 
       // Crear usuario usando Admin API
-      return await createUserWithAdminAPI(email, password, nombres, apellidos, 'judoka', clubId)
+      return await createUserWithAdminAPI(finalEmail, finalPassword, nombres, apellidos, 'judoka', clubId)
     } catch (error) {
       console.error('Error al crear usuario de judoka:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear usuario'

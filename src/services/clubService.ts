@@ -64,6 +64,8 @@ export const clubService = {
   async create(club: ClubCreate): Promise<ApiResponse<Club>> {
     try {
       const client = getSupabaseClient()
+      
+      // Crear el club
       const { data, error } = await client
         .from('clubes')
         .insert(club)
@@ -71,6 +73,26 @@ export const clubService = {
         .single()
 
       if (error) throw error
+
+      // Si se asignó un director técnico, actualizar su rol a 'encargado' y club_id
+      if (club.director_tecnico_id && data) {
+        // Actualizar user_profiles
+        await client
+          .from('user_profiles')
+          .update({ 
+            rol: 'encargado',
+            club_id: data.id // Usar el club recién creado
+          })
+          .eq('id', club.director_tecnico_id)
+        
+        // Actualizar también la tabla senseis para mantener sincronización
+        await client
+          .from('senseis')
+          .update({ 
+            club_id: data.id
+          })
+          .eq('usuario_id', club.director_tecnico_id)
+      }
 
       return { success: true, data }
     } catch (error: any) {
@@ -84,6 +106,62 @@ export const clubService = {
   async update(id: string, club: ClubUpdate): Promise<ApiResponse<Club>> {
     try {
       const client = getSupabaseClient()
+      
+      // Si se está actualizando el director técnico, manejar cambios de rol
+      if (club.director_tecnico_id !== undefined) {
+        // Obtener el director técnico anterior
+        const { data: clubAnterior } = await client
+          .from('clubes')
+          .select('director_tecnico_id')
+          .eq('id', id)
+          .single()
+
+        const directorAnterior = clubAnterior?.director_tecnico_id
+        const directorNuevo = club.director_tecnico_id
+
+        // Si cambió el director técnico
+        if (directorAnterior !== directorNuevo) {
+          // Si había un director anterior, cambiar su rol a 'sensei' y limpiar club_id
+          if (directorAnterior) {
+            // Obtener el club_id del sensei en la tabla senseis
+            const { data: senseiAnterior } = await client
+              .from('senseis')
+              .select('club_id')
+              .eq('usuario_id', directorAnterior)
+              .single()
+            
+            await client
+              .from('user_profiles')
+              .update({ 
+                rol: 'sensei',
+                club_id: senseiAnterior?.club_id || null // Mantener el club del sensei
+              })
+              .eq('id', directorAnterior)
+          }
+
+          // Si hay un nuevo director, cambiar su rol a 'encargado' y actualizar club_id
+          if (directorNuevo) {
+            // Actualizar user_profiles
+            await client
+              .from('user_profiles')
+              .update({ 
+                rol: 'encargado',
+                club_id: id // Usar el club actual
+              })
+              .eq('id', directorNuevo)
+            
+            // Actualizar también la tabla senseis para mantener sincronización
+            await client
+              .from('senseis')
+              .update({ 
+                club_id: id
+              })
+              .eq('usuario_id', directorNuevo)
+          }
+        }
+      }
+
+      // Actualizar el club
       const { data, error } = await client
         .from('clubes')
         .update(club)

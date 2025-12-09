@@ -10,8 +10,12 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  InputAdornment,
+  IconButton,
 } from '@mui/material'
+import Visibility from '@mui/icons-material/Visibility'
+import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import type { SelectChangeEvent } from '@mui/material/Select'
 import { Arbitro, ArbitroCreate, ArbitroUpdate } from '@/models/arbitro'
 import { arbitroController } from '@/controllers/arbitroController'
@@ -37,6 +41,7 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
     if (arbitro) {
@@ -173,13 +178,27 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
               fullWidth
               label="Contraseña"
               name="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={formData.password || ''}
               onChange={handleChange}
               required
               disabled={loading}
               helperText="Mínimo 8 caracteres"
               inputProps={{ minLength: 8 }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={() => setShowPassword(!showPassword)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
           </>
         )}

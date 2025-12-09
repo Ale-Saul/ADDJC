@@ -20,7 +20,7 @@ const mockSenseis: Sensei[] = [
     usuario_id: 'user-s1',
     nombres: 'Sensei',
     apellidos: 'Uno',
-    club_id: 'c1',
+    club_id: null, // Sin club asignado
     fecha_nacimiento: '1950-01-01',
     grado_dan: '5to Dan',
     certificacion: 'Nacional',
@@ -35,7 +35,7 @@ const mockSenseis: Sensei[] = [
     usuario_id: 'user-s2',
     nombres: 'Sensei',
     apellidos: 'Dos',
-    club_id: 'c2',
+    club_id: null, // Sin club asignado
     fecha_nacimiento: '1955-01-01',
     grado_dan: '3er Dan',
     certificacion: 'Regional',
@@ -106,7 +106,8 @@ describe('ClubForm', () => {
     render(<ClubForm onSuccess={onSuccess} />)
 
     await userEvent.type(screen.getByLabelText(/Nombre del Club/i), 'Nuevo Club')
-    fireEvent.submit(screen.getByRole('button', { name: /Crear/i }))
+    const submitButton = screen.getByRole('button', { name: /^Crear$/i })
+    fireEvent.click(submitButton)
 
     await waitFor(() => {
       expect(mockedClubController.createClub).toHaveBeenCalledWith(
@@ -147,12 +148,18 @@ describe('ClubForm', () => {
     render(<ClubForm />)
     
     await userEvent.type(screen.getByLabelText(/Nombre del Club/i), 'Club con Nuevo Sensei')
+    
+    // Click on "Crear Nuevo Director Técnico" button to show the form
+    const createNewDirectorBtn = screen.getByRole('button', { name: /Crear Nuevo Director Técnico/i })
+    await userEvent.click(createNewDirectorBtn)
+    
     await userEvent.type(screen.getByLabelText(/Nombre del Director Técnico/i), 'Nuevo')
     await userEvent.type(screen.getByLabelText(/Apellidos del Director Técnico/i), 'Sensei')
     await userEvent.type(screen.getByLabelText(/Email del Director Técnico/i), 'nuevo.sensei@test.com')
     await userEvent.type(screen.getByLabelText(/Contraseña del Director Técnico/i), 'password123')
 
-    fireEvent.submit(screen.getByRole('button', { name: /Crear/i }))
+    const submitButton = screen.getByRole('button', { name: /^Crear$/i })
+    fireEvent.click(submitButton)
 
     await waitFor(() => {
       expect(mockedSenseiController.createSensei).toHaveBeenCalledWith(
@@ -178,7 +185,8 @@ describe('ClubForm', () => {
     render(<ClubForm />)
     
     await userEvent.type(screen.getByLabelText(/Nombre del Club/i), 'Club Fallido')
-    fireEvent.submit(screen.getByRole('button', { name: /Crear/i }))
+    const submitButton = screen.getByRole('button', { name: /^Crear$/i })
+    fireEvent.click(submitButton)
 
     await waitFor(() => {
       expect(screen.getByText(/Error de base de datos/i)).toBeInTheDocument()
