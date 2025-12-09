@@ -100,14 +100,23 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     }
   }, [judoka])
 
-  // Si es un sensei creando un nuevo judoka, pre-completar club y entrenador
+  // Si es un sensei o encargado creando un nuevo judoka, pre-completar el club
   useEffect(() => {
-    if (!judoka && user?.rol === 'sensei' && user.club_id && user.id) {
-      setFormData(prev => ({
-        ...prev,
-        club_id: user.club_id,
-        entrenador_id: user.id
-      }))
+    if (!judoka && user && user.club_id) {
+      if (user.rol === 'sensei') {
+        // Sensei: pre-completar club y entrenador (él mismo)
+        setFormData(prev => ({
+          ...prev,
+          club_id: user.club_id,
+          entrenador_id: user.id
+        }))
+      } else if (user.rol === 'encargado') {
+        // Encargado: solo pre-completar club, puede elegir el entrenador
+        setFormData(prev => ({
+          ...prev,
+          club_id: user.club_id
+        }))
+      }
     }
   }, [judoka, user])
 
@@ -193,7 +202,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
             name="club_id"
             value={formData.club_id || ''}
             onChange={handleSelectChange}
-            disabled={loading || loadingClubes || user?.rol === 'sensei'}
+            disabled={loading || loadingClubes || user?.rol === 'sensei' || user?.rol === 'encargado'}
             label="Club"
           >
             <MenuItem value="">
@@ -205,7 +214,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               </MenuItem>
             ))}
           </Select>
-          {user?.rol === 'sensei' && (
+          {(user?.rol === 'sensei' || user?.rol === 'encargado') && (
             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
               Los judokas se crearán automáticamente en tu club
             </Typography>

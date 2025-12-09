@@ -10,13 +10,15 @@ import {
   MenuItem,
   Select,
   FormControl,
-  InputLabel
+  InputLabel,
+  Typography
 } from '@mui/material'
 import type { SelectChangeEvent } from '@mui/material/Select'
 import { Sensei, SenseiCreate, SenseiUpdate } from '@/models/sensei'
 import { senseiController } from '@/controllers/senseiController'
 import { clubController } from '@/controllers/clubController'
 import { Club } from '@/models/club'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface SenseiFormProps {
   sensei?: Sensei | null
@@ -25,6 +27,7 @@ interface SenseiFormProps {
 }
 
 export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormProps) {
+  const { user } = useAuth()
   const [formData, setFormData] = useState<SenseiCreate | SenseiUpdate>({
     usuario_id: '',
     club_id: null,
@@ -71,6 +74,16 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
       })
     }
   }, [sensei])
+
+  // Si es un encargado creando un nuevo sensei, pre-completar el club
+  useEffect(() => {
+    if (!sensei && user?.rol === 'encargado' && user.club_id) {
+      setFormData(prev => ({
+        ...prev,
+        club_id: user.club_id
+      }))
+    }
+  }, [sensei, user])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -162,7 +175,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
             name="club_id"
             value={formData.club_id || ''}
             onChange={handleSelectChange}
-            disabled={loading || loadingClubes}
+            disabled={loading || loadingClubes || user?.rol === 'encargado'}
             label="Club"
           >
             <MenuItem value="">
@@ -174,6 +187,11 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               </MenuItem>
             ))}
           </Select>
+          {user?.rol === 'encargado' && (
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+              Los senseis se crearán automáticamente en tu club
+            </Typography>
+          )}
         </FormControl>
 
         <TextField
