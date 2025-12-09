@@ -10,8 +10,12 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  InputAdornment,
+  IconButton,
 } from '@mui/material'
+import Visibility from '@mui/icons-material/Visibility'
+import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import type { SelectChangeEvent } from '@mui/material/Select'
 import { Club, ClubCreate, ClubUpdate } from '@/models/club'
 import { clubController } from '@/controllers/clubController'
@@ -42,6 +46,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
   const [loadingSenseis, setLoadingSenseis] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
     // Cargar senseis activos
@@ -327,7 +332,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                 fullWidth
                 label="Contraseña del Director Técnico"
                 name="nuevo_director_password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={newDirectorPassword}
                 onChange={(e) => {
                   setNewDirectorPassword(e.target.value)
@@ -336,6 +341,20 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                 }}
                 disabled={loading}
                 required={newDirectorNombres.trim() !== '' || newDirectorApellidos.trim() !== ''}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() => setShowPassword(!showPassword)}
+                        onMouseDown={(e) => e.preventDefault()}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
                 helperText="Mínimo 8 caracteres"
                 inputProps={{ minLength: 8 }}
               />

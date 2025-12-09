@@ -44,9 +44,6 @@ export const senseiService = {
    */
   async getByClub(clubId: string): Promise<ApiResponse<Sensei[]>> {
     try {
-      console.log('=== SERVICIO: GET SENSEIS BY CLUB ===')
-      console.log('Club ID recibido:', clubId)
-      
       const client = getSupabaseClient()
       const { data, error } = await client
         .from('senseis')
@@ -54,11 +51,6 @@ export const senseiService = {
         .eq('club_id', clubId)
         .eq('activo', true)
         .order('created_at', { ascending: false })
-
-      console.log('Data:', data)
-      console.log('Error:', error)
-      console.log('Cantidad encontrada:', data?.length || 0)
-      console.log('=====================================')
 
       if (error) throw error
 

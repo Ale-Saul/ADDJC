@@ -7,7 +7,11 @@ import {
   Box,
   Alert,
   CircularProgress,
+  InputAdornment,
+  IconButton,
 } from '@mui/material'
+import Visibility from '@mui/icons-material/Visibility'
+import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import { MiembroAsociacion, MiembroAsociacionCreate, MiembroAsociacionUpdate } from '@/models/asociacion'
 import { asociacionController } from '@/controllers/asociacionController'
 
@@ -28,6 +32,7 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
     if (miembro) {
@@ -150,12 +155,26 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
             fullWidth
             label="Contraseña"
             name="password"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             value={formData.password}
             onChange={handleChange}
             required
             disabled={loading}
             helperText="Mínimo 8 caracteres"
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={() => setShowPassword(!showPassword)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
         )}
       </Box>

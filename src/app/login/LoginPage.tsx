@@ -12,7 +12,11 @@ import {
   Alert,
   CircularProgress,
   Link,
+  InputAdornment,
+  IconButton,
 } from '@mui/material'
+import Visibility from '@mui/icons-material/Visibility'
+import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import { useAuth } from '@/contexts/AuthContext'
 import { LoginCredentials } from '@/models/auth'
 
@@ -26,6 +30,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   // Evitar problemas de hidratación
   useEffect(() => {
@@ -153,12 +158,26 @@ export default function LoginPage() {
               fullWidth
               name="password"
               label="Contraseña"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               id="password"
               autoComplete="current-password"
               value={formData.password}
               onChange={handleChange}
               disabled={loading}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={() => setShowPassword(!showPassword)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
             <Button
               type="submit"

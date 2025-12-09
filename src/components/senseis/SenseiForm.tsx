@@ -11,8 +11,12 @@ import {
   Select,
   FormControl,
   InputLabel,
-  Typography
+  Typography,
+  InputAdornment,
+  IconButton,
 } from '@mui/material'
+import Visibility from '@mui/icons-material/Visibility'
+import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import type { SelectChangeEvent } from '@mui/material/Select'
 import { Sensei, SenseiCreate, SenseiUpdate } from '@/models/sensei'
 import { senseiController } from '@/controllers/senseiController'
@@ -47,6 +51,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
   const [loadingClubes, setLoadingClubes] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
     // Cargar clubes activos
@@ -232,13 +237,27 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               fullWidth
               label="Contraseña"
               name="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={formData.password || ''}
               onChange={handleChange}
               required
               disabled={loading}
               helperText="Mínimo 8 caracteres"
               inputProps={{ minLength: 8 }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={() => setShowPassword(!showPassword)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
           </>
         )}
