@@ -76,20 +76,22 @@ export const clubService = {
 
       // Si se asignó un director técnico, actualizar su rol a 'encargado' y club_id
       if (club.director_tecnico_id && data) {
-        // Obtener el club_id del sensei en la tabla senseis
-        const { data: senseiData } = await client
-          .from('senseis')
-          .select('club_id')
-          .eq('usuario_id', club.director_tecnico_id)
-          .single()
-        
+        // Actualizar user_profiles
         await client
           .from('user_profiles')
           .update({ 
             rol: 'encargado',
-            club_id: senseiData?.club_id || data.id // Usar el club del sensei o el club recién creado
+            club_id: data.id // Usar el club recién creado
           })
           .eq('id', club.director_tecnico_id)
+        
+        // Actualizar también la tabla senseis para mantener sincronización
+        await client
+          .from('senseis')
+          .update({ 
+            club_id: data.id
+          })
+          .eq('usuario_id', club.director_tecnico_id)
       }
 
       return { success: true, data }
@@ -139,20 +141,22 @@ export const clubService = {
 
           // Si hay un nuevo director, cambiar su rol a 'encargado' y actualizar club_id
           if (directorNuevo) {
-            // Obtener el club_id del sensei en la tabla senseis
-            const { data: senseiNuevo } = await client
-              .from('senseis')
-              .select('club_id')
-              .eq('usuario_id', directorNuevo)
-              .single()
-            
+            // Actualizar user_profiles
             await client
               .from('user_profiles')
               .update({ 
                 rol: 'encargado',
-                club_id: senseiNuevo?.club_id || id // Usar el club actual
+                club_id: id // Usar el club actual
               })
               .eq('id', directorNuevo)
+            
+            // Actualizar también la tabla senseis para mantener sincronización
+            await client
+              .from('senseis')
+              .update({ 
+                club_id: id
+              })
+              .eq('usuario_id', directorNuevo)
           }
         }
       }

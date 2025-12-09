@@ -68,7 +68,13 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     const loadSenseis = async () => {
       if (formData.club_id) {
         setLoadingSenseis(true)
+        console.log('=== CARGAR SENSEIS POR CLUB ===')
+        console.log('Club ID:', formData.club_id)
         const response = await senseiController.getSenseisByClub(formData.club_id)
+        console.log('Senseis encontrados:', response.data?.length || 0)
+        console.log('Senseis:', response.data)
+        console.log('Error:', response.error)
+        console.log('===============================')
         if (response.success && response.data) {
           setSenseis(response.data)
         } else {
