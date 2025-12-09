@@ -13,9 +13,12 @@ import {
   MenuItem,
   InputAdornment,
   IconButton,
+  Typography,
 } from '@mui/material'
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
+import AddIcon from '@mui/icons-material/Add'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import type { SelectChangeEvent } from '@mui/material/Select'
 import { Club, ClubCreate, ClubUpdate } from '@/models/club'
 import { clubController } from '@/controllers/clubController'
@@ -47,6 +50,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [isCreatingNewDirector, setIsCreatingNewDirector] = useState(false)
 
   useEffect(() => {
     // Cargar senseis activos
@@ -262,104 +266,174 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
           disabled={loading}
         />
 
-        <FormControl fullWidth>
-          <InputLabel>Director Técnico</InputLabel>
-          <Select
-            name="director_tecnico_id"
-            value={formData.director_tecnico_id || ''}
-            onChange={handleSelectChange}
-            disabled={loading || loadingSenseis}
-            label="Director Técnico"
-          >
-            <MenuItem value="">
-              <em>Sin director técnico</em>
-            </MenuItem>
-            {senseis.map((sensei) => (
-              <MenuItem key={sensei.id} value={sensei.usuario_id}>
-                {sensei.nombres} {sensei.apellidos}
-                {sensei.grado_dan && ` - ${sensei.grado_dan}`}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
+        {/* Sección de Director Técnico */}
         {!club && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Box sx={{ fontSize: 14, color: 'text.secondary', mb: 1 }}>
-              O crea un nuevo director técnico (se registrará como encargado automáticamente):
-            </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <TextField
-                fullWidth
-                label="Nombre del Director Técnico"
-                name="nuevo_director_nombres"
-                value={newDirectorNombres}
-                onChange={(e) => {
-                  setNewDirectorNombres(e.target.value)
-                  setError(null)
-                  setSuccess(false)
-                }}
-                disabled={loading}
-              />
-              <TextField
-                fullWidth
-                label="Apellidos del Director Técnico"
-                name="nuevo_director_apellidos"
-                value={newDirectorApellidos}
-                onChange={(e) => {
-                  setNewDirectorApellidos(e.target.value)
-                  setError(null)
-                  setSuccess(false)
-                }}
-                disabled={loading}
-              />
-              <TextField
-                fullWidth
-                label="Email del Director Técnico"
-                name="nuevo_director_email"
-                type="email"
-                value={newDirectorEmail}
-                onChange={(e) => {
-                  setNewDirectorEmail(e.target.value)
-                  setError(null)
-                  setSuccess(false)
-                }}
-                disabled={loading}
-                required={newDirectorNombres.trim() !== '' || newDirectorApellidos.trim() !== ''}
-                helperText="Email para iniciar sesión en el sistema"
-              />
-              <TextField
-                fullWidth
-                label="Contraseña del Director Técnico"
-                name="nuevo_director_password"
-                type={showPassword ? 'text' : 'password'}
-                value={newDirectorPassword}
-                onChange={(e) => {
-                  setNewDirectorPassword(e.target.value)
-                  setError(null)
-                  setSuccess(false)
-                }}
-                disabled={loading}
-                required={newDirectorNombres.trim() !== '' || newDirectorApellidos.trim() !== ''}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle password visibility"
-                        onClick={() => setShowPassword(!showPassword)}
-                        onMouseDown={(e) => e.preventDefault()}
-                        edge="end"
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-                helperText="Mínimo 8 caracteres"
-                inputProps={{ minLength: 8 }}
-              />
-            </Box>
+          <Box sx={{ mt: 1 }}>
+            {!isCreatingNewDirector ? (
+              // Modo: Seleccionar director técnico existente
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <FormControl fullWidth>
+                  <InputLabel>Director Técnico</InputLabel>
+                  <Select
+                    name="director_tecnico_id"
+                    value={formData.director_tecnico_id || ''}
+                    onChange={handleSelectChange}
+                    disabled={loading || loadingSenseis}
+                    label="Director Técnico"
+                  >
+                    <MenuItem value="">
+                      <em>Sin director técnico</em>
+                    </MenuItem>
+                    {senseis.map((sensei) => (
+                      <MenuItem key={sensei.id} value={sensei.usuario_id}>
+                        {sensei.nombres} {sensei.apellidos}
+                        {sensei.grado_dan && ` - ${sensei.grado_dan}`}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                
+                <Button
+                  variant="outlined"
+                  startIcon={<AddIcon />}
+                  onClick={() => {
+                    setIsCreatingNewDirector(true)
+                    setFormData(prev => ({ ...prev, director_tecnico_id: null }))
+                  }}
+                  disabled={loading}
+                  sx={{ alignSelf: 'flex-start' }}
+                >
+                  Crear Nuevo Director Técnico
+                </Button>
+              </Box>
+            ) : (
+              // Modo: Crear nuevo director técnico
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    Nuevo Director Técnico
+                  </Typography>
+                  <Button
+                    size="small"
+                    startIcon={<ArrowBackIcon />}
+                    onClick={() => {
+                      setIsCreatingNewDirector(false)
+                      setNewDirectorNombres('')
+                      setNewDirectorApellidos('')
+                      setNewDirectorEmail('')
+                      setNewDirectorPassword('')
+                    }}
+                    disabled={loading}
+                  >
+                    Seleccionar Existente
+                  </Button>
+                </Box>
+                
+                <Alert severity="info" sx={{ mb: 1 }}>
+                  El director técnico se registrará como encargado automáticamente
+                </Alert>
+
+                <TextField
+                  fullWidth
+                  label="Nombre del Director Técnico"
+                  name="nuevo_director_nombres"
+                  value={newDirectorNombres}
+                  onChange={(e) => {
+                    setNewDirectorNombres(e.target.value)
+                    setError(null)
+                    setSuccess(false)
+                  }}
+                  disabled={loading}
+                  required
+                />
+                
+                <TextField
+                  fullWidth
+                  label="Apellidos del Director Técnico"
+                  name="nuevo_director_apellidos"
+                  value={newDirectorApellidos}
+                  onChange={(e) => {
+                    setNewDirectorApellidos(e.target.value)
+                    setError(null)
+                    setSuccess(false)
+                  }}
+                  disabled={loading}
+                  required
+                />
+                
+                <TextField
+                  fullWidth
+                  label="Email del Director Técnico"
+                  name="nuevo_director_email"
+                  type="email"
+                  value={newDirectorEmail}
+                  onChange={(e) => {
+                    setNewDirectorEmail(e.target.value)
+                    setError(null)
+                    setSuccess(false)
+                  }}
+                  disabled={loading}
+                  required
+                  helperText="Email para iniciar sesión en el sistema"
+                />
+                
+                <TextField
+                  fullWidth
+                  label="Contraseña del Director Técnico"
+                  name="nuevo_director_password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={newDirectorPassword}
+                  onChange={(e) => {
+                    setNewDirectorPassword(e.target.value)
+                    setError(null)
+                    setSuccess(false)
+                  }}
+                  disabled={loading}
+                  required
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle password visibility"
+                          onClick={() => setShowPassword(!showPassword)}
+                          onMouseDown={(e) => e.preventDefault()}
+                          edge="end"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  helperText="Mínimo 8 caracteres"
+                  inputProps={{ minLength: 8 }}
+                />
+              </Box>
+            )}
           </Box>
+        )}
+
+        {/* Al editar, solo mostrar el selector */}
+        {club && (
+          <FormControl fullWidth>
+            <InputLabel>Director Técnico</InputLabel>
+            <Select
+              name="director_tecnico_id"
+              value={formData.director_tecnico_id || ''}
+              onChange={handleSelectChange}
+              disabled={loading || loadingSenseis}
+              label="Director Técnico"
+            >
+              <MenuItem value="">
+                <em>Sin director técnico</em>
+              </MenuItem>
+              {senseis.map((sensei) => (
+                <MenuItem key={sensei.id} value={sensei.usuario_id}>
+                  {sensei.nombres} {sensei.apellidos}
+                  {sensei.grado_dan && ` - ${sensei.grado_dan}`}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         )}
       </Box>
 

@@ -13,13 +13,18 @@ import {
   Avatar,
   Badge,
   IconButton,
+  InputAdornment,
 } from '@mui/material'
 import SaveIcon from '@mui/icons-material/Save'
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
+import LockIcon from '@mui/icons-material/Lock'
+import Visibility from '@mui/icons-material/Visibility'
+import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
 import { authController } from '@/controllers/authController'
+import { createClient } from '@/lib/supabase/client'
 
 export default function PerfilPage() {
   const { user, refreshUser } = useAuth()
@@ -34,6 +39,15 @@ export default function PerfilPage() {
   const [uploading, setUploading] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  
+  // Estados para cambio de contraseña
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [loadingPassword, setLoadingPassword] = useState(false)
+  const [successPassword, setSuccessPassword] = useState<string | null>(null)
+  const [errorPassword, setErrorPassword] = useState<string | null>(null)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -130,6 +144,55 @@ export default function PerfilPage() {
       setError('Ocurrió un error inesperado')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleChangePassword = async () => {
+    setErrorPassword(null)
+    setSuccessPassword(null)
+
+    // Validaciones
+    if (!newPassword || !confirmPassword) {
+      setErrorPassword('Todos los campos son requeridos')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setErrorPassword('Las contraseñas no coinciden')
+      return
+    }
+
+    if (newPassword.length < 8) {
+      setErrorPassword('La contraseña debe tener al menos 8 caracteres')
+      return
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/
+    if (!passwordRegex.test(newPassword)) {
+      setErrorPassword('La contraseña debe contener al menos una mayúscula, una minúscula y un número')
+      return
+    }
+
+    setLoadingPassword(true)
+
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+
+      if (error) {
+        setErrorPassword(error.message || 'Error al cambiar la contraseña')
+      } else {
+        setSuccessPassword('Contraseña actualizada correctamente')
+        setNewPassword('')
+        setConfirmPassword('')
+      }
+    } catch (err) {
+      console.error('Error al cambiar contraseña:', err)
+      setErrorPassword('Error inesperado al cambiar la contraseña')
+    } finally {
+      setLoadingPassword(false)
     }
   }
 
@@ -350,6 +413,98 @@ export default function PerfilPage() {
                 </Button>
               </Box>
             </form>
+
+            {/* Sección de cambio de contraseña */}
+            <Box mt={5}>
+              <Typography variant="h6" gutterBottom sx={{ color: 'text.primary', fontWeight: 600, mb: 3 }}>
+                Cambiar Contraseña
+              </Typography>
+              <Divider sx={{ mb: 4 }} />
+
+              {successPassword && (
+                <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccessPassword(null)}>
+                  {successPassword}
+                </Alert>
+              )}
+
+              {errorPassword && (
+                <Alert severity="error" sx={{ mb: 3 }} onClose={() => setErrorPassword(null)}>
+                  {errorPassword}
+                </Alert>
+              )}
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <TextField
+                  label="Nueva Contraseña"
+                  type={showNewPassword ? 'text' : 'password'}
+                  fullWidth
+                  value={newPassword}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value)
+                    setErrorPassword(null)
+                    setSuccessPassword(null)
+                  }}
+                  disabled={loadingPassword}
+                  helperText="Mínimo 8 caracteres, debe incluir mayúscula, minúscula y número"
+                  variant="outlined"
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle new password visibility"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          onMouseDown={(e) => e.preventDefault()}
+                          edge="end"
+                        >
+                          {showNewPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+
+                <TextField
+                  label="Confirmar Nueva Contraseña"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  fullWidth
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value)
+                    setErrorPassword(null)
+                    setSuccessPassword(null)
+                  }}
+                  disabled={loadingPassword}
+                  variant="outlined"
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle confirm password visibility"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          onMouseDown={(e) => e.preventDefault()}
+                          edge="end"
+                        >
+                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Box>
+
+              <Box display="flex" justifyContent="flex-end" mt={3}>
+                <Button
+                  variant="outlined"
+                  size="large"
+                  startIcon={loadingPassword ? <CircularProgress size={20} /> : <LockIcon />}
+                  onClick={handleChangePassword}
+                  disabled={loadingPassword}
+                  sx={{ px: 5, py: 1.5, fontWeight: 600 }}
+                >
+                  {loadingPassword ? 'Cambiando...' : 'Cambiar Contraseña'}
+                </Button>
+              </Box>
+            </Box>
           </Paper>
       </Layout>
     </ProtectedRoute>
