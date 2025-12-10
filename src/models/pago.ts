@@ -44,7 +44,6 @@ export interface Pago {
   fecha_pago: string | null
   metodo_pago: string | null
   comprobante_url: string | null
-  notas: string | null
   creador_id: string
   pagado_por: string | null
   activo: boolean
@@ -64,12 +63,12 @@ export interface PagoCreate {
   descuento_porcentaje?: number | null
   descuento_monto?: number | null
   razon_descuento?: RazonDescuento | null
+  monto_final?: number
   estado?: EstadoPago
   fecha_vencimiento: string
   fecha_pago?: string | null
   metodo_pago?: string | null
   comprobante_url?: string | null
-  notas?: string | null
   creador_id: string
   activo?: boolean
 }
@@ -89,7 +88,6 @@ export interface PagoUpdate {
   fecha_pago?: string | null
   metodo_pago?: string | null
   comprobante_url?: string | null
-  notas?: string | null
   pagado_por?: string | null
   activo?: boolean
 }

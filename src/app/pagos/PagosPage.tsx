@@ -11,18 +11,31 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  CircularProgress
+  CircularProgress,
+  IconButton,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent
 } from '@mui/material'
+import AddIcon from '@mui/icons-material/Add'
+import VisibilityIcon from '@mui/icons-material/Visibility'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
 import { judokaController } from '@/controllers/judokaController'
 import { Judoka } from '@/models/judoka'
+import PagoForm from '@/components/forms/PagoForm'
+import PagosList from '@/components/pagos/PagosList'
 
 export default function PagosPage() {
   const { user } = useAuth()
   const [judokas, setJudokas] = useState<Judoka[]>([])
   const [loading, setLoading] = useState(true)
+  const [openDialog, setOpenDialog] = useState(false)
+  const [openPagosDialog, setOpenPagosDialog] = useState(false)
+  const [selectedJudoka, setSelectedJudoka] = useState<Judoka | null>(null)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
     const fetchJudokas = async () => {
@@ -34,7 +47,9 @@ export default function PagosPage() {
       try {
         const response = await judokaController.getJudokasByClub(user.club_id)
         if (response.success && response.data) {
-          setJudokas(response.data)
+          // Filtrar solo judokas que están inscritos en el club (club_id no null)
+          const judokasInscritos = response.data.filter(j => j.club_id !== null)
+          setJudokas(judokasInscritos)
         }
       } catch (error) {
         console.error('Error al cargar judokas:', error)
@@ -44,7 +59,23 @@ export default function PagosPage() {
     }
 
     fetchJudokas()
-  }, [user?.club_id])
+  }, [user?.club_id, refreshTrigger])
+
+  const handleNuevoPago = (judoka: Judoka) => {
+    setSelectedJudoka(judoka)
+    setOpenDialog(true)
+  }
+
+  const handlePagoSuccess = () => {
+    setOpenDialog(false)
+    setSelectedJudoka(null)
+    setRefreshTrigger(prev => prev + 1)
+  }
+
+  const handleVerPagos = (judoka: Judoka) => {
+    setSelectedJudoka(judoka)
+    setOpenPagosDialog(true)
+  }
 
   return (
     <ProtectedRoute allowedRoles={['encargado']}>
@@ -73,6 +104,7 @@ export default function PagosPage() {
                     <TableCell>Apellidos</TableCell>
                     <TableCell>Categoría</TableCell>
                     <TableCell>Cinturón</TableCell>
+                    <TableCell align="center">Acciones</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -82,6 +114,26 @@ export default function PagosPage() {
                       <TableCell>{judoka.apellidos}</TableCell>
                       <TableCell>{judoka.categoria || '-'}</TableCell>
                       <TableCell>{judoka.cinturon_actual || '-'}</TableCell>
+                      <TableCell align="center">
+                        <Tooltip title="Ver Pagos">
+                          <IconButton
+                            color="info"
+                            onClick={() => handleVerPagos(judoka)}
+                            size="small"
+                          >
+                            <VisibilityIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Nuevo Pago">
+                          <IconButton
+                            color="primary"
+                            onClick={() => handleNuevoPago(judoka)}
+                            size="small"
+                          >
+                            <AddIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -89,6 +141,34 @@ export default function PagosPage() {
             </TableContainer>
           )}
         </Box>
+
+        <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
+          <DialogTitle>Crear Nuevo Pago</DialogTitle>
+          <DialogContent>
+            {selectedJudoka && (
+              <PagoForm
+                judokaId={selectedJudoka.id}
+                judokaNombre={`${selectedJudoka.nombres} ${selectedJudoka.apellidos}`}
+                onSuccess={handlePagoSuccess}
+                onCancel={() => setOpenDialog(false)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={openPagosDialog} onClose={() => setOpenPagosDialog(false)} maxWidth="md" fullWidth>
+          <DialogTitle>
+            Pagos de {selectedJudoka?.nombres} {selectedJudoka?.apellidos}
+          </DialogTitle>
+          <DialogContent>
+            {selectedJudoka && (
+              <PagosList
+                judokaId={selectedJudoka.id}
+                judokaNombre={`${selectedJudoka.nombres} ${selectedJudoka.apellidos}`}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </Layout>
     </ProtectedRoute>
   )
