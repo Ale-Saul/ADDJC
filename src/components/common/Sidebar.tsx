@@ -28,6 +28,7 @@ import GavelIcon from '@mui/icons-material/Gavel'
 import BusinessIcon from '@mui/icons-material/Business'
 import LogoutIcon from '@mui/icons-material/Logout'
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
+import PaymentIcon from '@mui/icons-material/Payment'
 import { useAuth } from '@/contexts/AuthContext'
 
 const DRAWER_WIDTH = 280
@@ -87,6 +88,12 @@ export default function Sidebar() {
       path: '/asociacion',
       icon: <AdminPanelSettingsIcon />,
       allowedRoles: ['asociacion'] // Solo asociación
+    },
+    {
+      label: 'Pagos y Cuotas',
+      path: '/pagos',
+      icon: <PaymentIcon />,
+      allowedRoles: ['encargado'] // Solo encargados
     }
   ]
 
