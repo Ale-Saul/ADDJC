@@ -17,12 +17,15 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  Button
+  Button,
+  TextField,
+  InputAdornment
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import HistoryIcon from '@mui/icons-material/History'
 import GroupAddIcon from '@mui/icons-material/GroupAdd'
+import SearchIcon from '@mui/icons-material/Search'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
@@ -43,6 +46,7 @@ export default function PagosPage() {
   const [openMasivoDialog, setOpenMasivoDialog] = useState(false)
   const [selectedJudoka, setSelectedJudoka] = useState<Judoka | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     const fetchJudokas = async () => {
@@ -94,6 +98,16 @@ export default function PagosPage() {
     setRefreshTrigger(prev => prev + 1)
   }
 
+  // Filtrar judokas por término de búsqueda
+  const judokasFiltrados = judokas.filter(judoka => {
+    const searchLower = searchTerm.toLowerCase()
+    return (
+      judoka.nombres.toLowerCase().includes(searchLower) ||
+      judoka.apellidos.toLowerCase().includes(searchLower) ||
+      `${judoka.nombres} ${judoka.apellidos}`.toLowerCase().includes(searchLower)
+    )
+  })
+
   return (
     <ProtectedRoute allowedRoles={['encargado']}>
       <Layout>
@@ -124,24 +138,47 @@ export default function PagosPage() {
               </Typography>
             </Paper>
           ) : (
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Nombre</TableCell>
-                    <TableCell>Apellidos</TableCell>
-                    <TableCell>Categoría</TableCell>
-                    <TableCell>Cinturón</TableCell>
-                    <TableCell align="center">Acciones</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {judokas.map((judoka) => (
-                    <TableRow key={judoka.id} hover>
-                      <TableCell>{judoka.nombres}</TableCell>
-                      <TableCell>{judoka.apellidos}</TableCell>
-                      <TableCell>{judoka.categoria || '-'}</TableCell>
-                      <TableCell>{judoka.cinturon_actual || '-'}</TableCell>
+            <>
+              <TextField
+                fullWidth
+                placeholder="Buscar judoka por nombre o apellido..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                sx={{ mb: 2 }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  )
+                }}
+              />
+
+              {judokasFiltrados.length === 0 ? (
+                <Paper sx={{ p: 3, textAlign: 'center' }}>
+                  <Typography color="text.secondary">
+                    No se encontraron judokas con "{searchTerm}"
+                  </Typography>
+                </Paper>
+              ) : (
+                <TableContainer component={Paper}>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Nombre</TableCell>
+                        <TableCell>Apellidos</TableCell>
+                        <TableCell>Categoría</TableCell>
+                        <TableCell>Cinturón</TableCell>
+                        <TableCell align="center">Acciones</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {judokasFiltrados.map((judoka) => (
+                        <TableRow key={judoka.id} hover>
+                          <TableCell>{judoka.nombres}</TableCell>
+                          <TableCell>{judoka.apellidos}</TableCell>
+                          <TableCell>{judoka.categoria || '-'}</TableCell>
+                          <TableCell>{judoka.cinturon_actual || '-'}</TableCell>
                       <TableCell align="center">
                         <Tooltip title="Ver Pagos Pendientes">
                           <IconButton
@@ -176,6 +213,8 @@ export default function PagosPage() {
                 </TableBody>
               </Table>
             </TableContainer>
+              )}
+            </>
           )}
         </Box>
 
