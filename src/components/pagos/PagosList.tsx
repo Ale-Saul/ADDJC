@@ -14,11 +14,16 @@ import {
   CircularProgress,
   Typography,
   IconButton,
-  Tooltip
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
+import PaymentIcon from '@mui/icons-material/Payment'
 import { Pago } from '@/models/pago'
 import { pagoController } from '@/controllers/pagoController'
+import RegistrarPagoForm from './RegistrarPagoForm'
 
 interface PagosListProps {
   judokaId: string
@@ -30,6 +35,8 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
   const [pagos, setPagos] = useState<Pago[]>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [openRegistrarDialog, setOpenRegistrarDialog] = useState(false)
+  const [selectedPago, setSelectedPago] = useState<Pago | null>(null)
 
   const fetchPagos = async () => {
     try {
@@ -68,6 +75,18 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
     } finally {
       setDeleting(null)
     }
+  }
+
+  const handleRegistrarPago = (pago: Pago) => {
+    setSelectedPago(pago)
+    setOpenRegistrarDialog(true)
+  }
+
+  const handleRegistrarSuccess = async () => {
+    setOpenRegistrarDialog(false)
+    setSelectedPago(null)
+    await fetchPagos()
+    onPagoDeleted?.()
   }
 
   const getEstadoChip = (estado: string) => {
@@ -123,6 +142,7 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
   }
 
   return (
+    <>
     <TableContainer component={Paper} elevation={0}>
       <Table size="small">
         <TableHead>
@@ -170,6 +190,17 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
               <TableCell>{formatFecha(pago.fecha_vencimiento)}</TableCell>
               <TableCell>{getEstadoChip(pago.estado)}</TableCell>
               <TableCell align="center">
+                {(pago.estado === 'pendiente' || pago.estado === 'vencido') && (
+                  <Tooltip title="Registrar Pago">
+                    <IconButton
+                      color="success"
+                      size="small"
+                      onClick={() => handleRegistrarPago(pago)}
+                    >
+                      <PaymentIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
                 <Tooltip title="Eliminar pago">
                   <span>
                     <IconButton
@@ -192,5 +223,19 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
         </TableBody>
       </Table>
     </TableContainer>
+
+    <Dialog open={openRegistrarDialog} onClose={() => setOpenRegistrarDialog(false)} maxWidth="sm" fullWidth>
+      <DialogTitle>Registrar Pago</DialogTitle>
+      <DialogContent>
+        {selectedPago && (
+          <RegistrarPagoForm
+            pago={selectedPago}
+            onSuccess={handleRegistrarSuccess}
+            onCancel={() => setOpenRegistrarDialog(false)}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }
