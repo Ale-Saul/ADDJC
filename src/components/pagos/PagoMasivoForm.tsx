@@ -19,42 +19,35 @@ import type { SelectChangeEvent } from '@mui/material/Select'
 import { PagoCreate } from '@/models/pago'
 import { pagoController } from '@/controllers/pagoController'
 import { useAuth } from '@/contexts/AuthContext'
+import { Judoka } from '@/models/judoka'
 
-interface PagoFormProps {
-  judokaId: string
-  judokaNombre: string
+interface PagoMasivoFormProps {
+  judokas: Judoka[]
   onSuccess?: () => void
   onCancel?: () => void
 }
 
-export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }: PagoFormProps) {
+export default function PagoMasivoForm({ judokas, onSuccess, onCancel }: PagoMasivoFormProps) {
   const { user } = useAuth()
-  const [formData, setFormData] = useState<PagoCreate>({
-    judoka_id: judokaId,
-    club_id: user?.club_id || '',
+  const [formData, setFormData] = useState({
     tipo_pago: 'cuota_mensual',
     concepto: '',
-    descripcion: null,
+    descripcion: '',
     monto_base: '' as any,
     tiene_descuento: false,
-    tipo_descuento: null,
-    descuento_porcentaje: null,
-    descuento_monto: null,
-    razon_descuento: null,
-    estado: 'pendiente',
-    fecha_vencimiento: '',
-    fecha_pago: null,
-    metodo_pago: null,
-    comprobante_url: null,
-    creador_id: user?.id || '',
-    activo: true
+    tipo_descuento: null as 'porcentaje' | 'monto' | null,
+    descuento_porcentaje: null as number | null,
+    descuento_monto: null as number | null,
+    razon_descuento: null as string | null,
+    fecha_vencimiento: ''
   })
   const [montoFinal, setMontoFinal] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [createdCount, setCreatedCount] = useState(0)
 
-  // Calcular monto final cuando cambian los valores
+  // Calcular monto final
   useEffect(() => {
     const montoBase = typeof formData.monto_base === 'string' ? parseFloat(formData.monto_base) || 0 : formData.monto_base
     let final = montoBase
@@ -106,7 +99,6 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
     setFormData(prev => ({
       ...prev,
       [name]: checked,
-      // Resetear valores de descuento si se desactiva
       ...(name === 'tiene_descuento' && !checked ? {
         tipo_descuento: null,
         descuento_porcentaje: null,
@@ -123,27 +115,52 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
     setLoading(true)
     setError(null)
     setSuccess(false)
+    setCreatedCount(0)
 
     try {
-      // Agregar monto_final calculado antes de enviar
-      const pagoConMontoFinal = {
-        ...formData,
-        monto_final: montoFinal
+      let successCount = 0
+      let errorCount = 0
+
+      // Crear un pago para cada judoka
+      for (const judoka of judokas) {
+        const pagoData: PagoCreate = {
+          judoka_id: judoka.id,
+          club_id: user?.club_id || '',
+          tipo_pago: formData.tipo_pago as any,
+          concepto: formData.concepto,
+          descripcion: formData.descripcion || null,
+          monto_base: typeof formData.monto_base === 'string' ? parseFloat(formData.monto_base) : formData.monto_base,
+          tiene_descuento: formData.tiene_descuento,
+          tipo_descuento: formData.tipo_descuento,
+          descuento_porcentaje: formData.descuento_porcentaje,
+          descuento_monto: formData.descuento_monto,
+          razon_descuento: formData.razon_descuento as any,
+          monto_final: montoFinal,
+          estado: 'pendiente',
+          fecha_vencimiento: formData.fecha_vencimiento,
+          creador_id: user?.id || ''
+        }
+
+        const response = await pagoController.createPago(pagoData)
+        if (response.success) {
+          successCount++
+          setCreatedCount(successCount)
+        } else {
+          errorCount++
+        }
       }
 
-      const response = await pagoController.createPago(pagoConMontoFinal)
-
-      if (response.success) {
+      if (errorCount > 0) {
+        setError(`Se crearon ${successCount} pagos correctamente y ${errorCount} fallaron`)
+      } else {
         setSuccess(true)
         setTimeout(() => {
           onSuccess?.()
         }, 1500)
-      } else {
-        setError(response.error || 'Error al crear el pago')
       }
     } catch (err) {
-      console.error('Error al crear pago:', err)
-      setError('Error inesperado al crear el pago')
+      console.error('Error al crear pagos masivos:', err)
+      setError('Error inesperado al crear los pagos')
     } finally {
       setLoading(false)
     }
@@ -152,7 +169,7 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
       <Typography variant="subtitle1" color="text.secondary" mb={2}>
-        Crear pago para: <strong>{judokaNombre}</strong>
+        Crear pago para <strong>{judokas.length} judokas</strong>
       </Typography>
 
       {error && (
@@ -163,7 +180,13 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
 
       {success && (
         <Alert severity="success" sx={{ mb: 2 }}>
-          Pago creado exitosamente
+          {createdCount} pagos creados exitosamente
+        </Alert>
+      )}
+
+      {loading && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Creando pagos... {createdCount} de {judokas.length}
         </Alert>
       )}
 
@@ -200,7 +223,7 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
         fullWidth
         label="Descripción (opcional)"
         name="descripcion"
-        value={formData.descripcion || ''}
+        value={formData.descripcion}
         onChange={handleChange}
         multiline
         rows={2}
@@ -309,7 +332,10 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
 
       <Box sx={{ p: 2, bgcolor: 'primary.light', borderRadius: 1, mb: 2 }}>
         <Typography variant="h6">
-          Monto Final: Bs. {montoFinal.toFixed(2)}
+          Monto Final por Judoka: Bs. {montoFinal.toFixed(2)}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Total a cobrar: Bs. {(montoFinal * judokas.length).toFixed(2)}
         </Typography>
       </Box>
 
@@ -326,7 +352,7 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
           variant="contained"
           disabled={loading}
         >
-          {loading ? <CircularProgress size={24} /> : 'Crear Pago'}
+          {loading ? <CircularProgress size={24} /> : `Crear ${judokas.length} Pagos`}
         </Button>
       </Box>
     </Box>

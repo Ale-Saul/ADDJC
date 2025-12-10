@@ -16,10 +16,12 @@ import {
   Tooltip,
   Dialog,
   DialogTitle,
-  DialogContent
+  DialogContent,
+  Button
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import VisibilityIcon from '@mui/icons-material/Visibility'
+import GroupAddIcon from '@mui/icons-material/GroupAdd'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
@@ -27,6 +29,7 @@ import { judokaController } from '@/controllers/judokaController'
 import { Judoka } from '@/models/judoka'
 import PagoForm from '@/components/forms/PagoForm'
 import PagosList from '@/components/pagos/PagosList'
+import PagoMasivoForm from '@/components/pagos/PagoMasivoForm'
 
 export default function PagosPage() {
   const { user } = useAuth()
@@ -34,6 +37,7 @@ export default function PagosPage() {
   const [loading, setLoading] = useState(true)
   const [openDialog, setOpenDialog] = useState(false)
   const [openPagosDialog, setOpenPagosDialog] = useState(false)
+  const [openMasivoDialog, setOpenMasivoDialog] = useState(false)
   const [selectedJudoka, setSelectedJudoka] = useState<Judoka | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
@@ -77,13 +81,29 @@ export default function PagosPage() {
     setOpenPagosDialog(true)
   }
 
+  const handlePagoMasivoSuccess = () => {
+    setOpenMasivoDialog(false)
+    setRefreshTrigger(prev => prev + 1)
+  }
+
   return (
     <ProtectedRoute allowedRoles={['encargado']}>
       <Layout>
         <Box>
-          <Typography variant="h4" component="h1" mb={3}>
-            Gestión de Pagos y Cuotas
-          </Typography>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Typography variant="h4" component="h1">
+              Gestión de Pagos y Cuotas
+            </Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<GroupAddIcon />}
+              onClick={() => setOpenMasivoDialog(true)}
+              disabled={judokas.length === 0}
+            >
+              Crear Pago para Todos
+            </Button>
+          </Box>
 
           {loading ? (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
@@ -168,6 +188,17 @@ export default function PagosPage() {
                 onPagoDeleted={() => setRefreshTrigger(prev => prev + 1)}
               />
             )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={openMasivoDialog} onClose={() => setOpenMasivoDialog(false)} maxWidth="md" fullWidth>
+          <DialogTitle>Crear Pago Masivo</DialogTitle>
+          <DialogContent>
+            <PagoMasivoForm
+              judokas={judokas}
+              onSuccess={handlePagoMasivoSuccess}
+              onCancel={() => setOpenMasivoDialog(false)}
+            />
           </DialogContent>
         </Dialog>
       </Layout>
