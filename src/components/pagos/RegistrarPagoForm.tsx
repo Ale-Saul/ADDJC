@@ -19,12 +19,12 @@ import { pagoController } from '@/controllers/pagoController'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface RegistrarPagoFormProps {
-  pago: Pago
+  pagos: Pago[]
   onSuccess?: () => void
   onCancel?: () => void
 }
 
-export default function RegistrarPagoForm({ pago, onSuccess, onCancel }: RegistrarPagoFormProps) {
+export default function RegistrarPagoForm({ pagos, onSuccess, onCancel }: RegistrarPagoFormProps) {
   const { user } = useAuth()
   const [formData, setFormData] = useState({
     fecha_pago: new Date().toISOString().split('T')[0], // Hoy por defecto
@@ -34,6 +34,9 @@ export default function RegistrarPagoForm({ pago, onSuccess, onCancel }: Registr
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  // Calcular total a pagar
+  const totalPagar = pagos.reduce((sum, pago) => sum + pago.monto_final, 0)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -60,25 +63,34 @@ export default function RegistrarPagoForm({ pago, onSuccess, onCancel }: Registr
     setError(null)
 
     try {
-      const response = await pagoController.updatePago(pago.id, {
-        estado: 'pagado',
-        fecha_pago: formData.fecha_pago,
-        metodo_pago: formData.metodo_pago,
-        observaciones_pago: formData.observaciones_pago || null,
-        pagado_por: user?.id || null
-      })
+      // Actualizar todos los pagos seleccionados
+      const updatePromises = pagos.map(pago => 
+        pagoController.updatePago(pago.id, {
+          estado: 'pagado',
+          fecha_pago: formData.fecha_pago,
+          metodo_pago: formData.metodo_pago,
+          observaciones_pago: formData.observaciones_pago || null,
+          pagado_por: user?.id || null
+        })
+      )
 
-      if (response.success) {
+      const results = await Promise.all(updatePromises)
+      
+      // Verificar si todos fueron exitosos
+      const allSuccess = results.every(r => r.success)
+      
+      if (allSuccess) {
         setSuccess(true)
         setTimeout(() => {
           onSuccess?.()
         }, 1000)
       } else {
-        setError(response.error || 'Error al registrar el pago')
+        const failedCount = results.filter(r => !r.success).length
+        setError(`Error al registrar ${failedCount} ${failedCount === 1 ? 'pago' : 'pagos'}`)
       }
     } catch (err) {
-      console.error('Error al registrar pago:', err)
-      setError('Error inesperado al registrar el pago')
+      console.error('Error al registrar pagos:', err)
+      setError('Error inesperado al registrar los pagos')
     } finally {
       setLoading(false)
     }
@@ -87,13 +99,23 @@ export default function RegistrarPagoForm({ pago, onSuccess, onCancel }: Registr
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
       <Typography variant="subtitle1" color="text.secondary" mb={2}>
-        Registrar pago de: <strong>{pago.concepto}</strong>
+        Registrando <strong>{pagos.length}</strong> {pagos.length === 1 ? 'pago' : 'pagos'}
       </Typography>
 
-      <Box sx={{ p: 2, bgcolor: 'info.light', borderRadius: 1, mb: 2 }}>
-        <Typography variant="body2">
-          Monto a pagar: <strong>Bs. {pago.monto_final.toFixed(2)}</strong>
+      <Box sx={{ p: 2, bgcolor: 'success.light', borderRadius: 1, mb: 2 }}>
+        <Typography variant="h6" color="success.dark">
+          Total a Pagar: Bs. {totalPagar.toFixed(2)}
         </Typography>
+        {pagos.length > 1 && (
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+            {pagos.map((p, idx) => (
+              <span key={p.id}>
+                {p.concepto}: Bs. {p.monto_final.toFixed(2)}
+                {idx < pagos.length - 1 && ' + '}
+              </span>
+            ))}
+          </Typography>
+        )}
       </Box>
 
       {error && (
@@ -104,7 +126,7 @@ export default function RegistrarPagoForm({ pago, onSuccess, onCancel }: Registr
 
       {success && (
         <Alert severity="success" sx={{ mb: 2 }}>
-          Pago registrado exitosamente
+          {pagos.length === 1 ? 'Pago registrado' : 'Pagos registrados'} exitosamente
         </Alert>
       )}
 
@@ -163,7 +185,7 @@ export default function RegistrarPagoForm({ pago, onSuccess, onCancel }: Registr
           color="success"
           disabled={loading}
         >
-          {loading ? <CircularProgress size={24} /> : 'Registrar Pago'}
+          {loading ? <CircularProgress size={24} /> : `Registrar ${pagos.length === 1 ? 'Pago' : `${pagos.length} Pagos`}`}
         </Button>
       </Box>
     </Box>

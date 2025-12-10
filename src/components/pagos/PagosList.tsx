@@ -17,7 +17,9 @@ import {
   Tooltip,
   Dialog,
   DialogTitle,
-  DialogContent
+  DialogContent,
+  Checkbox,
+  Button
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import PaymentIcon from '@mui/icons-material/Payment'
@@ -40,6 +42,7 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
   const [openRegistrarDialog, setOpenRegistrarDialog] = useState(false)
   const [openEditarDialog, setOpenEditarDialog] = useState(false)
   const [selectedPago, setSelectedPago] = useState<Pago | null>(null)
+  const [selectedPagos, setSelectedPagos] = useState<string[]>([])
 
   const fetchPagos = async () => {
     try {
@@ -84,16 +87,32 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
     }
   }
 
-  const handleRegistrarPago = (pago: Pago) => {
-    setSelectedPago(pago)
+  const handleRegistrarPagos = () => {
+    if (selectedPagos.length === 0) return
     setOpenRegistrarDialog(true)
   }
 
   const handleRegistrarSuccess = async () => {
     setOpenRegistrarDialog(false)
-    setSelectedPago(null)
+    setSelectedPagos([])
     await fetchPagos()
     onPagoDeleted?.()
+  }
+
+  const handleTogglePago = (pagoId: string) => {
+    setSelectedPagos(prev => 
+      prev.includes(pagoId) 
+        ? prev.filter(id => id !== pagoId)
+        : [...prev, pagoId]
+    )
+  }
+
+  const handleToggleAll = () => {
+    if (selectedPagos.length === pagos.length) {
+      setSelectedPagos([])
+    } else {
+      setSelectedPagos(pagos.map(p => p.id))
+    }
   }
 
   const handleEditarPago = (pago: Pago) => {
@@ -167,10 +186,29 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
 
   return (
     <>
+    <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+      <Button
+        variant="contained"
+        color="success"
+        startIcon={<PaymentIcon />}
+        onClick={handleRegistrarPagos}
+        disabled={selectedPagos.length === 0}
+      >
+        Registrar Pagos Seleccionados ({selectedPagos.length})
+      </Button>
+    </Box>
+    
     <TableContainer component={Paper} elevation={0}>
       <Table size="small">
         <TableHead>
           <TableRow>
+            <TableCell padding="checkbox">
+              <Checkbox
+                checked={pagos.length > 0 && selectedPagos.length === pagos.length}
+                indeterminate={selectedPagos.length > 0 && selectedPagos.length < pagos.length}
+                onChange={handleToggleAll}
+              />
+            </TableCell>
             <TableCell>Concepto</TableCell>
             <TableCell>Tipo</TableCell>
             <TableCell align="right">Monto</TableCell>
@@ -181,7 +219,13 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
         </TableHead>
         <TableBody>
           {pagos.map((pago) => (
-            <TableRow key={pago.id} hover>
+            <TableRow key={pago.id} hover selected={selectedPagos.includes(pago.id)}>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  checked={selectedPagos.includes(pago.id)}
+                  onChange={() => handleTogglePago(pago.id)}
+                />
+              </TableCell>
               <TableCell>
                 <Box>
                   <Typography variant="body2">
@@ -215,26 +259,15 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
               <TableCell>{getEstadoChip(pago.estado)}</TableCell>
               <TableCell align="center">
                 {(pago.estado === 'pendiente' || pago.estado === 'vencido') && (
-                  <>
-                    <Tooltip title="Editar Pago">
-                      <IconButton
-                        color="primary"
-                        size="small"
-                        onClick={() => handleEditarPago(pago)}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Registrar Pago">
-                      <IconButton
-                        color="success"
-                        size="small"
-                        onClick={() => handleRegistrarPago(pago)}
-                      >
-                        <PaymentIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </>
+                  <Tooltip title="Editar Pago">
+                    <IconButton
+                      color="primary"
+                      size="small"
+                      onClick={() => handleEditarPago(pago)}
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                 )}
                 <Tooltip title="Eliminar pago">
                   <span>
@@ -260,15 +293,15 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
     </TableContainer>
 
     <Dialog open={openRegistrarDialog} onClose={() => setOpenRegistrarDialog(false)} maxWidth="sm" fullWidth>
-      <DialogTitle>Registrar Pago</DialogTitle>
+      <DialogTitle>
+        Registrar Pagos ({selectedPagos.length} {selectedPagos.length === 1 ? 'pago' : 'pagos'})
+      </DialogTitle>
       <DialogContent>
-        {selectedPago && (
-          <RegistrarPagoForm
-            pago={selectedPago}
-            onSuccess={handleRegistrarSuccess}
-            onCancel={() => setOpenRegistrarDialog(false)}
-          />
-        )}
+        <RegistrarPagoForm
+          pagos={pagos.filter(p => selectedPagos.includes(p.id))}
+          onSuccess={handleRegistrarSuccess}
+          onCancel={() => setOpenRegistrarDialog(false)}
+        />
       </DialogContent>
     </Dialog>
 
