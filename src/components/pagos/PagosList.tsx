@@ -45,7 +45,11 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
     try {
       const response = await pagoController.getPagosByJudoka(judokaId)
       if (response.success && response.data) {
-        setPagos(response.data)
+        // Filtrar solo pagos pendientes y vencidos
+        const pagosPendientes = response.data.filter(
+          p => p.estado === 'pendiente' || p.estado === 'vencido'
+        )
+        setPagos(pagosPendientes)
       }
     } catch (error) {
       console.error('Error al cargar pagos:', error)
@@ -155,7 +159,7 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
     return (
       <Box p={3} textAlign="center">
         <Typography color="text.secondary">
-          No hay pagos registrados para {judokaNombre}
+          No hay pagos pendientes para {judokaNombre}
         </Typography>
       </Box>
     )

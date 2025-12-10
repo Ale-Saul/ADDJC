@@ -21,6 +21,7 @@ import {
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import VisibilityIcon from '@mui/icons-material/Visibility'
+import HistoryIcon from '@mui/icons-material/History'
 import GroupAddIcon from '@mui/icons-material/GroupAdd'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
@@ -29,6 +30,7 @@ import { judokaController } from '@/controllers/judokaController'
 import { Judoka } from '@/models/judoka'
 import PagoForm from '@/components/forms/PagoForm'
 import PagosList from '@/components/pagos/PagosList'
+import HistorialPagos from '@/components/pagos/HistorialPagos'
 import PagoMasivoForm from '@/components/pagos/PagoMasivoForm'
 
 export default function PagosPage() {
@@ -37,6 +39,7 @@ export default function PagosPage() {
   const [loading, setLoading] = useState(true)
   const [openDialog, setOpenDialog] = useState(false)
   const [openPagosDialog, setOpenPagosDialog] = useState(false)
+  const [openHistorialDialog, setOpenHistorialDialog] = useState(false)
   const [openMasivoDialog, setOpenMasivoDialog] = useState(false)
   const [selectedJudoka, setSelectedJudoka] = useState<Judoka | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -79,6 +82,11 @@ export default function PagosPage() {
   const handleVerPagos = (judoka: Judoka) => {
     setSelectedJudoka(judoka)
     setOpenPagosDialog(true)
+  }
+
+  const handleVerHistorial = (judoka: Judoka) => {
+    setSelectedJudoka(judoka)
+    setOpenHistorialDialog(true)
   }
 
   const handlePagoMasivoSuccess = () => {
@@ -135,13 +143,22 @@ export default function PagosPage() {
                       <TableCell>{judoka.categoria || '-'}</TableCell>
                       <TableCell>{judoka.cinturon_actual || '-'}</TableCell>
                       <TableCell align="center">
-                        <Tooltip title="Ver Pagos">
+                        <Tooltip title="Ver Pagos Pendientes">
                           <IconButton
-                            color="info"
+                            color="warning"
                             onClick={() => handleVerPagos(judoka)}
                             size="small"
                           >
                             <VisibilityIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Ver Historial">
+                          <IconButton
+                            color="success"
+                            onClick={() => handleVerHistorial(judoka)}
+                            size="small"
+                          >
+                            <HistoryIcon />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Nuevo Pago">
@@ -178,7 +195,7 @@ export default function PagosPage() {
 
         <Dialog open={openPagosDialog} onClose={() => setOpenPagosDialog(false)} maxWidth="md" fullWidth>
           <DialogTitle>
-            Pagos de {selectedJudoka?.nombres} {selectedJudoka?.apellidos}
+            Pagos Pendientes - {selectedJudoka?.nombres} {selectedJudoka?.apellidos}
           </DialogTitle>
           <DialogContent>
             {selectedJudoka && (
@@ -186,6 +203,20 @@ export default function PagosPage() {
                 judokaId={selectedJudoka.id}
                 judokaNombre={`${selectedJudoka.nombres} ${selectedJudoka.apellidos}`}
                 onPagoDeleted={() => setRefreshTrigger(prev => prev + 1)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={openHistorialDialog} onClose={() => setOpenHistorialDialog(false)} maxWidth="md" fullWidth>
+          <DialogTitle>
+            Historial de Pagos - {selectedJudoka?.nombres} {selectedJudoka?.apellidos}
+          </DialogTitle>
+          <DialogContent>
+            {selectedJudoka && (
+              <HistorialPagos
+                judokaId={selectedJudoka.id}
+                judokaNombre={`${selectedJudoka.nombres} ${selectedJudoka.apellidos}`}
               />
             )}
           </DialogContent>
