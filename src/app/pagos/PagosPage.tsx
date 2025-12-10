@@ -165,6 +165,7 @@ export default function PagosPage() {
               <PagosList
                 judokaId={selectedJudoka.id}
                 judokaNombre={`${selectedJudoka.nombres} ${selectedJudoka.apellidos}`}
+                onPagoDeleted={() => setRefreshTrigger(prev => prev + 1)}
               />
             )}
           </DialogContent>

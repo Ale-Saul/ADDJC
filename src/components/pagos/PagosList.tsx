@@ -12,36 +12,63 @@ import {
   Paper,
   Chip,
   CircularProgress,
-  Typography
+  Typography,
+  IconButton,
+  Tooltip
 } from '@mui/material'
+import DeleteIcon from '@mui/icons-material/Delete'
 import { Pago } from '@/models/pago'
 import { pagoController } from '@/controllers/pagoController'
 
 interface PagosListProps {
   judokaId: string
   judokaNombre: string
+  onPagoDeleted?: () => void
 }
 
-export default function PagosList({ judokaId, judokaNombre }: PagosListProps) {
+export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: PagosListProps) {
   const [pagos, setPagos] = useState<Pago[]>([])
   const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState<string | null>(null)
+
+  const fetchPagos = async () => {
+    try {
+      const response = await pagoController.getPagosByJudoka(judokaId)
+      if (response.success && response.data) {
+        setPagos(response.data)
+      }
+    } catch (error) {
+      console.error('Error al cargar pagos:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchPagos = async () => {
-      try {
-        const response = await pagoController.getPagosByJudoka(judokaId)
-        if (response.success && response.data) {
-          setPagos(response.data)
-        }
-      } catch (error) {
-        console.error('Error al cargar pagos:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchPagos()
   }, [judokaId])
+
+  const handleDelete = async (pago: Pago) => {
+    if (!confirm(`¿Estás seguro de eliminar el pago "${pago.concepto}"?`)) {
+      return
+    }
+
+    setDeleting(pago.id)
+    try {
+      const response = await pagoController.deletePago(pago.id)
+      if (response.success) {
+        await fetchPagos()
+        onPagoDeleted?.()
+      } else {
+        alert(`Error al eliminar: ${response.error}`)
+      }
+    } catch (error) {
+      console.error('Error al eliminar pago:', error)
+      alert('Error inesperado al eliminar el pago')
+    } finally {
+      setDeleting(null)
+    }
+  }
 
   const getEstadoChip = (estado: string) => {
     const colores: Record<string, 'success' | 'warning' | 'error' | 'default' | 'info'> = {
@@ -105,12 +132,24 @@ export default function PagosList({ judokaId, judokaNombre }: PagosListProps) {
             <TableCell align="right">Monto</TableCell>
             <TableCell>Vencimiento</TableCell>
             <TableCell>Estado</TableCell>
+            <TableCell align="center">Acciones</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {pagos.map((pago) => (
             <TableRow key={pago.id} hover>
-              <TableCell>{pago.concepto}</TableCell>
+              <TableCell>
+                <Box>
+                  <Typography variant="body2">
+                    {pago.concepto}
+                  </Typography>
+                  {pago.descripcion && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                      {pago.descripcion}
+                    </Typography>
+                  )}
+                </Box>
+              </TableCell>
               <TableCell>
                 <Typography variant="caption">
                   {pago.tipo_pago.replace('_', ' ')}
@@ -130,6 +169,24 @@ export default function PagosList({ judokaId, judokaNombre }: PagosListProps) {
               </TableCell>
               <TableCell>{formatFecha(pago.fecha_vencimiento)}</TableCell>
               <TableCell>{getEstadoChip(pago.estado)}</TableCell>
+              <TableCell align="center">
+                <Tooltip title="Eliminar pago">
+                  <span>
+                    <IconButton
+                      color="error"
+                      size="small"
+                      onClick={() => handleDelete(pago)}
+                      disabled={deleting === pago.id}
+                    >
+                      {deleting === pago.id ? (
+                        <CircularProgress size={20} />
+                      ) : (
+                        <DeleteIcon fontSize="small" />
+                      )}
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
