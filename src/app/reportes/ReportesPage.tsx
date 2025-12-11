@@ -170,8 +170,30 @@ export default function ReportesPage() {
       p.fecha_pago ? new Date(p.fecha_pago).toLocaleDateString('es-BO') : '-'
     ])
 
-    const csv = [headers, ...rows].map(row => row.join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    // Calcular totales
+    const totalCobrado = pagosFiltrados
+      .filter(p => p.estado === 'pagado')
+      .reduce((sum, p) => sum + p.monto_final, 0)
+    
+    const totalPendiente = pagosFiltrados
+      .filter(p => p.estado === 'pendiente' || p.estado === 'vencido')
+      .reduce((sum, p) => sum + p.monto_final, 0)
+
+    // Agregar líneas de totales
+    const totalesRows = [
+      ['', '', '', '', '', '', '', '', '', ''],
+      ['', '', '', '', '', 'TOTAL COBRADO:', totalCobrado.toFixed(2), '', '', ''],
+      ['', '', '', '', '', 'TOTAL PENDIENTE:', totalPendiente.toFixed(2), '', '', ''],
+      ['', '', '', '', '', 'TOTAL GENERAL:', (totalCobrado + totalPendiente).toFixed(2), '', '', '']
+    ]
+
+    // Combinar todo
+    const allRows = [headers, ...rows, ...totalesRows]
+    const csv = allRows.map(row => row.join(',')).join('\n')
+    
+    // Agregar BOM UTF-8 para que Excel reconozca correctamente los acentos
+    const BOM = '\uFEFF'
+    const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
     link.download = `reporte_pagos_${fechaInicio}_${fechaFin}.csv`
