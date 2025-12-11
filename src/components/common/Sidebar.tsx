@@ -29,6 +29,7 @@ import BusinessIcon from '@mui/icons-material/Business'
 import LogoutIcon from '@mui/icons-material/Logout'
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
 import PaymentIcon from '@mui/icons-material/Payment'
+import AssessmentIcon from '@mui/icons-material/Assessment'
 import { useAuth } from '@/contexts/AuthContext'
 
 const DRAWER_WIDTH = 280
@@ -93,6 +94,12 @@ export default function Sidebar() {
       label: 'Pagos y Cuotas',
       path: '/pagos',
       icon: <PaymentIcon />,
+      allowedRoles: ['encargado'] // Solo encargados
+    },
+    {
+      label: 'Reportes',
+      path: '/reportes',
+      icon: <AssessmentIcon />,
       allowedRoles: ['encargado'] // Solo encargados
     }
   ]
