@@ -31,6 +31,8 @@ import { pagoController } from '@/controllers/pagoController'
 import { judokaController } from '@/controllers/judokaController'
 import { Pago } from '@/models/pago'
 import { Judoka } from '@/models/judoka'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 export default function ReportesPage() {
   const { user } = useAuth()
@@ -200,6 +202,65 @@ export default function ReportesPage() {
     link.click()
   }
 
+  const exportarPDF = () => {
+    const doc = new jsPDF()
+    
+    // Título
+    doc.setFontSize(18)
+    doc.text('Reporte de Pagos y Cuotas', 14, 20)
+    
+    // Información del período
+    doc.setFontSize(11)
+    doc.text(`Período: ${new Date(fechaInicio).toLocaleDateString('es-BO')} - ${new Date(fechaFin).toLocaleDateString('es-BO')}`, 14, 28)
+    doc.text(`Fecha de generación: ${new Date().toLocaleDateString('es-BO')}`, 14, 34)
+    
+    // Totales
+    const totalCobrado = pagosFiltrados
+      .filter(p => p.estado === 'pagado')
+      .reduce((sum, p) => sum + p.monto_final, 0)
+    
+    const totalPendiente = pagosFiltrados
+      .filter(p => p.estado === 'pendiente' || p.estado === 'vencido')
+      .reduce((sum, p) => sum + p.monto_final, 0)
+
+    doc.setFontSize(10)
+    doc.text(`Total Cobrado: Bs. ${totalCobrado.toFixed(2)}`, 14, 42)
+    doc.text(`Total Pendiente: Bs. ${totalPendiente.toFixed(2)}`, 80, 42)
+    doc.text(`Total General: Bs. ${(totalCobrado + totalPendiente).toFixed(2)}`, 146, 42)
+    
+    // Tabla de pagos
+    const tableData = pagosFiltrados.map(p => [
+      new Date(p.created_at).toLocaleDateString('es-BO'),
+      getJudokaNombre(p.judoka_id),
+      p.concepto,
+      getTipoLabel(p.tipo_pago),
+      `Bs. ${p.monto_final.toFixed(2)}`,
+      p.estado,
+      new Date(p.fecha_vencimiento).toLocaleDateString('es-BO')
+    ])
+
+    autoTable(doc, {
+      head: [['Fecha', 'Judoka', 'Concepto', 'Tipo', 'Monto', 'Estado', 'Vencimiento']],
+      body: tableData,
+      startY: 48,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [66, 139, 202], textColor: 255 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      columnStyles: {
+        0: { cellWidth: 22 },
+        1: { cellWidth: 35 },
+        2: { cellWidth: 35 },
+        3: { cellWidth: 25 },
+        4: { cellWidth: 22, halign: 'right' },
+        5: { cellWidth: 20 },
+        6: { cellWidth: 22 }
+      }
+    })
+
+    // Guardar PDF
+    doc.save(`reporte_pagos_${fechaInicio}_${fechaFin}.pdf`)
+  }
+
   const getEstadoChip = (estado: string) => {
     const colores: Record<string, 'success' | 'warning' | 'error' | 'default' | 'info'> = {
       pagado: 'success',
@@ -247,15 +308,26 @@ export default function ReportesPage() {
                 Reportes y Estadísticas
               </Typography>
             </Box>
-            <Button
-              variant="contained"
-              color="success"
-              startIcon={<DownloadIcon />}
-              onClick={exportarExcel}
-              disabled={pagosFiltrados.length === 0}
-            >
-              Exportar a Excel
-            </Button>
+            <Box display="flex" gap={2}>
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<DownloadIcon />}
+                onClick={exportarPDF}
+                disabled={pagosFiltrados.length === 0}
+              >
+                Exportar a PDF
+              </Button>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<DownloadIcon />}
+                onClick={exportarExcel}
+                disabled={pagosFiltrados.length === 0}
+              >
+                Exportar a Excel
+              </Button>
+            </Box>
           </Box>
 
           {/* Filtros */}
