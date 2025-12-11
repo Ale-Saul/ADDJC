@@ -101,6 +101,12 @@ export default function Sidebar() {
       path: '/reportes',
       icon: <AssessmentIcon />,
       allowedRoles: ['encargado'] // Solo encargados
+    },
+    {
+      label: 'Reportes Asociación',
+      path: '/reportes/asociacion',
+      icon: <AssessmentIcon />,
+      allowedRoles: ['asociacion'] // Solo asociación
     }
   ]
 
