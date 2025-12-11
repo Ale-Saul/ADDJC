@@ -30,15 +30,19 @@ import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
 import { judokaController } from '@/controllers/judokaController'
+import { pagoController } from '@/controllers/pagoController'
 import { Judoka } from '@/models/judoka'
+import { Pago } from '@/models/pago'
 import PagoForm from '@/components/forms/PagoForm'
 import PagosList from '@/components/pagos/PagosList'
 import HistorialPagos from '@/components/pagos/HistorialPagos'
 import PagoMasivoForm from '@/components/pagos/PagoMasivoForm'
+import PagosStats from '@/components/pagos/PagosStats'
 
 export default function PagosPage() {
   const { user } = useAuth()
   const [judokas, setJudokas] = useState<Judoka[]>([])
+  const [pagos, setPagos] = useState<Pago[]>([])
   const [loading, setLoading] = useState(true)
   const [openDialog, setOpenDialog] = useState(false)
   const [openPagosDialog, setOpenPagosDialog] = useState(false)
@@ -49,27 +53,34 @@ export default function PagosPage() {
   const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
-    const fetchJudokas = async () => {
+    const fetchData = async () => {
       if (!user?.club_id) {
         setLoading(false)
         return
       }
 
       try {
-        const response = await judokaController.getJudokasByClub(user.club_id)
-        if (response.success && response.data) {
+        // Cargar judokas
+        const judokasResponse = await judokaController.getJudokasByClub(user.club_id)
+        if (judokasResponse.success && judokasResponse.data) {
           // Filtrar solo judokas que están inscritos en el club (club_id no null)
-          const judokasInscritos = response.data.filter(j => j.club_id !== null)
+          const judokasInscritos = judokasResponse.data.filter(j => j.club_id !== null)
           setJudokas(judokasInscritos)
         }
+
+        // Cargar pagos del club
+        const pagosResponse = await pagoController.getPagosByClub(user.club_id)
+        if (pagosResponse.success && pagosResponse.data) {
+          setPagos(pagosResponse.data)
+        }
       } catch (error) {
-        console.error('Error al cargar judokas:', error)
+        console.error('Error al cargar datos:', error)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchJudokas()
+    fetchData()
   }, [user?.club_id, refreshTrigger])
 
   const handleNuevoPago = (judoka: Judoka) => {
@@ -139,6 +150,9 @@ export default function PagosPage() {
             </Paper>
           ) : (
             <>
+              {/* Mini Dashboard de Estadísticas */}
+              <PagosStats pagos={pagos} />
+
               <TextField
                 fullWidth
                 placeholder="Buscar judoka por nombre o apellido..."
