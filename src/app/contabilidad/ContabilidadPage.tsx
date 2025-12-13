@@ -24,7 +24,7 @@ import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
 import * as movimientoFinancieroController from '@/controllers/movimientoFinancieroController'
-import * as clubController from '@/controllers/clubController'
+import { clubController } from '@/controllers/clubController'
 import { MovimientoFinanciero, TipoMovimiento, CategoriaMovimiento } from '@/models/movimientoFinanciero'
 import { Club } from '@/models/club'
 import BalanceCards from '@/components/contabilidad/BalanceCards'
@@ -171,9 +171,9 @@ export default function ContabilidadPage() {
     
     // Balance
     doc.setFontSize(14)
-    doc.text(`Total Ingresos: $${balance.total_ingresos.toFixed(2)}`, 14, 42)
-    doc.text(`Total Egresos: $${balance.total_egresos.toFixed(2)}`, 14, 50)
-    doc.text(`Balance: $${balance.balance.toFixed(2)}`, 14, 58)
+    doc.text(`Total Ingresos: Bs. ${balance.total_ingresos.toFixed(2)}`, 14, 42)
+    doc.text(`Total Egresos: Bs. ${balance.total_egresos.toFixed(2)}`, 14, 50)
+    doc.text(`Balance: Bs. ${balance.balance.toFixed(2)}`, 14, 58)
     
     // Tabla de movimientos
     const tableData = movimientosFiltrados.map(mov => [
@@ -181,7 +181,7 @@ export default function ContabilidadPage() {
       mov.tipo === 'ingreso' ? 'Ingreso' : 'Egreso',
       movimientoFinancieroController.getCategoriaLabel(mov.categoria),
       mov.concepto,
-      `$${mov.monto.toFixed(2)}`,
+      `Bs. ${mov.monto.toFixed(2)}`,
       mov.origen_club_nombre || mov.origen_entidad || '-',
     ])
     
@@ -277,82 +277,80 @@ export default function ContabilidadPage() {
 
               {/* Filtros */}
               <Paper sx={{ p: 3, mb: 3 }}>
-                <Typography variant="h6" gutterBottom>
+                <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
                   Filtros
                 </Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <TextField
-                      label="Fecha Inicio"
-                      type="date"
-                      fullWidth
-                      value={fechaInicio}
-                      onChange={(e) => setFechaInicio(e.target.value)}
-                      InputLabelProps={{ shrink: true }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <TextField
-                      label="Fecha Fin"
-                      type="date"
-                      fullWidth
-                      value={fechaFin}
-                      onChange={(e) => setFechaFin(e.target.value)}
-                      InputLabelProps={{ shrink: true }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={2}>
-                    <FormControl fullWidth>
-                      <InputLabel>Tipo</InputLabel>
-                      <Select
-                        value={tipoFiltro}
-                        label="Tipo"
-                        onChange={(e) => setTipoFiltro(e.target.value)}
-                      >
-                        <MenuItem value="todos">Todos</MenuItem>
-                        <MenuItem value="ingreso">Ingresos</MenuItem>
-                        <MenuItem value="egreso">Egresos</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={2}>
-                    <FormControl fullWidth>
-                      <InputLabel>Categoría</InputLabel>
-                      <Select
-                        value={categoriaFiltro}
-                        label="Categoría"
-                        onChange={(e) => setCategoriaFiltro(e.target.value)}
-                      >
-                        <MenuItem value="todos">Todas</MenuItem>
-                        <MenuItem value="donacion_club">Donación de Club</MenuItem>
-                        <MenuItem value="pago_club">Pago de Club</MenuItem>
-                        <MenuItem value="aporte_estado">Aporte del Estado</MenuItem>
-                        <MenuItem value="sponsor">Patrocinio</MenuItem>
-                        <MenuItem value="evento">Evento</MenuItem>
-                        <MenuItem value="gasto_operativo">Gasto Operativo</MenuItem>
-                        <MenuItem value="pago_proveedor">Pago a Proveedor</MenuItem>
-                        <MenuItem value="otro">Otro</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={2}>
-                    <FormControl fullWidth>
-                      <InputLabel>Club</InputLabel>
-                      <Select
-                        value={clubFiltro}
-                        label="Club"
-                        onChange={(e) => setClubFiltro(e.target.value)}
-                      >
-                        <MenuItem value="todos">Todos</MenuItem>
-                        {clubes.map(club => (
-                          <MenuItem key={club.id} value={club.id}>
-                            {club.nombre}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                </Grid>
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexWrap: 'wrap', 
+                  gap: 2,
+                  '& > *': {
+                    flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' },
+                    minWidth: { xs: '100%', sm: '200px', md: '150px' }
+                  }
+                }}>
+                  <TextField
+                    label="Fecha Inicio"
+                    type="date"
+                    value={fechaInicio}
+                    onChange={(e) => setFechaInicio(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    size="small"
+                  />
+                  <TextField
+                    label="Fecha Fin"
+                    type="date"
+                    value={fechaFin}
+                    onChange={(e) => setFechaFin(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    size="small"
+                  />
+                  <FormControl size="small">
+                    <InputLabel>Tipo</InputLabel>
+                    <Select
+                      value={tipoFiltro}
+                      label="Tipo"
+                      onChange={(e) => setTipoFiltro(e.target.value)}
+                    >
+                      <MenuItem value="todos">Todos</MenuItem>
+                      <MenuItem value="ingreso">Ingresos</MenuItem>
+                      <MenuItem value="egreso">Egresos</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <FormControl size="small">
+                    <InputLabel>Categoría</InputLabel>
+                    <Select
+                      value={categoriaFiltro}
+                      label="Categoría"
+                      onChange={(e) => setCategoriaFiltro(e.target.value)}
+                    >
+                      <MenuItem value="todos">Todas</MenuItem>
+                      <MenuItem value="donacion_club">Donación de Club</MenuItem>
+                      <MenuItem value="pago_club">Pago de Club</MenuItem>
+                      <MenuItem value="aporte_estado">Aporte del Estado</MenuItem>
+                      <MenuItem value="sponsor">Patrocinio</MenuItem>
+                      <MenuItem value="evento">Evento</MenuItem>
+                      <MenuItem value="gasto_operativo">Gasto Operativo</MenuItem>
+                      <MenuItem value="pago_proveedor">Pago a Proveedor</MenuItem>
+                      <MenuItem value="otro">Otro</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <FormControl size="small">
+                    <InputLabel>Club</InputLabel>
+                    <Select
+                      value={clubFiltro}
+                      label="Club"
+                      onChange={(e) => setClubFiltro(e.target.value)}
+                    >
+                      <MenuItem value="todos">Todos</MenuItem>
+                      {clubes.map(club => (
+                        <MenuItem key={club.id} value={club.id}>
+                          {club.nombre_club}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
               </Paper>
 
               {/* Tabla de Movimientos */}

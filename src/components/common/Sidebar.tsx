@@ -30,6 +30,7 @@ import LogoutIcon from '@mui/icons-material/Logout'
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
 import PaymentIcon from '@mui/icons-material/Payment'
 import AssessmentIcon from '@mui/icons-material/Assessment'
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
 import { useAuth } from '@/contexts/AuthContext'
 
 const DRAWER_WIDTH = 280
@@ -106,6 +107,12 @@ export default function Sidebar() {
       label: 'Reportes Asociación',
       path: '/reportes/asociacion',
       icon: <AssessmentIcon />,
+      allowedRoles: ['asociacion'] // Solo asociación
+    },
+    {
+      label: 'Contabilidad',
+      path: '/contabilidad',
+      icon: <AccountBalanceIcon />,
       allowedRoles: ['asociacion'] // Solo asociación
     }
   ]

@@ -3,7 +3,7 @@
  * Gestión de ingresos y egresos de la asociación
  */
 
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
 import {
   MovimientoFinanciero,
   MovimientoFinancieroInput,
@@ -17,14 +17,15 @@ import {
  * Obtener todos los movimientos financieros con información relacionada
  */
 export async function getAllMovimientos(): Promise<MovimientoFinanciero[]> {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('movimientos_financieros')
     .select(`
       *,
       clubes:origen_club_id (
-        nombre
+        nombre_club
       ),
-      afiliados:created_by (
+      user_profiles:created_by (
         email
       )
     `)
@@ -37,8 +38,8 @@ export async function getAllMovimientos(): Promise<MovimientoFinanciero[]> {
 
   return (data || []).map((mov: any) => ({
     ...mov,
-    origen_club_nombre: mov.clubes?.nombre,
-    created_by_email: mov.afiliados?.email,
+    origen_club_nombre: mov.clubes?.nombre_club,
+    created_by_email: mov.user_profiles?.email,
   }));
 }
 
@@ -49,14 +50,15 @@ export async function getMovimientosByDateRange(
   fechaInicio: string,
   fechaFin: string
 ): Promise<MovimientoFinanciero[]> {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('movimientos_financieros')
     .select(`
       *,
       clubes:origen_club_id (
-        nombre
+        nombre_club
       ),
-      afiliados:created_by (
+      user_profiles:created_by (
         email
       )
     `)
@@ -71,8 +73,8 @@ export async function getMovimientosByDateRange(
 
   return (data || []).map((mov: any) => ({
     ...mov,
-    origen_club_nombre: mov.clubes?.nombre,
-    created_by_email: mov.afiliados?.email,
+    origen_club_nombre: mov.clubes?.nombre_club,
+    created_by_email: mov.user_profiles?.email,
   }));
 }
 
@@ -80,14 +82,15 @@ export async function getMovimientosByDateRange(
  * Obtener un movimiento financiero por ID
  */
 export async function getMovimientoById(id: string): Promise<MovimientoFinanciero | null> {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('movimientos_financieros')
     .select(`
       *,
       clubes:origen_club_id (
-        nombre
+        nombre_club
       ),
-      afiliados:created_by (
+      user_profiles:created_by (
         email
       )
     `)
@@ -106,8 +109,8 @@ export async function getMovimientoById(id: string): Promise<MovimientoFinancier
 
   return {
     ...data,
-    origen_club_nombre: data.clubes?.nombre,
-    created_by_email: data.afiliados?.email,
+    origen_club_nombre: data.clubes?.nombre_club,
+    created_by_email: data.user_profiles?.email,
   };
 }
 
@@ -118,6 +121,7 @@ export async function createMovimiento(
   movimiento: MovimientoFinancieroInput,
   userId: string
 ): Promise<MovimientoFinanciero> {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('movimientos_financieros')
     .insert({
@@ -127,9 +131,9 @@ export async function createMovimiento(
     .select(`
       *,
       clubes:origen_club_id (
-        nombre
+        nombre_club
       ),
-      afiliados:created_by (
+      user_profiles:created_by (
         email
       )
     `)
@@ -142,8 +146,8 @@ export async function createMovimiento(
 
   return {
     ...data,
-    origen_club_nombre: data.clubes?.nombre,
-    created_by_email: data.afiliados?.email,
+    origen_club_nombre: data.clubes?.nombre_club,
+    created_by_email: data.user_profiles?.email,
   };
 }
 
@@ -154,6 +158,7 @@ export async function updateMovimiento(
   id: string,
   updates: MovimientoFinancieroUpdate
 ): Promise<MovimientoFinanciero> {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('movimientos_financieros')
     .update(updates)
@@ -161,9 +166,9 @@ export async function updateMovimiento(
     .select(`
       *,
       clubes:origen_club_id (
-        nombre
+        nombre_club
       ),
-      afiliados:created_by (
+      user_profiles:created_by (
         email
       )
     `)
@@ -176,8 +181,8 @@ export async function updateMovimiento(
 
   return {
     ...data,
-    origen_club_nombre: data.clubes?.nombre,
-    created_by_email: data.afiliados?.email,
+    origen_club_nombre: data.clubes?.nombre_club,
+    created_by_email: data.user_profiles?.email,
   };
 }
 
@@ -185,6 +190,7 @@ export async function updateMovimiento(
  * Eliminar un movimiento financiero
  */
 export async function deleteMovimiento(id: string): Promise<void> {
+  const supabase = createClient()
   const { error } = await supabase
     .from('movimientos_financieros')
     .delete()
@@ -210,6 +216,7 @@ export async function getBalance(
   fechaInicio: string,
   fechaFin: string
 ): Promise<BalanceFinanciero> {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('movimientos_financieros')
     .select('tipo, monto')
@@ -247,6 +254,7 @@ export async function getResumenPorCategoria(
   fechaInicio?: string,
   fechaFin?: string
 ): Promise<ResumenPorCategoria[]> {
+  const supabase = createClient()
   let query = supabase
     .from('movimientos_financieros')
     .select('tipo, categoria, monto')
@@ -292,6 +300,7 @@ export async function getResumenPorCategoria(
 export async function getMovimientosPorMes(
   anio?: number
 ): Promise<MovimientosPorMes[]> {
+  const supabase = createClient()
   let query = supabase
     .from('movimientos_financieros')
     .select('fecha, tipo, monto')

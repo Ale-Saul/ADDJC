@@ -62,7 +62,6 @@ export default function MovimientoFormDialog({
   const [comprobanteFile, setComprobanteFile] = useState<File | null>(null)
   const [comprobanteUrl, setComprobanteUrl] = useState('')
   const [comprobanteNombre, setComprobanteNombre] = useState('')
-  const [notas, setNotas] = useState('')
 
   // Inicializar campos cuando se abre el diálogo
   useEffect(() => {
@@ -79,7 +78,6 @@ export default function MovimientoFormDialog({
         setOrigenEntidad(movimiento.origen_entidad || '')
         setComprobanteUrl(movimiento.comprobante_url || '')
         setComprobanteNombre(movimiento.comprobante_nombre || '')
-        setNotas(movimiento.notas || '')
       } else {
         // Modo creación
         resetForm()
@@ -100,7 +98,6 @@ export default function MovimientoFormDialog({
     setComprobanteFile(null)
     setComprobanteUrl('')
     setComprobanteNombre('')
-    setNotas('')
   }
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,6 +126,8 @@ export default function MovimientoFormDialog({
       )
 
       if (result.success && result.url) {
+        // Guardar el path en lugar de la URL completa
+        // Esto funciona tanto para buckets públicos como privados
         setComprobanteUrl(result.url)
         setComprobanteNombre(comprobanteFile.name)
         setComprobanteFile(null)
@@ -180,7 +179,6 @@ export default function MovimientoFormDialog({
         origen_entidad: origenEntidad.trim() || undefined,
         comprobante_url: comprobanteUrl || undefined,
         comprobante_nombre: comprobanteNombre || undefined,
-        notas: notas.trim() || undefined,
       }
 
       if (movimiento) {
@@ -220,144 +218,129 @@ export default function MovimientoFormDialog({
           </Alert>
         )}
 
-        <Grid container spacing={2} sx={{ mt: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
           {/* Tipo */}
-          <Grid item xs={12} sm={6}>
-            <FormControl fullWidth required>
-              <InputLabel>Tipo</InputLabel>
-              <Select
-                value={tipo}
-                label="Tipo"
-                onChange={(e) => {
-                  setTipo(e.target.value as TipoMovimiento)
-                  setCategoria('otro')
-                }}
-              >
-                <MenuItem value="ingreso">Ingreso</MenuItem>
-                <MenuItem value="egreso">Egreso</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
+          <FormControl fullWidth required>
+            <InputLabel>Tipo</InputLabel>
+            <Select
+              value={tipo}
+              label="Tipo"
+              onChange={(e) => {
+                setTipo(e.target.value as TipoMovimiento)
+                setCategoria('otro')
+              }}
+            >
+              <MenuItem value="ingreso">Ingreso</MenuItem>
+              <MenuItem value="egreso">Egreso</MenuItem>
+            </Select>
+          </FormControl>
 
           {/* Categoría */}
-          <Grid item xs={12} sm={6}>
+          <FormControl fullWidth required>
+            <InputLabel>Categoría</InputLabel>
+            <Select
+              value={categoria}
+              label="Categoría"
+              onChange={(e) => setCategoria(e.target.value as CategoriaMovimiento)}
+            >
+              {categoriasDisponibles.map((cat) => (
+                <MenuItem key={cat} value={cat}>
+                  {movimientoFinancieroController.getCategoriaLabel(cat)}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {/* Concepto */}
+          <TextField
+            label="Concepto"
+            fullWidth
+            required
+            value={concepto}
+            onChange={(e) => setConcepto(e.target.value)}
+            placeholder="Título breve del movimiento"
+          />
+
+          {/* Descripción */}
+          <TextField
+            label="Descripción"
+            fullWidth
+            multiline
+            rows={3}
+            value={descripcion}
+            onChange={(e) => setDescripcion(e.target.value)}
+            placeholder="Descripción detallada del movimiento (opcional)"
+          />
+
+          {/* Monto */}
+          <TextField
+            label="Monto"
+            type="number"
+            fullWidth
+            required
+            value={monto}
+            onChange={(e) => setMonto(e.target.value)}
+            InputProps={{
+              startAdornment: <Typography sx={{ mr: 1 }}>Bs.</Typography>,
+            }}
+          />
+
+          {/* Fecha */}
+          <TextField
+            label="Fecha"
+            type="date"
+            fullWidth
+            required
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+
+          {/* Club de origen (solo si es necesario) */}
+          {requiereClub && (
             <FormControl fullWidth required>
-              <InputLabel>Categoría</InputLabel>
+              <InputLabel>Club de Origen</InputLabel>
               <Select
-                value={categoria}
-                label="Categoría"
-                onChange={(e) => setCategoria(e.target.value as CategoriaMovimiento)}
+                value={origenClubId}
+                label="Club de Origen"
+                onChange={(e) => setOrigenClubId(e.target.value)}
               >
-                {categoriasDisponibles.map((cat) => (
-                  <MenuItem key={cat} value={cat}>
-                    {movimientoFinancieroController.getCategoriaLabel(cat)}
+                <MenuItem value="">
+                  <em>Seleccionar club</em>
+                </MenuItem>
+                {clubes.map((club) => (
+                  <MenuItem key={club.id} value={club.id}>
+                    {club.nombre_club}
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-
-          {/* Concepto */}
-          <Grid item xs={12}>
-            <TextField
-              label="Concepto"
-              fullWidth
-              required
-              value={concepto}
-              onChange={(e) => setConcepto(e.target.value)}
-              placeholder="Título breve del movimiento"
-            />
-          </Grid>
-
-          {/* Descripción */}
-          <Grid item xs={12}>
-            <TextField
-              label="Descripción"
-              fullWidth
-              multiline
-              rows={2}
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
-              placeholder="Descripción detallada (opcional)"
-            />
-          </Grid>
-
-          {/* Monto */}
-          <Grid item xs={12} sm={6}>
-            <TextField
-              label="Monto"
-              type="number"
-              fullWidth
-              required
-              value={monto}
-              onChange={(e) => setMonto(e.target.value)}
-              InputProps={{
-                startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>,
-              }}
-            />
-          </Grid>
-
-          {/* Fecha */}
-          <Grid item xs={12} sm={6}>
-            <TextField
-              label="Fecha"
-              type="date"
-              fullWidth
-              required
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-
-          {/* Club de origen (solo si es necesario) */}
-          {requiereClub && (
-            <Grid item xs={12}>
-              <FormControl fullWidth required>
-                <InputLabel>Club de Origen</InputLabel>
-                <Select
-                  value={origenClubId}
-                  label="Club de Origen"
-                  onChange={(e) => setOrigenClubId(e.target.value)}
-                >
-                  <MenuItem value="">
-                    <em>Seleccionar club</em>
-                  </MenuItem>
-                  {clubes.map((club) => (
-                    <MenuItem key={club.id} value={club.id}>
-                      {club.nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
           )}
 
           {/* Entidad de origen (solo si es necesario) */}
           {requiereEntidad && (
-            <Grid item xs={12}>
-              <TextField
-                label="Entidad de Origen"
-                fullWidth
-                required
-                value={origenEntidad}
-                onChange={(e) => setOrigenEntidad(e.target.value)}
-                placeholder="Nombre de la entidad (ej: Ministerio del Deporte)"
-              />
-            </Grid>
+            <TextField
+              label="Entidad de Origen"
+              fullWidth
+              required
+              value={origenEntidad}
+              onChange={(e) => setOrigenEntidad(e.target.value)}
+              placeholder="Nombre de la entidad (ej: Ministerio del Deporte)"
+            />
           )}
 
           {/* Upload de comprobante */}
-          <Grid item xs={12}>
+          <Box>
             <Typography variant="subtitle2" gutterBottom>
               Comprobante (opcional)
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               <Button
                 variant="outlined"
                 component="label"
                 startIcon={<CloudUploadIcon />}
                 disabled={uploadingFile}
+                fullWidth
               >
                 Seleccionar Archivo
                 <input
@@ -368,17 +351,21 @@ export default function MovimientoFormDialog({
                 />
               </Button>
               {comprobanteFile && (
-                <>
-                  <Chip label={comprobanteFile.name} onDelete={() => setComprobanteFile(null)} />
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Chip 
+                    label={comprobanteFile.name} 
+                    onDelete={() => setComprobanteFile(null)}
+                    sx={{ alignSelf: 'flex-start' }}
+                  />
                   <Button
                     variant="contained"
-                    size="small"
                     onClick={handleUploadFile}
                     disabled={uploadingFile}
+                    fullWidth
                   >
-                    {uploadingFile ? 'Subiendo...' : 'Subir'}
+                    {uploadingFile ? 'Subiendo...' : 'Subir Archivo'}
                   </Button>
-                </>
+                </Box>
               )}
               {comprobanteUrl && !comprobanteFile && (
                 <Chip
@@ -386,24 +373,12 @@ export default function MovimientoFormDialog({
                   label={comprobanteNombre || 'Comprobante adjunto'}
                   color="success"
                   variant="outlined"
+                  sx={{ alignSelf: 'flex-start' }}
                 />
               )}
             </Box>
-          </Grid>
-
-          {/* Notas */}
-          <Grid item xs={12}>
-            <TextField
-              label="Notas adicionales"
-              fullWidth
-              multiline
-              rows={2}
-              value={notas}
-              onChange={(e) => setNotas(e.target.value)}
-              placeholder="Notas internas (opcional)"
-            />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={loading}>

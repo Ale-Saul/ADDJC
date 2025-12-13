@@ -35,11 +35,10 @@ export default function MovimientosTable({
   onAnular,
 }: MovimientosTableProps) {
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0,
-    }).format(amount)
+    return `Bs. ${new Intl.NumberFormat('es-BO', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount)}`
   }
 
   const getTipoColor = (tipo: string) => {
@@ -59,8 +58,27 @@ export default function MovimientosTable({
     }
   }
 
-  const handleVerComprobante = (url: string) => {
-    window.open(url, '_blank')
+  const handleVerComprobante = async (pathOrUrl: string) => {
+    // Si es una URL completa (empieza con http), abrir directamente
+    if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
+      window.open(pathOrUrl, '_blank')
+      return
+    }
+
+    // Si es un path (bucket privado), obtener URL firmada
+    try {
+      const { storageService } = await import('@/services/storageService')
+      const result = await storageService.getSignedUrl('comprobantes-financieros', pathOrUrl)
+      
+      if (result.success && result.url) {
+        window.open(result.url, '_blank')
+      } else {
+        alert(result.error || 'Error al obtener el comprobante')
+      }
+    } catch (error) {
+      console.error('Error al ver comprobante:', error)
+      alert('Error al abrir el comprobante')
+    }
   }
 
   return (
