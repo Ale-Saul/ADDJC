@@ -5,3 +5,16 @@ export interface ApiResponse<T> {
   success: boolean
 }
 
+// Exportar tipos de MovimientoFinanciero
+export type {
+  MovimientoFinanciero,
+  MovimientoFinancieroInput,
+  MovimientoFinancieroUpdate,
+  BalanceFinanciero,
+  ResumenPorCategoria,
+  MovimientosPorMes,
+  TipoMovimiento,
+  CategoriaMovimiento,
+  EstadoMovimiento,
+} from '@/models/movimientoFinanciero';
+
