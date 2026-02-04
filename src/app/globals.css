@@ -1,26 +1,347 @@
 @import "tailwindcss";
 
+/* =====================================================
+   BRANDING - Sistema de Gestión de Judo
+   Paleta "Software Moderno" + Tipografía Premium
+   ===================================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Colores del Branding */
+  --color-primary: #3F51B5;
+  --color-primary-light: #5C6BC0;
+  --color-primary-dark: #303F9F;
+  
+  --color-accent: #00BFA5;
+  --color-accent-light: #1DE9B6;
+  --color-accent-dark: #00897B;
+  
+  --color-background-main: #ECEFF1;
+  --color-background-sidebar: #FFFFFF;
+  
+  --color-text-primary: #212121;
+  --color-text-secondary: #757575;
+  --color-text-disabled: #BDBDBD;
+  
+  /* Estados */
+  --color-success: #00BFA5;
+  --color-warning: #FFA726;
+  --color-error: #EF5350;
+  --color-info: #42A5F5;
+  
+  /* Bordes */
+  --color-border: #E0E0E0;
+  --color-border-hover: #BDBDBD;
+  --color-border-active: #3F51B5;
+  
+  /* Fuentes */
+  --font-montserrat: var(--font-montserrat-custom);
+  --font-opensans: var(--font-opensans-custom);
 }
 
+/* Configuración de Tailwind CSS v4 */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Colores Principales */
+  --color-primary: #3F51B5;
+  --color-primary-light: #5C6BC0;
+  --color-primary-dark: #303F9F;
+  
+  --color-accent: #00BFA5;
+  --color-accent-light: #1DE9B6;
+  --color-accent-dark: #00897B;
+  
+  /* Fondos */
+  --color-background-main: #ECEFF1;
+  --color-background-sidebar: #FFFFFF;
+  
+  /* Texto */
+  --color-text-primary: #212121;
+  --color-text-secondary: #757575;
+  --color-text-disabled: #BDBDBD;
+  
+  /* Estados */
+  --color-success: #00BFA5;
+  --color-warning: #FFA726;
+  --color-error: #EF5350;
+  --color-info: #42A5F5;
+  
+  /* Bordes */
+  --color-border: #E0E0E0;
+  --color-border-hover: #BDBDBD;
+  --color-border-active: #3F51B5;
+  
+  /* Fuentes */
+  --font-heading: var(--font-montserrat-custom), system-ui, sans-serif;
+  --font-body: var(--font-opensans-custom), system-ui, sans-serif;
+  
+  /* Sombras personalizadas */
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-soft-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-card: 0 2px 4px rgba(0, 0, 0, 0.06);
+  
+  /* Letter spacing premium */
+  --tracking-premium: 0.8px;
+  --tracking-wide-sm: 0.5px;
+  --tracking-wide-xs: 0.3px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* =====================================================
+   ESTILOS GLOBALES BASE
+   ===================================================== */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-background-main);
+  color: var(--color-text-primary);
+  font-family: var(--font-opensans-custom), 'Open Sans', system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* =====================================================
+   TIPOGRAFÍA GLOBAL
+   ===================================================== */
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-montserrat-custom), 'Montserrat', system-ui, sans-serif;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.3;
+  margin: 0;
+}
+
+h1 {
+  font-size: 2rem; /* 32px */
+  font-weight: 700;
+  letter-spacing: var(--tracking-premium);
+}
+
+h2 {
+  font-size: 1.5rem; /* 24px */
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide-sm);
+}
+
+h3 {
+  font-size: 1.25rem; /* 20px */
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide-xs);
+}
+
+h4 {
+  font-size: 1.125rem; /* 18px */
+  font-weight: 600;
+}
+
+h5 {
+  font-size: 1rem; /* 16px */
+  font-weight: 600;
+}
+
+h6 {
+  font-size: 0.875rem; /* 14px */
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide-sm);
+}
+
+p {
+  margin: 0;
+  font-family: var(--font-opensans-custom), 'Open Sans', sans-serif;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* Responsive Typography */
+@media (max-width: 768px) {
+  h1 {
+    font-size: 1.5rem; /* 24px */
+    letter-spacing: 0.5px;
+  }
+  
+  h2 {
+    font-size: 1.25rem; /* 20px */
+  }
+  
+  h3 {
+    font-size: 1.125rem; /* 18px */
+  }
+  
+  body {
+    font-size: 14px;
+  }
+}
+
+/* =====================================================
+   ENLACES
+   ===================================================== */
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+}
+
+a:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* =====================================================
+   BOTONES BASE
+   ===================================================== */
+
+button {
+  font-family: var(--font-opensans-custom), 'Open Sans', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* =====================================================
+   FORMULARIOS
+   ===================================================== */
+
+input, textarea, select {
+  font-family: var(--font-opensans-custom), 'Open Sans', sans-serif;
+  font-size: 14px;
+  color: var(--color-text-primary);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-text-disabled);
+}
+
+label {
+  font-family: var(--font-opensans-custom), 'Open Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+/* =====================================================
+   UTILIDADES DE CLASES PERSONALIZADAS
+   ===================================================== */
+
+/* Texto */
+.text-heading {
+  font-family: var(--font-montserrat-custom), 'Montserrat', sans-serif;
+}
+
+.text-body {
+  font-family: var(--font-opensans-custom), 'Open Sans', sans-serif;
+}
+
+.text-premium {
+  letter-spacing: var(--tracking-premium);
+}
+
+/* Sombras */
+.shadow-soft {
+  box-shadow: var(--shadow-soft);
+}
+
+.shadow-soft-lg {
+  box-shadow: var(--shadow-soft-lg);
+}
+
+.shadow-card {
+  box-shadow: var(--shadow-card);
+}
+
+/* Cards */
+.card {
+  background: var(--color-background-sidebar);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-soft);
+  padding: 1.5rem;
+}
+
+/* Contenedor Principal */
+.main-container {
+  background: var(--color-background-main);
+  min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  background: var(--color-background-sidebar);
+  box-shadow: var(--shadow-soft-lg);
+}
+
+/* =====================================================
+   SCROLLBAR PERSONALIZADO
+   ===================================================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background-main);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-text-disabled);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* =====================================================
+   ANIMACIONES
+   ===================================================== */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-in-out;
 }
