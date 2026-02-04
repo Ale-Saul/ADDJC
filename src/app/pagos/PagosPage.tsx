@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
@@ -29,95 +28,53 @@ import SearchIcon from '@mui/icons-material/Search'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
-import { judokaController } from '@/controllers/judokaController'
-import { pagoController } from '@/controllers/pagoController'
 import { Judoka } from '@/models/judoka'
-import { Pago } from '@/models/pago'
 import PagoForm from '@/components/forms/PagoForm'
 import PagosList from '@/components/pagos/PagosList'
 import HistorialPagos from '@/components/pagos/HistorialPagos'
 import PagoMasivoForm from '@/components/pagos/PagoMasivoForm'
 import PagosStats from '@/components/pagos/PagosStats'
+import { useJudokas } from '@/hooks/useJudokas'
+import { usePagos } from '@/hooks/usePagos'
+import { useDialog } from '@/hooks/useDialog'
 
 export default function PagosPage() {
   const { user } = useAuth()
-  const [judokas, setJudokas] = useState<Judoka[]>([])
-  const [pagos, setPagos] = useState<Pago[]>([])
-  const [loading, setLoading] = useState(true)
-  const [openDialog, setOpenDialog] = useState(false)
-  const [openPagosDialog, setOpenPagosDialog] = useState(false)
-  const [openHistorialDialog, setOpenHistorialDialog] = useState(false)
-  const [openMasivoDialog, setOpenMasivoDialog] = useState(false)
-  const [selectedJudoka, setSelectedJudoka] = useState<Judoka | null>(null)
-  const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const [searchTerm, setSearchTerm] = useState('')
+  
+  // Hooks personalizados
+  const {
+    judokas,
+    isLoading: loadingJudokas,
+    searchTerm,
+    setSearchTerm,
+  } = useJudokas({ clubId: user?.club_id, autoFetch: !!user?.club_id })
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!user?.club_id) {
-        setLoading(false)
-        return
-      }
+  const {
+    allPagos: pagos,
+    refresh: refreshPagos,
+  } = usePagos({ clubId: user?.club_id })
 
-      try {
-        // Cargar judokas
-        const judokasResponse = await judokaController.getJudokasByClub(user.club_id)
-        if (judokasResponse.success && judokasResponse.data) {
-          // Filtrar solo judokas que están inscritos en el club (club_id no null)
-          const judokasInscritos = judokasResponse.data.filter(j => j.club_id !== null)
-          setJudokas(judokasInscritos)
-        }
-
-        // Cargar pagos del club
-        const pagosResponse = await pagoController.getPagosByClub(user.club_id)
-        if (pagosResponse.success && pagosResponse.data) {
-          setPagos(pagosResponse.data)
-        }
-      } catch (error) {
-        console.error('Error al cargar datos:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [user?.club_id, refreshTrigger])
+  // Diálogos
+  const pagoDialog = useDialog()
+  const pagosListDialog = useDialog()
+  const historialDialog = useDialog()
+  const masivoDialog = useDialog()
 
   const handleNuevoPago = (judoka: Judoka) => {
-    setSelectedJudoka(judoka)
-    setOpenDialog(true)
+    pagoDialog.open(judoka)
   }
 
   const handlePagoSuccess = () => {
-    setOpenDialog(false)
-    setSelectedJudoka(null)
-    setRefreshTrigger(prev => prev + 1)
-  }
-
-  const handleVerPagos = (judoka: Judoka) => {
-    setSelectedJudoka(judoka)
-    setOpenPagosDialog(true)
-  }
-
-  const handleVerHistorial = (judoka: Judoka) => {
-    setSelectedJudoka(judoka)
-    setOpenHistorialDialog(true)
+    pagoDialog.close()
+    refreshPagos()
   }
 
   const handlePagoMasivoSuccess = () => {
-    setOpenMasivoDialog(false)
-    setRefreshTrigger(prev => prev + 1)
+    masivoDialog.close()
+    refreshPagos()
   }
 
-  // Filtrar judokas por término de búsqueda
-  const judokasFiltrados = judokas.filter(judoka => {
-    const searchLower = searchTerm.toLowerCase()
-    return (
-      judoka.nombres.toLowerCase().includes(searchLower) ||
-      judoka.apellidos.toLowerCase().includes(searchLower) ||
-      `${judoka.nombres} ${judoka.apellidos}`.toLowerCase().includes(searchLower)
-    )
-  })
+  const judokasFiltrados = judokas.filter(j => j.club_id !== null)
 
   return (
     <ProtectedRoute allowedRoles={['admin', 'encargado']}>
@@ -131,14 +88,14 @@ export default function PagosPage() {
               variant="contained"
               color="primary"
               startIcon={<GroupAddIcon />}
-              onClick={() => setOpenMasivoDialog(true)}
+              onClick={() => masivoDialog.open()}
               disabled={judokas.length === 0}
             >
               Crear Pago para Todos
             </Button>
           </Box>
 
-          {loading ? (
+          {loadingJudokas ? (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
               <CircularProgress />
             </Box>
@@ -197,7 +154,7 @@ export default function PagosPage() {
                         <Tooltip title="Ver Pagos Pendientes">
                           <IconButton
                             color="warning"
-                            onClick={() => handleVerPagos(judoka)}
+                            onClick={() => pagosListDialog.open(judoka)}
                             size="small"
                           >
                             <VisibilityIcon />
@@ -206,7 +163,7 @@ export default function PagosPage() {
                         <Tooltip title="Ver Historial">
                           <IconButton
                             color="success"
-                            onClick={() => handleVerHistorial(judoka)}
+                            onClick={() => historialDialog.open(judoka)}
                             size="small"
                           >
                             <HistoryIcon />
@@ -232,56 +189,56 @@ export default function PagosPage() {
           )}
         </Box>
 
-        <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
+        <Dialog open={pagoDialog.isOpen} onClose={pagoDialog.close} maxWidth="md" fullWidth>
           <DialogTitle>Crear Nuevo Pago</DialogTitle>
           <DialogContent>
-            {selectedJudoka && (
+            {pagoDialog.data && (
               <PagoForm
-                judokaId={selectedJudoka.id}
-                judokaNombre={`${selectedJudoka.nombres} ${selectedJudoka.apellidos}`}
+                judokaId={pagoDialog.data.id}
+                judokaNombre={`${pagoDialog.data.nombres} ${pagoDialog.data.apellidos}`}
                 onSuccess={handlePagoSuccess}
-                onCancel={() => setOpenDialog(false)}
+                onCancel={pagoDialog.close}
               />
             )}
           </DialogContent>
         </Dialog>
 
-        <Dialog open={openPagosDialog} onClose={() => setOpenPagosDialog(false)} maxWidth="md" fullWidth>
+        <Dialog open={pagosListDialog.isOpen} onClose={pagosListDialog.close} maxWidth="md" fullWidth>
           <DialogTitle>
-            Pagos Pendientes - {selectedJudoka?.nombres} {selectedJudoka?.apellidos}
+            Pagos Pendientes - {pagosListDialog.data?.nombres} {pagosListDialog.data?.apellidos}
           </DialogTitle>
           <DialogContent>
-            {selectedJudoka && (
+            {pagosListDialog.data && (
               <PagosList
-                judokaId={selectedJudoka.id}
-                judokaNombre={`${selectedJudoka.nombres} ${selectedJudoka.apellidos}`}
-                onPagoDeleted={() => setRefreshTrigger(prev => prev + 1)}
+                judokaId={pagosListDialog.data.id}
+                judokaNombre={`${pagosListDialog.data.nombres} ${pagosListDialog.data.apellidos}`}
+                onPagoDeleted={refreshPagos}
               />
             )}
           </DialogContent>
         </Dialog>
 
-        <Dialog open={openHistorialDialog} onClose={() => setOpenHistorialDialog(false)} maxWidth="md" fullWidth>
+        <Dialog open={historialDialog.isOpen} onClose={historialDialog.close} maxWidth="md" fullWidth>
           <DialogTitle>
-            Historial de Pagos - {selectedJudoka?.nombres} {selectedJudoka?.apellidos}
+            Historial de Pagos - {historialDialog.data?.nombres} {historialDialog.data?.apellidos}
           </DialogTitle>
           <DialogContent>
-            {selectedJudoka && (
+            {historialDialog.data && (
               <HistorialPagos
-                judokaId={selectedJudoka.id}
-                judokaNombre={`${selectedJudoka.nombres} ${selectedJudoka.apellidos}`}
+                judokaId={historialDialog.data.id}
+                judokaNombre={`${historialDialog.data.nombres} ${historialDialog.data.apellidos}`}
               />
             )}
           </DialogContent>
         </Dialog>
 
-        <Dialog open={openMasivoDialog} onClose={() => setOpenMasivoDialog(false)} maxWidth="md" fullWidth>
+        <Dialog open={masivoDialog.isOpen} onClose={masivoDialog.close} maxWidth="md" fullWidth>
           <DialogTitle>Crear Pago Masivo</DialogTitle>
           <DialogContent>
             <PagoMasivoForm
               judokas={judokas}
               onSuccess={handlePagoMasivoSuccess}
-              onCancel={() => setOpenMasivoDialog(false)}
+              onCancel={masivoDialog.close}
             />
           </DialogContent>
         </Dialog>

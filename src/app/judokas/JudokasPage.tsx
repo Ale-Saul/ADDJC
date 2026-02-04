@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { Box, Button, Typography, Dialog, DialogTitle, DialogContent } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import Layout from '@/components/common/Layout'
@@ -9,33 +8,33 @@ import JudokaList from '@/components/judokas/JudokaList'
 import JudokaForm from '@/components/judokas/JudokaForm'
 import SearchBar from '@/components/common/SearchBar'
 import { Judoka } from '@/models/judoka'
-import { judokaController } from '@/controllers/judokaController'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { useJudokas } from '@/hooks/useJudokas'
+import { useDialog } from '@/hooks/useDialog'
 
 export default function JudokasPage() {
   const router = useRouter()
   const { user } = useAuth()
-  const [openDialog, setOpenDialog] = useState(false)
-  const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const [searchTerm, setSearchTerm] = useState('')
+  const dialog = useDialog()
 
-  // Determinar qué filtro usar según el rol
-  let clubId: string | undefined
-  let entrenadorId: string | undefined
+  // Determinar filtros según el rol
+  const clubId = user?.rol === 'encargado' ? user.club_id : undefined
+  const entrenadorId = user?.rol === 'sensei' ? user.id : undefined
 
-  if (user?.rol === 'encargado') {
-    // Encargado: ver todos los judokas del club
-    clubId = user.club_id || undefined
-  } else if (user?.rol === 'sensei') {
-    // Sensei normal: ver solo sus estudiantes
-    entrenadorId = user.id
-  }
-  // Si es 'asociacion', no se filtra (ve todos)
+  // Hook de judokas con filtros
+  const {
+    judokas,
+    isLoading,
+    searchTerm,
+    setSearchTerm,
+    deleteJudoka,
+    refresh,
+  } = useJudokas({ clubId, entrenadorId })
 
   const handleCreateSuccess = () => {
-    setOpenDialog(false)
-    setRefreshTrigger(prev => prev + 1)
+    dialog.close()
+    refresh()
   }
 
   const handleEdit = (judoka: Judoka) => {
@@ -43,20 +42,8 @@ export default function JudokasPage() {
   }
 
   const handleDelete = async (judoka: Judoka) => {
-    if (confirm(`¿Estás seguro de eliminar al judoka "${judoka.nombres} ${judoka.apellidos}"?`)) {
-      try {
-        const response = await judokaController.deleteJudoka(judoka.id)
-        if (response.success) {
-          setRefreshTrigger(prev => prev + 1)
-          alert('Judoka eliminado exitosamente')
-        } else {
-          alert(`Error al eliminar judoka: ${response.error}`)
-        }
-      } catch (error) {
-        console.error('Error al eliminar judoka:', error)
-        alert('Error inesperado al eliminar judoka')
-      }
-    }
+    await deleteJudoka(judoka.id)
+    refresh()
   }
 
   return (
@@ -69,7 +56,7 @@ export default function JudokasPage() {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => setOpenDialog(true)}
+          onClick={() => dialog.open()}
         >
           Nuevo Judoka
         </Button>
@@ -81,20 +68,18 @@ export default function JudokasPage() {
       />
 
       <JudokaList
+        judokas={judokas}
+        isLoading={isLoading}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        refreshTrigger={refreshTrigger}
-        searchTerm={searchTerm}
-        clubId={clubId}
-        entrenadorId={entrenadorId}
       />
 
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
+      <Dialog open={dialog.isOpen} onClose={dialog.close} maxWidth="md" fullWidth>
         <DialogTitle>Registrar Nuevo Judoka</DialogTitle>
         <DialogContent>
           <JudokaForm
             onSuccess={handleCreateSuccess}
-            onCancel={() => setOpenDialog(false)}
+            onCancel={dialog.close}
           />
         </DialogContent>
       </Dialog>
