@@ -221,7 +221,7 @@ export default function ContabilidadPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={['asociacion']}>
+    <ProtectedRoute allowedRoles={['admin', 'asociacion']}>
       <Layout>
         <Box sx={{ p: 3 }}>
           {/* Header */}

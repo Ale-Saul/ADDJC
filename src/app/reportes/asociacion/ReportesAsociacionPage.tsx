@@ -448,7 +448,7 @@ export default function ReportesAsociacionPage() {
 
   if (loading) {
     return (
-      <ProtectedRoute allowedRoles={['asociacion']}>
+      <ProtectedRoute allowedRoles={['admin', 'asociacion']}>
         <Layout>
           <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
             <CircularProgress />

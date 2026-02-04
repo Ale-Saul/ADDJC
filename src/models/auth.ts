@@ -12,7 +12,7 @@ export interface SignUpData {
   password: string
   nombres: string
   apellidos: string
-  rol?: 'asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka'
+  rol?: 'admin' | 'asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka'
   club_id?: string
 }
 
@@ -21,7 +21,7 @@ export interface User {
   email: string
   nombres: string
   apellidos: string
-  rol: 'asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka'
+  rol: 'admin' | 'asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka'
   club_id?: string | null
   club_nombre?: string | null // Nombre del club al que pertenece
   avatar_url?: string | null
@@ -31,7 +31,7 @@ export interface User {
 }
 
 // Tipo para roles válidos
-export type UserRole = 'asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka'
+export type UserRole = 'admin' | 'asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka'
 
 export interface AuthSession {
   user: User

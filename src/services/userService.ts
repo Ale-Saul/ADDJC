@@ -10,7 +10,7 @@ async function createUserWithAdminAPI(
   password: string,
   nombres: string,
   apellidos: string,
-  rol: 'asociacion' | 'sensei' | 'arbitro' | 'judoka' | 'encargado',
+  rol: 'admin' | 'asociacion' | 'sensei' | 'arbitro' | 'judoka' | 'encargado',
   clubId?: string
 ): Promise<ApiResponse<{ userId: string }>> {
   try {

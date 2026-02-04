@@ -111,7 +111,7 @@ export const authController = {
     }
 
     // Validar rol
-    const validRoles = ['asociacion', 'sensei', 'arbitro', 'judoka']
+    const validRoles = ['admin', 'asociacion', 'sensei', 'arbitro', 'judoka', 'encargado']
     if (signUpData.rol && !validRoles.includes(signUpData.rol)) {
       return {
         success: false,

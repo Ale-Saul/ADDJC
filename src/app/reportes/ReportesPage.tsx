@@ -286,7 +286,7 @@ export default function ReportesPage() {
 
   if (loading) {
     return (
-      <ProtectedRoute allowedRoles={['encargado']}>
+      <ProtectedRoute allowedRoles={['admin', 'encargado']}>
         <Layout>
           <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
             <CircularProgress />

@@ -7,8 +7,8 @@ import { useAuth } from '@/contexts/AuthContext'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
-  requiredRole?: 'asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka'
-  allowedRoles?: ('asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka')[]
+  requiredRole?: 'admin' | 'asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka'
+  allowedRoles?: ('admin' | 'asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka')[]
 }
 
 export default function ProtectedRoute({

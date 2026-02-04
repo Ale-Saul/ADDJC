@@ -120,7 +120,7 @@ export default function PagosPage() {
   })
 
   return (
-    <ProtectedRoute allowedRoles={['encargado']}>
+    <ProtectedRoute allowedRoles={['admin', 'encargado']}>
       <Layout>
         <Box>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
