@@ -45,7 +45,7 @@ export default function AsociacionPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={['asociacion']}>
+    <ProtectedRoute allowedRoles={['admin', 'asociacion']}>
       <Layout>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4" component="h1">

@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
         user_metadata: {
           nombres,
           apellidos,
-          user_type: rol === 'encargado' ? 'sensei' : rol, // encargado usa user_type 'sensei'
+          user_type: rol === 'encargado' ? 'sensei' : (rol === 'admin' ? 'admin' : rol), // encargado usa user_type 'sensei', admin usa 'admin'
           rol: rol || 'judoka',
           club_id: club_id || null,
         },
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
           email,
           nombres,
           apellidos,
-          user_type: rol === 'encargado' ? 'sensei' : rol,
+          user_type: rol === 'encargado' ? 'sensei' : (rol === 'admin' ? 'admin' : rol),
           rol: rol || 'judoka',
           club_id: club_id || null,
           activo: true,

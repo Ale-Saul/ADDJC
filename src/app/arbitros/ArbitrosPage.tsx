@@ -45,7 +45,7 @@ export default function ArbitrosPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={['asociacion', 'arbitro']}>
+    <ProtectedRoute allowedRoles={['admin', 'asociacion', 'arbitro']}>
       <Layout>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">

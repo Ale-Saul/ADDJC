@@ -60,7 +60,7 @@ export default function JudokasPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={['asociacion', 'sensei', 'encargado', 'judoka']}>
+    <ProtectedRoute allowedRoles={['admin', 'asociacion', 'sensei', 'encargado', 'judoka']}>
       <Layout>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">

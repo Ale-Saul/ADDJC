@@ -58,7 +58,7 @@ export default function AsociacionEditPage() {
 
   if (loading) {
     return (
-      <ProtectedRoute allowedRoles={['asociacion']}>
+      <ProtectedRoute allowedRoles={['admin', 'asociacion']}>
         <Layout>
           <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
             <CircularProgress />
@@ -70,7 +70,7 @@ export default function AsociacionEditPage() {
 
   if (error || !miembro) {
     return (
-      <ProtectedRoute allowedRoles={['asociacion']}>
+      <ProtectedRoute allowedRoles={['admin', 'asociacion']}>
         <Layout>
           <Alert severity="error" sx={{ mb: 2 }}>
             {error || 'Miembro no encontrado'}
