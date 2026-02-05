@@ -6,7 +6,10 @@ export interface Sensei {
   apellidos: string
   fecha_nacimiento: string | null
   grado_dan: string | null
-  certificacion: string | null
+  /** ID de la certificación principal (FK a certificaciones) */
+  certificacion_id: string | null
+  /** Nombre de la certificación (desde join con certificaciones, solo lectura) */
+  certificacion?: string | null
   especialidad: string | null
   foto_perfil: string | null
   activo: boolean
@@ -23,7 +26,7 @@ export interface SenseiCreate {
   password?: string // Opcional: requerido si se crea nuevo usuario
   fecha_nacimiento?: string | null
   grado_dan?: string | null
-  certificacion?: string | null
+  certificacion_id?: string | null
   especialidad?: string | null
   foto_perfil?: string | null
   activo?: boolean
@@ -36,7 +39,7 @@ export interface SenseiUpdate {
   apellidos?: string
   fecha_nacimiento?: string | null
   grado_dan?: string | null
-  certificacion?: string | null
+  certificacion_id?: string | null
   especialidad?: string | null
   foto_perfil?: string | null
   activo?: boolean

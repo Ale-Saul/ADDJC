@@ -8,7 +8,18 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, password, nombres, apellidos, rol, club_id } = body
+    const {
+      email,
+      password,
+      nombres,
+      apellidos,
+      apellido_paterno: apellidoPaternoBody,
+      apellido_materno: apellidoMaternoBody,
+      fecha_nacimiento: fechaNacimientoBody,
+      genero: generoBody,
+      rol,
+      club_id,
+    } = body
 
     // Validaciones con mensajes específicos
     if (!email) {
@@ -35,13 +46,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!apellidos) {
-      console.error('Apellidos faltantes en la solicitud')
-      return NextResponse.json(
-        { success: false, error: 'Apellidos son requeridos' },
-        { status: 400 }
-      )
-    }
+    // Apellidos: aceptar apellido_paterno + apellido_materno o un solo "apellidos" (se divide)
+    const apellidoPaterno =
+      apellidoPaternoBody ??
+      (typeof apellidos === 'string' ? apellidos.trim().split(/\s+/)[0] || 'Apellido' : 'Apellido')
+    const apellidoMaterno =
+      apellidoMaternoBody ??
+      (typeof apellidos === 'string' ? apellidos.trim().split(/\s+/).slice(1).join(' ') || 'Apellido' : 'Apellido')
+    const fechaNacimiento = fechaNacimientoBody || '1990-01-01'
+    const genero = generoBody || 'Prefiero no decir'
 
     // Verificar que la Service Role Key esté configurada
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -70,6 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Crear usuario usando Admin API (auto-confirmado)
+    // El trigger handle_new_user crea la fila en usuarios usando estos metadata
     let authData, authError
     try {
       const result = await supabaseAdmin.auth.admin.createUser({
@@ -78,8 +92,11 @@ export async function POST(request: NextRequest) {
         email_confirm: true, // Auto-confirmar email
         user_metadata: {
           nombres,
-          apellidos,
-          user_type: rol === 'encargado' ? 'sensei' : (rol === 'admin' ? 'admin' : rol), // encargado usa user_type 'sensei', admin usa 'admin'
+          apellido_paterno: apellidoPaterno,
+          apellido_materno: apellidoMaterno,
+          fecha_nacimiento: fechaNacimiento,
+          genero,
+          user_type: rol === 'encargado' ? 'sensei' : rol === 'admin' ? 'admin' : rol || 'judoka',
           rol: rol || 'judoka',
           club_id: club_id || null,
         },
@@ -139,53 +156,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const userId = authData.user.id
+    const authUserId = authData.user.id
 
-    // El perfil se crea automáticamente por el trigger handle_new_user
-    // Pero verificamos que se haya creado correctamente
-    const { data: profileData, error: profileError } = await supabaseAdmin
-      .from('user_profiles')
-      .select('*')
-      .eq('id', userId)
+    // El trigger handle_new_user crea la fila en usuarios; verificamos que exista
+    const { data: usuarioRow, error: usuarioError } = await supabaseAdmin
+      .from('usuarios')
+      .select('id')
+      .eq('auth_user_id', authUserId)
       .single()
 
-    if (profileError) {
-      console.warn('Perfil no encontrado después de crear usuario, creándolo manualmente:', profileError)
-      // Crear perfil manualmente si el trigger no funcionó
-      const { error: createProfileError } = await supabaseAdmin
-        .from('user_profiles')
-        .insert({
-          id: userId,
-          email,
-          nombres,
-          apellidos,
-          user_type: rol === 'encargado' ? 'sensei' : (rol === 'admin' ? 'admin' : rol),
-          rol: rol || 'judoka',
-          club_id: club_id || null,
-          activo: true,
-        })
+    if (usuarioError || !usuarioRow) {
+      console.error('Usuario no encontrado en tabla usuarios después del trigger:', usuarioError)
+      return NextResponse.json(
+        { success: false, error: 'El usuario se creó en Auth pero no se encontró en la base de datos. Revisa el trigger handle_new_user.' },
+        { status: 500 }
+      )
+    }
 
-      if (createProfileError) {
-        console.error('Error al crear perfil manualmente:', createProfileError.message)
-        
-        // Si falla crear el perfil, intentar eliminar el usuario de auth.users para mantener consistencia
-        try {
-          await supabaseAdmin.auth.admin.deleteUser(userId)
-          console.log('Usuario eliminado de auth.users debido a error al crear perfil')
-        } catch (deleteError) {
-          console.error('Error al eliminar usuario después de fallar crear perfil:', deleteError)
-        }
-        
-        // Retornar error para que el usuario sepa que algo falló
-        let errorMessage = createProfileError.message || 'Error desconocido'
-        if (createProfileError.message?.includes('check constraint') || createProfileError.message?.includes('violates check')) {
-          errorMessage = 'Error: El rol especificado no es válido. Verifica la configuración de la base de datos.'
-        } else if (createProfileError.message?.includes('foreign key') || createProfileError.message?.includes('violates foreign key')) {
-          errorMessage = 'Error: Problema con las relaciones de la base de datos. Contacta al administrador.'
-        }
-        
+    // Si el rol es admin, insertar en la tabla admin
+    const rolFinal = rol || 'judoka'
+    if (rolFinal === 'admin') {
+      const { error: adminError } = await supabaseAdmin.from('admin').insert({
+        usuario_id: usuarioRow.id,
+        activo: true,
+      })
+      if (adminError) {
+        console.error('Error al crear registro en tabla admin:', adminError)
         return NextResponse.json(
-          { success: false, error: `Error al crear perfil: ${errorMessage}` },
+          { success: false, error: `Usuario creado pero falló al asignar rol admin: ${adminError.message}` },
           { status: 500 }
         )
       }
@@ -193,7 +191,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: { userId },
+      data: { userId: authUserId, usuarioId: usuarioRow.id },
     })
   } catch (error) {
     console.error('Error en API route create-user:', error)

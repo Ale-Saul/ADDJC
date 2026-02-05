@@ -5,7 +5,10 @@ export interface Arbitro {
   apellidos: string
   fecha_nacimiento: string | null
   nivel_arbitraje: string | null
-  certificacion: string | null
+  /** ID de la certificación principal (FK a certificaciones) */
+  certificacion_id: string | null
+  /** Nombre de la certificación (desde join con certificaciones, solo lectura) */
+  certificacion?: string | null
   foto_perfil: string | null
   activo: boolean
   created_at: string
@@ -20,7 +23,7 @@ export interface ArbitroCreate {
   password?: string // Opcional: requerido si se crea nuevo usuario
   fecha_nacimiento?: string | null
   nivel_arbitraje?: string | null
-  certificacion?: string | null
+  certificacion_id?: string | null
   foto_perfil?: string | null
   activo?: boolean
 }
@@ -30,7 +33,7 @@ export interface ArbitroUpdate {
   apellidos?: string
   fecha_nacimiento?: string | null
   nivel_arbitraje?: string | null
-  certificacion?: string | null
+  certificacion_id?: string | null
   foto_perfil?: string | null
   activo?: boolean
 }

@@ -21,7 +21,7 @@ export const arbitroService = {
       const client = getSupabaseClient()
       let query = client
         .from('arbitros')
-        .select('*')
+        .select('*, certificacion:certificaciones(nombre_certificacion)')
         .order('created_at', { ascending: false })
 
       if (!includeInactive) {
@@ -32,7 +32,12 @@ export const arbitroService = {
 
       if (error) throw error
 
-      return { success: true, data: data || [] }
+      const mapped = (data || []).map((row: any) => ({
+        ...row,
+        certificacion: row.certificacion?.nombre_certificacion ?? null,
+        certificacion_id: row.certificacion_id ?? null,
+      }))
+      return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
@@ -47,13 +52,18 @@ export const arbitroService = {
       const client = getSupabaseClient()
       const { data, error } = await client
         .from('arbitros')
-        .select('*')
+        .select('*, certificacion:certificaciones(nombre_certificacion)')
         .eq('id', id)
         .single()
 
       if (error) throw error
 
-      return { success: true, data }
+      const mapped = {
+        ...data,
+        certificacion: data?.certificacion?.nombre_certificacion ?? null,
+        certificacion_id: data?.certificacion_id ?? null,
+      }
+      return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
@@ -103,19 +113,18 @@ export const arbitroService = {
         }
       }
 
-      // Crear el árbitro con el usuario_id correcto
-      // Excluir email y password ya que no existen en la tabla arbitros
-      const { email, password, ...arbitroData } = arbitro
+      const { email, password, certificacion, ...arbitroData } = arbitro as ArbitroCreate & { certificacion?: string | null }
       const arbitroConUsuario = {
         ...arbitroData,
-        usuario_id: userId
+        usuario_id: userId,
+        certificacion_id: arbitro.certificacion_id ?? null,
       }
 
       const client = getSupabaseClient()
       const { data, error } = await client
         .from('arbitros')
         .insert(arbitroConUsuario)
-        .select()
+        .select('*, certificacion:certificaciones(nombre_certificacion)')
         .single()
 
       if (error) {
@@ -135,7 +144,12 @@ export const arbitroService = {
         return { success: false, error: errorMessage }
       }
 
-      return { success: true, data }
+      const mapped = data ? {
+        ...data,
+        certificacion: data.certificacion?.nombre_certificacion ?? null,
+        certificacion_id: data.certificacion_id ?? null,
+      } : data
+      return { success: true, data: mapped }
     } catch (error) {
       console.error('Error al crear árbitro:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear el árbitro'
@@ -149,16 +163,22 @@ export const arbitroService = {
   async update(id: string, arbitro: ArbitroUpdate): Promise<ApiResponse<Arbitro>> {
     try {
       const client = getSupabaseClient()
+      const { certificacion, ...updatePayload } = arbitro as ArbitroUpdate & { certificacion?: string | null }
       const { data, error } = await client
         .from('arbitros')
-        .update(arbitro)
+        .update(updatePayload)
         .eq('id', id)
-        .select()
+        .select('*, certificacion:certificaciones(nombre_certificacion)')
         .single()
 
       if (error) throw error
 
-      return { success: true, data }
+      const mapped = {
+        ...data,
+        certificacion: data?.certificacion?.nombre_certificacion ?? null,
+        certificacion_id: data?.certificacion_id ?? null,
+      }
+      return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }

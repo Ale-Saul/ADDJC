@@ -21,7 +21,7 @@ export const senseiService = {
       const client = getSupabaseClient()
       let query = client
         .from('senseis')
-        .select('*')
+        .select('*, certificacion:certificaciones(nombre_certificacion)')
         .order('created_at', { ascending: false })
 
       if (!includeInactive) {
@@ -32,7 +32,12 @@ export const senseiService = {
 
       if (error) throw error
 
-      return { success: true, data: data || [] }
+      const mapped = (data || []).map((row: any) => ({
+        ...row,
+        certificacion: row.certificacion?.nombre_certificacion ?? null,
+        certificacion_id: row.certificacion_id ?? null,
+      }))
+      return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
@@ -47,14 +52,19 @@ export const senseiService = {
       const client = getSupabaseClient()
       const { data, error } = await client
         .from('senseis')
-        .select('*')
+        .select('*, certificacion:certificaciones(nombre_certificacion)')
         .eq('club_id', clubId)
         .eq('activo', true)
         .order('created_at', { ascending: false })
 
       if (error) throw error
 
-      return { success: true, data: data || [] }
+      const mapped = (data || []).map((row: any) => ({
+        ...row,
+        certificacion: row.certificacion?.nombre_certificacion ?? null,
+        certificacion_id: row.certificacion_id ?? null,
+      }))
+      return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
@@ -69,13 +79,18 @@ export const senseiService = {
       const client = getSupabaseClient()
       const { data, error } = await client
         .from('senseis')
-        .select('*')
+        .select('*, certificacion:certificaciones(nombre_certificacion)')
         .eq('id', id)
         .single()
 
       if (error) throw error
 
-      return { success: true, data }
+      const mapped = {
+        ...data,
+        certificacion: data?.certificacion?.nombre_certificacion ?? null,
+        certificacion_id: data?.certificacion_id ?? null,
+      }
+      return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
@@ -135,18 +150,19 @@ export const senseiService = {
       }
 
       // Crear el sensei con el usuario_id correcto
-      // Excluir email, password e isEncargado ya que no existen en la tabla senseis
-      const { email, password, isEncargado, ...senseiData } = sensei
+      // Excluir email, password, isEncargado y certificacion (texto); usar certificacion_id
+      const { email, password, isEncargado, certificacion, ...senseiData } = sensei as SenseiCreate & { certificacion?: string | null }
       const senseiConUsuario = {
         ...senseiData,
-        usuario_id: userId
+        usuario_id: userId,
+        certificacion_id: sensei.certificacion_id ?? null,
       }
 
       const client = getSupabaseClient()
       const { data, error } = await client
         .from('senseis')
         .insert(senseiConUsuario)
-        .select()
+        .select('*, certificacion:certificaciones(nombre_certificacion)')
         .single()
 
       if (error) {
@@ -172,15 +188,19 @@ export const senseiService = {
         return { success: false, error: errorMessage }
       }
 
-      // Actualizar club_id en user_profiles si el sensei tiene un club asignado
       if (data && data.club_id) {
         await client
-          .from('user_profiles')
+          .from('usuarios')
           .update({ club_id: data.club_id, updated_at: new Date().toISOString() })
           .eq('id', userId)
       }
 
-      return { success: true, data }
+      const mapped = data ? {
+        ...data,
+        certificacion: data.certificacion?.nombre_certificacion ?? null,
+        certificacion_id: data.certificacion_id ?? null,
+      } : data
+      return { success: true, data: mapped }
     } catch (error) {
       console.error('Error al crear sensei:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear el sensei'
@@ -194,24 +214,30 @@ export const senseiService = {
   async update(id: string, sensei: SenseiUpdate): Promise<ApiResponse<Sensei>> {
     try {
       const client = getSupabaseClient()
+      const { certificacion, ...updatePayload } = sensei as SenseiUpdate & { certificacion?: string | null }
       const { data, error } = await client
         .from('senseis')
-        .update(sensei)
+        .update(updatePayload)
         .eq('id', id)
-        .select()
+        .select('*, certificacion:certificaciones(nombre_certificacion)')
         .single()
 
       if (error) throw error
 
-      // Si se actualizó el club_id del sensei, actualizar también en user_profiles
+      const mapped = {
+        ...data,
+        certificacion: data?.certificacion?.nombre_certificacion ?? null,
+        certificacion_id: data?.certificacion_id ?? null,
+      }
+
       if (data && sensei.club_id !== undefined) {
         await client
-          .from('user_profiles')
+          .from('usuarios')
           .update({ club_id: sensei.club_id, updated_at: new Date().toISOString() })
           .eq('id', data.usuario_id)
       }
 
-      return { success: true, data }
+      return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
