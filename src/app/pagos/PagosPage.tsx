@@ -102,7 +102,7 @@ export default function PagosPage() {
           ) : judokas.length === 0 ? (
             <Paper sx={{ p: 3, textAlign: 'center' }}>
               <Typography color="text.secondary">
-                No hay judokas registrados en tu club
+                No hay judokas registrados
               </Typography>
             </Paper>
           ) : (

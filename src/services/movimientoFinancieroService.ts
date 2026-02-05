@@ -25,8 +25,8 @@ export async function getAllMovimientos(): Promise<MovimientoFinanciero[]> {
       clubes:origen_club_id (
         nombre_club
       ),
-      user_profiles:created_by (
-        email
+      usuarios:created_by (
+        correo
       )
     `)
     .order('fecha', { ascending: false });
@@ -39,7 +39,7 @@ export async function getAllMovimientos(): Promise<MovimientoFinanciero[]> {
   return (data || []).map((mov: any) => ({
     ...mov,
     origen_club_nombre: mov.clubes?.nombre_club,
-    created_by_email: mov.user_profiles?.email,
+    created_by_email: mov.usuarios?.correo,
   }));
 }
 
@@ -58,8 +58,8 @@ export async function getMovimientosByDateRange(
       clubes:origen_club_id (
         nombre_club
       ),
-      user_profiles:created_by (
-        email
+      usuarios:created_by (
+        correo
       )
     `)
     .gte('fecha', fechaInicio)
@@ -74,7 +74,7 @@ export async function getMovimientosByDateRange(
   return (data || []).map((mov: any) => ({
     ...mov,
     origen_club_nombre: mov.clubes?.nombre_club,
-    created_by_email: mov.user_profiles?.email,
+    created_by_email: mov.usuarios?.correo,
   }));
 }
 
@@ -90,8 +90,8 @@ export async function getMovimientoById(id: string): Promise<MovimientoFinancier
       clubes:origen_club_id (
         nombre_club
       ),
-      user_profiles:created_by (
-        email
+      usuarios:created_by (
+        correo
       )
     `)
     .eq('id', id)
@@ -110,7 +110,7 @@ export async function getMovimientoById(id: string): Promise<MovimientoFinancier
   return {
     ...data,
     origen_club_nombre: data.clubes?.nombre_club,
-    created_by_email: data.user_profiles?.email,
+    created_by_email: data.usuarios?.correo,
   };
 }
 
@@ -133,8 +133,8 @@ export async function createMovimiento(
       clubes:origen_club_id (
         nombre_club
       ),
-      user_profiles:created_by (
-        email
+      usuarios:created_by (
+        correo
       )
     `)
     .single();
@@ -147,7 +147,7 @@ export async function createMovimiento(
   return {
     ...data,
     origen_club_nombre: data.clubes?.nombre_club,
-    created_by_email: data.user_profiles?.email,
+    created_by_email: data.usuarios?.correo,
   };
 }
 
@@ -168,8 +168,8 @@ export async function updateMovimiento(
       clubes:origen_club_id (
         nombre_club
       ),
-      user_profiles:created_by (
-        email
+      usuarios:created_by (
+        correo
       )
     `)
     .single();
@@ -182,7 +182,7 @@ export async function updateMovimiento(
   return {
     ...data,
     origen_club_nombre: data.clubes?.nombre_club,
-    created_by_email: data.user_profiles?.email,
+    created_by_email: data.usuarios?.correo,
   };
 }
 

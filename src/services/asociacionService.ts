@@ -66,13 +66,13 @@ async function createUserWithAdminAPI(
 
 export const asociacionService = {
   /**
-   * Obtener todos los miembros de la asociación
+   * Obtener todos los miembros de la asociación (desde tabla usuarios)
    */
   async getAll(includeInactive: boolean = false): Promise<ApiResponse<MiembroAsociacion[]>> {
     try {
       const client = getSupabaseClient()
       let query = client
-        .from('user_profiles')
+        .from('usuarios')
         .select('*')
         .eq('rol', 'asociacion')
         .order('created_at', { ascending: false })
@@ -85,17 +85,17 @@ export const asociacionService = {
 
       if (error) throw error
 
-      // Mapear los datos al formato MiembroAsociacion
-      const miembros: MiembroAsociacion[] = (data || []).map((profile: any) => ({
-        id: profile.id,
-        email: profile.email || '',
-        nombres: profile.nombres || '',
-        apellidos: profile.apellidos || '',
+      type UsuarioRow = { id: string; correo?: string; nombre?: string; apellido_paterno?: string; apellido_materno?: string; club_id?: string | null; activo?: boolean; created_at: string; updated_at: string }
+      const miembros: MiembroAsociacion[] = (data || []).map((u: UsuarioRow) => ({
+        id: u.id,
+        email: u.correo || '',
+        nombres: u.nombre || '',
+        apellidos: [u.apellido_paterno, u.apellido_materno].filter(Boolean).join(' ') || '',
         rol: 'asociacion' as const,
-        club_id: profile.club_id || null,
-        activo: profile.activo ?? true,
-        created_at: profile.created_at,
-        updated_at: profile.updated_at,
+        club_id: u.club_id || null,
+        activo: u.activo ?? true,
+        created_at: u.created_at,
+        updated_at: u.updated_at,
       }))
 
       return { success: true, data: miembros }
@@ -106,13 +106,13 @@ export const asociacionService = {
   },
 
   /**
-   * Obtener un miembro por ID
+   * Obtener un miembro por ID (desde tabla usuarios)
    */
   async getById(id: string): Promise<ApiResponse<MiembroAsociacion>> {
     try {
       const client = getSupabaseClient()
       const { data, error } = await client
-        .from('user_profiles')
+        .from('usuarios')
         .select('*')
         .eq('id', id)
         .eq('rol', 'asociacion')
@@ -122,9 +122,9 @@ export const asociacionService = {
 
       const miembro: MiembroAsociacion = {
         id: data.id,
-        email: data.email || '',
-        nombres: data.nombres || '',
-        apellidos: data.apellidos || '',
+        email: data.correo || '',
+        nombres: data.nombre || '',
+        apellidos: [data.apellido_paterno, data.apellido_materno].filter(Boolean).join(' ') || '',
         rol: 'asociacion' as const,
         club_id: data.club_id || null,
         activo: data.activo ?? true,
@@ -160,8 +160,18 @@ export const asociacionService = {
         }
       }
 
-      // Obtener el miembro creado (el perfil se crea automáticamente por el trigger)
-      return await this.getById(userResult.data.userId)
+      // Obtener el miembro creado: el trigger crea la fila en usuarios; buscar por auth_user_id
+      const client = getSupabaseClient()
+      const { data: usuario, error: findError } = await client
+        .from('usuarios')
+        .select('id')
+        .eq('auth_user_id', userResult.data.userId)
+        .eq('rol', 'asociacion')
+        .single()
+      if (findError || !usuario) {
+        return { success: false, error: 'Usuario creado pero no se encontró en la base de datos.' }
+      }
+      return await this.getById(usuario.id)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
@@ -174,23 +184,24 @@ export const asociacionService = {
   async update(id: string, miembro: MiembroAsociacionUpdate): Promise<ApiResponse<MiembroAsociacion>> {
     try {
       const client = getSupabaseClient()
-      
-      // Preparar los datos a actualizar (excluir password)
-      const updateData: any = {}
-      if (miembro.nombres !== undefined) updateData.nombres = miembro.nombres
-      if (miembro.apellidos !== undefined) updateData.apellidos = miembro.apellidos
-      if (miembro.email !== undefined) updateData.email = miembro.email
+      const updateData: { nombre?: string; apellido_paterno?: string; apellido_materno?: string; correo?: string; activo?: boolean } = {}
+      if (miembro.nombres !== undefined) updateData.nombre = miembro.nombres
+      if (miembro.apellidos !== undefined) {
+        const parts = miembro.apellidos.trim().split(/\s+/)
+        updateData.apellido_paterno = parts[0] || ''
+        updateData.apellido_materno = parts.slice(1).join(' ') || ''
+      }
+      if (miembro.email !== undefined) updateData.correo = miembro.email
       if (miembro.activo !== undefined) updateData.activo = miembro.activo
 
       const { error } = await client
-        .from('user_profiles')
+        .from('usuarios')
         .update(updateData)
         .eq('id', id)
         .eq('rol', 'asociacion')
 
       if (error) throw error
 
-      // Retornar el miembro actualizado
       return await this.getById(id)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
@@ -205,17 +216,26 @@ export const asociacionService = {
   async delete(id: string): Promise<ApiResponse<void>> {
     try {
       const client = getSupabaseClient()
-      
-      // Marcar como inactivo en user_profiles
+
+      const { data: usuario, error: getError } = await client
+        .from('usuarios')
+        .select('auth_user_id')
+        .eq('id', id)
+        .eq('rol', 'asociacion')
+        .single()
+
+      if (getError || !usuario?.auth_user_id) {
+        return { success: false, error: 'Miembro no encontrado' }
+      }
+
       const { error: updateError } = await client
-        .from('user_profiles')
+        .from('usuarios')
         .update({ activo: false })
         .eq('id', id)
         .eq('rol', 'asociacion')
 
       if (updateError) throw updateError
 
-      // Eliminar el usuario en auth.users para que el email se pueda reutilizar
       try {
         const response = await fetch('/api/admin/disable-user', {
           method: 'POST',
@@ -223,7 +243,7 @@ export const asociacionService = {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            userId: id,
+            userId: usuario.auth_user_id,
           }),
         })
 
@@ -251,7 +271,7 @@ export const asociacionService = {
     try {
       const client = getSupabaseClient()
       const { error } = await client
-        .from('user_profiles')
+        .from('usuarios')
         .update({ activo: true })
         .eq('id', id)
         .eq('rol', 'asociacion')

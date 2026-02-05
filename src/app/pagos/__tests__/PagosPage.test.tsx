@@ -177,7 +177,7 @@ describe('PagosPage', () => {
       render(<PagosPage />)
 
       await waitFor(() => {
-        expect(screen.getByText(/No hay judokas registrados en tu club/)).toBeInTheDocument()
+        expect(screen.getByText(/No hay judokas registrados/)).toBeInTheDocument()
       })
     })
 

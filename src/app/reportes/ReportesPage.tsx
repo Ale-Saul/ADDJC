@@ -297,7 +297,7 @@ export default function ReportesPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={['encargado']}>
+    <ProtectedRoute allowedRoles={['admin', 'encargado']}>
       <Layout>
         <Box>
           {/* Header */}

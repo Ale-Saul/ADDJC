@@ -29,14 +29,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // También marcar el perfil como inactivo si aún existe
+    // Marcar usuario como inactivo en tabla usuarios (por auth_user_id)
     const { error: profileError } = await supabaseAdmin
-      .from('user_profiles')
+      .from('usuarios')
       .update({ activo: false })
-      .eq('id', userId)
+      .eq('auth_user_id', userId)
 
     if (profileError) {
-      console.warn('Error al actualizar user_profiles:', profileError)
+      console.warn('Error al actualizar usuarios:', profileError)
       // No fallar porque el usuario ya fue eliminado de auth.users
     }
 

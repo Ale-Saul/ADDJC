@@ -459,7 +459,7 @@ export default function ReportesAsociacionPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={['asociacion']}>
+    <ProtectedRoute allowedRoles={['admin', 'asociacion']}>
       <Layout>
         <Box>
           {/* Header */}

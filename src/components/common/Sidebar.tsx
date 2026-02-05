@@ -69,8 +69,21 @@ export default function Sidebar() {
     return roles[rol || ''] || rol || 'Usuario'
   }
 
-  const isActive = (path: string) => {
-    return pathname === path || pathname?.startsWith(path + '/')
+  const isActive = (path: string, allPaths?: string[]) => {
+    if (!pathname) return false
+    // Coincidencia exacta siempre es activa
+    if (pathname === path) return true
+    // Para subrutas, verificar que empiece con path + '/'
+    // Pero solo si no hay otra ruta más específica que coincida exactamente
+    if (pathname.startsWith(path + '/')) {
+      // Si hay una lista de rutas, verificar que no haya una más específica que coincida exactamente
+      if (allPaths) {
+        const exactMatch = allPaths.find(p => p !== path && pathname === p)
+        if (exactMatch) return false // Hay una ruta más específica que coincide exactamente
+      }
+      return true
+    }
+    return false
   }
 
   // Función para verificar si el usuario tiene acceso a una ruta
@@ -153,6 +166,9 @@ export default function Sidebar() {
   
   // Solo mostrar el menú "Afiliados" si hay al menos un item visible
   const showAfiliadosMenu = visibleAfiliadosItems.length > 0
+  
+  // Obtener todas las rutas del menú para la función isActive
+  const allMenuPaths = visibleMenuItems.map(item => item.path)
 
   // Evitar renderizar hasta que esté montado en el cliente
   if (!mounted) {
@@ -189,7 +205,7 @@ export default function Sidebar() {
         {visibleMenuItems.map((item) => (
           <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
             <ListItemButton
-              selected={isActive(item.path)}
+              selected={isActive(item.path, allMenuPaths)}
               onClick={() => router.push(item.path)}
               sx={{
                 py: 1,
