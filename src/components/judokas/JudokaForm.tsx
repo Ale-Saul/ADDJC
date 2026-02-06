@@ -38,6 +38,8 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     apellido_paterno: '',
     apellido_materno: '',
     fecha_nacimiento: '',
+    numero_celular: '',
+    genero: '',
     categoria: '',
     peso_competitivo: null,
     cinturon_actual: '',
@@ -95,6 +97,8 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         apellido_paterno: ap,
         apellido_materno: am,
         fecha_nacimiento: judoka.fecha_nacimiento || '',
+        numero_celular: judoka.numero_celular || '',
+        genero: judoka.genero || '',
         categoria: judoka.categoria || '',
         peso_competitivo: judoka.peso_competitivo || null,
         cinturon_actual: judoka.cinturon_actual || '',
@@ -164,7 +168,9 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
           usuario_id: 'temp-user-id', // El servicio lo reemplazará automáticamente
           apellido_paterno: 'apellido_paterno' in formData ? (formData.apellido_paterno ?? '') : '',
           apellido_materno: 'apellido_materno' in formData ? (formData.apellido_materno ?? '') : '',
-          fecha_nacimiento: formData.fecha_nacimiento || ''
+          fecha_nacimiento: formData.fecha_nacimiento || '',
+          numero_celular: formData.numero_celular,
+          genero: formData.genero
         }
         response = await judokaController.createJudoka(createData)
       }
@@ -298,6 +304,33 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
             shrink: true,
           }}
         />
+
+        <TextField
+          fullWidth
+          label="Número de Celular"
+          name="numero_celular"
+          value={formData.numero_celular || ''}
+          onChange={handleChange}
+          disabled={loading}
+        />
+
+        <FormControl fullWidth>
+          <InputLabel>Género</InputLabel>
+          <Select
+            name="genero"
+            value={formData.genero || ''}
+            onChange={handleSelectChange}
+            disabled={loading}
+            label="Género"
+          >
+            <MenuItem value="">
+              <em>Sin definir</em>
+            </MenuItem>
+            <MenuItem value="Masculino">Masculino</MenuItem>
+            <MenuItem value="Femenino">Femenino</MenuItem>
+            <MenuItem value="Prefiero no decir">Prefiero no decir</MenuItem>
+          </Select>
+        </FormControl>
 
         <FormControl fullWidth>
           <InputLabel>Categoría</InputLabel>

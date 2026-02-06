@@ -42,6 +42,8 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
     email: '',
     password: '',
     fecha_nacimiento: null,
+    numero_celular: '',
+    genero: '',
     grado_dan: '',
     especialidad: '',
     activo: true,
@@ -75,6 +77,8 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
         apellido_paterno: apParts[0] ?? '',
         apellido_materno: apParts.slice(1).join(' ') ?? '',
         fecha_nacimiento: sensei.fecha_nacimiento || null,
+        numero_celular: sensei.numero_celular || '',
+        genero: sensei.genero || '',
         grado_dan: sensei.grado_dan || '',
         especialidad: sensei.especialidad || '',
         activo: sensei.activo
@@ -138,7 +142,9 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
           ...formData as SenseiCreate,
           usuario_id: 'temp-user-id', // El servicio lo reemplazará automáticamente
           email: formData.email,
-          password: formData.password
+          password: formData.password,
+          numero_celular: formData.numero_celular,
+          genero: formData.genero
         }
         response = await senseiController.createSensei(createData)
       }
@@ -285,6 +291,33 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
             shrink: true,
           }}
         />
+
+        <TextField
+          fullWidth
+          label="Número de Celular"
+          name="numero_celular"
+          value={formData.numero_celular || ''}
+          onChange={handleChange}
+          disabled={loading}
+        />
+
+        <FormControl fullWidth>
+          <InputLabel>Género</InputLabel>
+          <Select
+            name="genero"
+            value={formData.genero || ''}
+            onChange={handleSelectChange}
+            disabled={loading}
+            label="Género"
+          >
+            <MenuItem value="">
+              <em>Sin definir</em>
+            </MenuItem>
+            <MenuItem value="Masculino">Masculino</MenuItem>
+            <MenuItem value="Femenino">Femenino</MenuItem>
+            <MenuItem value="Prefiero no decir">Prefiero no decir</MenuItem>
+          </Select>
+        </FormControl>
 
         <FormControl fullWidth>
           <InputLabel>Grado Dan</InputLabel>

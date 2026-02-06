@@ -35,6 +35,8 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
     email: '',
     password: '',
     fecha_nacimiento: null,
+    numero_celular: '',
+    genero: '',
     nivel_arbitraje: '',
     foto_perfil: null,
     activo: true
@@ -52,6 +54,8 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
         apellido_paterno: ap[0] ?? '',
         apellido_materno: ap.slice(1).join(' ') ?? '',
         fecha_nacimiento: arbitro.fecha_nacimiento || null,
+        numero_celular: arbitro.numero_celular || '',
+        genero: arbitro.genero || '',
         nivel_arbitraje: arbitro.nivel_arbitraje || '',
         foto_perfil: arbitro.foto_perfil || null,
         activo: arbitro.activo
@@ -105,7 +109,9 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
           ...formData as ArbitroCreate,
           usuario_id: 'temp-user-id', // El servicio lo reemplazará automáticamente
           email: formData.email,
-          password: formData.password
+          password: formData.password,
+          numero_celular: formData.numero_celular,
+          genero: formData.genero
         }
         response = await arbitroController.createArbitro(createData)
       }
@@ -227,6 +233,33 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
             shrink: true,
           }}
         />
+
+        <TextField
+          fullWidth
+          label="Número de Celular"
+          name="numero_celular"
+          value={formData.numero_celular || ''}
+          onChange={handleChange}
+          disabled={loading}
+        />
+
+        <FormControl fullWidth>
+          <InputLabel>Género</InputLabel>
+          <Select
+            name="genero"
+            value={formData.genero || ''}
+            onChange={handleSelectChange}
+            disabled={loading}
+            label="Género"
+          >
+            <MenuItem value="">
+              <em>Sin definir</em>
+            </MenuItem>
+            <MenuItem value="Masculino">Masculino</MenuItem>
+            <MenuItem value="Femenino">Femenino</MenuItem>
+            <MenuItem value="Prefiero no decir">Prefiero no decir</MenuItem>
+          </Select>
+        </FormControl>
 
         <FormControl fullWidth>
           <InputLabel>Nivel de Arbitraje</InputLabel>

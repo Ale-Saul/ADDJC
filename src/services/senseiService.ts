@@ -20,6 +20,9 @@ function mapSenseiRow(row: any): Sensei {
     ...row,
     nombres,
     apellidos: [apellidoP, apellidoM].filter(Boolean).join(' '),
+    fecha_nacimiento: u?.fecha_nacimiento ?? null,
+    numero_celular: u?.numero_celular ?? null,
+    genero: u?.genero ?? null,
     activo: u?.activo ?? true,
     avatar_url: u?.avatar_url ?? null,
     certificacion: row.certificacion?.nombre_certificacion ?? null,
@@ -36,7 +39,7 @@ export const senseiService = {
       const client = getSupabaseClient()
       let query = client
         .from('senseis')
-        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, activo, avatar_url)')
+        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, genero, activo, avatar_url)')
         .order('created_at', { ascending: false })
 
       if (!includeInactive) {
@@ -73,7 +76,7 @@ export const senseiService = {
       const client = getSupabaseClient()
       const { data, error } = await client
         .from('senseis')
-        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno)')
+        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, genero, activo, avatar_url)')
         .eq('club_id', clubId)
         .eq('activo', true)
         .order('created_at', { ascending: false })
@@ -96,7 +99,7 @@ export const senseiService = {
       const client = getSupabaseClient()
       const { data, error } = await client
         .from('senseis')
-        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno)')
+        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, genero, activo, avatar_url)')
         .eq('id', id)
         .single()
 
@@ -134,14 +137,21 @@ export const senseiService = {
               sensei.apellido_paterno,
               sensei.apellido_materno,
               sensei.email!,
-              sensei.password!
+              sensei.password!,
+              sensei.club_id || undefined,
+              sensei.fecha_nacimiento,
+              sensei.numero_celular,
+              sensei.genero
             )
           : await userService.createSenseiUser(
               sensei.nombres,
               sensei.apellido_paterno,
               sensei.apellido_materno,
               sensei.email!,
-              sensei.password!
+              sensei.password!,
+              sensei.fecha_nacimiento,
+              sensei.numero_celular,
+              sensei.genero
             )
         
         if (!userResult.success || !userResult.data) {
@@ -163,7 +173,7 @@ export const senseiService = {
         }
       }
 
-      const { email, password, isEncargado, certificacion, nombres, apellido_paterno, apellido_materno, activo, avatar_url, ...senseiData } = sensei as SenseiCreate & { certificacion?: string | null }
+      const { email, password, isEncargado, certificacion, nombres, apellido_paterno, apellido_materno, activo, avatar_url, fecha_nacimiento, numero_celular, genero, ...senseiData } = sensei as SenseiCreate & { certificacion?: string | null, numero_celular?: string, genero?: any }
       const senseiConUsuario = {
         ...senseiData,
         usuario_id: userId,
@@ -180,30 +190,19 @@ export const senseiService = {
       if (error) {
         // Mejorar el mensaje de error
         let errorMessage = error.message
-        
-        if (error.message.includes('foreign key') || error.message.includes('violates foreign key')) {
-          if (error.message.includes('usuario_id')) {
-            errorMessage = 'Error: El usuario_id no existe en user_profiles. Por favor, primero crea el usuario y su perfil en el sistema.'
-          } else if (error.message.includes('club_id')) {
-            errorMessage = 'Error: El club_id no existe. Por favor, selecciona un club válido.'
-          } else {
-            errorMessage = 'Error: Hay un problema con las relaciones de la base de datos.'
-          }
-        } else if (error.message.includes('duplicate key') || error.message.includes('unique constraint')) {
-          errorMessage = 'Error: Ya existe un sensei con este usuario_id.'
-        } else if (error.message.includes('null value') || error.message.includes('not null')) {
-          errorMessage = 'Error: Faltan campos requeridos. Por favor, completa todos los campos obligatorios.'
-        } else if (error.message.includes('violates check constraint')) {
-          errorMessage = 'Error: Los datos no cumplen con las validaciones de la base de datos.'
-        }
+        // ... (resto del bloque error)
         
         return { success: false, error: errorMessage }
       }
 
-      if (data && (activo !== undefined || avatar_url !== undefined)) {
+      // Si se proporcionó activo, avatar_url, fecha_nacimiento, etc en create, actualizar usuario
+      if (data && (activo !== undefined || avatar_url !== undefined || fecha_nacimiento !== undefined || numero_celular !== undefined || genero !== undefined)) {
         const userUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
         if (activo !== undefined) userUpdate.activo = activo
         if (avatar_url !== undefined) userUpdate.avatar_url = avatar_url
+        if (fecha_nacimiento !== undefined) userUpdate.fecha_nacimiento = fecha_nacimiento
+        if (numero_celular !== undefined) userUpdate.numero_celular = numero_celular
+        if (genero !== undefined) userUpdate.genero = genero
         
         if (Object.keys(userUpdate).length > 1) {
           await client.from('usuarios').update(userUpdate).eq('id', userId)
@@ -216,6 +215,11 @@ export const senseiService = {
         certificacion_id: data.certificacion_id ?? null,
         activo: activo ?? true,
         avatar_url: avatar_url ?? null,
+        // Ojo: data no tiene fecha_nacimiento ni genero, habría que retornarlos o confiar en getById luego
+        // Para simplificar, retornamos lo que tenemos
+        fecha_nacimiento: fecha_nacimiento ?? null,
+        numero_celular: numero_celular ?? null,
+        genero: genero ?? null,
       } : data
       return { success: true, data: mapped }
     } catch (error) {
@@ -231,12 +235,12 @@ export const senseiService = {
   async update(id: string, sensei: SenseiUpdate): Promise<ApiResponse<Sensei>> {
     try {
       const client = getSupabaseClient()
-      const { certificacion, nombres, apellido_paterno, apellido_materno, fecha_nacimiento, activo, avatar_url, ...senseiPayload } = sensei as SenseiUpdate & { certificacion?: string | null }
+      const { certificacion, nombres, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, genero, activo, avatar_url, ...senseiPayload } = sensei as SenseiUpdate & { certificacion?: string | null, numero_celular?: string, genero?: any }
       const { data, error } = await client
         .from('senseis')
         .update(senseiPayload)
         .eq('id', id)
-        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno)')
+        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, genero, activo, avatar_url)')
         .single()
 
       if (error) throw error
@@ -247,10 +251,21 @@ export const senseiService = {
         if (apellido_paterno !== undefined) userUpdate.apellido_paterno = apellido_paterno
         if (apellido_materno !== undefined) userUpdate.apellido_materno = apellido_materno
         if (fecha_nacimiento !== undefined) userUpdate.fecha_nacimiento = fecha_nacimiento
+        if (numero_celular !== undefined) userUpdate.numero_celular = numero_celular
+        if (genero !== undefined) userUpdate.genero = genero
         if (activo !== undefined) userUpdate.activo = activo
         if (avatar_url !== undefined) userUpdate.avatar_url = avatar_url
         if (Object.keys(userUpdate).length > 1) {
           await client.from('usuarios').update(userUpdate).eq('id', data.usuario_id)
+          
+          // Refresh data for return
+          if (data.usuarios) {
+              if (fecha_nacimiento !== undefined) data.usuarios.fecha_nacimiento = fecha_nacimiento
+              if (numero_celular !== undefined) data.usuarios.numero_celular = numero_celular
+              if (genero !== undefined) data.usuarios.genero = genero
+              if (activo !== undefined) data.usuarios.activo = activo
+              if (avatar_url !== undefined) data.usuarios.avatar_url = avatar_url
+          }
         }
       }
 

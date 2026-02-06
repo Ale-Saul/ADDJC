@@ -12,7 +12,9 @@ async function createUserWithAdminAPI(
   apellido_paterno: string,
   apellido_materno: string,
   rol: 'admin' | 'asociacion' | 'sensei' | 'arbitro' | 'judoka' | 'encargado',
-  fechaNacimiento?: string | null
+  fechaNacimiento?: string | null,
+  numeroCelular?: string | null,
+  genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
 ): Promise<ApiResponse<{ userId: string; usuarioId?: string }>> {
   try {
     const body: Record<string, unknown> = {
@@ -22,9 +24,13 @@ async function createUserWithAdminAPI(
       apellido_paterno,
       apellido_materno,
       rol,
+      genero,
     }
     if (fechaNacimiento != null && fechaNacimiento !== '') {
       body.fecha_nacimiento = fechaNacimiento
+    }
+    if (numeroCelular != null && numeroCelular !== '') {
+      body.numero_celular = numeroCelular
     }
     const response = await fetch('/api/admin/create-user', {
       method: 'POST',
@@ -70,7 +76,9 @@ export const userService = {
     apellido_materno: string,
     email: string,
     password: string,
-    fecha_nacimiento?: string | null
+    fecha_nacimiento?: string | null,
+    numero_celular?: string | null,
+    genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   ): Promise<ApiResponse<{ userId: string; usuarioId: string }>> {
     try {
       // Validar email y password
@@ -100,7 +108,7 @@ export const userService = {
 
       // Crear en auth.users; el trigger crea la fila en tabla usuarios (nombre, apellidos, correo, fecha_nacimiento, rol).
       // usuarioId es el id de la fila en usuarios; se usa en arbitros.usuario_id (FK a usuarios.id).
-      const result = await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'arbitro', undefined, fecha_nacimiento)
+      const result = await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'arbitro', fecha_nacimiento, numero_celular, genero)
       if (!result.success) return result
       const usuarioId = result.data?.usuarioId ?? result.data?.userId
       return { success: true, data: { userId: result.data!.userId, usuarioId } }
@@ -119,7 +127,10 @@ export const userService = {
     apellido_paterno: string,
     apellido_materno: string,
     email: string,
-    password: string
+    password: string,
+    fecha_nacimiento?: string | null,
+    numero_celular?: string | null,
+    genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   ): Promise<ApiResponse<{ userId: string }>> {
     try {
       if (!email || !password) {
@@ -132,7 +143,7 @@ export const userService = {
       if (password.length < 8) {
         return { success: false, error: 'La contraseña debe tener al menos 8 caracteres' }
       }
-      return await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'sensei')
+      return await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'sensei', fecha_nacimiento, numero_celular, genero)
     } catch (error) {
       console.error('Error al crear usuario de sensei:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear usuario'
@@ -149,7 +160,10 @@ export const userService = {
     apellido_materno: string,
     email: string,
     password: string,
-    clubId?: string
+    clubId?: string,
+    fecha_nacimiento?: string | null,
+    numero_celular?: string | null,
+    genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   ): Promise<ApiResponse<{ userId: string }>> {
     try {
       if (!email || !password) {
@@ -166,7 +180,7 @@ export const userService = {
         }
       }
 
-      return await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'encargado')
+      return await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'encargado', fecha_nacimiento, numero_celular, genero)
     } catch (error) {
       console.error('Error al crear usuario de encargado:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear usuario'
@@ -183,7 +197,10 @@ export const userService = {
     apellido_materno: string,
     email?: string,
     password?: string,
-    clubId?: string
+    clubId?: string,
+    fecha_nacimiento?: string | null,
+    numero_celular?: string | null,
+    genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   ): Promise<ApiResponse<{ userId: string }>> {
     try {
       let finalEmail = email
@@ -201,9 +218,41 @@ export const userService = {
       if (!emailRegex.test(finalEmail)) {
         return { success: false, error: 'El formato del email no es válido' }
       }
-      return await createUserWithAdminAPI(finalEmail, finalPassword, nombres, apellido_paterno, apellido_materno, 'judoka')
+      return await createUserWithAdminAPI(finalEmail, finalPassword, nombres, apellido_paterno, apellido_materno, 'judoka', fecha_nacimiento, numero_celular, genero)
     } catch (error) {
       console.error('Error al crear usuario de judoka:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear usuario'
+      return { success: false, error: errorMessage }
+    }
+  },
+
+  /**
+   * Crear usuario y perfil para un miembro de la asociación
+   */
+  async createAsociacionUser(
+    nombres: string,
+    apellido_paterno: string,
+    apellido_materno: string,
+    email: string,
+    password: string,
+    fecha_nacimiento?: string | null,
+    numero_celular?: string | null,
+    genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
+  ): Promise<ApiResponse<{ userId: string }>> {
+    try {
+      if (!email || !password) {
+        return { success: false, error: 'Email y contraseña son requeridos' }
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email)) {
+        return { success: false, error: 'El formato del email no es válido' }
+      }
+      if (password.length < 8) {
+        return { success: false, error: 'La contraseña debe tener al menos 8 caracteres' }
+      }
+      return await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'asociacion', fecha_nacimiento, numero_celular, genero)
+    } catch (error) {
+      console.error('Error al crear usuario de asociación:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear usuario'
       return { success: false, error: errorMessage }
     }

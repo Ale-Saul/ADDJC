@@ -35,6 +35,10 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
     email: '',
     password: '',
     cargo: '',
+    fecha_nacimiento: null,
+    numero_celular: '',
+    genero: '',
+    fecha_ingreso: null,
     activo: true,
   })
   const [loading, setLoading] = useState(false)
@@ -50,6 +54,10 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
         apellido_materno: miembro.apellido_materno ?? miembro.apellidos?.split(/\s+/).slice(1).join(' ') ?? '',
         email: miembro.email,
         cargo: miembro.cargo ?? '',
+        fecha_nacimiento: miembro.fecha_nacimiento || null,
+        numero_celular: miembro.numero_celular || '',
+        genero: miembro.genero || '',
+        fecha_ingreso: miembro.fecha_ingreso || null,
         activo: miembro.activo,
       })
     }
@@ -84,6 +92,10 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
           apellido_materno: formData.apellido_materno,
           email: formData.email,
           cargo: formData.cargo || null,
+          fecha_nacimiento: formData.fecha_nacimiento || null,
+          numero_celular: formData.numero_celular || null,
+          genero: formData.genero || null,
+          fecha_ingreso: formData.fecha_ingreso || null,
           activo: formData.activo,
         }
         response = await asociacionController.updateMiembro(miembro.id, updateData)
@@ -95,6 +107,10 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
           email: formData.email || '',
           password: formData.password || '',
           cargo: formData.cargo || null,
+          fecha_nacimiento: formData.fecha_nacimiento || null,
+          numero_celular: formData.numero_celular || null,
+          genero: formData.genero || null,
+          fecha_ingreso: formData.fecha_ingreso || null,
           activo: formData.activo ?? true,
         }
         response = await asociacionController.createMiembro(createData)
@@ -158,6 +174,59 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
           value={formData.apellido_materno ?? ''}
           onChange={handleChange}
           disabled={loading}
+        />
+
+        <TextField
+          fullWidth
+          label="Fecha de Nacimiento"
+          name="fecha_nacimiento"
+          type="date"
+          value={formData.fecha_nacimiento || ''}
+          onChange={handleChange}
+          disabled={loading}
+          InputLabelProps={{
+            shrink: true,
+          }}
+        />
+
+        <TextField
+          fullWidth
+          label="Número de Celular"
+          name="numero_celular"
+          value={formData.numero_celular || ''}
+          onChange={handleChange}
+          disabled={loading}
+        />
+
+        <FormControl fullWidth>
+          <InputLabel>Género</InputLabel>
+          <Select
+            name="genero"
+            value={formData.genero || ''}
+            onChange={handleSelectChange}
+            disabled={loading}
+            label="Género"
+          >
+            <MenuItem value="">
+              <em>Sin definir</em>
+            </MenuItem>
+            <MenuItem value="Masculino">Masculino</MenuItem>
+            <MenuItem value="Femenino">Femenino</MenuItem>
+            <MenuItem value="Prefiero no decir">Prefiero no decir</MenuItem>
+          </Select>
+        </FormControl>
+
+        <TextField
+          fullWidth
+          label="Fecha de Ingreso"
+          name="fecha_ingreso"
+          type="date"
+          value={formData.fecha_ingreso || ''}
+          onChange={handleChange}
+          disabled={loading}
+          InputLabelProps={{
+            shrink: true,
+          }}
         />
 
         <FormControl fullWidth required disabled={loading}>

@@ -12,7 +12,7 @@ function getSupabaseClient() {
   return supabase
 }
 
-const selectArbitrosWithUsuario = '*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, fecha_nacimiento, activo, avatar_url)'
+const selectArbitrosWithUsuario = '*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, genero, activo, avatar_url)'
 
 function mapArbitroRow(row: any): Arbitro {
   const u = row.usuarios ?? row.usuario_id
@@ -26,6 +26,8 @@ function mapArbitroRow(row: any): Arbitro {
     nombres,
     apellidos,
     fecha_nacimiento: isUserObject ? (u?.fecha_nacimiento ?? null) : null,
+    numero_celular: isUserObject ? (u?.numero_celular ?? null) : null,
+    genero: isUserObject ? (u?.genero ?? null) : null,
     activo: isUserObject ? (u?.activo ?? true) : true,
     avatar_url: isUserObject ? (u?.avatar_url ?? null) : null,
     usuarios: undefined,
@@ -106,7 +108,9 @@ export const arbitroService = {
           arbitro.apellido_materno,
           arbitro.email!,
           arbitro.password!,
-          arbitro.fecha_nacimiento ?? null
+          arbitro.fecha_nacimiento ?? null,
+          arbitro.numero_celular,
+          arbitro.genero
         )
         if (!userResult.success || !userResult.data) {
           return { success: false, error: userResult.error || 'Error al crear el usuario del árbitro' }
@@ -132,11 +136,13 @@ export const arbitroService = {
         .select('id')
         .single()
 
-      // Si se proporcionó avatar_url o activo, actualizar el usuario
-      if (usuarioId && (arbitro.avatar_url || arbitro.activo !== undefined)) {
+      // Si se proporcionó avatar_url, activo, numero_celular, genero, actualizar el usuario
+      if (usuarioId && (arbitro.avatar_url || arbitro.activo !== undefined || arbitro.numero_celular !== undefined || arbitro.genero !== undefined)) {
         const userUpdate: Record<string, unknown> = {}
         if (arbitro.avatar_url) userUpdate.avatar_url = arbitro.avatar_url
         if (arbitro.activo !== undefined) userUpdate.activo = arbitro.activo
+        if (arbitro.numero_celular !== undefined) userUpdate.numero_celular = arbitro.numero_celular
+        if (arbitro.genero !== undefined) userUpdate.genero = arbitro.genero
         
         if (Object.keys(userUpdate).length > 0) {
           await client.from('usuarios').update(userUpdate).eq('id', usuarioId)
@@ -182,7 +188,7 @@ export const arbitroService = {
   async update(id: string, arbitro: ArbitroUpdate): Promise<ApiResponse<Arbitro>> {
     try {
       const client = getSupabaseClient()
-      const { certificacion, apellido_paterno, apellido_materno, fecha_nacimiento, activo, avatar_url, ...updatePayload } = arbitro as ArbitroUpdate & { certificacion?: string | null }
+      const { certificacion, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, genero, activo, avatar_url, ...updatePayload } = arbitro as ArbitroUpdate & { certificacion?: string | null, numero_celular?: string, genero?: any }
       const { data, error } = await client
         .from('arbitros')
         .update(updatePayload)
@@ -192,11 +198,13 @@ export const arbitroService = {
 
       if (error) throw error
 
-      if (data?.usuario_id && (apellido_paterno !== undefined || apellido_materno !== undefined || fecha_nacimiento !== undefined || activo !== undefined || avatar_url !== undefined)) {
+      if (data?.usuario_id && (apellido_paterno !== undefined || apellido_materno !== undefined || fecha_nacimiento !== undefined || activo !== undefined || avatar_url !== undefined || numero_celular !== undefined || genero !== undefined)) {
         const userUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
         if (apellido_paterno !== undefined) userUpdate.apellido_paterno = apellido_paterno
         if (apellido_materno !== undefined) userUpdate.apellido_materno = apellido_materno
         if (fecha_nacimiento !== undefined) userUpdate.fecha_nacimiento = fecha_nacimiento
+        if (numero_celular !== undefined) userUpdate.numero_celular = numero_celular
+        if (genero !== undefined) userUpdate.genero = genero
         if (activo !== undefined) userUpdate.activo = activo
         if (avatar_url !== undefined) userUpdate.avatar_url = avatar_url
         await client.from('usuarios').update(userUpdate).eq('id', data.usuario_id)

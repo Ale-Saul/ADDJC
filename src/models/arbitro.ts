@@ -4,6 +4,8 @@ export interface Arbitro {
   nombres: string
   apellidos: string
   fecha_nacimiento: string | null
+  numero_celular?: string | null
+  genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   nivel_arbitraje: string | null
   /** ID de la certificación principal (FK a certificaciones) */
   certificacion_id: string | null
@@ -23,6 +25,8 @@ export interface ArbitroCreate {
   email?: string
   password?: string
   fecha_nacimiento?: string | null
+  numero_celular?: string | null
+  genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   nivel_arbitraje?: string | null
   certificacion_id?: string | null
   avatar_url?: string | null
@@ -34,6 +38,8 @@ export interface ArbitroUpdate {
   apellido_paterno?: string
   apellido_materno?: string
   fecha_nacimiento?: string | null
+  numero_celular?: string | null
+  genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   nivel_arbitraje?: string | null
   certificacion_id?: string | null
   avatar_url?: string | null

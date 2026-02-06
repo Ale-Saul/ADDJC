@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
       apellido_materno: apellidoMaternoBody,
       fecha_nacimiento: fechaNacimientoBody,
       genero: generoBody,
+      numero_celular: numeroCelularBody,
       rol,
     } = body
 
@@ -95,6 +96,7 @@ export async function POST(request: NextRequest) {
           apellido_materno: apellidoMaterno,
           fecha_nacimiento: fechaNacimiento,
           genero,
+          numero_celular: numeroCelularBody,
           user_type: rol === 'encargado' ? 'sensei' : rol === 'admin' ? 'admin' : rol || 'judoka',
           rol: rol || 'judoka',
         },
@@ -169,6 +171,14 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'El usuario se creó en Auth pero no se encontró en la base de datos. Revisa el trigger handle_new_user.' },
         { status: 500 }
       )
+    }
+
+    // Actualizar campos adicionales en usuarios que podrían no haber sido mapeados por el trigger
+    if (numeroCelularBody) {
+      await supabaseAdmin
+        .from('usuarios')
+        .update({ numero_celular: numeroCelularBody })
+        .eq('id', usuarioRow.id)
     }
 
     // Si el rol es admin, insertar en la tabla admin

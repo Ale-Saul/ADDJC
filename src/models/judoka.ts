@@ -8,8 +8,11 @@ export interface Judoka {
   apellidos: string
   apellido_paterno?: string
   apellido_materno?: string
-  fecha_nacimiento: string
-  categoria: string | null
+  fecha_nacimiento?: string | null
+  numero_celular?: string | null
+  genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
+  avatar_url?: string | null
+  activo: boolean
   peso_competitivo: number | null
   cinturon_actual: string | null
   avatar_url?: string | null
@@ -26,6 +29,8 @@ export interface JudokaCreate {
   apellido_paterno: string
   apellido_materno: string
   fecha_nacimiento: string
+  numero_celular?: string | null
+  genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   categoria?: string | null
   peso_competitivo?: number | null
   cinturon_actual?: string | null
@@ -40,6 +45,8 @@ export interface JudokaUpdate {
   apellido_paterno?: string
   apellido_materno?: string
   fecha_nacimiento?: string
+  numero_celular?: string | null
+  genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   categoria?: string | null
   peso_competitivo?: number | null
   cinturon_actual?: string | null
