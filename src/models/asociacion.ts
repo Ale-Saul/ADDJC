@@ -1,27 +1,32 @@
 /**
  * Modelo para miembros de la asociación
- * Los miembros de la asociación se almacenan en user_profiles con rol 'asociacion'
+ * Datos en usuarios + tabla asociacion (cargo)
  */
 
 import { User } from './auth'
 
 export interface MiembroAsociacion extends User {
-  // Hereda todos los campos de User:
-  // id, email, nombres, apellidos, rol: 'asociacion', activo, created_at, updated_at
+  apellido_paterno?: string
+  apellido_materno?: string
+  cargo?: string | null
 }
 
 export interface MiembroAsociacionCreate {
   email: string
   password: string
   nombres: string
-  apellidos: string
+  apellido_paterno: string
+  apellido_materno: string
+  cargo?: string | null
   activo?: boolean
 }
 
 export interface MiembroAsociacionUpdate {
   nombres?: string
-  apellidos?: string
+  apellido_paterno?: string
+  apellido_materno?: string
   email?: string
+  cargo?: string | null
   activo?: boolean
 }
 

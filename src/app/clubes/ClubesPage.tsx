@@ -61,7 +61,7 @@ export default function ClubesPage() {
       </Box>
 
       <SearchBar
-        placeholder="Buscar por nombre, municipio, dirección o teléfono..."
+        placeholder="Buscar por nombre, provincia, dirección o teléfono..."
         onSearch={setSearchTerm}
       />
 

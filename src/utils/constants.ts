@@ -93,6 +93,43 @@ export const GENDERS = {
 
 export const GENDERS_LIST = Object.values(GENDERS)
 
+/** Cargos para miembros de la asociación */
+export const CARGOS_ASOCIACION = [
+  'Secretario',
+  'Tesorero',
+  'Presidente',
+  'Vicepresidente',
+  'Vocal',
+] as const
+
+/** Provincias para clubes (Cochabamba y otras) */
+export const PROVINCIAS = [
+  'Cercado',
+  'Chapare',
+  'Carrasco',
+  'Mizque',
+  'Germán Jordán',
+  'Ayopaya',
+  'Arque',
+  'Tapacarí',
+  'Bolívar',
+  'Moxos',
+  'Pocona',
+  'Punata',
+  'Quillacollo',
+  'Tiraque',
+  'Arani',
+  'Esteban Arce',
+] as const
+
+/** Especialidades para senseis */
+export const ESPECIALIDADES_SENSEI = [
+  'Nage-waza',
+  'Katame-waza',
+  'Kata',
+  'Randori',
+] as const
+
 export const BELT_COLORS = [
   'Blanco',
   'Amarillo',

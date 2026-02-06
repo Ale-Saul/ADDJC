@@ -24,6 +24,7 @@ import { Club, ClubCreate, ClubUpdate } from '@/models/club'
 import { clubController } from '@/controllers/clubController'
 import { senseiController } from '@/controllers/senseiController'
 import { Sensei, SenseiCreate } from '@/models/sensei'
+import { PROVINCIAS } from '@/utils/constants'
 
 interface ClubFormProps {
   club?: Club | null
@@ -34,7 +35,7 @@ interface ClubFormProps {
 export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
   const [formData, setFormData] = useState<ClubCreate | ClubUpdate>({
     nombre_club: '',
-    municipio: '',
+    provincia: '',
     direccion: '',
     telefono_contacto: '',
     director_tecnico_id: null,
@@ -80,7 +81,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
     if (club) {
       setFormData({
         nombre_club: club.nombre_club,
-        municipio: club.municipio || '',
+        provincia: club.provincia || '',
         direccion: club.direccion || '',
         telefono_contacto: club.telefono_contacto || '',
         director_tecnico_id: club.director_tecnico_id || null,
@@ -240,14 +241,21 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
           disabled={loading}
         />
 
-        <TextField
-          fullWidth
-          label="Municipio"
-          name="municipio"
-          value={formData.municipio}
-          onChange={handleChange}
-          disabled={loading}
-        />
+        <FormControl fullWidth disabled={loading}>
+          <InputLabel>Provincia</InputLabel>
+          <Select
+            name="provincia"
+            value={formData.provincia ?? ''}
+            label="Provincia"
+            onChange={(e: SelectChangeEvent<string>) =>
+              setFormData(prev => ({ ...prev, provincia: e.target.value }))
+            }
+          >
+            {PROVINCIAS.map(p => (
+              <MenuItem key={p} value={p}>{p}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
 
         <TextField
           fullWidth

@@ -1,7 +1,7 @@
 export interface Club {
   id: string
   nombre_club: string
-  municipio: string | null
+  provincia: string | null
   direccion: string | null
   telefono_contacto: string | null
   director_tecnico_id: string | null
@@ -12,7 +12,7 @@ export interface Club {
 
 export interface ClubCreate {
   nombre_club: string
-  municipio?: string | null
+  provincia?: string | null
   direccion?: string | null
   telefono_contacto?: string | null
   director_tecnico_id?: string | null
@@ -21,7 +21,7 @@ export interface ClubCreate {
 
 export interface ClubUpdate {
   nombre_club?: string
-  municipio?: string | null
+  provincia?: string | null
   direccion?: string | null
   telefono_contacto?: string | null
   director_tecnico_id?: string | null

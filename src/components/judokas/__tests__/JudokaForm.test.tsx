@@ -41,7 +41,7 @@ describe('JudokaForm', () => {
     { 
       id: 'club-1', 
       nombre_club: 'Club A', 
-      municipio: 'Municipio A',
+      provincia: 'Cercado',
       direccion: 'Dir A',
       telefono_contacto: '123',
       director_tecnico_id: null,
@@ -52,7 +52,7 @@ describe('JudokaForm', () => {
     { 
       id: 'club-2', 
       nombre_club: 'Club B', 
-      municipio: 'Municipio B',
+      provincia: 'Chapare',
       direccion: 'Dir B',
       telefono_contacto: '456',
       director_tecnico_id: null,
@@ -107,7 +107,8 @@ describe('JudokaForm', () => {
 
     await waitFor(() => {
       expect(screen.getByLabelText(/Nombres/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/Apellidos/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/Apellido paterno/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/Apellido materno/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/Fecha de Nacimiento/i)).toBeInTheDocument()
     })
   })
@@ -150,7 +151,8 @@ describe('JudokaForm', () => {
 
     // Fill text fields
     fireEvent.change(screen.getByLabelText(/Nombres/i), { target: { value: 'Nuevo' } })
-    fireEvent.change(screen.getByLabelText(/Apellidos/i), { target: { value: 'Judoka' } })
+    fireEvent.change(screen.getByLabelText(/Apellido paterno/i), { target: { value: 'Judoka' } })
+    fireEvent.change(screen.getByLabelText(/Apellido materno/i), { target: { value: 'Test' } })
     fireEvent.change(screen.getByLabelText(/Fecha de Nacimiento/i), { target: { value: '2000-01-01' } })
 
     // Submit
@@ -160,7 +162,8 @@ describe('JudokaForm', () => {
     await waitFor(() => {
       expect(judokaController.createJudoka).toHaveBeenCalledWith(expect.objectContaining({
         nombres: 'Nuevo',
-        apellidos: 'Judoka',
+        apellido_paterno: 'Judoka',
+        apellido_materno: 'Test',
         fecha_nacimiento: '2000-01-01'
       }))
     })
@@ -171,7 +174,8 @@ describe('JudokaForm', () => {
   })
 
   it('should populate form with existing judoka data', async () => {
-    render(<JudokaForm judoka={mockJudoka} />)
+    const judokaWithApellidos = { ...mockJudoka, apellido_paterno: 'Perez', apellido_materno: 'Garcia' }
+    render(<JudokaForm judoka={judokaWithApellidos} />)
 
     // Esperar a que los clubes y senseis se carguen primero
     await waitFor(() => {
@@ -182,6 +186,7 @@ describe('JudokaForm', () => {
     await waitFor(() => {
       expect(screen.getByDisplayValue('Juan')).toBeInTheDocument()
       expect(screen.getByDisplayValue('Perez')).toBeInTheDocument()
+      expect(screen.getByDisplayValue('Garcia')).toBeInTheDocument()
       expect(screen.getByDisplayValue('1990-01-01')).toBeInTheDocument()
     })
   })
@@ -191,6 +196,11 @@ describe('JudokaForm', () => {
     const onSuccess = jest.fn()
 
     render(<JudokaForm judoka={mockJudoka} onSuccess={onSuccess} />)
+
+    // Wait for form to be populated
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Juan')).toBeInTheDocument()
+    })
 
     // Change a field
     fireEvent.change(screen.getByLabelText(/Nombres/i), { target: { value: 'Juan Updated' } })
@@ -217,7 +227,8 @@ describe('JudokaForm', () => {
 
     // Fill required fields
     fireEvent.change(screen.getByLabelText(/Nombres/i), { target: { value: 'Test' } })
-    fireEvent.change(screen.getByLabelText(/Apellidos/i), { target: { value: 'Test' } })
+    fireEvent.change(screen.getByLabelText(/Apellido paterno/i), { target: { value: 'Test' } })
+    fireEvent.change(screen.getByLabelText(/Apellido materno/i), { target: { value: 'User' } })
     fireEvent.change(screen.getByLabelText(/Fecha de Nacimiento/i), { target: { value: '2000-01-01' } })
 
     fireEvent.click(screen.getByRole('button', { name: /Crear/i }))

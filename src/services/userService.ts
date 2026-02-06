@@ -9,24 +9,29 @@ async function createUserWithAdminAPI(
   email: string,
   password: string,
   nombres: string,
-  apellidos: string,
+  apellido_paterno: string,
+  apellido_materno: string,
   rol: 'admin' | 'asociacion' | 'sensei' | 'arbitro' | 'judoka' | 'encargado',
-  clubId?: string
-): Promise<ApiResponse<{ userId: string }>> {
+  fechaNacimiento?: string | null
+): Promise<ApiResponse<{ userId: string; usuarioId?: string }>> {
   try {
+    const body: Record<string, unknown> = {
+      email,
+      password,
+      nombres,
+      apellido_paterno,
+      apellido_materno,
+      rol,
+    }
+    if (fechaNacimiento != null && fechaNacimiento !== '') {
+      body.fecha_nacimiento = fechaNacimiento
+    }
     const response = await fetch('/api/admin/create-user', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        email,
-        password,
-        nombres,
-        apellidos,
-        rol,
-        club_id: clubId,
-      }),
+      body: JSON.stringify(body),
     })
 
     const result = await response.json()
@@ -40,7 +45,10 @@ async function createUserWithAdminAPI(
 
     return {
       success: true,
-      data: { userId: result.data.userId },
+      data: {
+        userId: result.data.userId,
+        usuarioId: result.data.usuarioId ?? result.data.userId,
+      },
     }
   } catch (error) {
     console.error('Error al crear usuario con Admin API:', error)
@@ -57,11 +65,13 @@ export const userService = {
    * Crear usuario y perfil para un árbitro
    */
   async createArbitroUser(
-    nombres: string, 
-    apellidos: string, 
-    email: string, 
-    password: string
-  ): Promise<ApiResponse<{ userId: string }>> {
+    nombres: string,
+    apellido_paterno: string,
+    apellido_materno: string,
+    email: string,
+    password: string,
+    fecha_nacimiento?: string | null
+  ): Promise<ApiResponse<{ userId: string; usuarioId: string }>> {
     try {
       // Validar email y password
       if (!email || !password) {
@@ -88,8 +98,12 @@ export const userService = {
         }
       }
 
-      // Crear usuario usando Admin API (auto-confirmado)
-      return await createUserWithAdminAPI(email, password, nombres, apellidos, 'arbitro')
+      // Crear en auth.users; el trigger crea la fila en tabla usuarios (nombre, apellidos, correo, fecha_nacimiento, rol).
+      // usuarioId es el id de la fila en usuarios; se usa en arbitros.usuario_id (FK a usuarios.id).
+      const result = await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'arbitro', undefined, fecha_nacimiento)
+      if (!result.success) return result
+      const usuarioId = result.data?.usuarioId ?? result.data?.userId
+      return { success: true, data: { userId: result.data!.userId, usuarioId } }
     } catch (error) {
       console.error('Error al crear usuario de árbitro:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear usuario'
@@ -101,39 +115,24 @@ export const userService = {
    * Crear usuario y perfil para un sensei
    */
   async createSenseiUser(
-    nombres: string, 
-    apellidos: string, 
-    email: string, 
+    nombres: string,
+    apellido_paterno: string,
+    apellido_materno: string,
+    email: string,
     password: string
   ): Promise<ApiResponse<{ userId: string }>> {
     try {
-      // Validar email y password
       if (!email || !password) {
-        return {
-          success: false,
-          error: 'Email y contraseña son requeridos'
-        }
+        return { success: false, error: 'Email y contraseña son requeridos' }
       }
-
-      // Validar formato de email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(email)) {
-        return {
-          success: false,
-          error: 'El formato del email no es válido'
-        }
+        return { success: false, error: 'El formato del email no es válido' }
       }
-
-      // Validar longitud de contraseña
       if (password.length < 8) {
-        return {
-          success: false,
-          error: 'La contraseña debe tener al menos 8 caracteres'
-        }
+        return { success: false, error: 'La contraseña debe tener al menos 8 caracteres' }
       }
-
-      // Crear usuario usando Admin API (auto-confirmado)
-      return await createUserWithAdminAPI(email, password, nombres, apellidos, 'sensei')
+      return await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'sensei')
     } catch (error) {
       console.error('Error al crear usuario de sensei:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear usuario'
@@ -145,31 +144,21 @@ export const userService = {
    * Crear usuario y perfil para un encargado (Director Técnico)
    */
   async createEncargadoUser(
-    nombres: string, 
-    apellidos: string, 
-    email: string, 
+    nombres: string,
+    apellido_paterno: string,
+    apellido_materno: string,
+    email: string,
     password: string,
     clubId?: string
   ): Promise<ApiResponse<{ userId: string }>> {
     try {
-      // Validar email y password
       if (!email || !password) {
-        return {
-          success: false,
-          error: 'Email y contraseña son requeridos'
-        }
+        return { success: false, error: 'Email y contraseña son requeridos' }
       }
-
-      // Validar formato de email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(email)) {
-        return {
-          success: false,
-          error: 'El formato del email no es válido'
-        }
+        return { success: false, error: 'El formato del email no es válido' }
       }
-
-      // Validar longitud de contraseña
       if (password.length < 8) {
         return {
           success: false,
@@ -177,8 +166,7 @@ export const userService = {
         }
       }
 
-      // Crear usuario usando Admin API (auto-confirmado)
-      return await createUserWithAdminAPI(email, password, nombres, apellidos, 'encargado', clubId)
+      return await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'encargado')
     } catch (error) {
       console.error('Error al crear usuario de encargado:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear usuario'
@@ -190,41 +178,30 @@ export const userService = {
    * Crear usuario y perfil para un judoka
    */
   async createJudokaUser(
-    nombres: string, 
-    apellidos: string, 
-    email?: string, 
+    nombres: string,
+    apellido_paterno: string,
+    apellido_materno: string,
+    email?: string,
     password?: string,
     clubId?: string
   ): Promise<ApiResponse<{ userId: string }>> {
     try {
-      // Si no se proporciona email, generar uno automático
       let finalEmail = email
       let finalPassword = password
-
       if (!finalEmail) {
-        // Generar email automático basado en nombres y apellidos
         const nombreLimpio = nombres.toLowerCase().replace(/\s+/g, '')
-        const apellidoLimpio = apellidos.toLowerCase().replace(/\s+/g, '')
+        const apellidoLimpio = (apellido_paterno + apellido_materno).toLowerCase().replace(/\s+/g, '')
         const timestamp = Date.now()
         finalEmail = `${nombreLimpio}.${apellidoLimpio}.${timestamp}@judoka.local`
       }
-
       if (!finalPassword) {
-        // Generar contraseña temporal aleatoria
         finalPassword = `Judoka${Date.now()}!`
       }
-
-      // Validar formato de email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(finalEmail)) {
-        return {
-          success: false,
-          error: 'El formato del email no es válido'
-        }
+        return { success: false, error: 'El formato del email no es válido' }
       }
-
-      // Crear usuario usando Admin API
-      return await createUserWithAdminAPI(finalEmail, finalPassword, nombres, apellidos, 'judoka', clubId)
+      return await createUserWithAdminAPI(finalEmail, finalPassword, nombres, apellido_paterno, apellido_materno, 'judoka')
     } catch (error) {
       console.error('Error al crear usuario de judoka:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear usuario'

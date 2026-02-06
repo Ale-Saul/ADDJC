@@ -23,6 +23,7 @@ import { senseiController } from '@/controllers/senseiController'
 import { clubController } from '@/controllers/clubController'
 import { Club } from '@/models/club'
 import { useAuth } from '@/contexts/AuthContext'
+import { ESPECIALIDADES_SENSEI } from '@/utils/constants'
 
 interface SenseiFormProps {
   sensei?: Sensei | null
@@ -36,13 +37,13 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
     usuario_id: '',
     club_id: null,
     nombres: '',
-    apellidos: '',
+    apellido_paterno: '',
+    apellido_materno: '',
     email: '',
     password: '',
     fecha_nacimiento: null,
     grado_dan: '',
     especialidad: '',
-    foto_perfil: null,
     activo: true,
     isEncargado: false
   })
@@ -67,14 +68,15 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
 
   useEffect(() => {
     if (sensei) {
+      const apParts = sensei.apellidos?.trim().split(/\s+/) ?? []
       setFormData({
         club_id: sensei.club_id || null,
         nombres: sensei.nombres,
-        apellidos: sensei.apellidos,
+        apellido_paterno: apParts[0] ?? '',
+        apellido_materno: apParts.slice(1).join(' ') ?? '',
         fecha_nacimiento: sensei.fecha_nacimiento || null,
         grado_dan: sensei.grado_dan || '',
         especialidad: sensei.especialidad || '',
-        foto_perfil: sensei.foto_perfil || null,
         activo: sensei.activo
       })
     }
@@ -211,9 +213,18 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
 
         <TextField
           fullWidth
-          label="Apellidos"
-          name="apellidos"
-          value={formData.apellidos}
+          label="Apellido paterno"
+          name="apellido_paterno"
+          value={formData.apellido_paterno ?? ''}
+          onChange={handleChange}
+          required
+          disabled={loading}
+        />
+        <TextField
+          fullWidth
+          label="Apellido materno"
+          name="apellido_materno"
+          value={formData.apellido_materno ?? ''}
           onChange={handleChange}
           required
           disabled={loading}
@@ -300,17 +311,23 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
           </Select>
         </FormControl>
 
-        <TextField
-          fullWidth
-          label="Especialidad"
-          name="especialidad"
-          value={formData.especialidad || ''}
-          onChange={handleChange}
-          disabled={loading}
-          placeholder="Área de especialización del sensei"
-        />
-
-        {/* TODO: Agregar campo para subir foto_perfil */}
+        <FormControl fullWidth>
+          <InputLabel>Especialidad</InputLabel>
+          <Select
+            name="especialidad"
+            value={formData.especialidad || ''}
+            onChange={handleSelectChange}
+            disabled={loading}
+            label="Especialidad"
+          >
+            <MenuItem value="">
+              <em>Sin definir</em>
+            </MenuItem>
+            {ESPECIALIDADES_SENSEI.map(esp => (
+              <MenuItem key={esp} value={esp}>{esp}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       </Box>
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>

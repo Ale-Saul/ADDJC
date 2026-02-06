@@ -30,15 +30,18 @@ export const arbitroController = {
       return { success: false, error: 'El nombre es requerido' }
     }
 
-    if (!arbitroData.apellidos || arbitroData.apellidos.trim() === '') {
-      return { success: false, error: 'Los apellidos son requeridos' }
+    const paterno = (arbitroData.apellido_paterno ?? '').trim()
+    const materno = (arbitroData.apellido_materno ?? '').trim()
+    if (!paterno && !materno) {
+      return { success: false, error: 'Al menos un apellido (paterno o materno) es requerido' }
     }
 
     if (arbitroData.nombres.length < 2) {
       return { success: false, error: 'El nombre debe tener al menos 2 caracteres' }
     }
 
-    if (arbitroData.apellidos.length < 2) {
+    const apellidosCompletos = [paterno, materno].filter(Boolean).join(' ')
+    if (apellidosCompletos.length < 2) {
       return { success: false, error: 'Los apellidos deben tener al menos 2 caracteres' }
     }
 
@@ -46,8 +49,8 @@ export const arbitroController = {
       return { success: false, error: 'El nombre no puede exceder 100 caracteres' }
     }
 
-    if (arbitroData.apellidos.length > 100) {
-      return { success: false, error: 'Los apellidos no pueden exceder 100 caracteres' }
+    if (apellidosCompletos.length > 200) {
+      return { success: false, error: 'Los apellidos no pueden exceder 200 caracteres en total' }
     }
 
     // Por defecto, el árbitro se crea como activo
@@ -88,17 +91,15 @@ export const arbitroController = {
       }
     }
 
-    if (arbitroData.apellidos !== undefined) {
-      if (arbitroData.apellidos.trim() === '') {
-        return { success: false, error: 'Los apellidos no pueden estar vacíos' }
+    if (arbitroData.apellido_paterno !== undefined || arbitroData.apellido_materno !== undefined) {
+      const paterno = (arbitroData.apellido_paterno ?? '').trim()
+      const materno = (arbitroData.apellido_materno ?? '').trim()
+      if (!paterno && !materno) {
+        return { success: false, error: 'Al menos un apellido (paterno o materno) debe estar presente' }
       }
-
-      if (arbitroData.apellidos.length < 2) {
-        return { success: false, error: 'Los apellidos deben tener al menos 2 caracteres' }
-      }
-
-      if (arbitroData.apellidos.length > 100) {
-        return { success: false, error: 'Los apellidos no pueden exceder 100 caracteres' }
+      const apellidosCompletos = [paterno, materno].filter(Boolean).join(' ')
+      if (apellidosCompletos.length > 200) {
+        return { success: false, error: 'Los apellidos no pueden exceder 200 caracteres en total' }
       }
     }
 

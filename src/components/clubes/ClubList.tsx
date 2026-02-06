@@ -67,7 +67,7 @@ export default function ClubList({ onEdit, onDelete, refreshTrigger, searchTerm 
     const search = searchTerm.toLowerCase()
     return clubes.filter((club) => (
       club.nombre_club?.toLowerCase().includes(search) ||
-      club.municipio?.toLowerCase().includes(search) ||
+      club.provincia?.toLowerCase().includes(search) ||
       club.direccion?.toLowerCase().includes(search) ||
       club.telefono_contacto?.toLowerCase().includes(search)
     ))
@@ -132,7 +132,7 @@ export default function ClubList({ onEdit, onDelete, refreshTrigger, searchTerm 
             {paginatedClubes.map((club) => (
               <TableRow key={club.id} hover>
                 <TableCell>{club.nombre_club}</TableCell>
-                <TableCell>{club.municipio || '-'}</TableCell>
+                <TableCell>{club.provincia || '-'}</TableCell>
                 <TableCell>{club.telefono_contacto || '-'}</TableCell>
                 <TableCell>
                   <Chip 

@@ -41,15 +41,18 @@ export const senseiController = {
       return { success: false, error: 'El nombre es requerido' }
     }
 
-    if (!senseiData.apellidos || senseiData.apellidos.trim() === '') {
-      return { success: false, error: 'Los apellidos son requeridos' }
+    const paterno = (senseiData.apellido_paterno ?? '').trim()
+    const materno = (senseiData.apellido_materno ?? '').trim()
+    if (!paterno && !materno) {
+      return { success: false, error: 'Al menos un apellido (paterno o materno) es requerido' }
     }
 
     if (senseiData.nombres.length < 2) {
       return { success: false, error: 'El nombre debe tener al menos 2 caracteres' }
     }
 
-    if (senseiData.apellidos.length < 2) {
+    const apellidosCompletos = [paterno, materno].filter(Boolean).join(' ')
+    if (apellidosCompletos.length < 2) {
       return { success: false, error: 'Los apellidos deben tener al menos 2 caracteres' }
     }
 
@@ -57,8 +60,8 @@ export const senseiController = {
       return { success: false, error: 'El nombre no puede exceder 100 caracteres' }
     }
 
-    if (senseiData.apellidos.length > 100) {
-      return { success: false, error: 'Los apellidos no pueden exceder 100 caracteres' }
+    if (apellidosCompletos.length > 200) {
+      return { success: false, error: 'Los apellidos no pueden exceder 200 caracteres en total' }
     }
 
     // Por defecto, el sensei se crea como activo
@@ -99,17 +102,15 @@ export const senseiController = {
       }
     }
 
-    if (senseiData.apellidos !== undefined) {
-      if (senseiData.apellidos.trim() === '') {
-        return { success: false, error: 'Los apellidos no pueden estar vacíos' }
+    if (senseiData.apellido_paterno !== undefined || senseiData.apellido_materno !== undefined) {
+      const paterno = (senseiData.apellido_paterno ?? '').trim()
+      const materno = (senseiData.apellido_materno ?? '').trim()
+      if (!paterno && !materno) {
+        return { success: false, error: 'Al menos un apellido (paterno o materno) debe estar presente' }
       }
-
-      if (senseiData.apellidos.length < 2) {
-        return { success: false, error: 'Los apellidos deben tener al menos 2 caracteres' }
-      }
-
-      if (senseiData.apellidos.length > 100) {
-        return { success: false, error: 'Los apellidos no pueden exceder 100 caracteres' }
+      const apellidosCompletos = [paterno, materno].filter(Boolean).join(' ')
+      if (apellidosCompletos.length > 200) {
+        return { success: false, error: 'Los apellidos no pueden exceder 200 caracteres en total' }
       }
     }
 

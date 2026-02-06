@@ -127,7 +127,8 @@ describe('senseiController', () => {
     const validSenseiData: SenseiCreate = {
       usuario_id: 'temp-user-id',
       nombres: 'Carlos',
-      apellidos: 'García',
+      apellido_paterno: 'García',
+      apellido_materno: 'López',
       club_id: 'club-123',
     }
 
@@ -202,27 +203,26 @@ describe('senseiController', () => {
     })
 
     // Pruebas de validación de apellidos
-    it('debe retornar error si apellidos está vacío', async () => {
-      const invalidData = { ...validSenseiData, apellidos: '   ' }
+    it('debe retornar error si ambos apellidos están vacíos', async () => {
+      const invalidData = { ...validSenseiData, apellido_paterno: '   ', apellido_materno: '   ' }
 
       const result = await senseiController.createSensei(invalidData)
 
       expect(result.success).toBe(false)
-      expect(result.error).toBe('Los apellidos son requeridos')
+      expect(result.error).toBe('Al menos un apellido (paterno o materno) es requerido')
     })
 
-    it('debe retornar error si apellidos está ausente', async () => {
-      const invalidData = { ...validSenseiData }
-      delete (invalidData as any).apellidos
+    it('debe retornar error si ambos apellidos están ausentes', async () => {
+      const invalidData = { ...validSenseiData, apellido_paterno: '', apellido_materno: '' }
 
       const result = await senseiController.createSensei(invalidData)
 
       expect(result.success).toBe(false)
-      expect(result.error).toBe('Los apellidos son requeridos')
+      expect(result.error).toBe('Al menos un apellido (paterno o materno) es requerido')
     })
 
-    it('debe retornar error si apellidos es muy corto', async () => {
-      const invalidData = { ...validSenseiData, apellidos: 'G' }
+    it('debe retornar error si apellidos son muy cortos', async () => {
+      const invalidData = { ...validSenseiData, apellido_paterno: 'G', apellido_materno: '' }
 
       const result = await senseiController.createSensei(invalidData)
 
@@ -230,13 +230,13 @@ describe('senseiController', () => {
       expect(result.error).toBe('Los apellidos deben tener al menos 2 caracteres')
     })
 
-    it('debe retornar error si apellidos es muy largo', async () => {
-      const invalidData = { ...validSenseiData, apellidos: 'G'.repeat(101) }
+    it('debe retornar error si apellidos son muy largos', async () => {
+      const invalidData = { ...validSenseiData, apellido_paterno: 'G'.repeat(201), apellido_materno: '' }
 
       const result = await senseiController.createSensei(invalidData)
 
       expect(result.success).toBe(false)
-      expect(result.error).toBe('Los apellidos no pueden exceder 100 caracteres')
+      expect(result.error).toBe('Los apellidos no pueden exceder 200 caracteres en total')
     })
 
     it('debe propagar errores del servicio', async () => {

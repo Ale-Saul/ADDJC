@@ -52,8 +52,10 @@ export const judokaController = {
       return { success: false, error: 'El nombre es requerido' }
     }
 
-    if (!judokaData.apellidos || judokaData.apellidos.trim() === '') {
-      return { success: false, error: 'Los apellidos son requeridos' }
+    const paterno = (judokaData.apellido_paterno ?? '').trim()
+    const materno = (judokaData.apellido_materno ?? '').trim()
+    if (!paterno && !materno) {
+      return { success: false, error: 'Al menos un apellido (paterno o materno) es requerido' }
     }
 
     if (!judokaData.fecha_nacimiento || judokaData.fecha_nacimiento.trim() === '') {
@@ -64,7 +66,8 @@ export const judokaController = {
       return { success: false, error: 'El nombre debe tener al menos 2 caracteres' }
     }
 
-    if (judokaData.apellidos.length < 2) {
+    const apellidosCompletos = [paterno, materno].filter(Boolean).join(' ')
+    if (apellidosCompletos.length < 2) {
       return { success: false, error: 'Los apellidos deben tener al menos 2 caracteres' }
     }
 
@@ -72,8 +75,8 @@ export const judokaController = {
       return { success: false, error: 'El nombre no puede exceder 100 caracteres' }
     }
 
-    if (judokaData.apellidos.length > 100) {
-      return { success: false, error: 'Los apellidos no pueden exceder 100 caracteres' }
+    if (apellidosCompletos.length > 200) {
+      return { success: false, error: 'Los apellidos no pueden exceder 200 caracteres en total' }
     }
 
     // Validar peso si se proporciona
@@ -124,17 +127,15 @@ export const judokaController = {
       }
     }
 
-    if (judokaData.apellidos !== undefined) {
-      if (judokaData.apellidos.trim() === '') {
-        return { success: false, error: 'Los apellidos no pueden estar vacíos' }
+    if (judokaData.apellido_paterno !== undefined || judokaData.apellido_materno !== undefined) {
+      const paterno = (judokaData.apellido_paterno ?? '').trim()
+      const materno = (judokaData.apellido_materno ?? '').trim()
+      if (!paterno && !materno) {
+        return { success: false, error: 'Al menos un apellido (paterno o materno) debe estar presente' }
       }
-
-      if (judokaData.apellidos.length < 2) {
-        return { success: false, error: 'Los apellidos deben tener al menos 2 caracteres' }
-      }
-
-      if (judokaData.apellidos.length > 100) {
-        return { success: false, error: 'Los apellidos no pueden exceder 100 caracteres' }
+      const apellidosCompletos = [paterno, materno].filter(Boolean).join(' ')
+      if (apellidosCompletos.length > 200) {
+        return { success: false, error: 'Los apellidos no pueden exceder 200 caracteres en total' }
       }
     }
 

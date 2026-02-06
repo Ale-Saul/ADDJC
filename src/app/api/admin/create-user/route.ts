@@ -18,7 +18,6 @@ export async function POST(request: NextRequest) {
       fecha_nacimiento: fechaNacimientoBody,
       genero: generoBody,
       rol,
-      club_id,
     } = body
 
     // Validaciones con mensajes específicos
@@ -98,7 +97,6 @@ export async function POST(request: NextRequest) {
           genero,
           user_type: rol === 'encargado' ? 'sensei' : rol === 'admin' ? 'admin' : rol || 'judoka',
           rol: rol || 'judoka',
-          club_id: club_id || null,
         },
       })
       authData = result.data

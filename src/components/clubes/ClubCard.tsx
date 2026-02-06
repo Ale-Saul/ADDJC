@@ -30,9 +30,9 @@ export default function ClubCard({ club, onClick }: ClubCardProps) {
           />
         </Box>
         
-        {club.municipio && (
+        {club.provincia && (
           <Typography variant="body2" color="text.secondary" gutterBottom>
-            📍 {club.municipio}
+            📍 {club.provincia}
           </Typography>
         )}
         

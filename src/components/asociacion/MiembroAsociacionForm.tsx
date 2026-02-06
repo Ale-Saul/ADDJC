@@ -9,11 +9,17 @@ import {
   CircularProgress,
   InputAdornment,
   IconButton,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material'
+import type { SelectChangeEvent } from '@mui/material/Select'
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import { MiembroAsociacion, MiembroAsociacionCreate, MiembroAsociacionUpdate } from '@/models/asociacion'
 import { asociacionController } from '@/controllers/asociacionController'
+import { CARGOS_ASOCIACION } from '@/utils/constants'
 
 interface MiembroAsociacionFormProps {
   miembro?: MiembroAsociacion | null
@@ -24,9 +30,11 @@ interface MiembroAsociacionFormProps {
 export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: MiembroAsociacionFormProps) {
   const [formData, setFormData] = useState<MiembroAsociacionCreate | MiembroAsociacionUpdate>({
     nombres: '',
-    apellidos: '',
+    apellido_paterno: '',
+    apellido_materno: '',
     email: '',
     password: '',
+    cargo: '',
     activo: true,
   })
   const [loading, setLoading] = useState(false)
@@ -38,20 +46,24 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
     if (miembro) {
       setFormData({
         nombres: miembro.nombres,
-        apellidos: miembro.apellidos,
+        apellido_paterno: miembro.apellido_paterno ?? miembro.apellidos?.split(/\s+/)[0] ?? '',
+        apellido_materno: miembro.apellido_materno ?? miembro.apellidos?.split(/\s+/).slice(1).join(' ') ?? '',
         email: miembro.email,
+        cargo: miembro.cargo ?? '',
         activo: miembro.activo,
-        // No cargar password al editar
       })
     }
   }, [miembro])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+    setFormData(prev => ({ ...prev, [name]: value }))
+    setError(null)
+    setSuccess(false)
+  }
+
+  const handleSelectChange = (e: SelectChangeEvent<string>) => {
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
     setError(null)
     setSuccess(false)
   }
@@ -66,21 +78,23 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
       let response
 
       if (miembro) {
-        // Actualizar - no incluir password si está vacío
         const updateData: MiembroAsociacionUpdate = {
           nombres: formData.nombres,
-          apellidos: formData.apellidos,
+          apellido_paterno: formData.apellido_paterno,
+          apellido_materno: formData.apellido_materno,
           email: formData.email,
+          cargo: formData.cargo || null,
           activo: formData.activo,
         }
         response = await asociacionController.updateMiembro(miembro.id, updateData)
       } else {
-        // Crear
         const createData: MiembroAsociacionCreate = {
           nombres: formData.nombres || '',
-          apellidos: formData.apellidos || '',
+          apellido_paterno: formData.apellido_paterno || '',
+          apellido_materno: formData.apellido_materno || '',
           email: formData.email || '',
           password: formData.password || '',
+          cargo: formData.cargo || null,
           activo: formData.activo ?? true,
         }
         response = await asociacionController.createMiembro(createData)
@@ -130,13 +144,35 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
 
         <TextField
           fullWidth
-          label="Apellidos"
-          name="apellidos"
-          value={formData.apellidos}
+          label="Apellido paterno"
+          name="apellido_paterno"
+          value={formData.apellido_paterno ?? ''}
           onChange={handleChange}
-          required
+          disabled={loading}
+          helperText="Al menos uno de los dos apellidos es requerido"
+        />
+        <TextField
+          fullWidth
+          label="Apellido materno"
+          name="apellido_materno"
+          value={formData.apellido_materno ?? ''}
+          onChange={handleChange}
           disabled={loading}
         />
+
+        <FormControl fullWidth required disabled={loading}>
+          <InputLabel>Cargo</InputLabel>
+          <Select
+            name="cargo"
+            value={formData.cargo ?? ''}
+            label="Cargo"
+            onChange={handleSelectChange}
+          >
+            {CARGOS_ASOCIACION.map(c => (
+              <MenuItem key={c} value={c}>{c}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
 
         <TextField
           fullWidth

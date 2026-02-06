@@ -12,6 +12,27 @@ function getSupabaseClient() {
   return supabase
 }
 
+const selectJudokasWithUsuario = '*, usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, fecha_nacimiento, activo, avatar_url)'
+
+function mapJudokaRow(row: any): Judoka {
+  const u = row.usuarios
+  const nombres = u?.nombre ?? ''
+  const apellidoPaterno = u?.apellido_paterno ?? ''
+  const apellidoMaterno = u?.apellido_materno ?? ''
+  const apellidos = [apellidoPaterno, apellidoMaterno].filter(Boolean).join(' ')
+  return {
+    ...row,
+    nombres,
+    apellidos,
+    apellido_paterno: apellidoPaterno,
+    apellido_materno: apellidoMaterno,
+    fecha_nacimiento: u?.fecha_nacimiento ?? '',
+    activo: u?.activo ?? true,
+    avatar_url: u?.avatar_url ?? null,
+    usuarios: undefined,
+  }
+}
+
 export const judokaService = {
   /**
    * Obtener todos los judokas
@@ -21,7 +42,7 @@ export const judokaService = {
       const client = getSupabaseClient()
       let query = client
         .from('judokas')
-        .select('*')
+        .select(selectJudokasWithUsuario)
         .order('created_at', { ascending: false })
 
       if (!includeInactive) {
@@ -32,7 +53,8 @@ export const judokaService = {
 
       if (error) throw error
 
-      return { success: true, data: data || [] }
+      const mapped = (data || []).map(mapJudokaRow)
+      return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
@@ -47,14 +69,15 @@ export const judokaService = {
       const client = getSupabaseClient()
       const { data, error } = await client
         .from('judokas')
-        .select('*')
+        .select(selectJudokasWithUsuario)
         .eq('club_id', clubId)
         .eq('activo', true)
         .order('created_at', { ascending: false })
 
       if (error) throw error
 
-      return { success: true, data: data || [] }
+      const mapped = (data || []).map(mapJudokaRow)
+      return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
@@ -69,14 +92,15 @@ export const judokaService = {
       const client = getSupabaseClient()
       const { data, error } = await client
         .from('judokas')
-        .select('*')
+        .select(selectJudokasWithUsuario)
         .eq('entrenador_id', entrenadorId)
         .eq('activo', true)
         .order('created_at', { ascending: false })
 
       if (error) throw error
 
-      return { success: true, data: data || [] }
+      const mapped = (data || []).map(mapJudokaRow)
+      return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
@@ -91,13 +115,13 @@ export const judokaService = {
       const client = getSupabaseClient()
       const { data, error } = await client
         .from('judokas')
-        .select('*')
+        .select(selectJudokasWithUsuario)
         .eq('id', id)
         .single()
 
       if (error) throw error
 
-      return { success: true, data }
+      return { success: true, data: data ? mapJudokaRow(data) : data }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
@@ -113,7 +137,11 @@ export const judokaService = {
 
       // Si no hay usuario_id o es temporal, crear usuario y perfil automáticamente
       if (!userId || userId === 'temp-user-id') {
-        const userResult = await userService.createJudokaUser(judoka.nombres, judoka.apellidos)
+        const userResult = await userService.createJudokaUser(
+          judoka.nombres,
+          judoka.apellido_paterno,
+          judoka.apellido_materno
+        )
         
         if (!userResult.success || !userResult.data) {
           return { 
@@ -122,7 +150,7 @@ export const judokaService = {
           }
         }
 
-        userId = userResult.data.userId
+        userId = (userResult.data as { userId: string; usuarioId?: string }).usuarioId ?? userResult.data.userId
       }
 
       // Validar formato UUID
@@ -134,18 +162,32 @@ export const judokaService = {
         }
       }
 
-      // Crear el judoka con el usuario_id correcto
-      const judokaConUsuario = {
-        ...judoka,
-        usuario_id: userId
+      const client = getSupabaseClient()
+      const insertPayload = {
+        usuario_id: userId,
+        club_id: judoka.club_id ?? null,
+        entrenador_id: judoka.entrenador_id ?? null,
+        categoria: judoka.categoria ?? null,
+        peso_competitivo: judoka.peso_competitivo ?? null,
+        cinturon_actual: judoka.cinturon_actual ?? null,
       }
 
-      const client = getSupabaseClient()
       const { data, error } = await client
         .from('judokas')
-        .insert(judokaConUsuario)
+        .insert(insertPayload)
         .select()
         .single()
+
+      // Si se proporcionó avatar_url o activo, actualizar el usuario
+      if (userId && (judoka.avatar_url || judoka.activo !== undefined)) {
+        const userUpdate: Record<string, unknown> = {}
+        if (judoka.avatar_url) userUpdate.avatar_url = judoka.avatar_url
+        if (judoka.activo !== undefined) userUpdate.activo = judoka.activo
+        
+        if (Object.keys(userUpdate).length > 0) {
+          await client.from('usuarios').update(userUpdate).eq('id', userId)
+        }
+      }
 
       if (error) {
         // Mejorar el mensaje de error
@@ -186,16 +228,37 @@ export const judokaService = {
   async update(id: string, judoka: JudokaUpdate): Promise<ApiResponse<Judoka>> {
     try {
       const client = getSupabaseClient()
+      const { nombres, apellido_paterno, apellido_materno, fecha_nacimiento, activo, avatar_url, ...judokaPayload } = judoka
+
       const { data, error } = await client
         .from('judokas')
-        .update(judoka)
+        .update(judokaPayload)
         .eq('id', id)
-        .select()
+        .select(selectJudokasWithUsuario)
         .single()
 
       if (error) throw error
 
-      return { success: true, data }
+      if (data?.usuario_id && (nombres !== undefined || apellido_paterno !== undefined || apellido_materno !== undefined || fecha_nacimiento !== undefined || activo !== undefined || avatar_url !== undefined)) {
+        const userUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
+        if (nombres !== undefined) userUpdate.nombre = nombres
+        if (apellido_paterno !== undefined) userUpdate.apellido_paterno = apellido_paterno
+        if (apellido_materno !== undefined) userUpdate.apellido_materno = apellido_materno
+        if (fecha_nacimiento !== undefined) userUpdate.fecha_nacimiento = fecha_nacimiento
+        if (activo !== undefined) userUpdate.activo = activo
+        if (avatar_url !== undefined) userUpdate.avatar_url = avatar_url
+        
+        await client.from('usuarios').update(userUpdate).eq('id', data.usuario_id)
+        
+        // Refresh the returned data to include updated user info
+        if (activo !== undefined || avatar_url !== undefined) {
+           data.usuarios.activo = activo !== undefined ? activo : data.usuarios.activo
+           data.usuarios.avatar_url = avatar_url !== undefined ? avatar_url : data.usuarios.avatar_url
+        }
+      }
+
+      const mapped = data ? mapJudokaRow(data) : data
+      return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
@@ -208,10 +271,20 @@ export const judokaService = {
   async delete(id: string): Promise<ApiResponse<void>> {
     try {
       const client = getSupabaseClient()
-      const { error } = await client
+      
+      // Get user_id first
+      const { data, error: getError } = await client
         .from('judokas')
-        .update({ activo: false })
+        .select('usuario_id')
         .eq('id', id)
+        .single()
+        
+      if (getError || !data) throw getError || new Error('Judoka not found')
+
+      const { error } = await client
+        .from('usuarios')
+        .update({ activo: false })
+        .eq('id', data.usuario_id)
 
       if (error) throw error
 
@@ -228,16 +301,25 @@ export const judokaService = {
   async restore(id: string): Promise<ApiResponse<Judoka>> {
     try {
       const client = getSupabaseClient()
-      const { data, error } = await client
+      
+      // Get user_id first
+      const { data: judokaData, error: getError } = await client
         .from('judokas')
-        .update({ activo: true })
+        .select('usuario_id')
         .eq('id', id)
-        .select()
         .single()
+        
+      if (getError || !judokaData) throw getError || new Error('Judoka not found')
+
+      const { error } = await client
+        .from('usuarios')
+        .update({ activo: true })
+        .eq('id', judokaData.usuario_id)
 
       if (error) throw error
-
-      return { success: true, data }
+      
+      // Return full object
+      return await this.getById(id)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }

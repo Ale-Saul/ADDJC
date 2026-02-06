@@ -619,9 +619,9 @@ export default function ReportesAsociacionPage() {
                         <Typography variant="body2" fontWeight="bold">
                           {resumen.club.nombre_club}
                         </Typography>
-                        {resumen.club.municipio && (
+                        {resumen.club.provincia && (
                           <Typography variant="caption" color="text.secondary">
-                            {resumen.club.municipio}
+                            {resumen.club.provincia}
                           </Typography>
                         )}
                       </TableCell>

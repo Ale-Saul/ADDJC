@@ -30,8 +30,10 @@ export const asociacionController = {
       return { success: false, error: 'El nombre es requerido' }
     }
 
-    if (!miembroData.apellidos || miembroData.apellidos.trim() === '') {
-      return { success: false, error: 'Los apellidos son requeridos' }
+    const paterno = (miembroData.apellido_paterno ?? '').trim()
+    const materno = (miembroData.apellido_materno ?? '').trim()
+    if (!paterno && !materno) {
+      return { success: false, error: 'Al menos un apellido (paterno o materno) es requerido' }
     }
 
     if (!miembroData.email || miembroData.email.trim() === '') {
@@ -72,9 +74,11 @@ export const asociacionController = {
       }
     }
 
-    if (miembroData.apellidos !== undefined) {
-      if (miembroData.apellidos.trim() === '') {
-        return { success: false, error: 'Los apellidos no pueden estar vacíos' }
+    if (miembroData.apellido_paterno !== undefined || miembroData.apellido_materno !== undefined) {
+      const paterno = (miembroData.apellido_paterno ?? '').trim()
+      const materno = (miembroData.apellido_materno ?? '').trim()
+      if (!paterno && !materno) {
+        return { success: false, error: 'Al menos un apellido (paterno o materno) debe estar presente' }
       }
     }
 

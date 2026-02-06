@@ -30,7 +30,8 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
   const [formData, setFormData] = useState<ArbitroCreate | ArbitroUpdate>({
     usuario_id: '',
     nombres: '',
-    apellidos: '',
+    apellido_paterno: '',
+    apellido_materno: '',
     email: '',
     password: '',
     fecha_nacimiento: null,
@@ -45,9 +46,11 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
 
   useEffect(() => {
     if (arbitro) {
+      const ap = arbitro.apellidos?.trim().split(/\s+/) ?? []
       setFormData({
         nombres: arbitro.nombres,
-        apellidos: arbitro.apellidos,
+        apellido_paterno: ap[0] ?? '',
+        apellido_materno: ap.slice(1).join(' ') ?? '',
         fecha_nacimiento: arbitro.fecha_nacimiento || null,
         nivel_arbitraje: arbitro.nivel_arbitraje || '',
         foto_perfil: arbitro.foto_perfil || null,
@@ -152,9 +155,18 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
 
         <TextField
           fullWidth
-          label="Apellidos"
-          name="apellidos"
-          value={formData.apellidos}
+          label="Apellido paterno"
+          name="apellido_paterno"
+          value={formData.apellido_paterno ?? ''}
+          onChange={handleChange}
+          required
+          disabled={loading}
+        />
+        <TextField
+          fullWidth
+          label="Apellido materno"
+          name="apellido_materno"
+          value={formData.apellido_materno ?? ''}
           onChange={handleChange}
           required
           disabled={loading}

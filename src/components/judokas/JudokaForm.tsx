@@ -35,7 +35,8 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     club_id: null,
     entrenador_id: null,
     nombres: '',
-    apellidos: '',
+    apellido_paterno: '',
+    apellido_materno: '',
     fecha_nacimiento: '',
     categoria: '',
     peso_competitivo: null,
@@ -85,11 +86,14 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
 
   useEffect(() => {
     if (judoka) {
+      const ap = judoka.apellido_paterno ?? judoka.apellidos?.trim().split(/\s+/)[0] ?? ''
+      const am = judoka.apellido_materno ?? judoka.apellidos?.trim().split(/\s+/).slice(1).join(' ') ?? ''
       setFormData({
         club_id: judoka.club_id || null,
         entrenador_id: judoka.entrenador_id || null,
         nombres: judoka.nombres,
-        apellidos: judoka.apellidos,
+        apellido_paterno: ap,
+        apellido_materno: am,
         fecha_nacimiento: judoka.fecha_nacimiento || '',
         categoria: judoka.categoria || '',
         peso_competitivo: judoka.peso_competitivo || null,
@@ -158,7 +162,9 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         const createData: JudokaCreate = {
           ...formData as JudokaCreate,
           usuario_id: 'temp-user-id', // El servicio lo reemplazará automáticamente
-          fecha_nacimiento: formData.fecha_nacimiento || '' // Asegurar que no sea null
+          apellido_paterno: 'apellido_paterno' in formData ? (formData.apellido_paterno ?? '') : '',
+          apellido_materno: 'apellido_materno' in formData ? (formData.apellido_materno ?? '') : '',
+          fecha_nacimiento: formData.fecha_nacimiento || ''
         }
         response = await judokaController.createJudoka(createData)
       }
@@ -262,9 +268,18 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
 
         <TextField
           fullWidth
-          label="Apellidos"
-          name="apellidos"
-          value={formData.apellidos}
+          label="Apellido paterno"
+          name="apellido_paterno"
+          value={'apellido_paterno' in formData ? (formData.apellido_paterno ?? '') : ''}
+          onChange={handleChange}
+          required
+          disabled={loading}
+        />
+        <TextField
+          fullWidth
+          label="Apellido materno"
+          name="apellido_materno"
+          value={'apellido_materno' in formData ? (formData.apellido_materno ?? '') : ''}
           onChange={handleChange}
           required
           disabled={loading}

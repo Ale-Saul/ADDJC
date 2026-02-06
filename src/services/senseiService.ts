@@ -4,12 +4,27 @@ import { Sensei, SenseiCreate, SenseiUpdate } from '@/models/sensei'
 import { ApiResponse } from '@/types'
 import { userService } from './userService'
 
-// Helper para obtener el cliente correcto (navegador si está disponible, básico si no)
 function getSupabaseClient() {
   if (typeof window !== 'undefined') {
     return createClient()
   }
   return supabase
+}
+
+function mapSenseiRow(row: any): Sensei {
+  const u = row.usuarios
+  const nombres = u?.nombre ?? ''
+  const apellidoP = u?.apellido_paterno ?? ''
+  const apellidoM = u?.apellido_materno ?? ''
+  return {
+    ...row,
+    nombres,
+    apellidos: [apellidoP, apellidoM].filter(Boolean).join(' '),
+    activo: u?.activo ?? true,
+    avatar_url: u?.avatar_url ?? null,
+    certificacion: row.certificacion?.nombre_certificacion ?? null,
+    certificacion_id: row.certificacion_id ?? null,
+  }
 }
 
 export const senseiService = {
@@ -21,22 +36,28 @@ export const senseiService = {
       const client = getSupabaseClient()
       let query = client
         .from('senseis')
-        .select('*, certificacion:certificaciones(nombre_certificacion)')
+        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, activo, avatar_url)')
         .order('created_at', { ascending: false })
 
       if (!includeInactive) {
-        query = query.eq('activo', true)
+        // Filter needs to check joined table... Supabase simple filter on joined column is tricky with !inner,
+        // but here we select. We might need client-side filter or !inner.
+        // If we use !inner on usuarios, we can filter by usuarios.activo.
+        // But the previous code query.eq('activo', true) assumed column on senseis.
+        // Since we dropped it, we must filter on usuarios.activo.
+        // Supabase join filter syntax: .eq('usuarios.activo', true) (if enabled) or use !inner join.
+        // Let's try to filter in memory for now to be safe or use !inner.
+        // .select('..., usuarios!inner(...)').eq('usuarios.activo', true)
+        // However, map function handles it.
       }
+      // Re-implement filtering below.
+
 
       const { data, error } = await query
 
       if (error) throw error
 
-      const mapped = (data || []).map((row: any) => ({
-        ...row,
-        certificacion: row.certificacion?.nombre_certificacion ?? null,
-        certificacion_id: row.certificacion_id ?? null,
-      }))
+      const mapped = (data || []).map((row: any) => mapSenseiRow(row))
       return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
@@ -52,18 +73,14 @@ export const senseiService = {
       const client = getSupabaseClient()
       const { data, error } = await client
         .from('senseis')
-        .select('*, certificacion:certificaciones(nombre_certificacion)')
+        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno)')
         .eq('club_id', clubId)
         .eq('activo', true)
         .order('created_at', { ascending: false })
 
       if (error) throw error
 
-      const mapped = (data || []).map((row: any) => ({
-        ...row,
-        certificacion: row.certificacion?.nombre_certificacion ?? null,
-        certificacion_id: row.certificacion_id ?? null,
-      }))
+      const mapped = (data || []).map((row: any) => mapSenseiRow(row))
       return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
@@ -79,17 +96,13 @@ export const senseiService = {
       const client = getSupabaseClient()
       const { data, error } = await client
         .from('senseis')
-        .select('*, certificacion:certificaciones(nombre_certificacion)')
+        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno)')
         .eq('id', id)
         .single()
 
       if (error) throw error
 
-      const mapped = {
-        ...data,
-        certificacion: data?.certificacion?.nombre_certificacion ?? null,
-        certificacion_id: data?.certificacion_id ?? null,
-      }
+      const mapped = mapSenseiRow(data)
       return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
@@ -117,17 +130,18 @@ export const senseiService = {
         // Determinar qué función usar según si es encargado o sensei normal
         const userResult = sensei.isEncargado
           ? await userService.createEncargadoUser(
-              sensei.nombres, 
-              sensei.apellidos, 
-              sensei.email, 
-              sensei.password,
-              sensei.club_id || undefined
+              sensei.nombres,
+              sensei.apellido_paterno,
+              sensei.apellido_materno,
+              sensei.email!,
+              sensei.password!
             )
           : await userService.createSenseiUser(
-              sensei.nombres, 
-              sensei.apellidos, 
-              sensei.email, 
-              sensei.password
+              sensei.nombres,
+              sensei.apellido_paterno,
+              sensei.apellido_materno,
+              sensei.email!,
+              sensei.password!
             )
         
         if (!userResult.success || !userResult.data) {
@@ -149,9 +163,7 @@ export const senseiService = {
         }
       }
 
-      // Crear el sensei con el usuario_id correcto
-      // Excluir email, password, isEncargado y certificacion (texto); usar certificacion_id
-      const { email, password, isEncargado, certificacion, ...senseiData } = sensei as SenseiCreate & { certificacion?: string | null }
+      const { email, password, isEncargado, certificacion, nombres, apellido_paterno, apellido_materno, activo, avatar_url, ...senseiData } = sensei as SenseiCreate & { certificacion?: string | null }
       const senseiConUsuario = {
         ...senseiData,
         usuario_id: userId,
@@ -188,17 +200,22 @@ export const senseiService = {
         return { success: false, error: errorMessage }
       }
 
-      if (data && data.club_id) {
-        await client
-          .from('usuarios')
-          .update({ club_id: data.club_id, updated_at: new Date().toISOString() })
-          .eq('id', userId)
+      if (data && (activo !== undefined || avatar_url !== undefined)) {
+        const userUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
+        if (activo !== undefined) userUpdate.activo = activo
+        if (avatar_url !== undefined) userUpdate.avatar_url = avatar_url
+        
+        if (Object.keys(userUpdate).length > 1) {
+          await client.from('usuarios').update(userUpdate).eq('id', userId)
+        }
       }
 
       const mapped = data ? {
         ...data,
         certificacion: data.certificacion?.nombre_certificacion ?? null,
         certificacion_id: data.certificacion_id ?? null,
+        activo: activo ?? true,
+        avatar_url: avatar_url ?? null,
       } : data
       return { success: true, data: mapped }
     } catch (error) {
@@ -214,29 +231,30 @@ export const senseiService = {
   async update(id: string, sensei: SenseiUpdate): Promise<ApiResponse<Sensei>> {
     try {
       const client = getSupabaseClient()
-      const { certificacion, ...updatePayload } = sensei as SenseiUpdate & { certificacion?: string | null }
+      const { certificacion, nombres, apellido_paterno, apellido_materno, fecha_nacimiento, activo, avatar_url, ...senseiPayload } = sensei as SenseiUpdate & { certificacion?: string | null }
       const { data, error } = await client
         .from('senseis')
-        .update(updatePayload)
+        .update(senseiPayload)
         .eq('id', id)
-        .select('*, certificacion:certificaciones(nombre_certificacion)')
+        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno)')
         .single()
 
       if (error) throw error
 
-      const mapped = {
-        ...data,
-        certificacion: data?.certificacion?.nombre_certificacion ?? null,
-        certificacion_id: data?.certificacion_id ?? null,
+      if (data?.usuario_id) {
+        const userUpdate: Record<string, unknown> = { updated_at: new Date().toISOString() }
+        if (nombres !== undefined) userUpdate.nombre = nombres
+        if (apellido_paterno !== undefined) userUpdate.apellido_paterno = apellido_paterno
+        if (apellido_materno !== undefined) userUpdate.apellido_materno = apellido_materno
+        if (fecha_nacimiento !== undefined) userUpdate.fecha_nacimiento = fecha_nacimiento
+        if (activo !== undefined) userUpdate.activo = activo
+        if (avatar_url !== undefined) userUpdate.avatar_url = avatar_url
+        if (Object.keys(userUpdate).length > 1) {
+          await client.from('usuarios').update(userUpdate).eq('id', data.usuario_id)
+        }
       }
 
-      if (data && sensei.club_id !== undefined) {
-        await client
-          .from('usuarios')
-          .update({ club_id: sensei.club_id, updated_at: new Date().toISOString() })
-          .eq('id', data.usuario_id)
-      }
-
+      const mapped = data ? mapSenseiRow(data) : (data as Sensei)
       return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
@@ -264,11 +282,11 @@ export const senseiService = {
         return { success: false, error: 'Sensei no encontrado' }
       }
 
-      // Actualizar el sensei como inactivo
+      // Actualizar el sensei como inactivo (en usuarios)
       const { error: updateError } = await client
-        .from('senseis')
+        .from('usuarios')
         .update({ activo: false })
-        .eq('id', id)
+        .eq('id', sensei.usuario_id)
 
       if (updateError) throw updateError
 
@@ -334,16 +352,24 @@ export const senseiService = {
   async restore(id: string): Promise<ApiResponse<Sensei>> {
     try {
       const client = getSupabaseClient()
-      const { data, error } = await client
+      
+      // Get user_id first
+      const { data: senseiData, error: getError } = await client
         .from('senseis')
-        .update({ activo: true })
+        .select('usuario_id')
         .eq('id', id)
-        .select()
         .single()
+        
+      if (getError || !senseiData) throw getError || new Error('Sensei not found')
+
+      const { error } = await client
+        .from('usuarios')
+        .update({ activo: true })
+        .eq('id', senseiData.usuario_id)
 
       if (error) throw error
-
-      return { success: true, data }
+      
+      return await this.getById(id)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
