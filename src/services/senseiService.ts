@@ -244,7 +244,7 @@ export const senseiService = {
   async update(id: string, sensei: SenseiUpdate): Promise<ApiResponse<Sensei>> {
     try {
       const client = getSupabaseClient()
-      const { certificacion, nombres, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, genero, activo, avatar_url, ...senseiPayload } = sensei as SenseiUpdate & { certificacion?: string | null, numero_celular?: string, genero?: any }
+      const { certificacion, nombres, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url, ...senseiPayload } = sensei as SenseiUpdate & { certificacion?: string | null, numero_celular?: string, ci?: string, genero?: any }
       const { data, error } = await client
         .from('senseis')
         .update(senseiPayload)

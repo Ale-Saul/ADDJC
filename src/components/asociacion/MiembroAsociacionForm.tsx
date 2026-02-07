@@ -46,6 +46,7 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
     if (miembro) {
@@ -65,8 +66,45 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
     }
   }, [miembro])
 
+  // Validación de CI: hasta 7 números, opcionalmente un guión y hasta 3 letras
+  const validateCI = (ci: string): boolean => {
+    if (!ci) return false
+    return /^\d{1,7}(-[A-Za-z]{1,3})?$/.test(ci)
+  }
+
+  // Validación de celular: exactamente 8 dígitos
+  const validateCelular = (cel: string): boolean => {
+    if (!cel) return true // no es requerido
+    return /^\d{8}$/.test(cel)
+  }
+
+  // Validación de email
+  const validateEmail = (email: string): boolean => {
+    if (!email) return false
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  }
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
+
+    // Filtrar entrada de CI: solo números, guión y letras
+    if (name === 'ci') {
+      const filtered = value.replace(/[^0-9a-zA-Z-]/g, '')
+      setFormData(prev => ({ ...prev, ci: filtered }))
+      setError(null)
+      setSuccess(false)
+      return
+    }
+
+    // Filtrar entrada de celular: solo números
+    if (name === 'numero_celular') {
+      const filtered = value.replace(/[^0-9]/g, '').slice(0, 8)
+      setFormData(prev => ({ ...prev, numero_celular: filtered }))
+      setError(null)
+      setSuccess(false)
+      return
+    }
+
     setFormData(prev => ({ ...prev, [name]: value }))
     setError(null)
     setSuccess(false)
@@ -80,9 +118,50 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitted(true)
     setLoading(true)
     setError(null)
     setSuccess(false)
+
+    // Validaciones del lado del cliente
+    const paterno = (formData.apellido_paterno ?? '').trim()
+    const materno = (formData.apellido_materno ?? '').trim()
+    if (!paterno && !materno) {
+      setError('Al menos uno de los dos apellidos es requerido')
+      setLoading(false)
+      return
+    }
+
+    const ciValue = (formData.ci ?? '').trim()
+    if (!ciValue) {
+      setError('El Carnet de Identidad es requerido')
+      setLoading(false)
+      return
+    }
+    if (!validateCI(ciValue)) {
+      setError('El Carnet de Identidad debe tener hasta 7 números y opcionalmente un guión seguido de hasta 3 letras (ej: 1234567-CB)')
+      setLoading(false)
+      return
+    }
+
+    const celValue = (formData.numero_celular ?? '').trim()
+    if (celValue && !validateCelular(celValue)) {
+      setError('El número de celular debe tener exactamente 8 dígitos')
+      setLoading(false)
+      return
+    }
+
+    const emailValue = (formData.email ?? '').trim()
+    if (!emailValue) {
+      setError('El email es requerido')
+      setLoading(false)
+      return
+    }
+    if (!validateEmail(emailValue)) {
+      setError('El formato del email no es válido')
+      setLoading(false)
+      return
+    }
 
     try {
       let response
@@ -137,6 +216,31 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
     }
   }
 
+  // Helpers para mostrar errores en campos individuales
+  const ciValue = (formData.ci ?? '').trim()
+  const ciError = submitted && (!ciValue || !validateCI(ciValue))
+  const ciHelperText = submitted && !ciValue
+    ? 'El Carnet de Identidad es requerido'
+    : submitted && !validateCI(ciValue) && ciValue
+      ? 'Formato: hasta 7 números, opcionalmente guión y hasta 3 letras (ej: 1234567-CB)'
+      : ''
+
+  const celValue = (formData.numero_celular ?? '').trim()
+  const celError = submitted && celValue.length > 0 && !validateCelular(celValue)
+  const celHelperText = celError ? 'Debe tener exactamente 8 dígitos' : ''
+
+  const emailValue = (formData.email ?? '').trim()
+  const emailError = submitted && (!emailValue || !validateEmail(emailValue))
+  const emailHelperText = submitted && !emailValue
+    ? 'El email es requerido'
+    : submitted && !validateEmail(emailValue) && emailValue
+      ? 'El formato del email no es válido'
+      : !miembro ? 'Email para iniciar sesión en el sistema' : ''
+
+  const paterno = (formData.apellido_paterno ?? '').trim()
+  const materno = (formData.apellido_materno ?? '').trim()
+  const apellidoError = submitted && !paterno && !materno
+
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
       {error && (
@@ -152,6 +256,20 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
       )}
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {/* CI como primer campo, requerido */}
+        <TextField
+          fullWidth
+          label="Carnet de Identidad"
+          name="ci"
+          value={formData.ci || ''}
+          onChange={handleChange}
+          required
+          disabled={loading}
+          error={ciError}
+          helperText={ciHelperText}
+          placeholder="Ej: 1234567-CB"
+        />
+
         <TextField
           fullWidth
           label="Nombres"
@@ -169,7 +287,8 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
           value={formData.apellido_paterno ?? ''}
           onChange={handleChange}
           disabled={loading}
-          helperText="Al menos uno de los dos apellidos es requerido"
+          error={apellidoError}
+          helperText={apellidoError ? 'Al menos uno de los dos apellidos es requerido' : ''}
         />
         <TextField
           fullWidth
@@ -178,6 +297,8 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
           value={formData.apellido_materno ?? ''}
           onChange={handleChange}
           disabled={loading}
+          error={apellidoError}
+          helperText={apellidoError ? 'Al menos uno de los dos apellidos es requerido' : ''}
         />
 
         <TextField
@@ -195,20 +316,15 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
 
         <TextField
           fullWidth
-          label="Carnet de Identidad"
-          name="ci"
-          value={formData.ci || ''}
-          onChange={handleChange}
-          disabled={loading}
-        />
-
-        <TextField
-          fullWidth
           label="Número de Celular"
           name="numero_celular"
           value={formData.numero_celular || ''}
           onChange={handleChange}
           disabled={loading}
+          error={celError}
+          helperText={celHelperText}
+          inputProps={{ maxLength: 8 }}
+          placeholder="Ej: 71234567"
         />
 
         <FormControl fullWidth>
@@ -242,7 +358,8 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
           }}
         />
 
-        <FormControl fullWidth required disabled={loading}>
+        {/* Cargo NO requerido */}
+        <FormControl fullWidth disabled={loading}>
           <InputLabel>Cargo</InputLabel>
           <Select
             name="cargo"
@@ -250,6 +367,9 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
             label="Cargo"
             onChange={handleSelectChange}
           >
+            <MenuItem value="">
+              <em>Sin cargo</em>
+            </MenuItem>
             {CARGOS_ASOCIACION.map(c => (
               <MenuItem key={c} value={c}>{c}</MenuItem>
             ))}
@@ -265,7 +385,8 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
           onChange={handleChange}
           required
           disabled={loading}
-          helperText={!miembro ? "Email para iniciar sesión en el sistema" : ""}
+          error={emailError}
+          helperText={emailHelperText}
         />
 
         {!miembro && (
@@ -319,4 +440,3 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
     </Box>
   )
 }
-
