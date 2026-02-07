@@ -51,34 +51,58 @@ export const authService = {
         }
       }
 
-      // Obtener información del club si corresponde
+      // Obtener información del club y role-specific IDs si corresponde
       let clubInfo = { club_id: null, club_nombre: null }
+      let senseiId = null
+      let judokaId = null
       const userRole = profileData.rol || 'judoka'
 
       if (userRole === 'judoka') {
         const { data: judokaData } = await supabaseWithSession
           .from('judokas')
-          .select('club_id, clubes(nombre_club)')
+          .select('id, club_id')
           .eq('usuario_id', profileData.id)
           .single()
         
         if (judokaData) {
-          clubInfo = {
-            club_id: judokaData.club_id,
-            club_nombre: judokaData.clubes?.nombre_club
+          judokaId = judokaData.id
+          
+          if (judokaData.club_id) {
+            const { data: clubData } = await supabaseWithSession
+              .from('clubes')
+              .select('nombre_club')
+              .eq('id', judokaData.club_id)
+              .single()
+              
+            clubInfo = {
+              club_id: judokaData.club_id,
+              club_nombre: clubData?.nombre_club || null
+            }
           }
         }
       } else if (userRole === 'sensei' || userRole === 'encargado') {
+        // 1. Obtener datos del sensei primero (sin join para evitar problemas)
         const { data: senseiData } = await supabaseWithSession
           .from('senseis')
-          .select('club_id, clubes(nombre_club)')
+          .select('id, club_id')
           .eq('usuario_id', profileData.id)
           .single()
           
         if (senseiData) {
-          clubInfo = {
-            club_id: senseiData.club_id,
-            club_nombre: senseiData.clubes?.nombre_club
+          senseiId = senseiData.id
+          
+          if (senseiData.club_id) {
+            // 2. Si tiene club, obtener nombre del club
+            const { data: clubData } = await supabaseWithSession
+              .from('clubes')
+              .select('nombre_club')
+              .eq('id', senseiData.club_id)
+              .single()
+              
+            clubInfo = {
+              club_id: senseiData.club_id,
+              club_nombre: clubData?.nombre_club || null
+            }
           }
         }
       }
@@ -94,6 +118,8 @@ export const authService = {
         rol: userRole,
         club_id: clubInfo.club_id || null,
         club_nombre: clubInfo.club_nombre || null,
+        sensei_id: senseiId,
+        judoka_id: judokaId,
         avatar_url: profileData.avatar_url || null,
         fecha_nacimiento: profileData.fecha_nacimiento || null,
         numero_celular: profileData.numero_celular || null,
@@ -244,34 +270,58 @@ export const authService = {
         }
       }
 
-      // Obtener información del club si corresponde
+      // Obtener información del club y role-specific IDs si corresponde
       let clubInfo = { club_id: null, club_nombre: null }
+      let senseiId = null
+      let judokaId = null
       const userRole = data.rol || 'judoka'
 
       if (userRole === 'judoka') {
         const { data: judokaData } = await supabase
           .from('judokas')
-          .select('club_id, clubes(nombre_club)')
+          .select('id, club_id')
           .eq('usuario_id', data.id)
           .single()
         
         if (judokaData) {
-          clubInfo = {
-            club_id: judokaData.club_id,
-            club_nombre: judokaData.clubes?.nombre_club
+          judokaId = judokaData.id
+          
+          if (judokaData.club_id) {
+            const { data: clubData } = await supabase
+              .from('clubes')
+              .select('nombre_club')
+              .eq('id', judokaData.club_id)
+              .single()
+              
+            clubInfo = {
+              club_id: judokaData.club_id,
+              club_nombre: clubData?.nombre_club || null
+            }
           }
         }
       } else if (userRole === 'sensei' || userRole === 'encargado') {
+        // 1. Obtener datos del sensei primero (sin join para evitar problemas)
         const { data: senseiData } = await supabase
           .from('senseis')
-          .select('club_id, clubes(nombre_club)')
+          .select('id, club_id')
           .eq('usuario_id', data.id)
           .single()
           
         if (senseiData) {
-          clubInfo = {
-            club_id: senseiData.club_id,
-            club_nombre: senseiData.clubes?.nombre_club
+          senseiId = senseiData.id
+          
+          if (senseiData.club_id) {
+            // 2. Si tiene club, obtener nombre del club
+            const { data: clubData } = await supabase
+              .from('clubes')
+              .select('nombre_club')
+              .eq('id', senseiData.club_id)
+              .single()
+              
+            clubInfo = {
+              club_id: senseiData.club_id,
+              club_nombre: clubData?.nombre_club || null
+            }
           }
         }
       }
@@ -287,6 +337,8 @@ export const authService = {
         rol: userRole,
         club_id: clubInfo.club_id || null,
         club_nombre: clubInfo.club_nombre || null,
+        sensei_id: senseiId,
+        judoka_id: judokaId,
         avatar_url: data.avatar_url || null,
         fecha_nacimiento: data.fecha_nacimiento || null,
         numero_celular: data.numero_celular || null,
@@ -398,34 +450,58 @@ export const authService = {
         }
       }
 
-      // Obtener información del club si corresponde
+      // Obtener información del club y role-specific IDs si corresponde
       let clubInfo = { club_id: null, club_nombre: null }
+      let senseiId = null
+      let judokaId = null
       const userRole = updatedData.rol || 'judoka'
 
       if (userRole === 'judoka') {
         const { data: judokaData } = await supabase
           .from('judokas')
-          .select('club_id, clubes(nombre_club)')
+          .select('id, club_id')
           .eq('usuario_id', updatedData.id)
           .single()
         
         if (judokaData) {
-          clubInfo = {
-            club_id: judokaData.club_id,
-            club_nombre: judokaData.clubes?.nombre_club
+          judokaId = judokaData.id
+          
+          if (judokaData.club_id) {
+            const { data: clubData } = await supabase
+              .from('clubes')
+              .select('nombre_club')
+              .eq('id', judokaData.club_id)
+              .single()
+              
+            clubInfo = {
+              club_id: judokaData.club_id,
+              club_nombre: clubData?.nombre_club || null
+            }
           }
         }
       } else if (userRole === 'sensei' || userRole === 'encargado') {
+        // 1. Obtener datos del sensei primero (sin join para evitar problemas)
         const { data: senseiData } = await supabase
           .from('senseis')
-          .select('club_id, clubes(nombre_club)')
+          .select('id, club_id')
           .eq('usuario_id', updatedData.id)
           .single()
           
         if (senseiData) {
-          clubInfo = {
-            club_id: senseiData.club_id,
-            club_nombre: senseiData.clubes?.nombre_club
+          senseiId = senseiData.id
+          
+          if (senseiData.club_id) {
+            // 2. Si tiene club, obtener nombre del club
+            const { data: clubData } = await supabase
+              .from('clubes')
+              .select('nombre_club')
+              .eq('id', senseiData.club_id)
+              .single()
+              
+            clubInfo = {
+              club_id: senseiData.club_id,
+              club_nombre: clubData?.nombre_club || null
+            }
           }
         }
       }
@@ -442,6 +518,8 @@ export const authService = {
           rol: userRole,
           club_id: clubInfo.club_id || null,
           club_nombre: clubInfo.club_nombre || null,
+          sensei_id: senseiId,
+          judoka_id: judokaId,
           avatar_url: updatedData.avatar_url || null,
           fecha_nacimiento: updatedData.fecha_nacimiento || null,
           numero_celular: updatedData.numero_celular || null,

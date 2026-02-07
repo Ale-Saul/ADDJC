@@ -24,6 +24,8 @@ export interface User {
   rol: 'admin' | 'asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka'
   club_id?: string | null
   club_nombre?: string | null // Nombre del club al que pertenece
+  sensei_id?: string | null // ID en la tabla senseis (para senseis y encargados)
+  judoka_id?: string | null // ID en la tabla judokas (para judokas)
   avatar_url?: string | null
   fecha_nacimiento?: string | null
   numero_celular?: string | null

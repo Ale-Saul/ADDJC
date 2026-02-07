@@ -20,7 +20,7 @@ export default function JudokasPage() {
 
   // Determinar filtros según el rol
   const clubId = user?.rol === 'encargado' ? user.club_id : undefined
-  const entrenadorId = user?.rol === 'sensei' ? user.id : undefined
+  const entrenadorId = user?.rol === 'sensei' ? user.sensei_id : undefined
 
   // Hook de judokas con filtros
   const {

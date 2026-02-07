@@ -27,7 +27,18 @@ export function useJudokas(options: UseJudokasOptions = {}) {
     setIsLoading(true)
     setError(null)
 
-    const response = await judokaController.getAllJudokas(clubId, entrenadorId)
+    let response
+    // Determinar qué método llamar según los filtros
+    if (entrenadorId) {
+      // Si hay entrenadorId, filtrar por entrenador (senseis)
+      response = await judokaController.getJudokasByEntrenador(entrenadorId)
+    } else if (clubId) {
+      // Si hay clubId, filtrar por club (encargados)
+      response = await judokaController.getJudokasByClub(clubId)
+    } else {
+      // Sin filtros, obtener todos (admin, asociacion)
+      response = await judokaController.getAllJudokas()
+    }
 
     if (response.success && response.data) {
       setJudokas(response.data)
