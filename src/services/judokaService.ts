@@ -48,11 +48,18 @@ export const judokaService = {
         .order('created_at', { ascending: false })
 
       if (!includeInactive) {
-        query = query.eq('activo', true)
+        // Filtramos en memoria por ahora para evitar problemas con joins
+        const { data: activeData, error: activeError } = await query
+        if (activeError) throw activeError
+        
+        const mapped = (activeData || [])
+          .map(mapJudokaRow)
+          .filter(j => j.activo)
+          
+        return { success: true, data: mapped }
       }
 
       const { data, error } = await query
-
       if (error) throw error
 
       const mapped = (data || []).map(mapJudokaRow)
@@ -73,12 +80,14 @@ export const judokaService = {
         .from('judokas')
         .select(selectJudokasWithUsuario)
         .eq('club_id', clubId)
-        .eq('activo', true)
         .order('created_at', { ascending: false })
 
       if (error) throw error
 
-      const mapped = (data || []).map(mapJudokaRow)
+      const mapped = (data || [])
+        .map(mapJudokaRow)
+        .filter(j => j.activo) // Filtrar siempre activos por defecto en getByClub
+
       return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
@@ -96,12 +105,14 @@ export const judokaService = {
         .from('judokas')
         .select(selectJudokasWithUsuario)
         .eq('entrenador_id', entrenadorId)
-        .eq('activo', true)
         .order('created_at', { ascending: false })
 
       if (error) throw error
 
-      const mapped = (data || []).map(mapJudokaRow)
+      const mapped = (data || [])
+        .map(mapJudokaRow)
+        .filter(j => j.activo) // Filtrar siempre activos por defecto en getByEntrenador
+
       return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
@@ -143,8 +154,8 @@ export const judokaService = {
           judoka.nombres,
           judoka.apellido_paterno,
           judoka.apellido_materno,
-          undefined, // email (opcional)
-          undefined, // password (opcional)
+          judoka.email, // email (opcional)
+          judoka.password, // password (opcional)
           undefined, // clubId
           judoka.fecha_nacimiento,
           judoka.numero_celular,
@@ -158,7 +169,7 @@ export const judokaService = {
           }
         }
 
-        userId = (userResult.data as { userId: string; usuarioId?: string }).usuarioId ?? userResult.data.userId
+        userId = userResult.data.usuarioId
       }
 
       // Validar formato UUID
@@ -205,7 +216,7 @@ export const judokaService = {
         
         if (error.message.includes('foreign key') || error.message.includes('violates foreign key')) {
           if (error.message.includes('usuario_id')) {
-            errorMessage = 'Error: El usuario_id no existe en user_profiles. Por favor, primero crea el usuario y su perfil en el sistema.'
+            errorMessage = 'Error: El usuario_id no existe en usuarios. Por favor, primero crea el usuario en el sistema.'
           } else if (error.message.includes('club_id')) {
             errorMessage = 'Error: El club_id no existe. Por favor, selecciona un club válido.'
           } else if (error.message.includes('entrenador_id')) {

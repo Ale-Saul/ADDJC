@@ -127,8 +127,21 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
       let response
       
       if (sensei) {
-        // Actualizar
-        response = await senseiController.updateSensei(sensei.id, formData)
+        // Actualizar - extraer solo los campos válidos para actualización
+        const updateData: SenseiUpdate = {
+          club_id: formData.club_id || null,
+          nombres: formData.nombres,
+          apellido_paterno: formData.apellido_paterno,
+          apellido_materno: formData.apellido_materno,
+          fecha_nacimiento: formData.fecha_nacimiento || null,
+          numero_celular: formData.numero_celular || null,
+          genero: formData.genero || null,
+          grado_dan: formData.grado_dan || null,
+          certificacion_id: formData.certificacion_id || null,
+          especialidad: formData.especialidad || null,
+          activo: formData.activo
+        }
+        response = await senseiController.updateSensei(sensei.id, updateData)
       } else {
         // Crear - El servicio creará automáticamente el usuario y perfil
         // Validar email y password si se está creando un nuevo sensei

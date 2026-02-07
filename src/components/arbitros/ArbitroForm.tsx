@@ -38,7 +38,6 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
     numero_celular: '',
     genero: '',
     nivel_arbitraje: '',
-    foto_perfil: null,
     activo: true
   })
   const [loading, setLoading] = useState(false)
@@ -57,7 +56,6 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
         numero_celular: arbitro.numero_celular || '',
         genero: arbitro.genero || '',
         nivel_arbitraje: arbitro.nivel_arbitraje || '',
-        foto_perfil: arbitro.foto_perfil || null,
         activo: arbitro.activo
       })
     }
@@ -94,8 +92,19 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
       let response
       
       if (arbitro) {
-        // Actualizar
-        response = await arbitroController.updateArbitro(arbitro.id, formData)
+        // Actualizar - extraer solo los campos válidos para actualización
+        const updateData: ArbitroUpdate = {
+          nombres: formData.nombres,
+          apellido_paterno: formData.apellido_paterno,
+          apellido_materno: formData.apellido_materno,
+          fecha_nacimiento: formData.fecha_nacimiento || null,
+          numero_celular: formData.numero_celular || null,
+          genero: formData.genero || null,
+          nivel_arbitraje: formData.nivel_arbitraje || null,
+          certificacion_id: formData.certificacion_id || null,
+          activo: formData.activo
+        }
+        response = await arbitroController.updateArbitro(arbitro.id, updateData)
       } else {
         // Crear - El servicio creará automáticamente el usuario y perfil
         // Validar email y password si se está creando un nuevo árbitro

@@ -129,8 +129,8 @@ export function useJudokas(options: UseJudokasOptions = {}) {
     }
   }
 
-  const refresh = () => {
-    fetchJudokas()
+  const refresh = async () => {
+    await fetchJudokas()
   }
 
   return {

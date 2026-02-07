@@ -88,7 +88,7 @@ export default function AsociacionEditPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={['asociacion']}>
+    <ProtectedRoute allowedRoles={['admin', 'asociacion']}>
       <Layout>
         <Box mb={3}>
           <Button

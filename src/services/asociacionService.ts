@@ -137,22 +137,14 @@ export const asociacionService = {
         }
       }
 
-      const client = getSupabaseClient()
-      const { data: usuario, error: findError } = await client
-        .from('usuarios')
-        .select('id')
-        .eq('auth_user_id', userResult.data.userId)
-        .eq('rol', 'asociacion')
-        .single()
-      if (findError || !usuario) {
-        return { success: false, error: 'Usuario creado pero no se encontró en la base de datos.' }
-      }
+      const usuarioId = userResult.data.usuarioId
 
       // Insertar en tabla asociacion con cargo
+      const client = getSupabaseClient()
       const { error: insertAsocError } = await client
         .from('asociacion')
         .insert({ 
-          usuario_id: usuario.id, 
+          usuario_id: usuarioId, 
           cargo: miembro.cargo || null,
           fecha_ingreso: miembro.fecha_ingreso || null
         })
@@ -160,7 +152,7 @@ export const asociacionService = {
         console.warn('Error al crear fila en asociacion:', insertAsocError)
       }
 
-      return await this.getById(usuario.id)
+      return await this.getById(usuarioId)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }

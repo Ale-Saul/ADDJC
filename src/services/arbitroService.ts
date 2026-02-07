@@ -49,7 +49,15 @@ export const arbitroService = {
         .order('created_at', { ascending: false })
 
       if (!includeInactive) {
-        query = query.eq('activo', true)
+        // Filtramos en memoria por ahora para evitar problemas con joins
+        const { data: activeData, error: activeError } = await query
+        if (activeError) throw activeError
+        
+        const mapped = (activeData || [])
+          .map(mapArbitroRow)
+          .filter(a => a.activo)
+          
+        return { success: true, data: mapped }
       }
 
       const { data, error } = await query
@@ -188,7 +196,7 @@ export const arbitroService = {
   async update(id: string, arbitro: ArbitroUpdate): Promise<ApiResponse<Arbitro>> {
     try {
       const client = getSupabaseClient()
-      const { certificacion, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, genero, activo, avatar_url, ...updatePayload } = arbitro as ArbitroUpdate & { certificacion?: string | null, numero_celular?: string, genero?: any }
+      const { certificacion, nombres, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, genero, activo, avatar_url, ...updatePayload } = arbitro as ArbitroUpdate & { certificacion?: string | null, numero_celular?: string, genero?: any }
       const { data, error } = await client
         .from('arbitros')
         .update(updatePayload)
@@ -198,8 +206,9 @@ export const arbitroService = {
 
       if (error) throw error
 
-      if (data?.usuario_id && (apellido_paterno !== undefined || apellido_materno !== undefined || fecha_nacimiento !== undefined || activo !== undefined || avatar_url !== undefined || numero_celular !== undefined || genero !== undefined)) {
+      if (data?.usuario_id && (nombres !== undefined || apellido_paterno !== undefined || apellido_materno !== undefined || fecha_nacimiento !== undefined || activo !== undefined || avatar_url !== undefined || numero_celular !== undefined || genero !== undefined)) {
         const userUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
+        if (nombres !== undefined) userUpdate.nombre = nombres
         if (apellido_paterno !== undefined) userUpdate.apellido_paterno = apellido_paterno
         if (apellido_materno !== undefined) userUpdate.apellido_materno = apellido_materno
         if (fecha_nacimiento !== undefined) userUpdate.fecha_nacimiento = fecha_nacimiento

@@ -28,6 +28,8 @@ export interface JudokaCreate {
   nombres: string
   apellido_paterno: string
   apellido_materno: string
+  email?: string
+  password?: string
   fecha_nacimiento: string
   numero_celular?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null

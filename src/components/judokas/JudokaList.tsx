@@ -23,6 +23,8 @@ import { judokaController } from '@/controllers/judokaController'
 import Pagination from '@/components/common/Pagination'
 
 interface JudokaListProps {
+  judokas?: Judoka[] // Opcional: recibir judokas directamente
+  isLoading?: boolean // Opcional: estado de carga externo
   onEdit?: (judoka: Judoka) => void
   onDelete?: (judoka: Judoka) => void
   refreshTrigger?: number
@@ -32,8 +34,8 @@ interface JudokaListProps {
   itemsPerPage?: number
 }
 
-export default function JudokaList({ onEdit, onDelete, refreshTrigger, clubId, entrenadorId, searchTerm = '', itemsPerPage: initialItemsPerPage = 10 }: JudokaListProps) {
-  const [judokas, setJudokas] = useState<Judoka[]>([])
+export default function JudokaList({ judokas: judokasProp, isLoading: isLoadingProp, onEdit, onDelete, refreshTrigger, clubId, entrenadorId, searchTerm = '', itemsPerPage: initialItemsPerPage = 10 }: JudokaListProps) {
+  const [judokasLocal, setJudokasLocal] = useState<Judoka[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -53,7 +55,7 @@ export default function JudokaList({ onEdit, onDelete, refreshTrigger, clubId, e
     }
     
     if (response.success && response.data) {
-      setJudokas(response.data)
+      setJudokasLocal(response.data)
     } else {
       setError(response.error || 'Error al cargar los judokas')
     }
@@ -62,8 +64,15 @@ export default function JudokaList({ onEdit, onDelete, refreshTrigger, clubId, e
   }
 
   useEffect(() => {
-    loadJudokas()
-  }, [refreshTrigger, clubId, entrenadorId])
+    // Solo cargar judokas si no se reciben por prop
+    if (!judokasProp) {
+      loadJudokas()
+    }
+  }, [refreshTrigger, clubId, entrenadorId, judokasProp])
+
+  // Usar judokas de prop si están disponibles, sino usar los locales
+  const judokas = judokasProp || judokasLocal
+  const isLoading = isLoadingProp !== undefined ? isLoadingProp : loading
 
   // Resetear a página 1 cuando cambia el término de búsqueda
   useEffect(() => {
@@ -95,7 +104,7 @@ export default function JudokaList({ onEdit, onDelete, refreshTrigger, clubId, e
     }
   }, [totalPages, currentPage])
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
         <CircularProgress />

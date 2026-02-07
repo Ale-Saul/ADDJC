@@ -32,9 +32,9 @@ export default function JudokasPage() {
     refresh,
   } = useJudokas({ clubId, entrenadorId })
 
-  const handleCreateSuccess = () => {
+  const handleCreateSuccess = async () => {
+    await refresh()
     dialog.close()
-    refresh()
   }
 
   const handleEdit = (judoka: Judoka) => {

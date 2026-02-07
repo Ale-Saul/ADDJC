@@ -11,8 +11,12 @@ import {
   Select,
   FormControl,
   InputLabel,
-  Typography
+  Typography,
+  InputAdornment,
+  IconButton,
 } from '@mui/material'
+import Visibility from '@mui/icons-material/Visibility'
+import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import type { SelectChangeEvent } from '@mui/material/Select'
 import { Judoka, JudokaCreate, JudokaUpdate } from '@/models/judoka'
 import { judokaController } from '@/controllers/judokaController'
@@ -37,13 +41,14 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     nombres: '',
     apellido_paterno: '',
     apellido_materno: '',
+    email: '',
+    password: '',
     fecha_nacimiento: '',
     numero_celular: '',
     genero: '',
     categoria: '',
     peso_competitivo: null,
     cinturon_actual: '',
-    foto_perfil: null,
     activo: true
   })
   const [clubes, setClubes] = useState<Club[]>([])
@@ -53,6 +58,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
   const [loadingSenseis, setLoadingSenseis] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
     // Cargar clubes activos
@@ -102,7 +108,6 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         categoria: judoka.categoria || '',
         peso_competitivo: judoka.peso_competitivo || null,
         cinturon_actual: judoka.cinturon_actual || '',
-        foto_perfil: judoka.foto_perfil || null,
         activo: judoka.activo
       })
     }
@@ -159,8 +164,22 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
       let response
       
       if (judoka) {
-        // Actualizar
-        response = await judokaController.updateJudoka(judoka.id, formData)
+        // Actualizar - extraer solo los campos válidos para actualización
+        const updateData: JudokaUpdate = {
+          club_id: formData.club_id || null,
+          entrenador_id: formData.entrenador_id || null,
+          nombres: formData.nombres,
+          apellido_paterno: formData.apellido_paterno,
+          apellido_materno: formData.apellido_materno,
+          fecha_nacimiento: formData.fecha_nacimiento || null,
+          numero_celular: formData.numero_celular || null,
+          genero: formData.genero || null,
+          categoria: formData.categoria || null,
+          peso_competitivo: formData.peso_competitivo || null,
+          cinturon_actual: formData.cinturon_actual || null,
+          activo: formData.activo
+        }
+        response = await judokaController.updateJudoka(judoka.id, updateData)
       } else {
         // Crear - El servicio creará automáticamente el usuario y perfil
         const createData: JudokaCreate = {
@@ -168,6 +187,8 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
           usuario_id: 'temp-user-id', // El servicio lo reemplazará automáticamente
           apellido_paterno: 'apellido_paterno' in formData ? (formData.apellido_paterno ?? '') : '',
           apellido_materno: 'apellido_materno' in formData ? (formData.apellido_materno ?? '') : '',
+          email: 'email' in formData ? formData.email : undefined,
+          password: 'password' in formData ? formData.password : undefined,
           fecha_nacimiento: formData.fecha_nacimiento || '',
           numero_celular: formData.numero_celular,
           genero: formData.genero
@@ -178,9 +199,10 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
       if (response.success) {
         setSuccess(true)
         if (onSuccess) {
+          // Llamar a onSuccess después de un breve delay para mostrar el mensaje
           setTimeout(() => {
             onSuccess()
-          }, 1000)
+          }, 500)
         }
       } else {
         setError(response.error || 'Error al guardar el judoka')
@@ -246,7 +268,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               <em>Sin entrenador</em>
             </MenuItem>
             {senseis.map((sensei) => (
-              <MenuItem key={sensei.id} value={sensei.usuario_id}>
+              <MenuItem key={sensei.id} value={sensei.id}>
                 {sensei.nombres} {sensei.apellidos}
               </MenuItem>
             ))}
@@ -290,6 +312,47 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
           required
           disabled={loading}
         />
+
+        {!judoka && (
+          <>
+            <TextField
+              fullWidth
+              label="Email"
+              name="email"
+              type="email"
+              value={'email' in formData ? (formData.email || '') : ''}
+              onChange={handleChange}
+              disabled={loading}
+              helperText="Email para iniciar sesión en el sistema (opcional, se generará automáticamente si no se proporciona)"
+            />
+
+            <TextField
+              fullWidth
+              label="Contraseña"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              value={'password' in formData ? (formData.password || '') : ''}
+              onChange={handleChange}
+              disabled={loading}
+              helperText="Contraseña para iniciar sesión (opcional, se generará automáticamente si no se proporciona)"
+              inputProps={{ minLength: 8 }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={() => setShowPassword(!showPassword)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </>
+        )}
 
         <TextField
           fullWidth

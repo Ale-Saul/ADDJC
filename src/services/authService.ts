@@ -39,12 +39,7 @@ export const authService = {
       // Obtener el perfil del usuario con el cliente autenticado
       const { data: profileData, error: profileError } = await supabaseWithSession
         .from('usuarios')
-        .select(`
-          *,
-          clubes:club_id (
-            nombre_club
-          )
-        `)
+        .select('*')
         .eq('auth_user_id', data.user.id)
         .single()
       
@@ -56,6 +51,38 @@ export const authService = {
         }
       }
 
+      // Obtener información del club si corresponde
+      let clubInfo = { club_id: null, club_nombre: null }
+      const userRole = profileData.rol || 'judoka'
+
+      if (userRole === 'judoka') {
+        const { data: judokaData } = await supabaseWithSession
+          .from('judokas')
+          .select('club_id, clubes(nombre_club)')
+          .eq('usuario_id', profileData.id)
+          .single()
+        
+        if (judokaData) {
+          clubInfo = {
+            club_id: judokaData.club_id,
+            club_nombre: judokaData.clubes?.nombre_club
+          }
+        }
+      } else if (userRole === 'sensei' || userRole === 'encargado') {
+        const { data: senseiData } = await supabaseWithSession
+          .from('senseis')
+          .select('club_id, clubes(nombre_club)')
+          .eq('usuario_id', profileData.id)
+          .single()
+          
+        if (senseiData) {
+          clubInfo = {
+            club_id: senseiData.club_id,
+            club_nombre: senseiData.clubes?.nombre_club
+          }
+        }
+      }
+
       // Construir nombre completo
       const nombreCompleto = `${profileData.nombre} ${profileData.apellido_paterno} ${profileData.apellido_materno}`.trim()
 
@@ -64,10 +91,13 @@ export const authService = {
         email: profileData.correo || '',
         nombres: nombreCompleto,
         apellidos: `${profileData.apellido_paterno} ${profileData.apellido_materno}`.trim(),
-        rol: profileData.rol || 'judoka',
-        club_id: profileData.club_id || null,
-        club_nombre: profileData.clubes?.nombre_club || null,
+        rol: userRole,
+        club_id: clubInfo.club_id || null,
+        club_nombre: clubInfo.club_nombre || null,
         avatar_url: profileData.avatar_url || null,
+        fecha_nacimiento: profileData.fecha_nacimiento || null,
+        numero_celular: profileData.numero_celular || null,
+        genero: profileData.genero || null,
         activo: profileData.activo ?? true,
         created_at: profileData.created_at,
         updated_at: profileData.updated_at,
@@ -196,12 +226,7 @@ export const authService = {
       // Buscar usuario por auth_user_id en la tabla usuarios
       const { data, error } = await supabase
         .from('usuarios')
-        .select(`
-          *,
-          clubes:club_id (
-            nombre_club
-          )
-        `)
+        .select('*')
         .eq('auth_user_id', authUserId)
         .single()
 
@@ -219,6 +244,38 @@ export const authService = {
         }
       }
 
+      // Obtener información del club si corresponde
+      let clubInfo = { club_id: null, club_nombre: null }
+      const userRole = data.rol || 'judoka'
+
+      if (userRole === 'judoka') {
+        const { data: judokaData } = await supabase
+          .from('judokas')
+          .select('club_id, clubes(nombre_club)')
+          .eq('usuario_id', data.id)
+          .single()
+        
+        if (judokaData) {
+          clubInfo = {
+            club_id: judokaData.club_id,
+            club_nombre: judokaData.clubes?.nombre_club
+          }
+        }
+      } else if (userRole === 'sensei' || userRole === 'encargado') {
+        const { data: senseiData } = await supabase
+          .from('senseis')
+          .select('club_id, clubes(nombre_club)')
+          .eq('usuario_id', data.id)
+          .single()
+          
+        if (senseiData) {
+          clubInfo = {
+            club_id: senseiData.club_id,
+            club_nombre: senseiData.clubes?.nombre_club
+          }
+        }
+      }
+
       // Construir nombre completo
       const nombreCompleto = `${data.nombre} ${data.apellido_paterno} ${data.apellido_materno}`.trim()
 
@@ -227,10 +284,13 @@ export const authService = {
         email: data.correo || '',
         nombres: nombreCompleto,
         apellidos: `${data.apellido_paterno} ${data.apellido_materno}`.trim(),
-        rol: data.rol || 'judoka',
-        club_id: data.club_id || null,
-        club_nombre: data.clubes?.nombre_club || null,
+        rol: userRole,
+        club_id: clubInfo.club_id || null,
+        club_nombre: clubInfo.club_nombre || null,
         avatar_url: data.avatar_url || null,
+        fecha_nacimiento: data.fecha_nacimiento || null,
+        numero_celular: data.numero_celular || null,
+        genero: data.genero || null,
         activo: data.activo ?? true,
         created_at: data.created_at,
         updated_at: data.updated_at,
@@ -328,18 +388,45 @@ export const authService = {
         .from('usuarios')
         .update(updates)
         .eq('id', userId)
-        .select(`
-          *,
-          clubes:club_id (
-            nombre_club
-          )
-        `)
+        .select('*')
         .single()
 
       if (error) {
         return {
           success: false,
           error: error.message || 'Error al actualizar el perfil',
+        }
+      }
+
+      // Obtener información del club si corresponde
+      let clubInfo = { club_id: null, club_nombre: null }
+      const userRole = updatedData.rol || 'judoka'
+
+      if (userRole === 'judoka') {
+        const { data: judokaData } = await supabase
+          .from('judokas')
+          .select('club_id, clubes(nombre_club)')
+          .eq('usuario_id', updatedData.id)
+          .single()
+        
+        if (judokaData) {
+          clubInfo = {
+            club_id: judokaData.club_id,
+            club_nombre: judokaData.clubes?.nombre_club
+          }
+        }
+      } else if (userRole === 'sensei' || userRole === 'encargado') {
+        const { data: senseiData } = await supabase
+          .from('senseis')
+          .select('club_id, clubes(nombre_club)')
+          .eq('usuario_id', updatedData.id)
+          .single()
+          
+        if (senseiData) {
+          clubInfo = {
+            club_id: senseiData.club_id,
+            club_nombre: senseiData.clubes?.nombre_club
+          }
         }
       }
 
@@ -352,10 +439,13 @@ export const authService = {
           email: updatedData.correo || '',
           nombres: nombreCompleto,
           apellidos: `${updatedData.apellido_paterno} ${updatedData.apellido_materno}`.trim(),
-          rol: updatedData.rol || 'judoka',
-          club_id: updatedData.club_id || null,
-          club_nombre: updatedData.clubes?.nombre_club || null,
+          rol: userRole,
+          club_id: clubInfo.club_id || null,
+          club_nombre: clubInfo.club_nombre || null,
           avatar_url: updatedData.avatar_url || null,
+          fecha_nacimiento: updatedData.fecha_nacimiento || null,
+          numero_celular: updatedData.numero_celular || null,
+          genero: updatedData.genero || null,
           activo: updatedData.activo ?? true,
           created_at: updatedData.created_at,
           updated_at: updatedData.updated_at,

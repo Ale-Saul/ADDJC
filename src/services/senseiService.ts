@@ -60,7 +60,12 @@ export const senseiService = {
 
       if (error) throw error
 
-      const mapped = (data || []).map((row: any) => mapSenseiRow(row))
+      let mapped = (data || []).map((row: any) => mapSenseiRow(row))
+      
+      if (!includeInactive) {
+        mapped = mapped.filter(s => s.activo)
+      }
+      
       return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
@@ -78,12 +83,14 @@ export const senseiService = {
         .from('senseis')
         .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, genero, activo, avatar_url)')
         .eq('club_id', clubId)
-        .eq('activo', true)
         .order('created_at', { ascending: false })
 
       if (error) throw error
 
-      const mapped = (data || []).map((row: any) => mapSenseiRow(row))
+      const mapped = (data || [])
+        .map((row: any) => mapSenseiRow(row))
+        .filter(s => s.activo)
+
       return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
@@ -161,7 +168,7 @@ export const senseiService = {
           }
         }
 
-        userId = userResult.data.userId
+        userId = userResult.data.usuarioId
       }
 
       // Validar formato UUID

@@ -76,22 +76,30 @@ export const clubService = {
 
       // Si se asignó un director técnico, actualizar su rol a 'encargado' y club_id
       if (club.director_tecnico_id && data) {
-        // Actualizar user_profiles
-        await client
-          .from('user_profiles')
-          .update({ 
-            rol: 'encargado',
-            club_id: data.id // Usar el club recién creado
-          })
-          .eq('id', club.director_tecnico_id)
-        
-        // Actualizar también la tabla senseis para mantener sincronización
-        await client
+        // Obtener el usuario_id del sensei
+        const { data: senseiData } = await client
           .from('senseis')
-          .update({ 
-            club_id: data.id
-          })
-          .eq('usuario_id', club.director_tecnico_id)
+          .select('usuario_id')
+          .eq('id', club.director_tecnico_id)
+          .single()
+
+        if (senseiData?.usuario_id) {
+          // Actualizar usuarios (rol)
+          await client
+            .from('usuarios')
+            .update({ 
+              rol: 'encargado'
+            })
+            .eq('id', senseiData.usuario_id)
+          
+          // Actualizar también la tabla senseis para mantener sincronización y asignar club
+          await client
+            .from('senseis')
+            .update({ 
+              club_id: data.id
+            })
+            .eq('id', club.director_tecnico_id)
+        }
       }
 
       return { success: true, data }
@@ -121,42 +129,51 @@ export const clubService = {
 
         // Si cambió el director técnico
         if (directorAnterior !== directorNuevo) {
-          // Si había un director anterior, cambiar su rol a 'sensei' y limpiar club_id
+          // Si había un director anterior, cambiar su rol a 'sensei'
           if (directorAnterior) {
-            // Obtener el club_id del sensei en la tabla senseis
-            const { data: senseiAnterior } = await client
+            // Obtener el usuario_id del sensei anterior
+            const { data: senseiAnteriorData } = await client
               .from('senseis')
-              .select('club_id')
-              .eq('usuario_id', directorAnterior)
-              .single()
-            
-            await client
-              .from('user_profiles')
-              .update({ 
-                rol: 'sensei',
-                club_id: senseiAnterior?.club_id || null // Mantener el club del sensei
-              })
+              .select('usuario_id')
               .eq('id', directorAnterior)
+              .single()
+
+            if (senseiAnteriorData?.usuario_id) {
+              await client
+                .from('usuarios')
+                .update({ 
+                  rol: 'sensei'
+                })
+                .eq('id', senseiAnteriorData.usuario_id)
+            }
           }
 
           // Si hay un nuevo director, cambiar su rol a 'encargado' y actualizar club_id
           if (directorNuevo) {
-            // Actualizar user_profiles
-            await client
-              .from('user_profiles')
-              .update({ 
-                rol: 'encargado',
-                club_id: id // Usar el club actual
-              })
-              .eq('id', directorNuevo)
-            
-            // Actualizar también la tabla senseis para mantener sincronización
-            await client
+            // Obtener el usuario_id del sensei nuevo
+            const { data: senseiNuevoData } = await client
               .from('senseis')
-              .update({ 
-                club_id: id
-              })
-              .eq('usuario_id', directorNuevo)
+              .select('usuario_id')
+              .eq('id', directorNuevo)
+              .single()
+
+            if (senseiNuevoData?.usuario_id) {
+              // Actualizar usuarios
+              await client
+                .from('usuarios')
+                .update({ 
+                  rol: 'encargado'
+                })
+                .eq('id', senseiNuevoData.usuario_id)
+              
+              // Actualizar también la tabla senseis para mantener sincronización
+              await client
+                .from('senseis')
+                .update({ 
+                  club_id: id
+                })
+                .eq('id', directorNuevo)
+            }
           }
         }
       }
@@ -214,17 +231,19 @@ export const clubService = {
         console.warn('Error al limpiar referencias en judokas:', judokasError)
       }
 
-      // 3. Limpiar club_id en user_profiles
+      // 3. Limpiar club_id en usuarios (no aplica, ya no existe la columna)
+      /* 
       const { error: profilesError } = await client
-        .from('user_profiles')
+        .from('usuarios')
         .update({ club_id: null })
         .eq('club_id', id)
 
       if (profilesError) {
-        console.warn('Error al limpiar referencias en user_profiles:', profilesError)
+        console.warn('Error al limpiar referencias en usuarios:', profilesError)
       }
+      */
 
-      // Nota: No necesitamos limpiar director_tecnico_id porque este campo referencia a user_profiles.id,
+      // Nota: No necesitamos limpiar director_tecnico_id porque este campo referencia a usuarios.id,
       // no a clubes.id. Si un sensei (director técnico) es eliminado, esa referencia se limpia en senseiService.delete()
 
       return { success: true }

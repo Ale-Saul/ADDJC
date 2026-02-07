@@ -43,7 +43,8 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
   })
   const [senseis, setSenseis] = useState<Sensei[]>([])
   const [newDirectorNombres, setNewDirectorNombres] = useState('')
-  const [newDirectorApellidos, setNewDirectorApellidos] = useState('')
+  const [newDirectorApellidoPaterno, setNewDirectorApellidoPaterno] = useState('')
+  const [newDirectorApellidoMaterno, setNewDirectorApellidoMaterno] = useState('')
   const [newDirectorEmail, setNewDirectorEmail] = useState('')
   const [newDirectorPassword, setNewDirectorPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -89,7 +90,8 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
       })
       // Al editar un club no usamos los campos de nuevo director
       setNewDirectorNombres('')
-      setNewDirectorApellidos('')
+      setNewDirectorApellidoPaterno('')
+      setNewDirectorApellidoMaterno('')
       setNewDirectorEmail('')
       setNewDirectorPassword('')
     }
@@ -133,7 +135,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
         !club &&
         !directorTecnicoId &&
         newDirectorNombres.trim() !== '' &&
-        newDirectorApellidos.trim() !== ''
+        (newDirectorApellidoPaterno.trim() !== '' || newDirectorApellidoMaterno.trim() !== '')
       ) {
         // Validar email y password para el nuevo director técnico
         if (!newDirectorEmail.trim() || !newDirectorPassword.trim()) {
@@ -145,7 +147,8 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
         const senseiToCreate: SenseiCreate = {
           usuario_id: 'temp-user-id', // el servicio creará el usuario real
           nombres: newDirectorNombres.trim(),
-          apellidos: newDirectorApellidos.trim(),
+          apellido_paterno: newDirectorApellidoPaterno.trim(),
+          apellido_materno: newDirectorApellidoMaterno.trim(),
           email: newDirectorEmail.trim(),
           password: newDirectorPassword.trim(),
           isEncargado: true, // Marcar como encargado para asignar el rol correcto
@@ -165,9 +168,8 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
         // Guardamos el ID del sensei creado para actualizarlo después con el club_id
         createdSenseiId = senseiResponse.data.id
 
-        // En la tabla clubes guardamos el id de user_profiles,
-        // que coincide con usuario_id del sensei
-        directorTecnicoId = senseiResponse.data.usuario_id
+        // En la tabla clubes guardamos el id de la tabla senseis
+        directorTecnicoId = senseiResponse.data.id
       }
 
       const clubPayload: ClubCreate = {
@@ -278,32 +280,32 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
         />
 
         {/* Sección de Director Técnico */}
-        {!club && (
-          <Box sx={{ mt: 1 }}>
-            {!isCreatingNewDirector ? (
-              // Modo: Seleccionar director técnico existente
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <FormControl fullWidth>
-                  <InputLabel>Director Técnico</InputLabel>
-                  <Select
-                    name="director_tecnico_id"
-                    value={formData.director_tecnico_id || ''}
-                    onChange={handleSelectChange}
-                    disabled={loading || loadingSenseis}
-                    label="Director Técnico"
-                  >
-                    <MenuItem value="">
-                      <em>Sin director técnico</em>
+        <Box sx={{ mt: 1 }}>
+          {!isCreatingNewDirector ? (
+            // Modo: Seleccionar director técnico existente
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <FormControl fullWidth>
+                <InputLabel>Director Técnico</InputLabel>
+                <Select
+                  name="director_tecnico_id"
+                  value={formData.director_tecnico_id || ''}
+                  onChange={handleSelectChange}
+                  disabled={loading || loadingSenseis}
+                  label="Director Técnico"
+                >
+                  <MenuItem value="">
+                    <em>Sin director técnico</em>
+                  </MenuItem>
+                  {senseis.map((sensei) => (
+                    <MenuItem key={sensei.id} value={sensei.id}>
+                      {sensei.nombres} {sensei.apellidos}
+                      {sensei.grado_dan && ` - ${sensei.grado_dan}`}
                     </MenuItem>
-                    {senseis.map((sensei) => (
-                      <MenuItem key={sensei.id} value={sensei.usuario_id}>
-                        {sensei.nombres} {sensei.apellidos}
-                        {sensei.grado_dan && ` - ${sensei.grado_dan}`}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                
+                  ))}
+                </Select>
+              </FormControl>
+              
+              {!club && (
                 <Button
                   variant="outlined"
                   startIcon={<AddIcon />}
@@ -316,29 +318,31 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                 >
                   Crear Nuevo Director Técnico
                 </Button>
+              )}
+            </Box>
+          ) : (
+            // Modo: Crear nuevo director técnico (solo disponible al crear club)
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Nuevo Director Técnico
+                </Typography>
+                <Button
+                  size="small"
+                  startIcon={<ArrowBackIcon />}
+                  onClick={() => {
+                    setIsCreatingNewDirector(false)
+                    setNewDirectorNombres('')
+                    setNewDirectorApellidoPaterno('')
+                    setNewDirectorApellidoMaterno('')
+                    setNewDirectorEmail('')
+                    setNewDirectorPassword('')
+                  }}
+                  disabled={loading}
+                >
+                  Seleccionar Existente
+                </Button>
               </Box>
-            ) : (
-              // Modo: Crear nuevo director técnico
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    Nuevo Director Técnico
-                  </Typography>
-                  <Button
-                    size="small"
-                    startIcon={<ArrowBackIcon />}
-                    onClick={() => {
-                      setIsCreatingNewDirector(false)
-                      setNewDirectorNombres('')
-                      setNewDirectorApellidos('')
-                      setNewDirectorEmail('')
-                      setNewDirectorPassword('')
-                    }}
-                    disabled={loading}
-                  >
-                    Seleccionar Existente
-                  </Button>
-                </Box>
                 
                 <Alert severity="info" sx={{ mb: 1 }}>
                   El director técnico se registrará como encargado automáticamente
@@ -360,16 +364,28 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                 
                 <TextField
                   fullWidth
-                  label="Apellidos del Director Técnico"
-                  name="nuevo_director_apellidos"
-                  value={newDirectorApellidos}
+                  label="Apellido Paterno del Director Técnico"
+                  name="nuevo_director_apellido_paterno"
+                  value={newDirectorApellidoPaterno}
                   onChange={(e) => {
-                    setNewDirectorApellidos(e.target.value)
+                    setNewDirectorApellidoPaterno(e.target.value)
                     setError(null)
                     setSuccess(false)
                   }}
                   disabled={loading}
-                  required
+                />
+                
+                <TextField
+                  fullWidth
+                  label="Apellido Materno del Director Técnico"
+                  name="nuevo_director_apellido_materno"
+                  value={newDirectorApellidoMaterno}
+                  onChange={(e) => {
+                    setNewDirectorApellidoMaterno(e.target.value)
+                    setError(null)
+                    setSuccess(false)
+                  }}
+                  disabled={loading}
                 />
                 
                 <TextField
@@ -421,32 +437,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
               </Box>
             )}
           </Box>
-        )}
-
-        {/* Al editar, solo mostrar el selector */}
-        {club && (
-          <FormControl fullWidth>
-            <InputLabel>Director Técnico</InputLabel>
-            <Select
-              name="director_tecnico_id"
-              value={formData.director_tecnico_id || ''}
-              onChange={handleSelectChange}
-              disabled={loading || loadingSenseis}
-              label="Director Técnico"
-            >
-              <MenuItem value="">
-                <em>Sin director técnico</em>
-              </MenuItem>
-              {senseis.map((sensei) => (
-                <MenuItem key={sensei.id} value={sensei.usuario_id}>
-                  {sensei.nombres} {sensei.apellidos}
-                  {sensei.grado_dan && ` - ${sensei.grado_dan}`}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        )}
-      </Box>
+        </Box>
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
         {onCancel && (
