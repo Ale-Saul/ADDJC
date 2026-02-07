@@ -295,13 +295,13 @@ export const judokaService = {
   },
 
   /**
-   * Eliminar un judoka (soft delete - marca como inactivo)
+   * Eliminar un judoka de forma real (hard delete)
    */
   async delete(id: string): Promise<ApiResponse<void>> {
     try {
       const client = getSupabaseClient()
       
-      // Get user_id first
+      // Obtener usuario_id primero
       const { data, error: getError } = await client
         .from('judokas')
         .select('usuario_id')
@@ -310,12 +310,17 @@ export const judokaService = {
         
       if (getError || !data) throw getError || new Error('Judoka not found')
 
-      const { error } = await client
-        .from('usuarios')
-        .update({ activo: false })
-        .eq('id', data.usuario_id)
+      // Llamar a la API para eliminar el usuario completo
+      const response = await fetch('/api/admin/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuarioId: data.usuario_id }),
+      })
 
-      if (error) throw error
+      const result = await response.json()
+      if (!result.success) {
+        return { success: false, error: result.error || 'Error al eliminar el judoka' }
+      }
 
       return { success: true }
     } catch (error) {

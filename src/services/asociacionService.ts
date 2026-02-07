@@ -211,51 +211,25 @@ export const asociacionService = {
   },
 
   /**
-   * Eliminar un miembro de la asociación (soft delete)
-   * También elimina el usuario en auth.users para que el email se pueda reutilizar
+   * Eliminar un miembro de la asociación de forma real (hard delete)
    */
   async delete(id: string): Promise<ApiResponse<void>> {
     try {
-      const client = getSupabaseClient()
+      // Llamar a la API para eliminar el usuario completo
+      // El id recibido aquí ya es el usuario_id (porque la tabla asociacion usa usuario_id como PK o referencia directa)
+      // Pero espera, getById usa 'usuarios' table id.
+      // Confirmemos: getById hace .from('usuarios').eq('id', id).
+      // Entonces 'id' es el usuario_id.
+      
+      const response = await fetch('/api/admin/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuarioId: id }),
+      })
 
-      const { data: usuario, error: getError } = await client
-        .from('usuarios')
-        .select('auth_user_id')
-        .eq('id', id)
-        .eq('rol', 'asociacion')
-        .single()
-
-      if (getError || !usuario?.auth_user_id) {
-        return { success: false, error: 'Miembro no encontrado' }
-      }
-
-      const { error: updateError } = await client
-        .from('usuarios')
-        .update({ activo: false })
-        .eq('id', id)
-        .eq('rol', 'asociacion')
-
-      if (updateError) throw updateError
-
-      try {
-        const response = await fetch('/api/admin/disable-user', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userId: usuario.auth_user_id,
-          }),
-        })
-
-        const result = await response.json()
-        if (!result.success) {
-          console.warn('Error al eliminar usuario en auth.users:', result.error)
-          // No fallar la eliminación por esto, solo registrar el warning
-        }
-      } catch (error) {
-        console.warn('Error al llamar API para eliminar usuario:', error)
-        // No fallar la eliminación por esto, solo registrar el warning
+      const result = await response.json()
+      if (!result.success) {
+        return { success: false, error: result.error || 'Error al eliminar el miembro' }
       }
 
       return { success: true }

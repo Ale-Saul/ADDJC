@@ -238,20 +238,36 @@ export const arbitroService = {
   },
 
   /**
-   * Eliminar un árbitro de forma real: borra la fila en arbitros, el usuario en auth.users
-   * y la fila en usuarios. Así desaparecen de la BD y el email puede reutilizarse.
+   * Eliminar un árbitro de forma real (hard delete)
    */
   async delete(id: string): Promise<ApiResponse<void>> {
     try {
-      const response = await fetch('/api/admin/delete-arbitro', {
+      const client = getSupabaseClient()
+      
+      // Obtener usuario_id primero
+      const { data: arbitro, error: getError } = await client
+        .from('arbitros')
+        .select('usuario_id')
+        .eq('id', id)
+        .single()
+
+      if (getError) throw getError
+      if (!arbitro) {
+        return { success: false, error: 'Árbitro no encontrado' }
+      }
+
+      // Llamar a la API para eliminar el usuario completo
+      const response = await fetch('/api/admin/delete-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ arbitroId: id }),
+        body: JSON.stringify({ usuarioId: arbitro.usuario_id }),
       })
+
       const result = await response.json()
       if (!result.success) {
         return { success: false, error: result.error || 'Error al eliminar el árbitro' }
       }
+
       return { success: true }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
