@@ -36,6 +36,7 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
     password: '',
     fecha_nacimiento: null,
     numero_celular: '',
+    ci: '',
     genero: '',
     nivel_arbitraje: '',
     activo: true
@@ -54,6 +55,7 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
         apellido_materno: ap.slice(1).join(' ') ?? '',
         fecha_nacimiento: arbitro.fecha_nacimiento || null,
         numero_celular: arbitro.numero_celular || '',
+        ci: arbitro.ci || '',
         genero: arbitro.genero || '',
         nivel_arbitraje: arbitro.nivel_arbitraje || '',
         activo: arbitro.activo
@@ -99,6 +101,7 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
           apellido_materno: formData.apellido_materno,
           fecha_nacimiento: formData.fecha_nacimiento || null,
           numero_celular: formData.numero_celular || null,
+          ci: formData.ci || null,
           genero: formData.genero || null,
           nivel_arbitraje: formData.nivel_arbitraje || null,
           certificacion_id: formData.certificacion_id || null,
@@ -120,6 +123,7 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
           email: formData.email,
           password: formData.password,
           numero_celular: formData.numero_celular,
+          ci: formData.ci,
           genero: formData.genero
         }
         response = await arbitroController.createArbitro(createData)
@@ -241,6 +245,15 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
           InputLabelProps={{
             shrink: true,
           }}
+        />
+
+        <TextField
+          fullWidth
+          label="Carnet de Identidad"
+          name="ci"
+          value={formData.ci || ''}
+          onChange={handleChange}
+          disabled={loading}
         />
 
         <TextField

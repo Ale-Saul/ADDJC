@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
       fecha_nacimiento: fechaNacimientoBody,
       genero: generoBody,
       numero_celular: numeroCelularBody,
+      ci: ciBody,
       rol,
     } = body
 
@@ -97,6 +98,7 @@ export async function POST(request: NextRequest) {
           fecha_nacimiento: fechaNacimiento,
           genero,
           numero_celular: numeroCelularBody,
+          ci: ciBody,
           user_type: rol === 'encargado' ? 'sensei' : rol === 'admin' ? 'admin' : rol || 'judoka',
           rol: rol || 'judoka',
         },
@@ -174,10 +176,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Actualizar campos adicionales en usuarios que podrían no haber sido mapeados por el trigger
-    if (numeroCelularBody) {
+    const updateData: any = {}
+    if (numeroCelularBody) updateData.numero_celular = numeroCelularBody
+    if (ciBody) updateData.ci = ciBody
+
+    if (Object.keys(updateData).length > 0) {
       await supabaseAdmin
         .from('usuarios')
-        .update({ numero_celular: numeroCelularBody })
+        .update(updateData)
         .eq('id', usuarioRow.id)
     }
 

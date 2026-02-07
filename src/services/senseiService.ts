@@ -203,12 +203,13 @@ export const senseiService = {
       }
 
       // Si se proporcionó activo, avatar_url, fecha_nacimiento, etc en create, actualizar usuario
-      if (data && (activo !== undefined || avatar_url !== undefined || fecha_nacimiento !== undefined || numero_celular !== undefined || genero !== undefined)) {
+      if (data && (activo !== undefined || avatar_url !== undefined || fecha_nacimiento !== undefined || numero_celular !== undefined || sensei.ci !== undefined || genero !== undefined)) {
         const userUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
         if (activo !== undefined) userUpdate.activo = activo
         if (avatar_url !== undefined) userUpdate.avatar_url = avatar_url
         if (fecha_nacimiento !== undefined) userUpdate.fecha_nacimiento = fecha_nacimiento
         if (numero_celular !== undefined) userUpdate.numero_celular = numero_celular
+        if (sensei.ci !== undefined) userUpdate.ci = sensei.ci
         if (genero !== undefined) userUpdate.genero = genero
         
         if (Object.keys(userUpdate).length > 1) {
@@ -226,6 +227,7 @@ export const senseiService = {
         // Para simplificar, retornamos lo que tenemos
         fecha_nacimiento: fecha_nacimiento ?? null,
         numero_celular: numero_celular ?? null,
+        ci: sensei.ci ?? null,
         genero: genero ?? null,
       } : data
       return { success: true, data: mapped }
@@ -259,6 +261,7 @@ export const senseiService = {
         if (apellido_materno !== undefined) userUpdate.apellido_materno = apellido_materno
         if (fecha_nacimiento !== undefined) userUpdate.fecha_nacimiento = fecha_nacimiento
         if (numero_celular !== undefined) userUpdate.numero_celular = numero_celular
+        if (sensei.ci !== undefined) userUpdate.ci = sensei.ci
         if (genero !== undefined) userUpdate.genero = genero
         if (activo !== undefined) userUpdate.activo = activo
         if (avatar_url !== undefined) userUpdate.avatar_url = avatar_url
@@ -269,6 +272,7 @@ export const senseiService = {
           if (data.usuarios) {
               if (fecha_nacimiento !== undefined) data.usuarios.fecha_nacimiento = fecha_nacimiento
               if (numero_celular !== undefined) data.usuarios.numero_celular = numero_celular
+              if (sensei.ci !== undefined) data.usuarios.ci = sensei.ci
               if (genero !== undefined) data.usuarios.genero = genero
               if (activo !== undefined) data.usuarios.activo = activo
               if (avatar_url !== undefined) data.usuarios.avatar_url = avatar_url

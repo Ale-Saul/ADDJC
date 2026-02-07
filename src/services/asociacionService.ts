@@ -38,7 +38,7 @@ export const asociacionService = {
 
       if (error) throw error
 
-      type UsuarioRow = { id: string; correo?: string; nombre?: string; apellido_paterno?: string; apellido_materno?: string; fecha_nacimiento?: string; numero_celular?: string; genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir'; club_id?: string | null; activo?: boolean; created_at: string; updated_at: string; asociacion?: { cargo?: string, fecha_ingreso?: string }[] | { cargo?: string, fecha_ingreso?: string } }
+      type UsuarioRow = { id: string; correo?: string; nombre?: string; apellido_paterno?: string; apellido_materno?: string; fecha_nacimiento?: string; numero_celular?: string; ci?: string; genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir'; club_id?: string | null; activo?: boolean; created_at: string; updated_at: string; asociacion?: { cargo?: string, fecha_ingreso?: string }[] | { cargo?: string, fecha_ingreso?: string } }
       const miembros: MiembroAsociacion[] = (data || []).map((u: UsuarioRow) => {
         const asoc = Array.isArray(u.asociacion) ? u.asociacion[0] : u.asociacion
         const cargo = asoc?.cargo
@@ -52,6 +52,7 @@ export const asociacionService = {
           apellido_materno: u.apellido_materno || '',
           fecha_nacimiento: u.fecha_nacimiento || null,
           numero_celular: u.numero_celular || null,
+          ci: u.ci || null,
           genero: u.genero || null,
           rol: 'asociacion' as const,
           club_id: u.club_id || null,
@@ -97,6 +98,7 @@ export const asociacionService = {
         apellido_materno: data.apellido_materno || '',
         fecha_nacimiento: data.fecha_nacimiento || null,
         numero_celular: data.numero_celular || null,
+        ci: data.ci || null,
         genero: data.genero || null,
         rol: 'asociacion' as const,
         club_id: data.club_id || null,
@@ -127,7 +129,8 @@ export const asociacionService = {
         miembro.password!,
         miembro.fecha_nacimiento,
         miembro.numero_celular,
-        miembro.genero
+        miembro.genero,
+        miembro.ci
       )
 
       if (!userResult.success || !userResult.data) {
@@ -165,7 +168,7 @@ export const asociacionService = {
   async update(id: string, miembro: MiembroAsociacionUpdate): Promise<ApiResponse<MiembroAsociacion>> {
     try {
       const client = getSupabaseClient()
-      const updateData: { nombre?: string; apellido_paterno?: string; apellido_materno?: string; correo?: string; activo?: boolean; fecha_nacimiento?: string | null; numero_celular?: string | null; genero?: any } = {}
+      const updateData: { nombre?: string; apellido_paterno?: string; apellido_materno?: string; correo?: string; activo?: boolean; fecha_nacimiento?: string | null; numero_celular?: string | null; ci?: string | null; genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null } = {}
       if (miembro.nombres !== undefined) updateData.nombre = miembro.nombres
       if (miembro.apellido_paterno !== undefined) updateData.apellido_paterno = miembro.apellido_paterno
       if (miembro.apellido_materno !== undefined) updateData.apellido_materno = miembro.apellido_materno
@@ -173,6 +176,7 @@ export const asociacionService = {
       if (miembro.activo !== undefined) updateData.activo = miembro.activo
       if (miembro.fecha_nacimiento !== undefined) updateData.fecha_nacimiento = miembro.fecha_nacimiento
       if (miembro.numero_celular !== undefined) updateData.numero_celular = miembro.numero_celular
+      if (miembro.ci !== undefined) updateData.ci = miembro.ci
       if (miembro.genero !== undefined) updateData.genero = miembro.genero
 
       if (Object.keys(updateData).length > 0) {
@@ -186,7 +190,7 @@ export const asociacionService = {
 
       if (miembro.cargo !== undefined || miembro.fecha_ingreso !== undefined) {
         const { data: asoc } = await client.from('asociacion').select('id').eq('usuario_id', id).single()
-        const asocUpdate: any = {}
+        const asocUpdate: Record<string, unknown> = {}
         if (miembro.cargo !== undefined) asocUpdate.cargo = miembro.cargo
         if (miembro.fecha_ingreso !== undefined) asocUpdate.fecha_ingreso = miembro.fecha_ingreso
         

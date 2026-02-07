@@ -29,6 +29,7 @@ export interface User {
   avatar_url?: string | null
   fecha_nacimiento?: string | null
   numero_celular?: string | null
+  ci?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   activo: boolean
   created_at?: string

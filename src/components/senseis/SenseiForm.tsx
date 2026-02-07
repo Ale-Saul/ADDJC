@@ -43,6 +43,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
     password: '',
     fecha_nacimiento: null,
     numero_celular: '',
+    ci: '',
     genero: '',
     grado_dan: '',
     especialidad: '',
@@ -78,6 +79,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
         apellido_materno: apParts.slice(1).join(' ') ?? '',
         fecha_nacimiento: sensei.fecha_nacimiento || null,
         numero_celular: sensei.numero_celular || '',
+        ci: sensei.ci || '',
         genero: sensei.genero || '',
         grado_dan: sensei.grado_dan || '',
         especialidad: sensei.especialidad || '',
@@ -135,6 +137,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
           apellido_materno: formData.apellido_materno,
           fecha_nacimiento: formData.fecha_nacimiento || null,
           numero_celular: formData.numero_celular || null,
+          ci: formData.ci || null,
           genero: formData.genero || null,
           grado_dan: formData.grado_dan || null,
           certificacion_id: formData.certificacion_id || null,
@@ -157,6 +160,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
           email: formData.email,
           password: formData.password,
           numero_celular: formData.numero_celular,
+          ci: formData.ci,
           genero: formData.genero
         }
         response = await senseiController.createSensei(createData)
@@ -303,6 +307,15 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
           InputLabelProps={{
             shrink: true,
           }}
+        />
+
+        <TextField
+          fullWidth
+          label="Carnet de Identidad"
+          name="ci"
+          value={formData.ci || ''}
+          onChange={handleChange}
+          disabled={loading}
         />
 
         <TextField

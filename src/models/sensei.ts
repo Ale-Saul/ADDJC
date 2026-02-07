@@ -6,6 +6,7 @@ export interface Sensei {
   apellidos: string
   fecha_nacimiento: string | null
   numero_celular?: string | null
+  ci?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   grado_dan: string | null
   /** ID de la certificación principal (FK a certificaciones) */
@@ -29,6 +30,7 @@ export interface SenseiCreate {
   password?: string
   fecha_nacimiento?: string | null
   numero_celular?: string | null
+  ci?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   grado_dan?: string | null
   certificacion_id?: string | null
@@ -45,6 +47,7 @@ export interface SenseiUpdate {
   apellido_materno?: string
   fecha_nacimiento?: string | null
   numero_celular?: string | null
+  ci?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   grado_dan?: string | null
   certificacion_id?: string | null

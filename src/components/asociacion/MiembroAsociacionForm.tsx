@@ -37,6 +37,7 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
     cargo: '',
     fecha_nacimiento: null,
     numero_celular: '',
+    ci: '',
     genero: '',
     fecha_ingreso: null,
     activo: true,
@@ -56,6 +57,7 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
         cargo: miembro.cargo ?? '',
         fecha_nacimiento: miembro.fecha_nacimiento || null,
         numero_celular: miembro.numero_celular || '',
+        ci: miembro.ci || '',
         genero: miembro.genero || '',
         fecha_ingreso: miembro.fecha_ingreso || null,
         activo: miembro.activo,
@@ -94,6 +96,7 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
           cargo: formData.cargo || null,
           fecha_nacimiento: formData.fecha_nacimiento || null,
           numero_celular: formData.numero_celular || null,
+          ci: formData.ci || null,
           genero: formData.genero || null,
           fecha_ingreso: formData.fecha_ingreso || null,
           activo: formData.activo,
@@ -109,6 +112,7 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
           cargo: formData.cargo || null,
           fecha_nacimiento: formData.fecha_nacimiento || null,
           numero_celular: formData.numero_celular || null,
+          ci: formData.ci || null,
           genero: formData.genero || null,
           fecha_ingreso: formData.fecha_ingreso || null,
           activo: formData.activo ?? true,
@@ -187,6 +191,15 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
           InputLabelProps={{
             shrink: true,
           }}
+        />
+
+        <TextField
+          fullWidth
+          label="Carnet de Identidad"
+          name="ci"
+          value={formData.ci || ''}
+          onChange={handleChange}
+          disabled={loading}
         />
 
         <TextField

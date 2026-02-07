@@ -14,7 +14,8 @@ async function createUserWithAdminAPI(
   rol: 'admin' | 'asociacion' | 'sensei' | 'arbitro' | 'judoka' | 'encargado',
   fechaNacimiento?: string | null,
   numeroCelular?: string | null,
-  genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
+  genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null,
+  ci?: string | null
 ): Promise<ApiResponse<{ userId: string; usuarioId?: string }>> {
   try {
     const body: Record<string, unknown> = {
@@ -25,6 +26,7 @@ async function createUserWithAdminAPI(
       apellido_materno,
       rol,
       genero,
+      ci,
     }
     if (fechaNacimiento != null && fechaNacimiento !== '') {
       body.fecha_nacimiento = fechaNacimiento
@@ -78,7 +80,8 @@ export const userService = {
     password: string,
     fecha_nacimiento?: string | null,
     numero_celular?: string | null,
-    genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
+    genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null,
+    ci?: string | null
   ): Promise<ApiResponse<{ userId: string; usuarioId: string }>> {
     try {
       // Validar email y password
@@ -108,7 +111,7 @@ export const userService = {
 
       // Crear en auth.users; el trigger crea la fila en tabla usuarios (nombre, apellidos, correo, fecha_nacimiento, rol).
       // usuarioId es el id de la fila en usuarios; se usa en arbitros.usuario_id (FK a usuarios.id).
-      const result = await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'arbitro', fecha_nacimiento, numero_celular, genero)
+      const result = await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'arbitro', fecha_nacimiento, numero_celular, genero, ci)
       if (!result.success) return result
       const usuarioId = result.data?.usuarioId ?? result.data?.userId
       return { success: true, data: { userId: result.data!.userId, usuarioId } }
@@ -130,7 +133,8 @@ export const userService = {
     password: string,
     fecha_nacimiento?: string | null,
     numero_celular?: string | null,
-    genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
+    genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null,
+    ci?: string | null
   ): Promise<ApiResponse<{ userId: string; usuarioId: string }>> {
     try {
       if (!email || !password) {
@@ -143,7 +147,7 @@ export const userService = {
       if (password.length < 8) {
         return { success: false, error: 'La contraseña debe tener al menos 8 caracteres' }
       }
-      const result = await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'sensei', fecha_nacimiento, numero_celular, genero)
+      const result = await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'sensei', fecha_nacimiento, numero_celular, genero, ci)
       if (!result.success) return result
       const usuarioId = result.data?.usuarioId ?? result.data?.userId
       return { success: true, data: { userId: result.data!.userId, usuarioId } }
@@ -166,7 +170,8 @@ export const userService = {
     clubId?: string,
     fecha_nacimiento?: string | null,
     numero_celular?: string | null,
-    genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
+    genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null,
+    ci?: string | null
   ): Promise<ApiResponse<{ userId: string; usuarioId: string }>> {
     try {
       if (!email || !password) {
@@ -183,7 +188,7 @@ export const userService = {
         }
       }
 
-      const result = await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'encargado', fecha_nacimiento, numero_celular, genero)
+      const result = await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'encargado', fecha_nacimiento, numero_celular, genero, ci)
       if (!result.success) return result
       const usuarioId = result.data?.usuarioId ?? result.data?.userId
       return { success: true, data: { userId: result.data!.userId, usuarioId } }
@@ -206,7 +211,8 @@ export const userService = {
     clubId?: string,
     fecha_nacimiento?: string | null,
     numero_celular?: string | null,
-    genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
+    genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null,
+    ci?: string | null
   ): Promise<ApiResponse<{ userId: string; usuarioId: string }>> {
     try {
       let finalEmail = email
@@ -224,7 +230,7 @@ export const userService = {
       if (!emailRegex.test(finalEmail)) {
         return { success: false, error: 'El formato del email no es válido' }
       }
-      const result = await createUserWithAdminAPI(finalEmail, finalPassword, nombres, apellido_paterno, apellido_materno, 'judoka', fecha_nacimiento, numero_celular, genero)
+      const result = await createUserWithAdminAPI(finalEmail, finalPassword, nombres, apellido_paterno, apellido_materno, 'judoka', fecha_nacimiento, numero_celular, genero, ci)
       if (!result.success) return result
       const usuarioId = result.data?.usuarioId ?? result.data?.userId
       return { success: true, data: { userId: result.data!.userId, usuarioId } }
@@ -246,7 +252,8 @@ export const userService = {
     password: string,
     fecha_nacimiento?: string | null,
     numero_celular?: string | null,
-    genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
+    genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null,
+    ci?: string | null
   ): Promise<ApiResponse<{ userId: string; usuarioId: string }>> {
     try {
       if (!email || !password) {
@@ -259,7 +266,7 @@ export const userService = {
       if (password.length < 8) {
         return { success: false, error: 'La contraseña debe tener al menos 8 caracteres' }
       }
-      const result = await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'asociacion', fecha_nacimiento, numero_celular, genero)
+      const result = await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'asociacion', fecha_nacimiento, numero_celular, genero, ci)
       if (!result.success) return result
       const usuarioId = result.data?.usuarioId ?? result.data?.userId
       return { success: true, data: { userId: result.data!.userId, usuarioId } }

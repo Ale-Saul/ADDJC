@@ -45,6 +45,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     password: '',
     fecha_nacimiento: '',
     numero_celular: '',
+    ci: '',
     genero: '',
     categoria: '',
     peso_competitivo: null,
@@ -104,6 +105,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         apellido_materno: am,
         fecha_nacimiento: judoka.fecha_nacimiento || '',
         numero_celular: judoka.numero_celular || '',
+        ci: judoka.ci || '',
         genero: judoka.genero || '',
         categoria: judoka.categoria || '',
         peso_competitivo: judoka.peso_competitivo || null,
@@ -173,6 +175,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
           apellido_materno: formData.apellido_materno,
           fecha_nacimiento: formData.fecha_nacimiento || null,
           numero_celular: formData.numero_celular || null,
+          ci: formData.ci || null,
           genero: formData.genero || null,
           categoria: formData.categoria || null,
           peso_competitivo: formData.peso_competitivo || null,
@@ -191,6 +194,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
           password: 'password' in formData ? formData.password : undefined,
           fecha_nacimiento: formData.fecha_nacimiento || '',
           numero_celular: formData.numero_celular,
+          ci: formData.ci,
           genero: formData.genero
         }
         response = await judokaController.createJudoka(createData)
@@ -366,6 +370,15 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
           InputLabelProps={{
             shrink: true,
           }}
+        />
+
+        <TextField
+          fullWidth
+          label="Carnet de Identidad"
+          name="ci"
+          value={formData.ci || ''}
+          onChange={handleChange}
+          disabled={loading}
         />
 
         <TextField
