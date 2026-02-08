@@ -45,6 +45,7 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
     if (arbitro) {
@@ -53,6 +54,7 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
         nombres: arbitro.nombres,
         apellido_paterno: ap[0] ?? '',
         apellido_materno: ap.slice(1).join(' ') ?? '',
+        email: arbitro.email || '',
         fecha_nacimiento: arbitro.fecha_nacimiento || null,
         numero_celular: arbitro.numero_celular || '',
         ci: arbitro.ci || '',
@@ -63,8 +65,49 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
     }
   }, [arbitro])
 
+  // Validación de CI: hasta 7 números, opcionalmente un guión y hasta 3 letras
+  const validateCI = (ci: string): boolean => {
+    if (!ci) return false
+    return /^\d{1,7}(-[A-Za-z]{1,3})?$/.test(ci)
+  }
+
+  // Validación de celular: exactamente 8 dígitos
+  const validateCelular = (cel: string): boolean => {
+    if (!cel) return true // no es requerido
+    return /^\d{8}$/.test(cel)
+  }
+
+  // Validación de email
+  const validateEmail = (email: string): boolean => {
+    if (!email) return false
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  }
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
+
+    if (submitted) setSubmitted(false)
+
+    // Filtrar entrada de CI: hasta 7 números, opcionalmente un guion y hasta 3 letras
+    if (name === 'ci') {
+      const val = value.toUpperCase()
+      if (/^\d{0,7}(-([A-Z]{0,3})?)?$/.test(val)) {
+        setFormData(prev => ({ ...prev, ci: val }))
+        setError(null)
+        setSuccess(false)
+      }
+      return
+    }
+
+    // Filtrar entrada de celular: solo números, máximo 8
+    if (name === 'numero_celular') {
+      const filtered = value.replace(/[^0-9]/g, '').slice(0, 8)
+      setFormData(prev => ({ ...prev, numero_celular: filtered }))
+      setError(null)
+      setSuccess(false)
+      return
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -76,6 +119,7 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
   const handleSelectChange = (e: SelectChangeEvent<string>) => {
     const { name, value } = e.target
     if (!name) return
+    if (submitted) setSubmitted(false)
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -86,9 +130,50 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitted(true)
     setLoading(true)
     setError(null)
     setSuccess(false)
+
+    // Validaciones del lado del cliente
+    const paternoVal = (formData.apellido_paterno ?? '').trim()
+    const maternoVal = (formData.apellido_materno ?? '').trim()
+    if (!paternoVal && !maternoVal) {
+      setError('Al menos uno de los dos apellidos es requerido')
+      setLoading(false)
+      return
+    }
+
+    const ciValue = (formData.ci ?? '').trim()
+    if (!ciValue) {
+      setError('El Carnet de Identidad es requerido')
+      setLoading(false)
+      return
+    }
+    if (!validateCI(ciValue)) {
+      setError('Formato de CI inválido: 1234567-CB')
+      setLoading(false)
+      return
+    }
+
+    const celValue = (formData.numero_celular ?? '').trim()
+    if (celValue && !validateCelular(celValue)) {
+      setError('El número de celular debe tener exactamente 8 dígitos')
+      setLoading(false)
+      return
+    }
+
+    const emailValue = (formData.email ?? '').trim()
+    if (!emailValue) {
+      setError('El email es requerido')
+      setLoading(false)
+      return
+    }
+    if (!validateEmail(emailValue)) {
+      setError('El formato del email no es válido')
+      setLoading(false)
+      return
+    }
 
     try {
       let response
@@ -99,6 +184,7 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
           nombres: formData.nombres,
           apellido_paterno: formData.apellido_paterno,
           apellido_materno: formData.apellido_materno,
+          email: formData.email,
           fecha_nacimiento: formData.fecha_nacimiento || null,
           numero_celular: formData.numero_celular || null,
           ci: formData.ci || null,
@@ -146,6 +232,29 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
     }
   }
 
+  // Helpers para errores individuales
+  const ciValue = (formData.ci ?? '').trim()
+  const ciError = submitted && (!ciValue || !validateCI(ciValue))
+  const ciHelperText = submitted && !ciValue
+    ? 'El Carnet de Identidad es requerido'
+    : submitted && !validateCI(ciValue) && ciValue
+      ? 'Formato: 1234567-CB'
+      : ''
+  const paterno = (formData.apellido_paterno ?? '').trim()
+  const materno = (formData.apellido_materno ?? '').trim()
+  const apellidoError = submitted && !paterno && !materno
+  const celValue = (formData.numero_celular ?? '').trim()
+  const celError = submitted && celValue.length > 0 && !validateCelular(celValue)
+  const celHelperText = celError ? 'Debe tener exactamente 8 dígitos' : ''
+
+  const emailValue = (formData.email ?? '').trim()
+  const emailError = submitted && (!emailValue || !validateEmail(emailValue))
+  const emailHelperText = submitted && !emailValue
+    ? 'El email es requerido'
+    : submitted && !validateEmail(emailValue) && emailValue
+      ? 'El formato del email no es válido'
+      : ''
+
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
       {error && (
@@ -164,6 +273,18 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <TextField
           fullWidth
+          label="Carnet de Identidad"
+          name="ci"
+          value={formData.ci || ''}
+          onChange={handleChange}
+          required
+          disabled={loading}
+          error={ciError}
+          helperText={ciHelperText}
+        />
+
+        <TextField
+          fullWidth
           label="Nombres"
           name="nombres"
           value={formData.nombres}
@@ -178,8 +299,9 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
           name="apellido_paterno"
           value={formData.apellido_paterno ?? ''}
           onChange={handleChange}
-          required
           disabled={loading}
+          error={apellidoError}
+          helperText={apellidoError ? 'Al menos uno de los dos apellidos es requerido' : ''}
         />
         <TextField
           fullWidth
@@ -187,24 +309,26 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
           name="apellido_materno"
           value={formData.apellido_materno ?? ''}
           onChange={handleChange}
+          disabled={loading}
+          error={apellidoError}
+          helperText={apellidoError ? 'Al menos uno de los dos apellidos es requerido' : ''}
+        />
+
+        <TextField
+          fullWidth
+          label="Email"
+          name="email"
+          type="email"
+          value={formData.email || ''}
+          onChange={handleChange}
           required
           disabled={loading}
+          error={emailError}
+          helperText={emailHelperText}
         />
 
         {!arbitro && (
           <>
-            <TextField
-              fullWidth
-              label="Email"
-              name="email"
-              type="email"
-              value={formData.email || ''}
-              onChange={handleChange}
-              required
-              disabled={loading}
-              helperText="Email para iniciar sesión en el sistema"
-            />
-
             <TextField
               fullWidth
               label="Contraseña"
@@ -214,7 +338,8 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
               onChange={handleChange}
               required
               disabled={loading}
-              helperText="Mínimo 8 caracteres"
+              error={submitted && (!formData.password || formData.password.length < 8)}
+              helperText={submitted && (!formData.password || formData.password.length < 8) ? "La contraseña debe tener al menos 8 caracteres" : ""}
               inputProps={{ minLength: 8 }}
               InputProps={{
                 endAdornment: (
@@ -249,20 +374,14 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
 
         <TextField
           fullWidth
-          label="Carnet de Identidad"
-          name="ci"
-          value={formData.ci || ''}
-          onChange={handleChange}
-          disabled={loading}
-        />
-
-        <TextField
-          fullWidth
           label="Número de Celular"
           name="numero_celular"
           value={formData.numero_celular || ''}
           onChange={handleChange}
           disabled={loading}
+          error={celError}
+          helperText={celHelperText}
+          inputProps={{ maxLength: 8 }}
         />
 
         <FormControl fullWidth>
@@ -277,8 +396,8 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
             <MenuItem value="">
               <em>Sin definir</em>
             </MenuItem>
-            <MenuItem value="Masculino">Masculino</MenuItem>
             <MenuItem value="Femenino">Femenino</MenuItem>
+            <MenuItem value="Masculino">Masculino</MenuItem>
             <MenuItem value="Prefiero no decir">Prefiero no decir</MenuItem>
           </Select>
         </FormControl>

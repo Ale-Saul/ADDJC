@@ -3,6 +3,7 @@ export interface Arbitro {
   usuario_id: string
   nombres: string
   apellidos: string
+  email?: string
   fecha_nacimiento: string | null
   numero_celular?: string | null
   ci?: string | null
@@ -39,6 +40,7 @@ export interface ArbitroUpdate {
   nombres?: string
   apellido_paterno?: string
   apellido_materno?: string
+  email?: string
   fecha_nacimiento?: string | null
   numero_celular?: string | null
   ci?: string | null

@@ -81,10 +81,12 @@ export default function SenseisPage() {
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
         <DialogTitle>Registrar Nuevo Sensei</DialogTitle>
         <DialogContent>
-          <SenseiForm
-            onSuccess={handleCreateSuccess}
-            onCancel={() => setOpenDialog(false)}
-          />
+          {openDialog && (
+            <SenseiForm
+              onSuccess={handleCreateSuccess}
+              onCancel={() => setOpenDialog(false)}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </Layout>

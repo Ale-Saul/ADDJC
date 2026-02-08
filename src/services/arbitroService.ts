@@ -12,12 +12,13 @@ function getSupabaseClient() {
   return supabase
 }
 
-const selectArbitrosWithUsuario = '*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url)'
+const selectArbitrosWithUsuario = '*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, correo, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url)'
 
 function mapArbitroRow(row: any): Arbitro {
   const u = row.usuarios ?? row.usuario_id
   const isUserObject = u && typeof u === 'object' && !Array.isArray(u) && ('nombre' in u || 'apellido_paterno' in u)
   const nombres = isUserObject ? (u?.nombre ?? '') : ''
+  const email = isUserObject ? (u?.correo ?? '') : ''
   const apellidoPaterno = isUserObject ? (u?.apellido_paterno ?? '') : ''
   const apellidoMaterno = isUserObject ? (u?.apellido_materno ?? '') : ''
   const apellidos = [apellidoPaterno, apellidoMaterno].filter(Boolean).join(' ')
@@ -25,6 +26,7 @@ function mapArbitroRow(row: any): Arbitro {
     ...row,
     nombres,
     apellidos,
+    email,
     fecha_nacimiento: isUserObject ? (u?.fecha_nacimiento ?? null) : null,
     numero_celular: isUserObject ? (u?.numero_celular ?? null) : null,
     ci: isUserObject ? (u?.ci ?? null) : null,
@@ -198,7 +200,7 @@ export const arbitroService = {
   async update(id: string, arbitro: ArbitroUpdate): Promise<ApiResponse<Arbitro>> {
     try {
       const client = getSupabaseClient()
-      const { certificacion, nombres, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url, ...updatePayload } = arbitro as ArbitroUpdate & { certificacion?: string | null, numero_celular?: string, ci?: string, genero?: any }
+      const { certificacion, nombres, apellido_paterno, apellido_materno, email, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url, ...updatePayload } = arbitro as ArbitroUpdate & { certificacion?: string | null, numero_celular?: string, ci?: string, genero?: any }
       const { data, error } = await client
         .from('arbitros')
         .update(updatePayload)
@@ -208,11 +210,12 @@ export const arbitroService = {
 
       if (error) throw error
 
-      if (data?.usuario_id && (nombres !== undefined || apellido_paterno !== undefined || apellido_materno !== undefined || fecha_nacimiento !== undefined || activo !== undefined || avatar_url !== undefined || numero_celular !== undefined || ci !== undefined || genero !== undefined)) {
+      if (data?.usuario_id && (nombres !== undefined || apellido_paterno !== undefined || apellido_materno !== undefined || email !== undefined || fecha_nacimiento !== undefined || activo !== undefined || avatar_url !== undefined || numero_celular !== undefined || ci !== undefined || genero !== undefined)) {
         const userUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
         if (nombres !== undefined) userUpdate.nombre = nombres
         if (apellido_paterno !== undefined) userUpdate.apellido_paterno = apellido_paterno
         if (apellido_materno !== undefined) userUpdate.apellido_materno = apellido_materno
+        if (email !== undefined) userUpdate.correo = email
         if (fecha_nacimiento !== undefined) userUpdate.fecha_nacimiento = fecha_nacimiento
         if (numero_celular !== undefined) userUpdate.numero_celular = numero_celular
         if (ci !== undefined) userUpdate.ci = ci

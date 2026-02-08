@@ -75,10 +75,12 @@ export default function ArbitrosPage() {
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
         <DialogTitle>Registrar Nuevo Árbitro</DialogTitle>
         <DialogContent>
-          <ArbitroForm
-            onSuccess={handleCreateSuccess}
-            onCancel={() => setOpenDialog(false)}
-          />
+          {openDialog && (
+            <ArbitroForm
+              onSuccess={handleCreateSuccess}
+              onCancel={() => setOpenDialog(false)}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </Layout>

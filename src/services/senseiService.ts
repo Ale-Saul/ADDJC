@@ -14,14 +14,17 @@ function getSupabaseClient() {
 function mapSenseiRow(row: any): Sensei {
   const u = row.usuarios
   const nombres = u?.nombre ?? ''
+  const email = u?.correo ?? ''
   const apellidoP = u?.apellido_paterno ?? ''
   const apellidoM = u?.apellido_materno ?? ''
   return {
     ...row,
     nombres,
     apellidos: [apellidoP, apellidoM].filter(Boolean).join(' '),
+    email,
     fecha_nacimiento: u?.fecha_nacimiento ?? null,
     numero_celular: u?.numero_celular ?? null,
+    ci: u?.ci ?? null,
     genero: u?.genero ?? null,
     activo: u?.activo ?? true,
     avatar_url: u?.avatar_url ?? null,
@@ -39,7 +42,7 @@ export const senseiService = {
       const client = getSupabaseClient()
       let query = client
         .from('senseis')
-        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, genero, activo, avatar_url)')
+        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, correo, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url)')
         .order('created_at', { ascending: false })
 
       if (!includeInactive) {
@@ -81,7 +84,7 @@ export const senseiService = {
       const client = getSupabaseClient()
       const { data, error } = await client
         .from('senseis')
-        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, genero, activo, avatar_url)')
+        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, correo, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url)')
         .eq('club_id', clubId)
         .order('created_at', { ascending: false })
 
@@ -106,7 +109,7 @@ export const senseiService = {
       const client = getSupabaseClient()
       const { data, error } = await client
         .from('senseis')
-        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, genero, activo, avatar_url)')
+        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, correo, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url)')
         .eq('id', id)
         .single()
 
@@ -168,29 +171,38 @@ export const senseiService = {
           }
         }
 
-        userId = userResult.data.usuarioId
+      userId = userResult.data.usuarioId
       }
 
-      // Validar formato UUID
+      // Validar formato UUID (8-4-4-4-12 caracteres)
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-      if (!uuidRegex.test(userId)) {
+      if (userId && !uuidRegex.test(userId)) {
         return { 
           success: false, 
           error: 'Error: El usuario_id debe ser un UUID válido.' 
         }
       }
 
-      const { email, password, isEncargado, certificacion, nombres, apellido_paterno, apellido_materno, activo, avatar_url, fecha_nacimiento, numero_celular, genero, ...senseiData } = sensei as SenseiCreate & { certificacion?: string | null, numero_celular?: string, genero?: any }
-      const senseiConUsuario = {
-        ...senseiData,
-        usuario_id: userId,
-        certificacion_id: sensei.certificacion_id ?? null,
-      }
+      // Separar datos de 'usuarios' y 'senseis'
+      const { 
+        email, password, isEncargado, certificacion, nombres, 
+        apellido_paterno, apellido_materno, activo, avatar_url, 
+        fecha_nacimiento, numero_celular, genero, ci,
+        ...senseiData 
+      } = sensei as any
 
       const client = getSupabaseClient()
+      const insertPayload = {
+        usuario_id: userId,
+        club_id: senseiData.club_id ?? null,
+        grado_dan: senseiData.grado_dan ?? null,
+        certificacion_id: senseiData.certificacion_id ?? null,
+        especialidad: senseiData.especialidad ?? null,
+      }
+
       const { data, error } = await client
         .from('senseis')
-        .insert(senseiConUsuario)
+        .insert(insertPayload)
         .select('*, certificacion:certificaciones(nombre_certificacion)')
         .single()
 
@@ -244,12 +256,12 @@ export const senseiService = {
   async update(id: string, sensei: SenseiUpdate): Promise<ApiResponse<Sensei>> {
     try {
       const client = getSupabaseClient()
-      const { certificacion, nombres, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url, ...senseiPayload } = sensei as SenseiUpdate & { certificacion?: string | null, numero_celular?: string, ci?: string, genero?: any }
+      const { certificacion, nombres, apellido_paterno, apellido_materno, email, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url, ...senseiPayload } = sensei as SenseiUpdate & { certificacion?: string | null, numero_celular?: string, ci?: string, genero?: any }
       const { data, error } = await client
         .from('senseis')
         .update(senseiPayload)
         .eq('id', id)
-        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, genero, activo, avatar_url)')
+        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, correo, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url)')
         .single()
 
       if (error) throw error
@@ -259,6 +271,7 @@ export const senseiService = {
         if (nombres !== undefined) userUpdate.nombre = nombres
         if (apellido_paterno !== undefined) userUpdate.apellido_paterno = apellido_paterno
         if (apellido_materno !== undefined) userUpdate.apellido_materno = apellido_materno
+        if (email !== undefined) userUpdate.correo = email
         if (fecha_nacimiento !== undefined) userUpdate.fecha_nacimiento = fecha_nacimiento
         if (numero_celular !== undefined) userUpdate.numero_celular = numero_celular
         if (sensei.ci !== undefined) userUpdate.ci = sensei.ci
@@ -270,6 +283,7 @@ export const senseiService = {
           
           // Refresh data for return
           if (data.usuarios) {
+              if (email !== undefined) data.usuarios.correo = email
               if (fecha_nacimiento !== undefined) data.usuarios.fecha_nacimiento = fecha_nacimiento
               if (numero_celular !== undefined) data.usuarios.numero_celular = numero_celular
               if (sensei.ci !== undefined) data.usuarios.ci = sensei.ci
