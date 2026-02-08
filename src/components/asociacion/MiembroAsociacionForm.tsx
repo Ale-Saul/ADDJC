@@ -87,16 +87,23 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
 
-    // Filtrar entrada de CI: solo números, guión y letras
+    // Reiniciar el estado de validación al empezar a escribir para cumplir con
+    // el requerimiento de mostrar errores solo al intentar guardar.
+    if (submitted) setSubmitted(false)
+
+    // Filtrar entrada de CI: hasta 7 números, opcionalmente un guion y hasta 3 letras
     if (name === 'ci') {
-      const filtered = value.replace(/[^0-9a-zA-Z-]/g, '')
-      setFormData(prev => ({ ...prev, ci: filtered }))
-      setError(null)
-      setSuccess(false)
+      const val = value.toUpperCase()
+      // Regex que valida la progresión: hasta 7 números, luego opcionalmente '-' y hasta 3 letras
+      if (/^\d{0,7}(-([A-Z]{0,3})?)?$/.test(val)) {
+        setFormData(prev => ({ ...prev, ci: val }))
+        setError(null)
+        setSuccess(false)
+      }
       return
     }
 
-    // Filtrar entrada de celular: solo números
+    // Filtrar entrada de celular: solo números, máximo 8
     if (name === 'numero_celular') {
       const filtered = value.replace(/[^0-9]/g, '').slice(0, 8)
       setFormData(prev => ({ ...prev, numero_celular: filtered }))
@@ -111,6 +118,7 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
   }
 
   const handleSelectChange = (e: SelectChangeEvent<string>) => {
+    if (submitted) setSubmitted(false)
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
     setError(null)
     setSuccess(false)
@@ -235,7 +243,7 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
     ? 'El email es requerido'
     : submitted && !validateEmail(emailValue) && emailValue
       ? 'El formato del email no es válido'
-      : !miembro ? 'Email para iniciar sesión en el sistema' : ''
+      : ''
 
   const paterno = (formData.apellido_paterno ?? '').trim()
   const materno = (formData.apellido_materno ?? '').trim()
@@ -267,7 +275,6 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
           disabled={loading}
           error={ciError}
           helperText={ciHelperText}
-          placeholder="Ej: 1234567-CB"
         />
 
         <TextField
@@ -324,7 +331,6 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
           error={celError}
           helperText={celHelperText}
           inputProps={{ maxLength: 8 }}
-          placeholder="Ej: 71234567"
         />
 
         <FormControl fullWidth>
@@ -339,8 +345,8 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
             <MenuItem value="">
               <em>Sin definir</em>
             </MenuItem>
-            <MenuItem value="Masculino">Masculino</MenuItem>
             <MenuItem value="Femenino">Femenino</MenuItem>
+            <MenuItem value="Masculino">Masculino</MenuItem>
             <MenuItem value="Prefiero no decir">Prefiero no decir</MenuItem>
           </Select>
         </FormControl>
@@ -370,7 +376,7 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
             <MenuItem value="">
               <em>Sin cargo</em>
             </MenuItem>
-            {CARGOS_ASOCIACION.map(c => (
+            {[...CARGOS_ASOCIACION].sort((a, b) => a.localeCompare(b)).map(c => (
               <MenuItem key={c} value={c}>{c}</MenuItem>
             ))}
           </Select>
@@ -399,7 +405,8 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
             onChange={handleChange}
             required
             disabled={loading}
-            helperText="Mínimo 8 caracteres"
+            error={submitted && (!formData.password || formData.password.length < 8)}
+            helperText={submitted && (!formData.password || formData.password.length < 8) ? "La contraseña debe tener al menos 8 caracteres" : ""}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">

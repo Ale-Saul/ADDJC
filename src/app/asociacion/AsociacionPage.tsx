@@ -75,10 +75,12 @@ export default function AsociacionPage() {
         <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
           <DialogTitle>Registrar Nuevo Miembro</DialogTitle>
           <DialogContent>
-            <MiembroAsociacionForm
-              onSuccess={handleCreateSuccess}
-              onCancel={() => setOpenDialog(false)}
-            />
+            {openDialog && (
+              <MiembroAsociacionForm
+                onSuccess={handleCreateSuccess}
+                onCancel={() => setOpenDialog(false)}
+              />
+            )}
           </DialogContent>
         </Dialog>
       </Layout>
