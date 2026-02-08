@@ -60,6 +60,18 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+
+  // Opciones ordenadas alfabéticamente
+  const sortedClubes = [...clubes].sort((a, b) => a.nombre_club.localeCompare(b.nombre_club))
+  const sortedSenseis = [...senseis].sort((a, b) => {
+    const nameA = (a.nombres + ' ' + (a.apellidos || '')).trim()
+    const nameB = (b.nombres + ' ' + (b.apellidos || '')).trim()
+    return nameA.localeCompare(nameB)
+  })
+  const generos = ["Masculino", "Femenino", "Prefiero no decir"].sort((a, b) => a.localeCompare(b))
+  const categorias = ["Preinfantil", "Infantil", "Cadete", "Junior", "Senior"]
+  const cinturones = ["Blanco", "Amarillo", "Naranja", "Verde", "Azul", "Café", "Negro"]
 
   useEffect(() => {
     // Cargar clubes activos
@@ -98,11 +110,13 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
       const ap = judoka.apellido_paterno ?? judoka.apellidos?.trim().split(/\s+/)[0] ?? ''
       const am = judoka.apellido_materno ?? judoka.apellidos?.trim().split(/\s+/).slice(1).join(' ') ?? ''
       setFormData({
+        ...judoka,
         club_id: judoka.club_id || null,
         entrenador_id: judoka.entrenador_id || null,
-        nombres: judoka.nombres,
+        nombres: judoka.nombres || '',
         apellido_paterno: ap,
         apellido_materno: am,
+        email: judoka.email || '',
         fecha_nacimiento: judoka.fecha_nacimiento || '',
         numero_celular: judoka.numero_celular || '',
         ci: judoka.ci || '',
@@ -135,11 +149,42 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     }
   }, [judoka, user])
 
+  const validateEmail = (email: string) => {
+    if (!email) return true
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  }
+
+  const validateCI = (ci: string) => {
+    if (!ci) return false
+    return /^\d{1,7}(-[A-Z]{1,3})?$/.test(ci)
+  }
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
+
+    if (submitted) setSubmitted(false)
+    
+    // Validación de CI
+    if (name === 'ci') {
+      const val = value.toUpperCase()
+      if (/^\d{0,7}(-([A-Z]{0,3})?)?$/.test(val)) {
+        setFormData(prev => ({ ...prev, [name]: val }))
+        setError(null)
+      }
+      return
+    } 
+
+    // Validación de celular (8 números)
+    if (name === 'numero_celular') {
+      const filtered = value.replace(/[^0-9]/g, '').slice(0, 8)
+      setFormData(prev => ({ ...prev, [name]: filtered }))
+      setError(null)
+      return
+    }
+
     setFormData(prev => ({
       ...prev,
-      [name]: value === '' ? null : value
+      [name]: value === '' ? (name === 'nombres' || name === 'apellido_paterno' || name === 'apellido_materno' ? '' : null) : value
     }))
     setError(null)
     setSuccess(false)
@@ -148,6 +193,9 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
   const handleSelectChange = (e: SelectChangeEvent<string>) => {
     const { name, value } = e.target
     if (!name) return
+
+    if (submitted) setSubmitted(false)
+
     setFormData(prev => ({
       ...prev,
       [name]: value === '' ? null : value
@@ -158,6 +206,52 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitted(true)
+
+    // Validaciones
+    const names = (formData.nombres ?? '').trim()
+    const paterno = (formData.apellido_paterno ?? '').trim()
+    const materno = (formData.apellido_materno ?? '').trim()
+    const ci = (formData.ci ?? '').trim()
+    const email = (formData.email ?? '').trim()
+    const cel = (formData.numero_celular ?? '').trim()
+
+    if (!ci || !validateCI(ci)) {
+      setError(!ci ? 'El Carnet de Identidad es requerido' : 'Formato de CI inválido: 1234567-CB')
+      return
+    }
+
+    if (!names) {
+      setError('El nombre es obligatorio')
+      return
+    }
+
+    if (!paterno && !materno) {
+      setError('Se requiere al menos un apellido')
+      return
+    }
+
+    if (email && !validateEmail(email)) {
+      setError('Email inválido')
+      return
+    }
+
+    if (cel && cel.length !== 8) {
+      setError('El número de celular debe tener exactamente 8 dígitos')
+      return
+    }
+
+    if (!judoka) {
+      if (!email) {
+        setError('El email es obligatorio para nuevos judokas')
+        return
+      }
+      if (!formData.password || formData.password.length < 8) {
+        setError('La contraseña es obligatoria y debe tener al menos 8 caracteres')
+        return
+      }
+    }
+
     setLoading(true)
     setError(null)
     setSuccess(false)
@@ -166,16 +260,17 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
       let response
       
       if (judoka) {
-        // Actualizar - extraer solo los campos válidos para actualización
+        // Actualizar
         const updateData: JudokaUpdate = {
           club_id: formData.club_id || null,
           entrenador_id: formData.entrenador_id || null,
-          nombres: formData.nombres,
-          apellido_paterno: formData.apellido_paterno,
-          apellido_materno: formData.apellido_materno,
+          nombres: names,
+          apellido_paterno: paterno,
+          apellido_materno: materno,
+          email: email || undefined,
           fecha_nacimiento: formData.fecha_nacimiento || null,
-          numero_celular: formData.numero_celular || null,
-          ci: formData.ci || null,
+          numero_celular: cel || null,
+          ci: ci || null,
           genero: formData.genero || null,
           categoria: formData.categoria || null,
           peso_competitivo: formData.peso_competitivo || null,
@@ -184,17 +279,18 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         }
         response = await judokaController.updateJudoka(judoka.id, updateData)
       } else {
-        // Crear - El servicio creará automáticamente el usuario y perfil
+        // Crear
         const createData: JudokaCreate = {
           ...formData as JudokaCreate,
-          usuario_id: 'temp-user-id', // El servicio lo reemplazará automáticamente
-          apellido_paterno: 'apellido_paterno' in formData ? (formData.apellido_paterno ?? '') : '',
-          apellido_materno: 'apellido_materno' in formData ? (formData.apellido_materno ?? '') : '',
-          email: 'email' in formData ? formData.email : undefined,
+          usuario_id: 'temp-user-id', 
+          nombres: names,
+          apellido_paterno: paterno,
+          apellido_materno: materno,
+          email: email || undefined,
           password: 'password' in formData ? formData.password : undefined,
           fecha_nacimiento: formData.fecha_nacimiento || '',
-          numero_celular: formData.numero_celular,
-          ci: formData.ci,
+          numero_celular: cel || null,
+          ci: ci,
           genero: formData.genero
         }
         response = await judokaController.createJudoka(createData)
@@ -203,7 +299,6 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
       if (response.success) {
         setSuccess(true)
         if (onSuccess) {
-          // Llamar a onSuccess después de un breve delay para mostrar el mensaje
           setTimeout(() => {
             onSuccess()
           }, 500)
@@ -218,8 +313,18 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     }
   }
 
+  const paternoVal = (formData.apellido_paterno ?? '').trim()
+  const maternoVal = (formData.apellido_materno ?? '').trim()
+  const apellidoError = submitted && !paternoVal && !maternoVal
+  const ciVal = (formData.ci ?? '').trim()
+  const ciError = submitted && (!ciVal || !validateCI(ciVal))
+  const emailVal = (formData.email ?? '').trim()
+  const emailError = submitted && emailVal && !validateEmail(emailVal)
+  const celVal = (formData.numero_celular ?? '').trim()
+  const celError = submitted && celVal && celVal.length !== 8
+
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+    <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 2 }}>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
@@ -246,7 +351,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
             <MenuItem value="">
               <em>Sin club</em>
             </MenuItem>
-            {clubes.map((club) => (
+            {sortedClubes.map((club) => (
               <MenuItem key={club.id} value={club.id}>
                 {club.nombre_club}
               </MenuItem>
@@ -271,7 +376,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
             <MenuItem value="">
               <em>Sin entrenador</em>
             </MenuItem>
-            {senseis.map((sensei) => (
+            {sortedSenseis.map((sensei) => (
               <MenuItem key={sensei.id} value={sensei.id}>
                 {sensei.nombres} {sensei.apellidos}
               </MenuItem>
@@ -290,12 +395,26 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
 
         <TextField
           fullWidth
+          label="Carnet de Identidad"
+          name="ci"
+          value={formData.ci || ''}
+          onChange={handleChange}
+          disabled={loading}
+          error={ciError}
+          helperText={ciError ? (!ciVal ? 'El Carnet de Identidad es requerido' : 'Formato: 1234567-CB') : ''}
+          required
+        />
+
+        <TextField
+          fullWidth
           label="Nombres"
           name="nombres"
           value={formData.nombres}
           onChange={handleChange}
           required
           disabled={loading}
+          error={submitted && !formData.nombres?.trim()}
+          helperText={submitted && !formData.nombres?.trim() ? 'El nombre es obligatorio' : ''}
         />
 
         <TextField
@@ -304,8 +423,9 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
           name="apellido_paterno"
           value={'apellido_paterno' in formData ? (formData.apellido_paterno ?? '') : ''}
           onChange={handleChange}
-          required
           disabled={loading}
+          error={apellidoError}
+          helperText={apellidoError ? 'Debe proporcionar al menos un apellido' : ''}
         />
         <TextField
           fullWidth
@@ -313,24 +433,25 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
           name="apellido_materno"
           value={'apellido_materno' in formData ? (formData.apellido_materno ?? '') : ''}
           onChange={handleChange}
-          required
           disabled={loading}
+          error={apellidoError}
+        />
+
+        <TextField
+          fullWidth
+          label="Email"
+          name="email"
+          type="email"
+          value={'email' in formData ? (formData.email || '') : ''}
+          onChange={handleChange}
+          disabled={loading}
+          error={emailError || (submitted && !judoka && !emailVal)}
+          helperText={emailError ? 'Formato de email inválido' : (submitted && !judoka && !emailVal ? 'El email es obligatorio' : '')}
+          required={!judoka}
         />
 
         {!judoka && (
-          <>
-            <TextField
-              fullWidth
-              label="Email"
-              name="email"
-              type="email"
-              value={'email' in formData ? (formData.email || '') : ''}
-              onChange={handleChange}
-              disabled={loading}
-              helperText="Email para iniciar sesión en el sistema (opcional, se generará automáticamente si no se proporciona)"
-            />
-
-            <TextField
+          <TextField
               fullWidth
               label="Contraseña"
               name="password"
@@ -338,7 +459,9 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               value={'password' in formData ? (formData.password || '') : ''}
               onChange={handleChange}
               disabled={loading}
-              helperText="Contraseña para iniciar sesión (opcional, se generará automáticamente si no se proporciona)"
+              required
+              error={submitted && (!formData.password || formData.password.length < 8)}
+              helperText={submitted && (!formData.password || formData.password.length < 8) ? "La contraseña es obligatoria (mínimo 8 caracteres)" : ""}
               inputProps={{ minLength: 8 }}
               InputProps={{
                 endAdornment: (
@@ -355,7 +478,6 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
                 ),
               }}
             />
-          </>
         )}
 
         <TextField
@@ -365,20 +487,10 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
           type="date"
           value={formData.fecha_nacimiento || ''}
           onChange={handleChange}
-          required
           disabled={loading}
           InputLabelProps={{
             shrink: true,
           }}
-        />
-
-        <TextField
-          fullWidth
-          label="Carnet de Identidad"
-          name="ci"
-          value={formData.ci || ''}
-          onChange={handleChange}
-          disabled={loading}
         />
 
         <TextField
@@ -388,6 +500,9 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
           value={formData.numero_celular || ''}
           onChange={handleChange}
           disabled={loading}
+          error={celError}
+          helperText={celError ? 'Debe tener exactamente 8 dígitos' : ''}
+          inputProps={{ maxLength: 8 }}
         />
 
         <FormControl fullWidth>
@@ -402,9 +517,9 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
             <MenuItem value="">
               <em>Sin definir</em>
             </MenuItem>
-            <MenuItem value="Masculino">Masculino</MenuItem>
-            <MenuItem value="Femenino">Femenino</MenuItem>
-            <MenuItem value="Prefiero no decir">Prefiero no decir</MenuItem>
+            {generos.map(g => (
+              <MenuItem key={g} value={g}>{g}</MenuItem>
+            ))}
           </Select>
         </FormControl>
 
@@ -420,11 +535,9 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
             <MenuItem value="">
               <em>Sin definir</em>
             </MenuItem>
-            <MenuItem value="Preinfantil">Preinfantil</MenuItem>
-            <MenuItem value="Infantil">Infantil</MenuItem>
-            <MenuItem value="Cadete">Cadete</MenuItem>
-            <MenuItem value="Junior">Junior</MenuItem>
-            <MenuItem value="Senior">Senior</MenuItem>
+            {categorias.map(c => (
+              <MenuItem key={c} value={c}>{c}</MenuItem>
+            ))}
           </Select>
         </FormControl>
 
@@ -440,17 +553,11 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
             <MenuItem value="">
               <em>Sin definir</em>
             </MenuItem>
-            <MenuItem value="Blanco">Blanco</MenuItem>
-            <MenuItem value="Amarillo">Amarillo</MenuItem>
-            <MenuItem value="Naranja">Naranja</MenuItem>
-            <MenuItem value="Verde">Verde</MenuItem>
-            <MenuItem value="Azul">Azul</MenuItem>
-            <MenuItem value="Café">Café</MenuItem>
-            <MenuItem value="Negro">Negro</MenuItem>
+            {cinturones.map(c => (
+              <MenuItem key={c} value={c}>{c}</MenuItem>
+            ))}
           </Select>
         </FormControl>
-
-        {/* TODO: Agregar campo para subir foto_perfil */}
       </Box>
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>

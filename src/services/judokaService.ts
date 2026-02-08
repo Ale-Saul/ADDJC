@@ -12,11 +12,12 @@ function getSupabaseClient() {
   return supabase
 }
 
-const selectJudokasWithUsuario = '*, usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url)'
+const selectJudokasWithUsuario = '*, usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, correo, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url)'
 
 function mapJudokaRow(row: any): Judoka {
   const u = row.usuarios
   const nombres = u?.nombre ?? ''
+  const email = u?.correo ?? ''
   const apellidoPaterno = u?.apellido_paterno ?? ''
   const apellidoMaterno = u?.apellido_materno ?? ''
   const apellidos = [apellidoPaterno, apellidoMaterno].filter(Boolean).join(' ')
@@ -24,6 +25,7 @@ function mapJudokaRow(row: any): Judoka {
     ...row,
     nombres,
     apellidos,
+    email,
     apellido_paterno: apellidoPaterno,
     apellido_materno: apellidoMaterno,
     fecha_nacimiento: u?.fecha_nacimiento ?? '',
@@ -160,7 +162,8 @@ export const judokaService = {
           undefined, // clubId
           judoka.fecha_nacimiento,
           judoka.numero_celular,
-          judoka.genero
+          judoka.genero,
+          judoka.ci
         )
         
         if (!userResult.success || !userResult.data) {
@@ -251,7 +254,7 @@ export const judokaService = {
   async update(id: string, judoka: JudokaUpdate): Promise<ApiResponse<Judoka>> {
     try {
       const client = getSupabaseClient()
-      const { nombres, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url, ...judokaPayload } = judoka as JudokaUpdate & { numero_celular?: string, ci?: string, genero?: any }
+      const { email, nombres, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url, ...judokaPayload } = judoka as JudokaUpdate & { email?: string, numero_celular?: string, ci?: string, genero?: any }
 
       const { data, error } = await client
         .from('judokas')
@@ -262,8 +265,9 @@ export const judokaService = {
 
       if (error) throw error
 
-      if (data?.usuario_id && (nombres !== undefined || apellido_paterno !== undefined || apellido_materno !== undefined || fecha_nacimiento !== undefined || activo !== undefined || avatar_url !== undefined || numero_celular !== undefined || ci !== undefined || genero !== undefined)) {
+      if (data?.usuario_id && (email !== undefined || nombres !== undefined || apellido_paterno !== undefined || apellido_materno !== undefined || fecha_nacimiento !== undefined || activo !== undefined || avatar_url !== undefined || numero_celular !== undefined || ci !== undefined || genero !== undefined)) {
         const userUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
+        if (email !== undefined) userUpdate.correo = email
         if (nombres !== undefined) userUpdate.nombre = nombres
         if (apellido_paterno !== undefined) userUpdate.apellido_paterno = apellido_paterno
         if (apellido_materno !== undefined) userUpdate.apellido_materno = apellido_materno
@@ -277,7 +281,8 @@ export const judokaService = {
         await client.from('usuarios').update(userUpdate).eq('id', data.usuario_id)
         
         // Refresh the returned data to include updated user info
-        if (activo !== undefined || avatar_url !== undefined || numero_celular !== undefined || ci !== undefined || genero !== undefined) {
+        if (email !== undefined || activo !== undefined || avatar_url !== undefined || numero_celular !== undefined || ci !== undefined || genero !== undefined) {
+           data.usuarios.correo = email !== undefined ? email : data.usuarios.correo
            data.usuarios.activo = activo !== undefined ? activo : data.usuarios.activo
            data.usuarios.avatar_url = avatar_url !== undefined ? avatar_url : data.usuarios.avatar_url
            data.usuarios.numero_celular = numero_celular !== undefined ? numero_celular : data.usuarios.numero_celular

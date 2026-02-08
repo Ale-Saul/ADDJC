@@ -337,10 +337,11 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
 
         <TextField
           fullWidth
-          label="Carnet de Identidad *"
+          label="Carnet de Identidad"
           name="ci"
           value={formData.ci || ''}
           onChange={handleChange}
+          required
           disabled={loading}
           error={ciError}
           helperText={ciHelperText}
@@ -349,10 +350,11 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
 
         <TextField
           fullWidth
-          label="Nombres *"
+          label="Nombres"
           name="nombres"
           value={formData.nombres}
           onChange={handleChange}
+          required
           disabled={loading}
           error={submitted && !formData.nombres}
           helperText={submitted && !formData.nombres ? 'El nombre es obligatorio' : ''}
@@ -380,11 +382,12 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
 
         <TextField
           fullWidth
-          label="Email *"
+          label="Email"
           name="email"
           type="email"
           value={formData.email || ''}
           onChange={handleChange}
+          required
           disabled={loading}
           error={emailError}
           helperText={emailError ? emailHelperText : (sensei ? "Email de acceso (se puede actualizar)" : "Email para iniciar sesión")}
@@ -394,11 +397,12 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
           <>
             <TextField
               fullWidth
-              label="Contraseña *"
+              label="Contraseña"
               name="password"
               type={showPassword ? 'text' : 'password'}
               value={formData.password || ''}
               onChange={handleChange}
+              required
               disabled={loading}
               error={submitted && (!formData.password || formData.password.length < 8)}
               helperText={submitted && (!formData.password || formData.password.length < 8) ? "La contraseña debe tener al menos 8 caracteres" : ""}

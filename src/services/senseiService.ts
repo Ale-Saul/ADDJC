@@ -151,7 +151,8 @@ export const senseiService = {
               sensei.club_id || undefined,
               sensei.fecha_nacimiento,
               sensei.numero_celular,
-              sensei.genero
+              sensei.genero,
+              sensei.ci
             )
           : await userService.createSenseiUser(
               sensei.nombres,
@@ -161,7 +162,8 @@ export const senseiService = {
               sensei.password!,
               sensei.fecha_nacimiento,
               sensei.numero_celular,
-              sensei.genero
+              sensei.genero,
+              sensei.ci
             )
         
         if (!userResult.success || !userResult.data) {

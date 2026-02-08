@@ -121,7 +121,8 @@ export const arbitroService = {
           arbitro.password!,
           arbitro.fecha_nacimiento ?? null,
           arbitro.numero_celular,
-          arbitro.genero
+          arbitro.genero,
+          arbitro.ci
         )
         if (!userResult.success || !userResult.data) {
           return { success: false, error: userResult.error || 'Error al crear el usuario del árbitro' }
