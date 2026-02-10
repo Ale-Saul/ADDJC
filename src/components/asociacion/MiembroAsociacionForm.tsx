@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { z } from 'zod'
+import { useForm, Controller, type FieldErrors } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   TextField,
   Button,
@@ -13,13 +16,15 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  FormHelperText,
 } from '@mui/material'
-import type { SelectChangeEvent } from '@mui/material/Select'
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import { MiembroAsociacion, MiembroAsociacionCreate, MiembroAsociacionUpdate } from '@/models/asociacion'
 import { asociacionController } from '@/controllers/asociacionController'
 import { CARGOS_ASOCIACION } from '@/utils/constants'
+import { miembroAsociacionSchema } from '@/utils/zodSchemas'
+import { formatCIInput, formatCelularInput, formatNameInput } from '@/utils/inputMasks'
 
 interface MiembroAsociacionFormProps {
   miembro?: MiembroAsociacion | null
@@ -28,29 +33,67 @@ interface MiembroAsociacionFormProps {
 }
 
 export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: MiembroAsociacionFormProps) {
-  const [formData, setFormData] = useState<MiembroAsociacionCreate | MiembroAsociacionUpdate>({
-    nombres: '',
-    apellido_paterno: '',
-    apellido_materno: '',
-    email: '',
-    password: '',
-    cargo: '',
-    fecha_nacimiento: null,
-    numero_celular: '',
-    ci: '',
-    genero: '',
-    fecha_ingreso: null,
-    activo: true,
-  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
 
+  // Configuración de React Hook Form con Zod
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setFocus,
+    formState: { errors, submitCount },
+  } = useForm({
+    resolver: zodResolver(miembroAsociacionSchema),
+    mode: 'onChange',
+    defaultValues: {
+      nombres: '',
+      apellido_paterno: '',
+      apellido_materno: '',
+      email: '',
+      password: '',
+      cargo: '',
+      fecha_nacimiento: null as string | null,
+      numero_celular: '',
+      ci: '',
+      genero: '',
+      fecha_ingreso: null as string | null,
+      activo: true,
+    },
+  })
+
+  const showErrors = submitCount > 0
+
+  const fieldError = (name: keyof typeof errors) => ({
+    error: showErrors && !!errors[name],
+    helperText: showErrors ? (errors[name] as { message?: string } | undefined)?.message : undefined,
+  })
+
+  const onError = (formErrors: FieldErrors<z.infer<typeof miembroAsociacionSchema>>) => {
+    // Obtener todos los campos con error
+    const errorKeys = Object.keys(formErrors) as (keyof z.infer<typeof miembroAsociacionSchema>)[]
+    
+    if (errorKeys.length > 0) {
+      // Intentar enfocar el primer campo con error
+      const firstField = errorKeys[0]
+      setFocus(firstField, { shouldSelect: true })
+
+      // Fallback: Desplazamiento manual por si setFocus no dispara el scroll en el Dialog
+      setTimeout(() => {
+        const element = document.getElementsByName(firstField)[0]
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }, 100)
+    }
+  }
+
+  // Efecto para cargar datos del miembro en edición
   useEffect(() => {
     if (miembro) {
-      setFormData({
+      reset({
         nombres: miembro.nombres,
         apellido_paterno: miembro.apellido_paterno ?? miembro.apellidos?.split(/\s+/)[0] ?? '',
         apellido_materno: miembro.apellido_materno ?? miembro.apellidos?.split(/\s+/).slice(1).join(' ') ?? '',
@@ -64,146 +107,39 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
         activo: miembro.activo,
       })
     }
-  }, [miembro])
+  }, [miembro, reset])
 
-  // Validación de CI: hasta 7 números, opcionalmente un guión y hasta 3 letras
-  const validateCI = (ci: string): boolean => {
-    if (!ci) return false
-    return /^\d{1,7}(-[A-Za-z]{1,3})?$/.test(ci)
-  }
-
-  // Validación de celular: exactamente 8 dígitos
-  const validateCelular = (cel: string): boolean => {
-    if (!cel) return true // no es requerido
-    return /^\d{8}$/.test(cel)
-  }
-
-  // Validación de email
-  const validateEmail = (email: string): boolean => {
-    if (!email) return false
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-
-    // Reiniciar el estado de validación al empezar a escribir para cumplir con
-    // el requerimiento de mostrar errores solo al intentar guardar.
-    if (submitted) setSubmitted(false)
-
-    // Filtrar entrada de CI: hasta 7 números, opcionalmente un guion y hasta 3 letras
-    if (name === 'ci') {
-      const val = value.toUpperCase()
-      // Regex que valida la progresión: hasta 7 números, luego opcionalmente '-' y hasta 3 letras
-      if (/^\d{0,7}(-([A-Z]{0,3})?)?$/.test(val)) {
-        setFormData(prev => ({ ...prev, ci: val }))
-        setError(null)
-        setSuccess(false)
-      }
-      return
-    }
-
-    // Filtrar entrada de celular: solo números, máximo 8
-    if (name === 'numero_celular') {
-      const filtered = value.replace(/[^0-9]/g, '').slice(0, 8)
-      setFormData(prev => ({ ...prev, numero_celular: filtered }))
-      setError(null)
-      setSuccess(false)
-      return
-    }
-
-    setFormData(prev => ({ ...prev, [name]: value }))
-    setError(null)
-    setSuccess(false)
-  }
-
-  const handleSelectChange = (e: SelectChangeEvent<string>) => {
-    if (submitted) setSubmitted(false)
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
-    setError(null)
-    setSuccess(false)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitted(true)
+  const onSubmit = async (data: z.infer<typeof miembroAsociacionSchema>) => {
     setLoading(true)
     setError(null)
     setSuccess(false)
-
-    // Validaciones del lado del cliente
-    const paterno = (formData.apellido_paterno ?? '').trim()
-    const materno = (formData.apellido_materno ?? '').trim()
-    if (!paterno && !materno) {
-      setError('Al menos uno de los dos apellidos es requerido')
-      setLoading(false)
-      return
-    }
-
-    const ciValue = (formData.ci ?? '').trim()
-    if (!ciValue) {
-      setError('El Carnet de Identidad es requerido')
-      setLoading(false)
-      return
-    }
-    if (!validateCI(ciValue)) {
-      setError('El Carnet de Identidad debe tener hasta 7 números y opcionalmente un guión seguido de hasta 3 letras (ej: 1234567-CB)')
-      setLoading(false)
-      return
-    }
-
-    const celValue = (formData.numero_celular ?? '').trim()
-    if (celValue && !validateCelular(celValue)) {
-      setError('El número de celular debe tener exactamente 8 dígitos')
-      setLoading(false)
-      return
-    }
-
-    const emailValue = (formData.email ?? '').trim()
-    if (!emailValue) {
-      setError('El email es requerido')
-      setLoading(false)
-      return
-    }
-    if (!validateEmail(emailValue)) {
-      setError('El formato del email no es válido')
-      setLoading(false)
-      return
-    }
 
     try {
       let response
 
       if (miembro) {
         const updateData: MiembroAsociacionUpdate = {
-          nombres: formData.nombres,
-          apellido_paterno: formData.apellido_paterno,
-          apellido_materno: formData.apellido_materno,
-          email: formData.email,
-          cargo: formData.cargo || null,
-          fecha_nacimiento: formData.fecha_nacimiento || null,
-          numero_celular: formData.numero_celular || null,
-          ci: formData.ci || null,
-          genero: formData.genero || null,
-          fecha_ingreso: formData.fecha_ingreso || null,
-          activo: formData.activo,
-        }
+          ...data,
+          cargo: data.cargo || null,
+          fecha_nacimiento: data.fecha_nacimiento || null,
+          numero_celular: data.numero_celular || null,
+          ci: data.ci || null,
+          genero: data.genero || null,
+          fecha_ingreso: data.fecha_ingreso || null,
+        } as MiembroAsociacionUpdate
         response = await asociacionController.updateMiembro(miembro.id, updateData)
       } else {
         const createData: MiembroAsociacionCreate = {
-          nombres: formData.nombres || '',
-          apellido_paterno: formData.apellido_paterno || '',
-          apellido_materno: formData.apellido_materno || '',
-          email: formData.email || '',
-          password: formData.password || '',
-          cargo: formData.cargo || null,
-          fecha_nacimiento: formData.fecha_nacimiento || null,
-          numero_celular: formData.numero_celular || null,
-          ci: formData.ci || null,
-          genero: formData.genero || null,
-          fecha_ingreso: formData.fecha_ingreso || null,
-          activo: formData.activo ?? true,
-        }
+          ...data,
+          cargo: data.cargo || null,
+          fecha_nacimiento: data.fecha_nacimiento || null,
+          numero_celular: data.numero_celular || null,
+          ci: data.ci || null,
+          genero: data.genero || null,
+          fecha_ingreso: data.fecha_ingreso || null,
+          activo: data.activo ?? true,
+          password: data.password || '',
+        } as MiembroAsociacionCreate
         response = await asociacionController.createMiembro(createData)
       }
 
@@ -217,40 +153,16 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
       } else {
         setError(response.error || 'Error al guardar el miembro')
       }
-    } catch (err: any) {
-      setError(err.message || 'Error inesperado')
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Error inesperado'
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
   }
 
-  // Helpers para mostrar errores en campos individuales
-  const ciValue = (formData.ci ?? '').trim()
-  const ciError = submitted && (!ciValue || !validateCI(ciValue))
-  const ciHelperText = submitted && !ciValue
-    ? 'El Carnet de Identidad es requerido'
-    : submitted && !validateCI(ciValue) && ciValue
-      ? 'Formato: hasta 7 números, opcionalmente guión y hasta 3 letras (ej: 1234567-CB)'
-      : ''
-
-  const celValue = (formData.numero_celular ?? '').trim()
-  const celError = submitted && celValue.length > 0 && !validateCelular(celValue)
-  const celHelperText = celError ? 'Debe tener exactamente 8 dígitos' : ''
-
-  const emailValue = (formData.email ?? '').trim()
-  const emailError = submitted && (!emailValue || !validateEmail(emailValue))
-  const emailHelperText = submitted && !emailValue
-    ? 'El email es requerido'
-    : submitted && !validateEmail(emailValue) && emailValue
-      ? 'El formato del email no es válido'
-      : ''
-
-  const paterno = (formData.apellido_paterno ?? '').trim()
-  const materno = (formData.apellido_materno ?? '').trim()
-  const apellidoError = submitted && !paterno && !materno
-
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+    <Box component="form" onSubmit={handleSubmit(onSubmit, onError)} sx={{ mt: 2 }}>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
@@ -264,174 +176,204 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
       )}
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {/* CI como primer campo, requerido */}
-        <TextField
-          fullWidth
-          label="Carnet de Identidad"
+        <Controller
           name="ci"
-          value={formData.ci || ''}
-          onChange={handleChange}
-          required
-          disabled={loading}
-          error={ciError}
-          helperText={ciHelperText}
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              fullWidth
+              label="Carnet de Identidad"
+              required
+              disabled={loading}
+              {...fieldError('ci')}
+              onChange={(e) => field.onChange(formatCIInput(e.target.value))}
+            />
+          )}
         />
 
-        <TextField
-          fullWidth
-          label="Nombres"
+        <Controller
           name="nombres"
-          value={formData.nombres}
-          onChange={handleChange}
-          required
-          disabled={loading}
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              fullWidth
+              label="Nombres"
+              required
+              disabled={loading}
+              {...fieldError('nombres')}
+              onChange={(e) => field.onChange(formatNameInput(e.target.value))}
+            />
+          )}
         />
 
-        <TextField
-          fullWidth
-          label="Apellido paterno"
+        <Controller
           name="apellido_paterno"
-          value={formData.apellido_paterno ?? ''}
-          onChange={handleChange}
-          disabled={loading}
-          error={apellidoError}
-          helperText={apellidoError ? 'Al menos uno de los dos apellidos es requerido' : ''}
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              fullWidth
+              label="Apellido paterno"
+              disabled={loading}
+              {...fieldError('apellido_paterno')}
+              onChange={(e) => field.onChange(formatNameInput(e.target.value))}
+            />
+          )}
         />
-        <TextField
-          fullWidth
-          label="Apellido materno"
+
+        <Controller
           name="apellido_materno"
-          value={formData.apellido_materno ?? ''}
-          onChange={handleChange}
-          disabled={loading}
-          error={apellidoError}
-          helperText={apellidoError ? 'Al menos uno de los dos apellidos es requerido' : ''}
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              fullWidth
+              label="Apellido materno"
+              disabled={loading}
+              error={fieldError('apellido_paterno').error}
+              helperText={fieldError('apellido_paterno').error ? 'Al menos uno de los dos apellidos es requerido' : undefined}
+              onChange={(e) => field.onChange(formatNameInput(e.target.value))}
+            />
+          )}
         />
 
-        <TextField
-          fullWidth
-          label="Fecha de Nacimiento"
+        <Controller
           name="fecha_nacimiento"
-          type="date"
-          value={formData.fecha_nacimiento || ''}
-          onChange={handleChange}
-          disabled={loading}
-          InputLabelProps={{
-            shrink: true,
-          }}
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              value={field.value || ''}
+              fullWidth
+              label="Fecha de Nacimiento"
+              type="date"
+              disabled={loading}
+              InputLabelProps={{ shrink: true }}
+              {...fieldError('fecha_nacimiento')}
+            />
+          )}
         />
 
-        <TextField
-          fullWidth
-          label="Número de Celular"
+        <Controller
           name="numero_celular"
-          value={formData.numero_celular || ''}
-          onChange={handleChange}
-          disabled={loading}
-          error={celError}
-          helperText={celHelperText}
-          inputProps={{ maxLength: 8 }}
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              fullWidth
+              label="Número de Celular"
+              disabled={loading}
+              {...fieldError('numero_celular')}
+              inputProps={{ maxLength: 8 }}
+              onChange={(e) => field.onChange(formatCelularInput(e.target.value))}
+            />
+          )}
         />
 
-        <FormControl fullWidth>
+        <FormControl fullWidth error={fieldError('genero').error}>
           <InputLabel>Género</InputLabel>
-          <Select
+          <Controller
             name="genero"
-            value={formData.genero || ''}
-            onChange={handleSelectChange}
-            disabled={loading}
-            label="Género"
-          >
-            <MenuItem value="">
-              <em>Sin definir</em>
-            </MenuItem>
-            <MenuItem value="Femenino">Femenino</MenuItem>
-            <MenuItem value="Masculino">Masculino</MenuItem>
-            <MenuItem value="Prefiero no decir">Prefiero no decir</MenuItem>
-          </Select>
+            control={control}
+            render={({ field }) => (
+              <Select {...field} label="Género" disabled={loading}>
+                <MenuItem value=""><em>Sin definir</em></MenuItem>
+                <MenuItem value="Masculino">Masculino</MenuItem>
+                <MenuItem value="Femenino">Femenino</MenuItem>
+                <MenuItem value="Prefiero no decir">Prefiero no decir</MenuItem>
+              </Select>
+            )}
+          />
+          {fieldError('genero').helperText && <FormHelperText>{fieldError('genero').helperText}</FormHelperText>}
         </FormControl>
 
-        <TextField
-          fullWidth
-          label="Fecha de Ingreso"
+        <Controller
           name="fecha_ingreso"
-          type="date"
-          value={formData.fecha_ingreso || ''}
-          onChange={handleChange}
-          disabled={loading}
-          InputLabelProps={{
-            shrink: true,
-          }}
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              value={field.value || ''}
+              fullWidth
+              label="Fecha de Ingreso"
+              type="date"
+              disabled={loading}
+              InputLabelProps={{ shrink: true }}
+              {...fieldError('fecha_ingreso')}
+            />
+          )}
         />
 
-        {/* Cargo NO requerido */}
-        <FormControl fullWidth disabled={loading}>
+        <FormControl fullWidth error={fieldError('cargo').error}>
           <InputLabel>Cargo</InputLabel>
-          <Select
+          <Controller
             name="cargo"
-            value={formData.cargo ?? ''}
-            label="Cargo"
-            onChange={handleSelectChange}
-          >
-            <MenuItem value="">
-              <em>Sin cargo</em>
-            </MenuItem>
-            {[...CARGOS_ASOCIACION].sort((a, b) => a.localeCompare(b)).map(c => (
-              <MenuItem key={c} value={c}>{c}</MenuItem>
-            ))}
-          </Select>
+            control={control}
+            render={({ field }) => (
+              <Select {...field} label="Cargo" disabled={loading}>
+                <MenuItem value=""><em>Sin cargo</em></MenuItem>
+                {CARGOS_ASOCIACION.map(c => (
+                  <MenuItem key={c} value={c}>{c}</MenuItem>
+                ))}
+              </Select>
+            )}
+          />
+          {fieldError('cargo').helperText && <FormHelperText>{fieldError('cargo').helperText}</FormHelperText>}
         </FormControl>
 
-        <TextField
-          fullWidth
-          label="Email"
+        <Controller
           name="email"
-          type="email"
-          value={formData.email}
-          onChange={handleChange}
-          required
-          disabled={loading}
-          error={emailError}
-          helperText={emailHelperText}
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              fullWidth
+              label="Email"
+              type="email"
+              required
+              disabled={loading}
+              {...fieldError('email')}
+            />
+          )}
         />
 
         {!miembro && (
-          <TextField
-            fullWidth
-            label="Contraseña"
+          <Controller
             name="password"
-            type={showPassword ? 'text' : 'password'}
-            value={formData.password}
-            onChange={handleChange}
-            required
-            disabled={loading}
-            error={submitted && (!formData.password || formData.password.length < 8)}
-            helperText={submitted && (!formData.password || formData.password.length < 8) ? "La contraseña debe tener al menos 8 caracteres" : ""}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    aria-label="toggle password visibility"
-                    onClick={() => setShowPassword(!showPassword)}
-                    onMouseDown={(e) => e.preventDefault()}
-                    edge="end"
-                  >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label="Contraseña"
+                type={showPassword ? 'text' : 'password'}
+                required
+                disabled={loading}
+                {...fieldError('password')}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            )}
           />
         )}
       </Box>
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
         {onCancel && (
-          <Button
-            variant="outlined"
-            onClick={onCancel}
-            disabled={loading}
-          >
+          <Button variant="outlined" onClick={onCancel} disabled={loading}>
             Cancelar
           </Button>
         )}

@@ -39,21 +39,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!nombres) {
-      console.error('Nombres faltantes en la solicitud')
+    const nombresTrimmed = (typeof nombres === 'string' ? nombres.trim() : '') || ''
+    if (!nombresTrimmed) {
       return NextResponse.json(
         { success: false, error: 'Nombres son requeridos' },
         { status: 400 }
       )
     }
 
-    // Apellidos: aceptar apellido_paterno + apellido_materno o un solo "apellidos" (se divide)
-    const apellidoPaterno =
+    // Apellidos: opcionales en BD; la app exige al menos uno. Enviamos null si viene vacío.
+    const rawPaterno =
       apellidoPaternoBody ??
-      (typeof apellidos === 'string' ? apellidos.trim().split(/\s+/)[0] || 'Apellido' : 'Apellido')
-    const apellidoMaterno =
+      (typeof apellidos === 'string' ? apellidos.trim().split(/\s+/)[0] || '' : '')
+    const rawMaterno =
       apellidoMaternoBody ??
-      (typeof apellidos === 'string' ? apellidos.trim().split(/\s+/).slice(1).join(' ') || 'Apellido' : 'Apellido')
+      (typeof apellidos === 'string' ? apellidos.trim().split(/\s+/).slice(1).join(' ') || '' : '')
+    const apellidoPaterno = (typeof rawPaterno === 'string' ? rawPaterno.trim() : '') || null
+    const apellidoMaterno = (typeof rawMaterno === 'string' ? rawMaterno.trim() : '') || null
     const fechaNacimiento = fechaNacimientoBody || '1990-01-01'
     const genero = generoBody || 'Prefiero no decir'
 
@@ -92,7 +94,7 @@ export async function POST(request: NextRequest) {
         password,
         email_confirm: true, // Auto-confirmar email
         user_metadata: {
-          nombres,
+          nombres: nombresTrimmed,
           apellido_paterno: apellidoPaterno,
           apellido_materno: apellidoMaterno,
           fecha_nacimiento: fechaNacimiento,
