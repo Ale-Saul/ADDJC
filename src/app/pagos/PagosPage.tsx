@@ -47,7 +47,7 @@ export default function PagosPage() {
     isLoading: loadingJudokas,
     searchTerm,
     setSearchTerm,
-  } = useJudokas({ clubId: user?.club_id, autoFetch: !!user?.club_id })
+  } = useJudokas({ clubId: user?.club_id, autoFetch: true })
 
   const {
     allPagos: pagos,
@@ -73,8 +73,6 @@ export default function PagosPage() {
     masivoDialog.close()
     refreshPagos()
   }
-
-  const judokasFiltrados = judokas.filter(j => j.club_id !== null)
 
   return (
     <ProtectedRoute allowedRoles={['admin', 'encargado']}>
@@ -125,7 +123,7 @@ export default function PagosPage() {
                 }}
               />
 
-              {judokasFiltrados.length === 0 ? (
+              {judokas.length === 0 ? (
                 <Paper sx={{ p: 3, textAlign: 'center' }}>
                   <Typography color="text.secondary">
                     No se encontraron judokas con "{searchTerm}"
@@ -144,7 +142,7 @@ export default function PagosPage() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {judokasFiltrados.map((judoka) => (
+                      {judokas.map((judoka) => (
                         <TableRow key={judoka.id} hover>
                           <TableCell>{judoka.nombres}</TableCell>
                           <TableCell>{judoka.apellidos}</TableCell>
