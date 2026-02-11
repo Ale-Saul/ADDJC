@@ -14,10 +14,28 @@ import {
   Box,
   CircularProgress,
   Alert,
-  Typography
+  Typography,
+  TextField,
+  InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Stack,
+  Tooltip
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
+import SearchIcon from '@mui/icons-material/Search'
+import ClearIcon from '@mui/icons-material/Clear'
+import {
+  useReactTable,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  flexRender,
+  createColumnHelper
+} from '@tanstack/react-table'
 import { Arbitro } from '@/models/arbitro'
 import { arbitroController } from '@/controllers/arbitroController'
 import Pagination from '@/components/common/Pagination'
@@ -30,25 +48,31 @@ interface ArbitroListProps {
   itemsPerPage?: number
 }
 
-export default function ArbitroList({ onEdit, onDelete, refreshTrigger, searchTerm = '', itemsPerPage: initialItemsPerPage = 10 }: ArbitroListProps) {
+export default function ArbitroList({ 
+  onEdit, 
+  onDelete, 
+  refreshTrigger, 
+  searchTerm: externalSearchTerm = '', 
+  itemsPerPage: initialItemsPerPage = 10 
+}: ArbitroListProps) {
   const [arbitros, setArbitros] = useState<Arbitro[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(initialItemsPerPage)
+  
+  // Estados para filtros
+  const [globalFilter, setGlobalFilter] = useState(externalSearchTerm)
+  const [nivelFilter, setNivelFilter] = useState<string>('all')
+  const [estadoFilter, setEstadoFilter] = useState<string>('all')
 
   const loadArbitros = async () => {
     setLoading(true)
     setError(null)
-    
     const response = await arbitroController.getAllArbitros()
-    
     if (response.success && response.data) {
       setArbitros(response.data)
     } else {
       setError(response.error || 'Error al cargar los árbitros')
     }
-    
     setLoading(false)
   }
 
@@ -56,27 +80,109 @@ export default function ArbitroList({ onEdit, onDelete, refreshTrigger, searchTe
     loadArbitros()
   }, [refreshTrigger])
 
-  // Resetear a página 1 cuando cambia el término de búsqueda
   useEffect(() => {
-    setCurrentPage(1)
-  }, [searchTerm])
+    setGlobalFilter(externalSearchTerm)
+  }, [externalSearchTerm])
 
-  // Filtrar árbitros según el término de búsqueda
-  const filteredArbitros = useMemo(() => {
-    if (!searchTerm) return arbitros
-    const search = searchTerm.toLowerCase()
-    return arbitros.filter((arbitro) => (
-      arbitro.nombres?.toLowerCase().includes(search) ||
-      arbitro.apellidos?.toLowerCase().includes(search) ||
-      arbitro.nivel_arbitraje?.toLowerCase().includes(search)
-    ))
-  }, [arbitros, searchTerm])
+  // Definición de columnas con TanStack Table
+  const columnHelper = createColumnHelper<Arbitro>()
+  
+  const columns = useMemo(() => [
+    columnHelper.display({
+      id: 'indice',
+      header: 'N°',
+      cell: (info) => info.row.index + 1,
+    }),
+    columnHelper.accessor('ci', {
+      header: 'Carnet',
+      cell: (info) => info.getValue() || '-',
+    }),
+    columnHelper.accessor('nombres', {
+      header: 'Nombres',
+    }),
+    columnHelper.accessor('apellidos', {
+      header: 'Apellidos',
+    }),
+    columnHelper.accessor('nivel_arbitraje', {
+      header: 'Nivel',
+      cell: (info) => info.getValue() || '-',
+    }),
+    columnHelper.accessor('activo', {
+      header: 'Estado',
+      cell: (info) => (
+        <Chip 
+          label={info.getValue() ? 'Activo' : 'Inactivo'} 
+          color={info.getValue() ? 'success' : 'default'}
+          size="small"
+        />
+      ),
+    }),
+    columnHelper.display({
+      id: 'acciones',
+      header: () => <Box textAlign="right">Acciones</Box>,
+      cell: (info) => (
+        <Box textAlign="right">
+          {onEdit && (
+            <IconButton 
+              size="small" 
+              color="primary" 
+              onClick={() => onEdit(info.row.original)}
+              title="Editar"
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+          )}
+          {onDelete && (
+            <IconButton 
+              size="small" 
+              color="error" 
+              onClick={() => onDelete(info.row.original)}
+              title="Eliminar"
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          )}
+        </Box>
+      ),
+    }),
+  ], [onEdit, onDelete])
 
-  // Calcular paginación
-  const totalPages = Math.ceil(filteredArbitros.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedArbitros = filteredArbitros.slice(startIndex, endIndex)
+  // Filtrado personalizado
+  const filteredData = useMemo(() => {
+    return arbitros.filter(a => {
+      const matchNivel = nivelFilter === 'all' || a.nivel_arbitraje === nivelFilter
+      const matchEstado = estadoFilter === 'all' || 
+        (estadoFilter === 'activo' ? a.activo : !a.activo)
+      
+      const search = globalFilter.toLowerCase()
+      const matchSearch = !search || 
+        a.nombres?.toLowerCase().includes(search) ||
+        a.apellidos?.toLowerCase().includes(search) ||
+        a.ci?.toLowerCase().includes(search) ||
+        a.nivel_arbitraje?.toLowerCase().includes(search)
+
+      return matchNivel && matchEstado && matchSearch
+    })
+  }, [arbitros, nivelFilter, estadoFilter, globalFilter])
+
+  const table = useReactTable({
+    data: filteredData,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: initialItemsPerPage,
+      },
+    },
+  })
+
+  const clearFilters = () => {
+    setNivelFilter('all')
+    setEstadoFilter('all')
+    setGlobalFilter('')
+  }
 
   if (loading) {
     return (
@@ -88,94 +194,116 @@ export default function ArbitroList({ onEdit, onDelete, refreshTrigger, searchTe
 
   if (error) {
     return (
-      <Alert severity="error" sx={{ mb: 2 }}>
-        {error}
-      </Alert>
-    )
-  }
-
-  if (arbitros.length === 0) {
-    return (
-      <Box textAlign="center" py={4}>
-        <Typography variant="h6" color="text.secondary">
-          No hay árbitros registrados
-        </Typography>
-      </Box>
-    )
-  }
-
-  if (filteredArbitros.length === 0 && searchTerm) {
-    return (
-      <Box textAlign="center" py={4}>
-        <Typography variant="h6" color="text.secondary">
-          No se encontraron árbitros que coincidan con "{searchTerm}"
-        </Typography>
-      </Box>
+      <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
     )
   }
 
   return (
-    <>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell><strong>Nombres</strong></TableCell>
-              <TableCell><strong>Apellidos</strong></TableCell>
-              <TableCell><strong>Nivel de Arbitraje</strong></TableCell>
-              <TableCell><strong>Estado</strong></TableCell>
-              <TableCell align="right"><strong>Acciones</strong></TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {paginatedArbitros.map((arbitro) => (
-              <TableRow key={arbitro.id} hover>
-                <TableCell>{arbitro.nombres}</TableCell>
-                <TableCell>{arbitro.apellidos}</TableCell>
-                <TableCell>{arbitro.nivel_arbitraje || '-'}</TableCell>
-                <TableCell>
-                  <Chip 
-                    label={arbitro.activo ? 'Activo' : 'Inactivo'} 
-                    color={arbitro.activo ? 'success' : 'default'}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell align="right">
-                  {onEdit && (
-                    <IconButton 
-                      size="small" 
-                      color="primary" 
-                      onClick={() => onEdit(arbitro)}
-                      title="Editar"
-                    >
-                      <EditIcon />
-                    </IconButton>
-                  )}
-                  {onDelete && (
-                    <IconButton 
-                      size="small" 
-                      color="error" 
-                      onClick={() => onDelete(arbitro)}
-                      title="Eliminar"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalItems={filteredArbitros.length}
-        itemsPerPage={itemsPerPage}
-        onPageChange={setCurrentPage}
-        onItemsPerPageChange={setItemsPerPage}
-      />
-    </>
+    <Box>
+      <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f8f9fa' }} variant="outlined">
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
+          <TextField
+            size="small"
+            placeholder="Buscar por carnet, nombre..."
+            value={globalFilter}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            sx={{ flexGrow: 1, backgroundColor: 'white' }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+          
+          <FormControl size="small" sx={{ minWidth: 150, backgroundColor: 'white' }}>
+            <InputLabel>Nivel</InputLabel>
+            <Select
+              value={nivelFilter}
+              label="Nivel"
+              onChange={(e) => setNivelFilter(e.target.value)}
+            >
+              <MenuItem value="all">Todos los niveles</MenuItem>
+              <MenuItem value="Regional">Regional</MenuItem>
+              <MenuItem value="Nacional">Nacional</MenuItem>
+              <MenuItem value="Internacional">Internacional</MenuItem>
+            </Select>
+          </FormControl>
+
+          <FormControl size="small" sx={{ minWidth: 150, backgroundColor: 'white' }}>
+            <InputLabel>Estado</InputLabel>
+            <Select
+              value={estadoFilter}
+              label="Estado"
+              onChange={(e) => setEstadoFilter(e.target.value)}
+            >
+              <MenuItem value="all">Todos los estados</MenuItem>
+              <MenuItem value="activo">Activos</MenuItem>
+              <MenuItem value="inactivo">Inactivos</MenuItem>
+            </Select>
+          </FormControl>
+
+          {(nivelFilter !== 'all' || estadoFilter !== 'all' || globalFilter !== '') && (
+            <Tooltip title="Limpiar filtros">
+              <IconButton onClick={clearFilters} color="warning" size="small">
+                <ClearIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Stack>
+      </Paper>
+
+      {filteredData.length === 0 ? (
+        <Box textAlign="center" py={4}>
+          <Typography variant="h6" color="text.secondary">
+            No se encontraron resultados con los filtros aplicados
+          </Typography>
+        </Box>
+      ) : (
+        <>
+          <TableContainer component={Paper} variant="outlined">
+            <Table size="small">
+              <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                {table.getHeaderGroups().map(headerGroup => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map(header => (
+                      <TableCell key={header.id} sx={{ fontWeight: 'bold', py: 1.5 }}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHead>
+              <TableBody>
+                {table.getRowModel().rows.map(row => (
+                  <TableRow key={row.id} hover>
+                    {row.getVisibleCells().map(cell => (
+                      <TableCell key={cell.id} sx={{ py: 1 }}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <Pagination
+            currentPage={table.getState().pagination.pageIndex + 1}
+            totalPages={table.getPageCount()}
+            totalItems={filteredData.length}
+            itemsPerPage={table.getState().pagination.pageSize}
+            onPageChange={(page) => table.setPageIndex(page - 1)}
+            onItemsPerPageChange={(size) => table.setPageSize(size)}
+          />
+        </>
+      )}
+    </Box>
   )
 }
-

@@ -24,7 +24,7 @@ import { Club, ClubCreate, ClubUpdate } from '@/models/club'
 import { clubController } from '@/controllers/clubController'
 import { senseiController } from '@/controllers/senseiController'
 import { Sensei, SenseiCreate } from '@/models/sensei'
-import { PROVINCIAS } from '@/utils/constants'
+import { MUNICIPIOS } from '@/utils/constants'
 
 interface ClubFormProps {
   club?: Club | null
@@ -244,17 +244,17 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
         />
 
         <FormControl fullWidth disabled={loading}>
-          <InputLabel>Provincia</InputLabel>
+          <InputLabel>Municipio</InputLabel>
           <Select
             name="provincia"
             value={formData.provincia ?? ''}
-            label="Provincia"
+            label="Municipio"
             onChange={(e: SelectChangeEvent<string>) =>
               setFormData(prev => ({ ...prev, provincia: e.target.value }))
             }
           >
-            {PROVINCIAS.map(p => (
-              <MenuItem key={p} value={p}>{p}</MenuItem>
+            {MUNICIPIOS.map(m => (
+              <MenuItem key={m} value={m}>{m}</MenuItem>
             ))}
           </Select>
         </FormControl>

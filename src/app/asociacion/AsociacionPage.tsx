@@ -7,7 +7,6 @@ import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import MiembroAsociacionList from '@/components/asociacion/MiembroAsociacionList'
 import MiembroAsociacionForm from '@/components/asociacion/MiembroAsociacionForm'
-import SearchBar from '@/components/common/SearchBar'
 import { MiembroAsociacion } from '@/models/asociacion'
 import { asociacionController } from '@/controllers/asociacionController'
 import { useRouter } from 'next/navigation'
@@ -16,7 +15,6 @@ export default function AsociacionPage() {
   const router = useRouter()
   const [openDialog, setOpenDialog] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const [searchTerm, setSearchTerm] = useState('')
 
   const handleCreateSuccess = () => {
     setOpenDialog(false)
@@ -60,16 +58,10 @@ export default function AsociacionPage() {
           </Button>
         </Box>
 
-        <SearchBar
-          placeholder="Buscar por nombre, apellido o email..."
-          onSearch={setSearchTerm}
-        />
-
         <MiembroAsociacionList
           onEdit={handleEdit}
           onDelete={handleDelete}
           refreshTrigger={refreshTrigger}
-          searchTerm={searchTerm}
         />
 
         <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>

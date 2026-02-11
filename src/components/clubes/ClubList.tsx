@@ -14,13 +14,32 @@ import {
   Box,
   CircularProgress,
   Alert,
-  Typography
+  Typography,
+  TextField,
+  InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Stack,
+  Tooltip
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
+import SearchIcon from '@mui/icons-material/Search'
+import ClearIcon from '@mui/icons-material/Clear'
+import {
+  useReactTable,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  flexRender,
+  createColumnHelper
+} from '@tanstack/react-table'
 import { Club } from '@/models/club'
 import { clubController } from '@/controllers/clubController'
 import Pagination from '@/components/common/Pagination'
+import { MUNICIPIOS } from '@/utils/constants'
 
 interface ClubListProps {
   onEdit?: (club: Club) => void
@@ -30,25 +49,31 @@ interface ClubListProps {
   itemsPerPage?: number
 }
 
-export default function ClubList({ onEdit, onDelete, refreshTrigger, searchTerm = '', itemsPerPage: initialItemsPerPage = 10 }: ClubListProps) {
+export default function ClubList({ 
+  onEdit, 
+  onDelete, 
+  refreshTrigger, 
+  searchTerm: externalSearchTerm = '', 
+  itemsPerPage: initialItemsPerPage = 10 
+}: ClubListProps) {
   const [clubes, setClubes] = useState<Club[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(initialItemsPerPage)
+  
+  // Estados para filtros
+  const [globalFilter, setGlobalFilter] = useState(externalSearchTerm)
+  const [municipioFilter, setMunicipioFilter] = useState<string>('all')
+  const [estadoFilter, setEstadoFilter] = useState<string>('all')
 
   const loadClubes = async () => {
     setLoading(true)
     setError(null)
-    
     const response = await clubController.getAllClubes()
-    
     if (response.success && response.data) {
       setClubes(response.data)
     } else {
       setError(response.error || 'Error al cargar los clubes')
     }
-    
     setLoading(false)
   }
 
@@ -56,28 +81,106 @@ export default function ClubList({ onEdit, onDelete, refreshTrigger, searchTerm 
     loadClubes()
   }, [refreshTrigger])
 
-  // Resetear a página 1 cuando cambia el término de búsqueda
   useEffect(() => {
-    setCurrentPage(1)
-  }, [searchTerm])
+    setGlobalFilter(externalSearchTerm)
+  }, [externalSearchTerm])
 
-  // Filtrar clubes según el término de búsqueda
-  const filteredClubes = useMemo(() => {
-    if (!searchTerm) return clubes
-    const search = searchTerm.toLowerCase()
-    return clubes.filter((club) => (
-      club.nombre_club?.toLowerCase().includes(search) ||
-      club.provincia?.toLowerCase().includes(search) ||
-      club.direccion?.toLowerCase().includes(search) ||
-      club.telefono_contacto?.toLowerCase().includes(search)
-    ))
-  }, [clubes, searchTerm])
+  // Definición de columnas con TanStack Table
+  const columnHelper = createColumnHelper<Club>()
+  
+  const columns = useMemo(() => [
+    columnHelper.display({
+      id: 'indice',
+      header: 'N°',
+      cell: (info) => info.row.index + 1,
+    }),
+    columnHelper.accessor('nombre_club', {
+      header: 'Nombre del Club',
+    }),
+    columnHelper.accessor('provincia', {
+      header: 'Municipio',
+      cell: (info) => info.getValue() || '-',
+    }),
+    columnHelper.accessor('telefono_contacto', {
+      header: 'Teléfono',
+      cell: (info) => info.getValue() || '-',
+    }),
+    columnHelper.accessor('activo', {
+      header: 'Estado',
+      cell: (info) => (
+        <Chip 
+          label={info.getValue() ? 'Activo' : 'Inactivo'} 
+          color={info.getValue() ? 'success' : 'default'}
+          size="small"
+        />
+      ),
+    }),
+    columnHelper.display({
+      id: 'acciones',
+      header: () => <Box textAlign="right">Acciones</Box>,
+      cell: (info) => (
+        <Box textAlign="right">
+          {onEdit && (
+            <IconButton 
+              size="small" 
+              color="primary" 
+              onClick={() => onEdit(info.row.original)}
+              title="Editar"
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+          )}
+          {onDelete && (
+            <IconButton 
+              size="small" 
+              color="error" 
+              onClick={() => onDelete(info.row.original)}
+              title="Eliminar"
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          )}
+        </Box>
+      ),
+    }),
+  ], [onEdit, onDelete])
 
-  // Calcular paginación
-  const totalPages = Math.ceil(filteredClubes.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedClubes = filteredClubes.slice(startIndex, endIndex)
+  // Filtrado personalizado
+  const filteredData = useMemo(() => {
+    return clubes.filter(c => {
+      const matchMunicipio = municipioFilter === 'all' || c.provincia === municipioFilter
+      const matchEstado = estadoFilter === 'all' || 
+        (estadoFilter === 'activo' ? c.activo : !c.activo)
+      
+      const search = globalFilter.toLowerCase()
+      const matchSearch = !search || 
+        c.nombre_club?.toLowerCase().includes(search) ||
+        c.provincia?.toLowerCase().includes(search) ||
+        c.direccion?.toLowerCase().includes(search) ||
+        c.telefono_contacto?.toLowerCase().includes(search)
+
+      return matchMunicipio && matchEstado && matchSearch
+    })
+  }, [clubes, municipioFilter, estadoFilter, globalFilter])
+
+  const table = useReactTable({
+    data: filteredData,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: initialItemsPerPage,
+      },
+    },
+  })
+
+  const clearFilters = () => {
+    setMunicipioFilter('all')
+    setEstadoFilter('all')
+    setGlobalFilter('')
+  }
 
   if (loading) {
     return (
@@ -89,94 +192,117 @@ export default function ClubList({ onEdit, onDelete, refreshTrigger, searchTerm 
 
   if (error) {
     return (
-      <Alert severity="error" sx={{ mb: 2 }}>
-        {error}
-      </Alert>
-    )
-  }
-
-  if (clubes.length === 0) {
-    return (
-      <Box textAlign="center" py={4}>
-        <Typography variant="h6" color="text.secondary">
-          No hay clubes registrados
-        </Typography>
-      </Box>
-    )
-  }
-
-  if (filteredClubes.length === 0 && searchTerm) {
-    return (
-      <Box textAlign="center" py={4}>
-        <Typography variant="h6" color="text.secondary">
-          No se encontraron clubes que coincidan con "{searchTerm}"
-        </Typography>
-      </Box>
+      <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
     )
   }
 
   return (
-    <>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell><strong>Nombre del Club</strong></TableCell>
-              <TableCell><strong>Municipio</strong></TableCell>
-              <TableCell><strong>Teléfono</strong></TableCell>
-              <TableCell><strong>Estado</strong></TableCell>
-              <TableCell align="right"><strong>Acciones</strong></TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {paginatedClubes.map((club) => (
-              <TableRow key={club.id} hover>
-                <TableCell>{club.nombre_club}</TableCell>
-                <TableCell>{club.provincia || '-'}</TableCell>
-                <TableCell>{club.telefono_contacto || '-'}</TableCell>
-                <TableCell>
-                  <Chip 
-                    label={club.activo ? 'Activo' : 'Inactivo'} 
-                    color={club.activo ? 'success' : 'default'}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell align="right">
-                  {onEdit && (
-                    <IconButton 
-                      size="small" 
-                      color="primary" 
-                      onClick={() => onEdit(club)}
-                      title="Editar"
-                    >
-                      <EditIcon />
-                    </IconButton>
-                  )}
-                  {onDelete && (
-                    <IconButton 
-                      size="small" 
-                      color="error" 
-                      onClick={() => onDelete(club)}
-                      title="Eliminar"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalItems={filteredClubes.length}
-        itemsPerPage={itemsPerPage}
-        onPageChange={setCurrentPage}
-        onItemsPerPageChange={setItemsPerPage}
-      />
-    </>
+    <Box>
+      {/* Barra de Filtros */}
+      <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f8f9fa' }} variant="outlined">
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
+          <TextField
+            size="small"
+            placeholder="Buscar por nombre, municipio, dirección..."
+            value={globalFilter}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            sx={{ flexGrow: 1, backgroundColor: 'white' }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+          
+          <FormControl size="small" sx={{ minWidth: 180, backgroundColor: 'white' }}>
+            <InputLabel>Municipio</InputLabel>
+            <Select
+              value={municipioFilter}
+              label="Municipio"
+              onChange={(e) => setMunicipioFilter(e.target.value)}
+            >
+              <MenuItem value="all">Todos los municipios</MenuItem>
+              {MUNICIPIOS.map(m => (
+                <MenuItem key={m} value={m}>{m}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl size="small" sx={{ minWidth: 150, backgroundColor: 'white' }}>
+            <InputLabel>Estado</InputLabel>
+            <Select
+              value={estadoFilter}
+              label="Estado"
+              onChange={(e) => setEstadoFilter(e.target.value)}
+            >
+              <MenuItem value="all">Todos los estados</MenuItem>
+              <MenuItem value="activo">Activos</MenuItem>
+              <MenuItem value="inactivo">Inactivos</MenuItem>
+            </Select>
+          </FormControl>
+
+          {(municipioFilter !== 'all' || estadoFilter !== 'all' || globalFilter !== '') && (
+            <Tooltip title="Limpiar filtros">
+              <IconButton onClick={clearFilters} color="warning" size="small">
+                <ClearIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Stack>
+      </Paper>
+
+      {filteredData.length === 0 ? (
+        <Box textAlign="center" py={4}>
+          <Typography variant="h6" color="text.secondary">
+            No se encontraron clubes con los filtros aplicados
+          </Typography>
+        </Box>
+      ) : (
+        <>
+          <TableContainer component={Paper} variant="outlined">
+            <Table size="small">
+              <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                {table.getHeaderGroups().map(headerGroup => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map(header => (
+                      <TableCell key={header.id} sx={{ fontWeight: 'bold', py: 1.5 }}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHead>
+              <TableBody>
+                {table.getRowModel().rows.map(row => (
+                  <TableRow key={row.id} hover>
+                    {row.getVisibleCells().map(cell => (
+                      <TableCell key={cell.id} sx={{ py: 1 }}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <Pagination
+            currentPage={table.getState().pagination.pageIndex + 1}
+            totalPages={table.getPageCount()}
+            totalItems={filteredData.length}
+            itemsPerPage={table.getState().pagination.pageSize}
+            onPageChange={(page) => table.setPageIndex(page - 1)}
+            onItemsPerPageChange={(size) => table.setPageSize(size)}
+          />
+        </>
+      )}
+    </Box>
   )
 }
-

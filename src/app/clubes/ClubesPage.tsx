@@ -7,7 +7,6 @@ import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import ClubList from '@/components/clubes/ClubList'
 import ClubForm from '@/components/clubes/ClubForm'
-import SearchBar from '@/components/common/SearchBar'
 import { Club } from '@/models/club'
 import { clubController } from '@/controllers/clubController'
 import { useRouter } from 'next/navigation'
@@ -16,7 +15,6 @@ export default function ClubesPage() {
   const router = useRouter()
   const [openDialog, setOpenDialog] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const [searchTerm, setSearchTerm] = useState('')
 
   const handleCreateSuccess = () => {
     setOpenDialog(false)
@@ -60,16 +58,10 @@ export default function ClubesPage() {
         </Button>
       </Box>
 
-      <SearchBar
-        placeholder="Buscar por nombre, provincia, dirección o teléfono..."
-        onSearch={setSearchTerm}
-      />
-
       <ClubList
         onEdit={handleEdit}
         onDelete={handleDelete}
         refreshTrigger={refreshTrigger}
-        searchTerm={searchTerm}
       />
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>

@@ -14,32 +14,65 @@ import {
   Box,
   CircularProgress,
   Alert,
-  Typography
+  Typography,
+  TextField,
+  InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Stack,
+  Tooltip
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
+import SearchIcon from '@mui/icons-material/Search'
+import ClearIcon from '@mui/icons-material/Clear'
+import {
+  useReactTable,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  flexRender,
+  createColumnHelper
+} from '@tanstack/react-table'
 import { Judoka } from '@/models/judoka'
 import { judokaController } from '@/controllers/judokaController'
 import Pagination from '@/components/common/Pagination'
+import { BELT_COLORS, CATEGORIES } from '@/utils/constants'
 
 interface JudokaListProps {
-  judokas?: Judoka[] // Opcional: recibir judokas directamente
-  isLoading?: boolean // Opcional: estado de carga externo
+  judokas?: Judoka[]
+  isLoading?: boolean
   onEdit?: (judoka: Judoka) => void
   onDelete?: (judoka: Judoka) => void
   refreshTrigger?: number
-  clubId?: string // Opcional: filtrar por club
-  entrenadorId?: string // Opcional: filtrar por entrenador
+  clubId?: string
+  entrenadorId?: string
   searchTerm?: string
   itemsPerPage?: number
 }
 
-export default function JudokaList({ judokas: judokasProp, isLoading: isLoadingProp, onEdit, onDelete, refreshTrigger, clubId, entrenadorId, searchTerm = '', itemsPerPage: initialItemsPerPage = 10 }: JudokaListProps) {
+export default function JudokaList({ 
+  judokas: judokasProp, 
+  isLoading: isLoadingProp, 
+  onEdit, 
+  onDelete, 
+  refreshTrigger, 
+  clubId, 
+  entrenadorId, 
+  searchTerm: externalSearchTerm = '', 
+  itemsPerPage: initialItemsPerPage = 10 
+}: JudokaListProps) {
   const [judokasLocal, setJudokasLocal] = useState<Judoka[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(initialItemsPerPage)
+  
+  // Estados para filtros
+  const [globalFilter, setGlobalFilter] = useState(externalSearchTerm)
+  const [cinturonFilter, setCinturonFilter] = useState<string>('all')
+  const [categoriaFilter, setCategoriaFilter] = useState<string>('all')
+  const [estadoFilter, setEstadoFilter] = useState<string>('all')
 
   const loadJudokas = async () => {
     setLoading(true)
@@ -64,45 +97,124 @@ export default function JudokaList({ judokas: judokasProp, isLoading: isLoadingP
   }
 
   useEffect(() => {
-    // Solo cargar judokas si no se reciben por prop
     if (!judokasProp) {
       loadJudokas()
     }
   }, [refreshTrigger, clubId, entrenadorId, judokasProp])
 
-  // Usar judokas de prop si están disponibles, sino usar los locales
+  useEffect(() => {
+    setGlobalFilter(externalSearchTerm)
+  }, [externalSearchTerm])
+
   const judokas = judokasProp || judokasLocal
   const isLoading = isLoadingProp !== undefined ? isLoadingProp : loading
 
-  // Resetear a página 1 cuando cambia el término de búsqueda
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchTerm])
-
-  // Filtrar judokas según el término de búsqueda
-  const filteredJudokas = useMemo(() => {
-    if (!searchTerm) return judokas
-    const search = searchTerm.toLowerCase()
-    return judokas.filter((judoka) => (
-      judoka.nombres?.toLowerCase().includes(search) ||
-      judoka.apellidos?.toLowerCase().includes(search) ||
-      judoka.categoria?.toLowerCase().includes(search) ||
-      judoka.cinturon_actual?.toLowerCase().includes(search)
-    ))
-  }, [judokas, searchTerm])
-
-  // Calcular paginación
-  const totalPages = Math.max(1, Math.ceil(filteredJudokas.length / itemsPerPage))
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedJudokas = filteredJudokas.slice(startIndex, endIndex)
+  // Definición de columnas con TanStack Table
+  const columnHelper = createColumnHelper<Judoka>()
   
-  // Asegurar que currentPage no exceda totalPages
-  useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(1)
-    }
-  }, [totalPages, currentPage])
+  const columns = useMemo(() => [
+    columnHelper.display({
+      id: 'indice',
+      header: 'N°',
+      cell: (info) => info.row.index + 1,
+    }),
+    columnHelper.accessor('ci', {
+      header: 'Carnet',
+      cell: (info) => info.getValue() || '-',
+    }),
+    columnHelper.accessor('nombres', {
+      header: 'Nombres',
+    }),
+    columnHelper.accessor('apellidos', {
+      header: 'Apellidos',
+    }),
+    columnHelper.accessor('categoria', {
+      header: 'Categoría',
+      cell: (info) => info.getValue() || '-',
+    }),
+    columnHelper.accessor('cinturon_actual', {
+      header: 'Cinturón',
+      cell: (info) => info.getValue() || '-',
+    }),
+    columnHelper.accessor('activo', {
+      header: 'Estado',
+      cell: (info) => (
+        <Chip 
+          label={info.getValue() ? 'Activo' : 'Inactivo'} 
+          color={info.getValue() ? 'success' : 'default'}
+          size="small"
+        />
+      ),
+    }),
+    columnHelper.display({
+      id: 'acciones',
+      header: () => <Box textAlign="right">Acciones</Box>,
+      cell: (info) => (
+        <Box textAlign="right">
+          {onEdit && (
+            <IconButton 
+              size="small" 
+              color="primary" 
+              onClick={() => onEdit(info.row.original)}
+              title="Editar"
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+          )}
+          {onDelete && (
+            <IconButton 
+              size="small" 
+              color="error" 
+              onClick={() => onDelete(info.row.original)}
+              title="Eliminar"
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          )}
+        </Box>
+      ),
+    }),
+  ], [onEdit, onDelete])
+
+  // Filtrado personalizado
+  const filteredData = useMemo(() => {
+    return judokas.filter(j => {
+      const matchCinturon = cinturonFilter === 'all' || j.cinturon_actual === cinturonFilter
+      const matchCategoria = categoriaFilter === 'all' || j.categoria === categoriaFilter
+      const matchEstado = estadoFilter === 'all' || 
+        (estadoFilter === 'activo' ? j.activo : !j.activo)
+      
+      const search = globalFilter.toLowerCase()
+      const matchSearch = !search || 
+        j.nombres?.toLowerCase().includes(search) ||
+        j.apellidos?.toLowerCase().includes(search) ||
+        j.ci?.toLowerCase().includes(search) ||
+        j.categoria?.toLowerCase().includes(search) ||
+        j.cinturon_actual?.toLowerCase().includes(search)
+
+      return matchCinturon && matchCategoria && matchEstado && matchSearch
+    })
+  }, [judokas, cinturonFilter, categoriaFilter, estadoFilter, globalFilter])
+
+  const table = useReactTable({
+    data: filteredData,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: initialItemsPerPage,
+      },
+    },
+  })
+
+  const clearFilters = () => {
+    setCinturonFilter('all')
+    setCategoriaFilter('all')
+    setEstadoFilter('all')
+    setGlobalFilter('')
+  }
 
   if (isLoading) {
     return (
@@ -114,96 +226,131 @@ export default function JudokaList({ judokas: judokasProp, isLoading: isLoadingP
 
   if (error) {
     return (
-      <Alert severity="error" sx={{ mb: 2 }}>
-        {error}
-      </Alert>
-    )
-  }
-
-  if (judokas.length === 0) {
-    return (
-      <Box textAlign="center" py={4}>
-        <Typography variant="h6" color="text.secondary">
-          No hay judokas registrados
-        </Typography>
-      </Box>
-    )
-  }
-
-  if (filteredJudokas.length === 0 && searchTerm) {
-    return (
-      <Box textAlign="center" py={4}>
-        <Typography variant="h6" color="text.secondary">
-          No se encontraron judokas que coincidan con "{searchTerm}"
-        </Typography>
-      </Box>
+      <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
     )
   }
 
   return (
-    <>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell><strong>Nombres</strong></TableCell>
-              <TableCell><strong>Apellidos</strong></TableCell>
-              <TableCell><strong>Categoría</strong></TableCell>
-              <TableCell><strong>Cinturón</strong></TableCell>
-              <TableCell><strong>Estado</strong></TableCell>
-              <TableCell align="right"><strong>Acciones</strong></TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {paginatedJudokas.map((judoka) => (
-              <TableRow key={judoka.id} hover>
-                <TableCell>{judoka.nombres}</TableCell>
-                <TableCell>{judoka.apellidos}</TableCell>
-                <TableCell>{judoka.categoria || '-'}</TableCell>
-                <TableCell>{judoka.cinturon_actual || '-'}</TableCell>
-                <TableCell>
-                  <Chip 
-                    label={judoka.activo ? 'Activo' : 'Inactivo'} 
-                    color={judoka.activo ? 'success' : 'default'}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell align="right">
-                  {onEdit && (
-                    <IconButton 
-                      size="small" 
-                      color="primary" 
-                      onClick={() => onEdit(judoka)}
-                      title="Editar"
-                    >
-                      <EditIcon />
-                    </IconButton>
-                  )}
-                  {onDelete && (
-                    <IconButton 
-                      size="small" 
-                      color="error" 
-                      onClick={() => onDelete(judoka)}
-                      title="Eliminar"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalItems={filteredJudokas.length}
-        itemsPerPage={itemsPerPage}
-        onPageChange={setCurrentPage}
-        onItemsPerPageChange={setItemsPerPage}
-      />
-    </>
+    <Box>
+      {/* Barra de Filtros */}
+      <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f8f9fa' }} variant="outlined">
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
+          <TextField
+            size="small"
+            placeholder="Buscar por carnet, nombre, categoría..."
+            value={globalFilter}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            sx={{ flexGrow: 1, backgroundColor: 'white' }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+          
+          <FormControl size="small" sx={{ minWidth: 150, backgroundColor: 'white' }}>
+            <InputLabel>Cinturón</InputLabel>
+            <Select
+              value={cinturonFilter}
+              label="Cinturón"
+              onChange={(e) => setCinturonFilter(e.target.value)}
+            >
+              <MenuItem value="all">Todos</MenuItem>
+              {BELT_COLORS.map(belt => (
+                <MenuItem key={belt} value={belt}>{belt}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl size="small" sx={{ minWidth: 150, backgroundColor: 'white' }}>
+            <InputLabel>Categoría</InputLabel>
+            <Select
+              value={categoriaFilter}
+              label="Categoría"
+              onChange={(e) => setCategoriaFilter(e.target.value)}
+            >
+              <MenuItem value="all">Todas</MenuItem>
+              {CATEGORIES.map(cat => (
+                <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl size="small" sx={{ minWidth: 130, backgroundColor: 'white' }}>
+            <InputLabel>Estado</InputLabel>
+            <Select
+              value={estadoFilter}
+              label="Estado"
+              onChange={(e) => setEstadoFilter(e.target.value)}
+            >
+              <MenuItem value="all">Todos</MenuItem>
+              <MenuItem value="activo">Activos</MenuItem>
+              <MenuItem value="inactivo">Inactivos</MenuItem>
+            </Select>
+          </FormControl>
+
+          {(cinturonFilter !== 'all' || categoriaFilter !== 'all' || estadoFilter !== 'all' || globalFilter !== '') && (
+            <Tooltip title="Limpiar filtros">
+              <IconButton onClick={clearFilters} color="warning" size="small">
+                <ClearIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Stack>
+      </Paper>
+
+      {filteredData.length === 0 ? (
+        <Box textAlign="center" py={4}>
+          <Typography variant="h6" color="text.secondary">
+            No se encontraron judokas con los filtros aplicados
+          </Typography>
+        </Box>
+      ) : (
+        <>
+          <TableContainer component={Paper} variant="outlined">
+            <Table size="small">
+              <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                {table.getHeaderGroups().map(headerGroup => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map(header => (
+                      <TableCell key={header.id} sx={{ fontWeight: 'bold', py: 1.5 }}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHead>
+              <TableBody>
+                {table.getRowModel().rows.map(row => (
+                  <TableRow key={row.id} hover>
+                    {row.getVisibleCells().map(cell => (
+                      <TableCell key={cell.id} sx={{ py: 1 }}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <Pagination
+            currentPage={table.getState().pagination.pageIndex + 1}
+            totalPages={table.getPageCount()}
+            totalItems={filteredData.length}
+            itemsPerPage={table.getState().pagination.pageSize}
+            onPageChange={(page) => table.setPageIndex(page - 1)}
+            onItemsPerPageChange={(size) => table.setPageSize(size)}
+          />
+        </>
+      )}
+    </Box>
   )
 }
-

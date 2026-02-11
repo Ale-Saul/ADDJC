@@ -6,7 +6,6 @@ import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import JudokaList from '@/components/judokas/JudokaList'
 import JudokaForm from '@/components/judokas/JudokaForm'
-import SearchBar from '@/components/common/SearchBar'
 import { Judoka } from '@/models/judoka'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
@@ -61,11 +60,6 @@ export default function JudokasPage() {
           Nuevo Judoka
         </Button>
       </Box>
-
-      <SearchBar
-        placeholder="Buscar por nombre, apellido, categoría o cinturón..."
-        onSearch={setSearchTerm}
-      />
 
       <JudokaList
         judokas={judokas}

@@ -102,8 +102,8 @@ export const CARGOS_ASOCIACION = [
   'Vocal',
 ] as const
 
-/** Provincias para clubes (Cochabamba y otras) */
-export const PROVINCIAS = [
+/** Municipios para clubes (Cochabamba y otras) */
+export const MUNICIPIOS = [
   'Cercado',
   'Chapare',
   'Carrasco',

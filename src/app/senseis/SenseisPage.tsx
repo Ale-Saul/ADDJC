@@ -7,7 +7,6 @@ import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import SenseiList from '@/components/senseis/SenseiList'
 import SenseiForm from '@/components/senseis/SenseiForm'
-import SearchBar from '@/components/common/SearchBar'
 import { Sensei } from '@/models/sensei'
 import { senseiController } from '@/controllers/senseiController'
 import { useRouter } from 'next/navigation'
@@ -18,7 +17,6 @@ export default function SenseisPage() {
   const { user } = useAuth()
   const [openDialog, setOpenDialog] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const [searchTerm, setSearchTerm] = useState('')
 
   // Si es encargado o sensei, filtrar por su club
   const clubId = (user?.rol === 'encargado' || user?.rol === 'sensei') ? user.club_id : undefined
@@ -65,16 +63,10 @@ export default function SenseisPage() {
         </Button>
       </Box>
 
-      <SearchBar
-        placeholder="Buscar por nombre, apellido, grado dan o especialidad..."
-        onSearch={setSearchTerm}
-      />
-
       <SenseiList
         onEdit={handleEdit}
         onDelete={handleDelete}
         refreshTrigger={refreshTrigger}
-        searchTerm={searchTerm}
         clubId={clubId}
       />
 
