@@ -41,11 +41,13 @@ export default function PerfilPage() {
   const [error, setError] = useState<string | null>(null)
   
   // Estados para cambio de contraseña
+  const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loadingPassword, setLoadingPassword] = useState(false)
   const [successPassword, setSuccessPassword] = useState<string | null>(null)
   const [errorPassword, setErrorPassword] = useState<string | null>(null)
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
@@ -87,15 +89,18 @@ export default function PerfilPage() {
       const response = await authController.uploadAvatar(user.id, file)
       
       if (response.success && response.data) {
+        // Actualizar el contexto global para que el avatar se vea en el sidebar inmediatamente
+        await refreshUser()
+        
         // Precargar la imagen antes de mostrarla y el mensaje de éxito
         const img = new Image()
         img.onload = () => {
-          setAvatarUrl(response.data)
+          setAvatarUrl(response.data!)
           setUploading(false)
           setSuccess('Foto de perfil actualizada correctamente')
         }
         img.onerror = () => {
-          setAvatarUrl(response.data)
+          setAvatarUrl(response.data!)
           setUploading(false)
           setSuccess('Foto de perfil actualizada correctamente')
         }
@@ -155,7 +160,7 @@ export default function PerfilPage() {
     setSuccessPassword(null)
 
     // Validaciones
-    if (!newPassword || !confirmPassword) {
+    if (!currentPassword || !newPassword || !confirmPassword) {
       setErrorPassword('Todos los campos son requeridos')
       return
     }
@@ -166,13 +171,13 @@ export default function PerfilPage() {
     }
 
     if (newPassword.length < 8) {
-      setErrorPassword('La contraseña debe tener al menos 8 caracteres')
+      setErrorPassword('La nueva contraseña debe tener al menos 8 caracteres')
       return
     }
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/
     if (!passwordRegex.test(newPassword)) {
-      setErrorPassword('La contraseña debe contener al menos una mayúscula, una minúscula y un número')
+      setErrorPassword('La nueva contraseña debe contener al menos una mayúscula, una minúscula y un número')
       return
     }
 
@@ -180,14 +185,29 @@ export default function PerfilPage() {
 
     try {
       const supabase = createClient()
-      const { error } = await supabase.auth.updateUser({
+      
+      // 1. Verificar la contraseña actual intentando iniciar sesión
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user?.email || '',
+        password: currentPassword,
+      })
+
+      if (signInError) {
+        setErrorPassword('La contraseña actual es incorrecta')
+        setLoadingPassword(false)
+        return
+      }
+
+      // 2. Si el inicio de sesión fue exitoso, actualizar a la nueva contraseña
+      const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword
       })
 
-      if (error) {
-        setErrorPassword(error.message || 'Error al cambiar la contraseña')
+      if (updateError) {
+        setErrorPassword(updateError.message || 'Error al cambiar la contraseña')
       } else {
         setSuccessPassword('Contraseña actualizada correctamente')
+        setCurrentPassword('')
         setNewPassword('')
         setConfirmPassword('')
       }
@@ -437,6 +457,34 @@ export default function PerfilPage() {
               )}
 
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <TextField
+                  label="Contraseña Actual"
+                  type={showCurrentPassword ? 'text' : 'password'}
+                  fullWidth
+                  value={currentPassword}
+                  onChange={(e) => {
+                    setCurrentPassword(e.target.value)
+                    setErrorPassword(null)
+                    setSuccessPassword(null)
+                  }}
+                  disabled={loadingPassword}
+                  variant="outlined"
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle current password visibility"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          onMouseDown={(e) => e.preventDefault()}
+                          edge="end"
+                        >
+                          {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+
                 <TextField
                   label="Nueva Contraseña"
                   type={showNewPassword ? 'text' : 'password'}
