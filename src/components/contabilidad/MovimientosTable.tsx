@@ -20,6 +20,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import TrendingDownIcon from '@mui/icons-material/TrendingDown'
 import { MovimientoFinanciero } from '@/models/movimientoFinanciero'
 import * as movimientoFinancieroController from '@/controllers/movimientoFinancieroController'
+import { formatters } from '@/utils/formatters'
 
 interface MovimientosTableProps {
   movimientos: MovimientoFinanciero[]
@@ -112,7 +113,7 @@ export default function MovimientosTable({
               {movimientos.map((movimiento) => (
                 <TableRow key={movimiento.id} hover>
                   <TableCell>
-                    {new Date(movimiento.fecha).toLocaleDateString('es-CO')}
+                    {formatters.formatDate(movimiento.fecha)}
                   </TableCell>
                   <TableCell>
                     <Chip

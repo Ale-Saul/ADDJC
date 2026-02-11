@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       (typeof apellidos === 'string' ? apellidos.trim().split(/\s+/).slice(1).join(' ') || '' : '')
     const apellidoPaterno = (typeof rawPaterno === 'string' ? rawPaterno.trim() : '') || null
     const apellidoMaterno = (typeof rawMaterno === 'string' ? rawMaterno.trim() : '') || null
-    const fechaNacimiento = fechaNacimientoBody || '1990-01-01'
+    const fechaNacimiento = fechaNacimientoBody || null
     const genero = generoBody || 'Prefiero no decir'
 
     // Verificar que la Service Role Key esté configurada

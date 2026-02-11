@@ -18,6 +18,8 @@ import {
 import type { SelectChangeEvent } from '@mui/material/Select'
 import { Pago } from '@/models/pago'
 import { pagoController } from '@/controllers/pagoController'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import dayjs from 'dayjs'
 
 interface EditarPagoFormProps {
   pago: Pago
@@ -205,16 +207,20 @@ export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPago
         sx={{ mb: 2 }}
       />
 
-      <TextField
-        fullWidth
+      <DatePicker
         label="Fecha de Vencimiento"
-        name="fecha_vencimiento"
-        type="date"
-        value={formData.fecha_vencimiento}
-        onChange={handleChange}
-        required
-        InputLabelProps={{ shrink: true }}
-        sx={{ mb: 2 }}
+        value={formData.fecha_vencimiento ? dayjs(formData.fecha_vencimiento) : null}
+        onChange={(newValue) => {
+          setFormData(prev => ({ ...prev, fecha_vencimiento: newValue ? newValue.format('YYYY-MM-DD') : '' }))
+        }}
+        slotProps={{
+          textField: {
+            fullWidth: true,
+            required: true,
+            sx: { mb: 2 }
+          },
+        }}
+        format="DD/MM/YYYY"
       />
 
       <FormControlLabel

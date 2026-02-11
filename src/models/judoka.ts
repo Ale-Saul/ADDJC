@@ -31,7 +31,7 @@ export interface JudokaCreate {
   apellido_materno: string
   email?: string
   password?: string
-  fecha_nacimiento: string
+  fecha_nacimiento?: string | null
   numero_celular?: string | null
   ci?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
@@ -48,7 +48,7 @@ export interface JudokaUpdate {
   nombres?: string
   apellido_paterno?: string
   apellido_materno?: string
-  fecha_nacimiento?: string
+  fecha_nacimiento?: string | null
   numero_celular?: string | null
   ci?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null

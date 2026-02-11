@@ -16,6 +16,8 @@ import {
   Alert,
   Fab,
 } from '@mui/material'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import dayjs from 'dayjs'
 import AddIcon from '@mui/icons-material/Add'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import DownloadIcon from '@mui/icons-material/Download'
@@ -32,6 +34,7 @@ import MovimientosTable from '@/components/contabilidad/MovimientosTable'
 import MovimientoFormDialog from '@/components/contabilidad/MovimientoFormDialog'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { formatters } from '@/utils/formatters'
 
 export default function ContabilidadPage() {
   const { user } = useAuth()
@@ -177,7 +180,7 @@ export default function ContabilidadPage() {
     
     // Tabla de movimientos
     const tableData = movimientosFiltrados.map(mov => [
-      new Date(mov.fecha).toLocaleDateString(),
+      formatters.formatDate(mov.fecha),
       mov.tipo === 'ingreso' ? 'Ingreso' : 'Egreso',
       movimientoFinancieroController.getCategoriaLabel(mov.categoria),
       mov.concepto,
@@ -289,21 +292,23 @@ export default function ContabilidadPage() {
                     minWidth: { xs: '100%', sm: '200px', md: '150px' }
                   }
                 }}>
-                  <TextField
+                  <DatePicker
                     label="Fecha Inicio"
-                    type="date"
-                    value={fechaInicio}
-                    onChange={(e) => setFechaInicio(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    size="small"
+                    value={fechaInicio ? dayjs(fechaInicio) : null}
+                    onChange={(newValue) => {
+                      setFechaInicio(newValue ? newValue.format('YYYY-MM-DD') : '')
+                    }}
+                    slotProps={{ textField: { size: 'small' } }}
+                    format="DD/MM/YYYY"
                   />
-                  <TextField
+                  <DatePicker
                     label="Fecha Fin"
-                    type="date"
-                    value={fechaFin}
-                    onChange={(e) => setFechaFin(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    size="small"
+                    value={fechaFin ? dayjs(fechaFin) : null}
+                    onChange={(newValue) => {
+                      setFechaFin(newValue ? newValue.format('YYYY-MM-DD') : '')
+                    }}
+                    slotProps={{ textField: { size: 'small' } }}
+                    format="DD/MM/YYYY"
                   />
                   <FormControl size="small">
                     <InputLabel>Tipo</InputLabel>

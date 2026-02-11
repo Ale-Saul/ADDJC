@@ -58,14 +58,6 @@ export const judokaController = {
       return { success: false, error: 'Al menos un apellido (paterno o materno) es requerido' }
     }
 
-    if (!judokaData.fecha_nacimiento || judokaData.fecha_nacimiento.trim() === '') {
-      return { success: false, error: 'La fecha de nacimiento es requerida' }
-    }
-
-    if (judokaData.nombres.length < 2) {
-      return { success: false, error: 'El nombre debe tener al menos 2 caracteres' }
-    }
-
     const apellidosCompletos = [paterno, materno].filter(Boolean).join(' ')
     if (apellidosCompletos.length < 2) {
       return { success: false, error: 'Los apellidos deben tener al menos 2 caracteres' }

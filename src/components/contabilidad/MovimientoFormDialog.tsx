@@ -17,6 +17,8 @@ import {
   Typography,
   Chip,
 } from '@mui/material'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import dayjs from 'dayjs'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import {
@@ -286,14 +288,20 @@ export default function MovimientoFormDialog({
           />
 
           {/* Fecha */}
-          <TextField
+          <DatePicker
             label="Fecha"
-            type="date"
-            fullWidth
-            required
-            value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
-            InputLabelProps={{ shrink: true }}
+            value={fecha ? dayjs(fecha) : null}
+            onChange={(newValue) => {
+              setFecha(newValue ? newValue.format('YYYY-MM-DD') : '')
+            }}
+            disabled={loading}
+            slotProps={{
+              textField: {
+                fullWidth: true,
+                required: true,
+              },
+            }}
+            format="DD/MM/YYYY"
           />
 
           {/* Club de origen (solo si es necesario) */}

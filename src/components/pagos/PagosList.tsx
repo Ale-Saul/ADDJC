@@ -28,6 +28,7 @@ import { Pago } from '@/models/pago'
 import { pagoController } from '@/controllers/pagoController'
 import RegistrarPagoForm from './RegistrarPagoForm'
 import EditarPagoForm from './EditarPagoForm'
+import { formatters } from '@/utils/formatters'
 
 interface PagosListProps {
   judokaId: string
@@ -158,14 +159,6 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
     )
   }
 
-  const formatFecha = (fecha: string) => {
-    return new Date(fecha).toLocaleDateString('es-BO', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
-
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" p={3}>
@@ -255,7 +248,7 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
                   )}
                 </Box>
               </TableCell>
-              <TableCell>{formatFecha(pago.fecha_vencimiento)}</TableCell>
+              <TableCell>{formatters.formatDate(pago.fecha_vencimiento)}</TableCell>
               <TableCell>{getEstadoChip(pago.estado)}</TableCell>
               <TableCell align="center">
                 {(pago.estado === 'pendiente' || pago.estado === 'vencido') && (

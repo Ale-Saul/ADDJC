@@ -31,8 +31,11 @@ import { judokaController } from '@/controllers/judokaController'
 import { Pago } from '@/models/pago'
 import { Club } from '@/models/club'
 import { Judoka } from '@/models/judoka'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import dayjs from 'dayjs'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { formatters } from '@/utils/formatters'
 
 interface ResumenClub {
   club: Club
@@ -237,8 +240,8 @@ export default function ReportesAsociacionPage() {
     
     // Información
     doc.setFontSize(11)
-    doc.text(`Período: ${new Date(fechaInicio).toLocaleDateString('es-BO')} - ${new Date(fechaFin).toLocaleDateString('es-BO')}`, 14, 28)
-    doc.text(`Fecha de generación: ${new Date().toLocaleDateString('es-BO')}`, 14, 34)
+    doc.text(`Período: ${formatters.formatDate(fechaInicio)} - ${formatters.formatDate(fechaFin)}`, 14, 28)
+    doc.text(`Fecha de generación: ${formatters.formatDate(new Date())}`, 14, 34)
     
     if (vistaDetalle === 'club') {
       // Totales generales
@@ -322,7 +325,7 @@ export default function ReportesAsociacionPage() {
       
       // Tabla de pagos
       const tableData = pagosConDetalles.map(p => [
-        new Date(p.created_at).toLocaleDateString('es-BO'),
+        formatters.formatDate(p.created_at),
         p.judoka_nombre || 'N/A',
         p.club_nombre || 'N/A',
         p.concepto,
@@ -407,7 +410,7 @@ export default function ReportesAsociacionPage() {
     } else {
       headers = ['Fecha', 'Judoka', 'Club', 'Concepto', 'Tipo', 'Monto Base', 'Descuento', 'Monto Final', 'Estado', 'Fecha Vencimiento', 'Fecha Pago']
       rows = pagosConDetalles.map(p => [
-        new Date(p.created_at).toLocaleDateString('es-BO'),
+        formatters.formatDate(p.created_at),
         p.judoka_nombre || 'N/A',
         p.club_nombre || 'N/A',
         p.concepto,
@@ -416,8 +419,8 @@ export default function ReportesAsociacionPage() {
         p.tiene_descuento ? (p.tipo_descuento === 'porcentaje' ? `${p.descuento_porcentaje}%` : `Bs. ${p.descuento_monto}`) : 'N/A',
         p.monto_final.toFixed(2),
         p.estado,
-        new Date(p.fecha_vencimiento).toLocaleDateString('es-BO'),
-        p.fecha_pago ? new Date(p.fecha_pago).toLocaleDateString('es-BO') : 'N/A'
+        formatters.formatDate(p.fecha_vencimiento),
+        p.fecha_pago ? formatters.formatDate(p.fecha_pago) : 'N/A'
       ])
 
       // Calcular totales para pagos
@@ -496,21 +499,23 @@ export default function ReportesAsociacionPage() {
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" mb={2}>Filtros</Typography>
             <Box display="flex" gap={2} flexWrap="wrap">
-              <TextField
+              <DatePicker
                 label="Fecha Inicio"
-                type="date"
-                value={fechaInicio}
-                onChange={(e) => setFechaInicio(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                sx={{ minWidth: 200 }}
+                value={fechaInicio ? dayjs(fechaInicio) : null}
+                onChange={(newValue) => {
+                  setFechaInicio(newValue ? newValue.format('YYYY-MM-DD') : '')
+                }}
+                slotProps={{ textField: { sx: { minWidth: 200 } } }}
+                format="DD/MM/YYYY"
               />
-              <TextField
+              <DatePicker
                 label="Fecha Fin"
-                type="date"
-                value={fechaFin}
-                onChange={(e) => setFechaFin(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                sx={{ minWidth: 200 }}
+                value={fechaFin ? dayjs(fechaFin) : null}
+                onChange={(newValue) => {
+                  setFechaFin(newValue ? newValue.format('YYYY-MM-DD') : '')
+                }}
+                slotProps={{ textField: { sx: { minWidth: 200 } } }}
+                format="DD/MM/YYYY"
               />
               <FormControl sx={{ minWidth: 250 }}>
                 <InputLabel>Club</InputLabel>
@@ -770,7 +775,7 @@ export default function ReportesAsociacionPage() {
                     <TableRow key={pago.id} hover>
                       <TableCell>
                         <Typography variant="body2">
-                          {new Date(pago.created_at).toLocaleDateString('es-BO')}
+                          {formatters.formatDate(pago.created_at)}
                         </Typography>
                       </TableCell>
                       <TableCell>
@@ -817,7 +822,7 @@ export default function ReportesAsociacionPage() {
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2">
-                          {new Date(pago.fecha_vencimiento).toLocaleDateString('es-BO')}
+                          {formatters.formatDate(pago.fecha_vencimiento)}
                         </Typography>
                       </TableCell>
                     </TableRow>

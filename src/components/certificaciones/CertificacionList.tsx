@@ -24,6 +24,7 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import ImageIcon from '@mui/icons-material/Image'
 import { Certificacion } from '@/models/certificacion'
 import { certificacionController } from '@/controllers/certificacionController'
+import { formatters } from '@/utils/formatters'
 
 interface CertificacionListProps {
   usuarioId: string
@@ -66,11 +67,6 @@ export default function CertificacionList({
       loadCertificaciones()
     }
   }, [usuarioId, tipoAfiliado, refreshTrigger])
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return '-'
-    return new Date(dateString).toLocaleDateString('es-ES')
-  }
 
   const getFileIcon = (url: string | null) => {
     if (!url) return null
@@ -136,8 +132,8 @@ export default function CertificacionList({
                 <TableRow key={certificacion.id} hover>
                   <TableCell>{certificacion.nombre_certificacion}</TableCell>
                   <TableCell>{certificacion.descripcion || '-'}</TableCell>
-                  <TableCell>{formatDate(certificacion.fecha_emision)}</TableCell>
-                  <TableCell>{formatDate(certificacion.fecha_vencimiento)}</TableCell>
+                  <TableCell>{formatters.formatDate(certificacion.fecha_emision)}</TableCell>
+                  <TableCell>{formatters.formatDate(certificacion.fecha_vencimiento)}</TableCell>
                   <TableCell>
                     {certificacion.archivo_url ? (
                       <Box display="flex" alignItems="center" gap={1}>

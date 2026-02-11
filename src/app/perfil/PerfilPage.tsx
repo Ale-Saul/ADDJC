@@ -51,6 +51,9 @@ export default function PerfilPage() {
 
   useEffect(() => {
     if (user) {
+      // Obtener nombres y apellidos directamente del objeto user
+      // Si el backend devuelve el nombre completo en 'nombres', intentamos usar 'nombre' de la BD si estuviera disponible
+      // Pero basándonos en la interfaz User, usamos lo que tenemos
       setFormData({
         nombres: user.nombres || '',
         apellidos: user.apellidos || '',

@@ -22,6 +22,8 @@ import {
   CircularProgress,
   Chip
 } from '@mui/material'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import dayjs from 'dayjs'
 import DownloadIcon from '@mui/icons-material/Download'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import Layout from '@/components/common/Layout'
@@ -33,6 +35,7 @@ import { Pago } from '@/models/pago'
 import { Judoka } from '@/models/judoka'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { formatters } from '@/utils/formatters'
 
 export default function ReportesPage() {
   const { user } = useAuth()
@@ -160,7 +163,7 @@ export default function ReportesPage() {
     // Crear CSV
     const headers = ['Fecha Creación', 'Judoka', 'Concepto', 'Tipo', 'Monto Base', 'Descuento', 'Monto Final', 'Estado', 'Fecha Vencimiento', 'Fecha Pago']
     const rows = pagosFiltrados.map(p => [
-      new Date(p.created_at).toLocaleDateString('es-BO'),
+      formatters.formatDate(p.created_at),
       getJudokaNombre(p.judoka_id),
       p.concepto,
       p.tipo_pago,
@@ -168,8 +171,8 @@ export default function ReportesPage() {
       p.tiene_descuento ? (p.tipo_descuento === 'porcentaje' ? `${p.descuento_porcentaje}%` : `Bs. ${p.descuento_monto}`) : '-',
       p.monto_final.toFixed(2),
       p.estado,
-      new Date(p.fecha_vencimiento).toLocaleDateString('es-BO'),
-      p.fecha_pago ? new Date(p.fecha_pago).toLocaleDateString('es-BO') : '-'
+      formatters.formatDate(p.fecha_vencimiento),
+      p.fecha_pago ? formatters.formatDate(p.fecha_pago) : '-'
     ])
 
     // Calcular totales
@@ -211,8 +214,8 @@ export default function ReportesPage() {
     
     // Información del período
     doc.setFontSize(11)
-    doc.text(`Período: ${new Date(fechaInicio).toLocaleDateString('es-BO')} - ${new Date(fechaFin).toLocaleDateString('es-BO')}`, 14, 28)
-    doc.text(`Fecha de generación: ${new Date().toLocaleDateString('es-BO')}`, 14, 34)
+    doc.text(`Período: ${formatters.formatDate(fechaInicio)} - ${formatters.formatDate(fechaFin)}`, 14, 28)
+    doc.text(`Fecha de generación: ${formatters.formatDate(new Date())}`, 14, 34)
     
     // Totales
     const totalCobrado = pagosFiltrados
@@ -230,13 +233,13 @@ export default function ReportesPage() {
     
     // Tabla de pagos
     const tableData = pagosFiltrados.map(p => [
-      new Date(p.created_at).toLocaleDateString('es-BO'),
+      formatters.formatDate(p.created_at),
       getJudokaNombre(p.judoka_id),
       p.concepto,
       getTipoLabel(p.tipo_pago),
       `Bs. ${p.monto_final.toFixed(2)}`,
       p.estado,
-      new Date(p.fecha_vencimiento).toLocaleDateString('es-BO')
+      formatters.formatDate(p.fecha_vencimiento)
     ])
 
     autoTable(doc, {
@@ -334,21 +337,23 @@ export default function ReportesPage() {
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" mb={2}>Filtros</Typography>
             <Box display="flex" gap={2} flexWrap="wrap">
-              <TextField
+              <DatePicker
                 label="Fecha Inicio"
-                type="date"
-                value={fechaInicio}
-                onChange={(e) => setFechaInicio(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                sx={{ minWidth: 200 }}
+                value={fechaInicio ? dayjs(fechaInicio) : null}
+                onChange={(newValue) => {
+                  setFechaInicio(newValue ? newValue.format('YYYY-MM-DD') : '')
+                }}
+                slotProps={{ textField: { sx: { minWidth: 200 } } }}
+                format="DD/MM/YYYY"
               />
-              <TextField
+              <DatePicker
                 label="Fecha Fin"
-                type="date"
-                value={fechaFin}
-                onChange={(e) => setFechaFin(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                sx={{ minWidth: 200 }}
+                value={fechaFin ? dayjs(fechaFin) : null}
+                onChange={(newValue) => {
+                  setFechaFin(newValue ? newValue.format('YYYY-MM-DD') : '')
+                }}
+                slotProps={{ textField: { sx: { minWidth: 200 } } }}
+                format="DD/MM/YYYY"
               />
               <FormControl sx={{ minWidth: 200 }}>
                 <InputLabel>Estado</InputLabel>
@@ -499,7 +504,7 @@ export default function ReportesPage() {
                   {pagosFiltrados.map((pago) => (
                     <TableRow key={pago.id} hover>
                       <TableCell>
-                        {new Date(pago.created_at).toLocaleDateString('es-BO')}
+                        {formatters.formatDate(pago.created_at)}
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2">
@@ -519,7 +524,7 @@ export default function ReportesPage() {
                       </TableCell>
                       <TableCell>{getEstadoChip(pago.estado)}</TableCell>
                       <TableCell>
-                        {new Date(pago.fecha_vencimiento).toLocaleDateString('es-BO')}
+                        {formatters.formatDate(pago.fecha_vencimiento)}
                       </TableCell>
                     </TableRow>
                   ))}

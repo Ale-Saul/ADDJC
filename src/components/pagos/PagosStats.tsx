@@ -7,6 +7,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import PeopleIcon from '@mui/icons-material/People'
 import { Pago } from '@/models/pago'
+import { formatters } from '@/utils/formatters'
 
 interface PagosStatsProps {
   pagos: Pago[]
@@ -140,7 +141,7 @@ export default function PagosStats({ pagos }: PagosStatsProps) {
             Bs. {stats.totalCobradoMes.toFixed(2)}
           </Typography>
           <Typography variant="caption" color="#000" sx={{ display: 'block', mt: 1 }}>
-            {new Date().toLocaleDateString('es-BO', { month: 'long', year: 'numeric' })}
+            {formatters.formatDate(new Date(), 'long').split(',')[1]?.trim() || formatters.formatDate(new Date(), 'long')}
           </Typography>
         </CardContent>
       </Card>

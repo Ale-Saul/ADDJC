@@ -108,13 +108,15 @@ export const authService = {
       }
 
       // Construir nombre completo
-      const nombreCompleto = `${profileData.nombre} ${profileData.apellido_paterno} ${profileData.apellido_materno}`.trim()
+      const nombreSolo = profileData.nombre || ''
+      const apellidoPaterno = profileData.apellido_paterno || ''
+      const apellidoMaterno = profileData.apellido_materno || ''
 
       const userData: User = {
         id: profileData.id,
         email: profileData.correo || '',
-        nombres: nombreCompleto,
-        apellidos: `${profileData.apellido_paterno} ${profileData.apellido_materno}`.trim(),
+        nombres: nombreSolo,
+        apellidos: `${apellidoPaterno} ${apellidoMaterno}`.trim(),
         rol: userRole,
         club_id: clubInfo.club_id || null,
         club_nombre: clubInfo.club_nombre || null,
@@ -327,13 +329,15 @@ export const authService = {
       }
 
       // Construir nombre completo
-      const nombreCompleto = `${data.nombre} ${data.apellido_paterno} ${data.apellido_materno}`.trim()
+      const nombreSolo = data.nombre || ''
+      const apellidoPaterno = data.apellido_paterno || ''
+      const apellidoMaterno = data.apellido_materno || ''
 
       const userData: User = {
         id: data.id,
         email: data.correo || '',
-        nombres: nombreCompleto,
-        apellidos: `${data.apellido_paterno} ${data.apellido_materno}`.trim(),
+        nombres: nombreSolo,
+        apellidos: `${apellidoPaterno} ${apellidoMaterno}`.trim(),
         rol: userRole,
         club_id: clubInfo.club_id || null,
         club_nombre: clubInfo.club_nombre || null,
@@ -506,15 +510,17 @@ export const authService = {
         }
       }
 
-      const nombreCompleto = `${updatedData.nombre} ${updatedData.apellido_paterno} ${updatedData.apellido_materno}`.trim()
+      const nombreSolo = updatedData.nombre || ''
+      const apellidoPaterno = updatedData.apellido_paterno || ''
+      const apellidoMaterno = updatedData.apellido_materno || ''
 
       return {
         success: true,
         data: {
           id: updatedData.id,
           email: updatedData.correo || '',
-          nombres: nombreCompleto,
-          apellidos: `${updatedData.apellido_paterno} ${updatedData.apellido_materno}`.trim(),
+          nombres: nombreSolo,
+          apellidos: `${apellidoPaterno} ${apellidoMaterno}`.trim(),
           rol: userRole,
           club_id: clubInfo.club_id || null,
           club_nombre: clubInfo.club_nombre || null,

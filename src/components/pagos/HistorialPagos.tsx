@@ -16,6 +16,7 @@ import {
 } from '@mui/material'
 import { Pago } from '@/models/pago'
 import { pagoController } from '@/controllers/pagoController'
+import { formatters } from '@/utils/formatters'
 
 interface HistorialPagosProps {
   judokaId: string
@@ -67,14 +68,6 @@ export default function HistorialPagos({ judokaId, judokaNombre }: HistorialPago
         size="small" 
       />
     )
-  }
-
-  const formatFecha = (fecha: string) => {
-    return new Date(fecha).toLocaleDateString('es-BO', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
   }
 
   if (loading) {
@@ -146,7 +139,7 @@ export default function HistorialPagos({ judokaId, judokaNombre }: HistorialPago
                 </Box>
               </TableCell>
               <TableCell>
-                {pago.fecha_pago ? formatFecha(pago.fecha_pago) : '-'}
+                {pago.fecha_pago ? formatters.formatDate(pago.fecha_pago) : '-'}
               </TableCell>
               <TableCell>
                 {pago.metodo_pago ? (

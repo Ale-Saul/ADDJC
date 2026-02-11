@@ -4,6 +4,8 @@ export interface Sensei {
   club_id: string | null
   nombres: string
   apellidos: string
+  apellido_paterno?: string
+  apellido_materno?: string
   email?: string
   fecha_nacimiento: string | null
   numero_celular?: string | null

@@ -17,6 +17,8 @@ import type { SelectChangeEvent } from '@mui/material/Select'
 import { Pago } from '@/models/pago'
 import { pagoController } from '@/controllers/pagoController'
 import { useAuth } from '@/contexts/AuthContext'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import dayjs from 'dayjs'
 
 interface RegistrarPagoFormProps {
   pagos: Pago[]
@@ -130,16 +132,20 @@ export default function RegistrarPagoForm({ pagos, onSuccess, onCancel }: Regist
         </Alert>
       )}
 
-      <TextField
-        fullWidth
+      <DatePicker
         label="Fecha de Pago"
-        name="fecha_pago"
-        type="date"
-        value={formData.fecha_pago}
-        onChange={handleChange}
-        required
-        InputLabelProps={{ shrink: true }}
-        sx={{ mb: 2 }}
+        value={formData.fecha_pago ? dayjs(formData.fecha_pago) : null}
+        onChange={(newValue) => {
+          setFormData(prev => ({ ...prev, fecha_pago: newValue ? newValue.format('YYYY-MM-DD') : '' }))
+        }}
+        slotProps={{
+          textField: {
+            fullWidth: true,
+            required: true,
+            sx: { mb: 2 }
+          },
+        }}
+        format="DD/MM/YYYY"
       />
 
       <FormControl fullWidth sx={{ mb: 2 }}>

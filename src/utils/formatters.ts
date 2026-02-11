@@ -4,10 +4,25 @@
 
 export const formatters = {
   /**
-   * Formatea una fecha a string legible
+   * Formatea una fecha a string legible (dd/mm/yyyy por defecto)
    */
-  formatDate(date: string | Date, format: 'short' | 'long' = 'short'): string {
-    const d = new Date(date)
+  formatDate(date: string | Date | null | undefined, format: 'short' | 'long' = 'short'): string {
+    if (!date) return '-'
+    
+    let d: Date
+    if (typeof date === 'string') {
+      // Si es formato YYYY-MM-DD, evitar problemas de zona horaria
+      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        const [year, month, day] = date.split('-').map(Number)
+        d = new Date(year, month - 1, day)
+      } else {
+        d = new Date(date)
+      }
+    } else {
+      d = date
+    }
+
+    if (isNaN(d.getTime())) return '-'
     
     if (format === 'short') {
       return d.toLocaleDateString('es-ES', {

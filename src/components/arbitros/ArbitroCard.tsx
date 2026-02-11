@@ -2,6 +2,7 @@
 
 import { Card, CardContent, Typography, Chip, Box } from '@mui/material'
 import { Arbitro } from '@/models/arbitro'
+import { formatters } from '@/utils/formatters'
 
 interface ArbitroCardProps {
   arbitro: Arbitro
@@ -38,7 +39,7 @@ export default function ArbitroCard({ arbitro, onClick }: ArbitroCardProps) {
         
         {arbitro.fecha_nacimiento && (
           <Typography variant="body2" color="text.secondary">
-            🎂 {new Date(arbitro.fecha_nacimiento).toLocaleDateString('es-ES')}
+            🎂 {formatters.formatDate(arbitro.fecha_nacimiento)}
           </Typography>
         )}
       </CardContent>

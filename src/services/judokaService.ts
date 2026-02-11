@@ -28,7 +28,7 @@ function mapJudokaRow(row: any): Judoka {
     email,
     apellido_paterno: apellidoPaterno,
     apellido_materno: apellidoMaterno,
-    fecha_nacimiento: u?.fecha_nacimiento ?? '',
+    fecha_nacimiento: u?.fecha_nacimiento ?? null,
     numero_celular: u?.numero_celular ?? null,
     ci: u?.ci ?? null,
     genero: u?.genero ?? null,

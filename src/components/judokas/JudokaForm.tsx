@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { z } from 'zod'
+import { useForm, Controller, type FieldErrors } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   TextField,
   Button,
@@ -14,10 +17,15 @@ import {
   Typography,
   InputAdornment,
   IconButton,
+  FormHelperText,
 } from '@mui/material'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import dayjs from 'dayjs'
+import 'dayjs/locale/es'
 import Visibility from '@mui/icons-material/Visibility'
+
+dayjs.locale('es')
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
-import type { SelectChangeEvent } from '@mui/material/Select'
 import { Judoka, JudokaCreate, JudokaUpdate } from '@/models/judoka'
 import { judokaController } from '@/controllers/judokaController'
 import { clubController } from '@/controllers/clubController'
@@ -25,6 +33,8 @@ import { senseiController } from '@/controllers/senseiController'
 import { Club } from '@/models/club'
 import { Sensei } from '@/models/sensei'
 import { useAuth } from '@/contexts/AuthContext'
+import { judokaSchema } from '@/utils/zodSchemas'
+import { formatCIInput, formatCelularInput, formatNameInput } from '@/utils/inputMasks'
 
 interface JudokaFormProps {
   judoka?: Judoka | null
@@ -34,24 +44,6 @@ interface JudokaFormProps {
 
 export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormProps) {
   const { user } = useAuth()
-  const [formData, setFormData] = useState<JudokaCreate | JudokaUpdate>({
-    usuario_id: '',
-    club_id: null,
-    entrenador_id: null,
-    nombres: '',
-    apellido_paterno: '',
-    apellido_materno: '',
-    email: '',
-    password: '',
-    fecha_nacimiento: '',
-    numero_celular: '',
-    ci: '',
-    genero: '',
-    categoria: '',
-    peso_competitivo: null,
-    cinturon_actual: '',
-    activo: true
-  })
   const [clubes, setClubes] = useState<Club[]>([])
   const [senseis, setSenseis] = useState<Sensei[]>([])
   const [loading, setLoading] = useState(false)
@@ -60,7 +52,61 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
+  const [focusedField, setFocusedField] = useState<string | null>(null)
+
+  // Configuración de React Hook Form con Zod
+  const {
+    control,
+    handleSubmit,
+    reset,
+    watch,
+    setFocus,
+    formState: { errors, submitCount },
+  } = useForm({
+    resolver: zodResolver(judokaSchema),
+    mode: 'onChange',
+    defaultValues: {
+      club_id: '',
+      entrenador_id: '',
+      nombres: '',
+      apellido_paterno: '',
+      apellido_materno: '',
+      email: '',
+      password: '',
+      fecha_nacimiento: null as string | null,
+      numero_celular: '',
+      ci: '',
+      genero: '',
+      categoria: '',
+      cinturon_actual: '',
+      activo: true,
+    },
+  })
+
+  const watchClubId = watch('club_id')
+  const showErrors = submitCount > 0
+
+  const fieldError = (name: keyof typeof errors) => {
+    const isFocused = focusedField === name
+    return {
+      error: showErrors && !!errors[name] && !isFocused,
+      helperText: (showErrors && !isFocused) ? (errors[name] as { message?: string } | undefined)?.message : undefined,
+    }
+  }
+
+  const onError = (formErrors: FieldErrors<z.infer<typeof judokaSchema>>) => {
+    const errorKeys = Object.keys(formErrors) as (keyof z.infer<typeof judokaSchema>)[]
+    if (errorKeys.length > 0) {
+      const firstField = errorKeys[0]
+      setFocus(firstField, { shouldSelect: true })
+      setTimeout(() => {
+        const element = document.getElementsByName(firstField)[0]
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }, 100)
+    }
+  }
 
   // Opciones ordenadas alfabéticamente
   const sortedClubes = [...clubes].sort((a, b) => a.nombre_club.localeCompare(b.nombre_club))
@@ -74,7 +120,6 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
   const cinturones = ["Blanco", "Amarillo", "Naranja", "Verde", "Azul", "Café", "Negro"]
 
   useEffect(() => {
-    // Cargar clubes activos
     const loadClubes = async () => {
       const response = await clubController.getAllClubes(false)
       if (response.success && response.data) {
@@ -88,9 +133,9 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
   // Cargar senseis cuando se selecciona un club
   useEffect(() => {
     const loadSenseis = async () => {
-      if (formData.club_id) {
+      if (watchClubId) {
         setLoadingSenseis(true)
-        const response = await senseiController.getSenseisByClub(formData.club_id)
+        const response = await senseiController.getSenseisByClub(watchClubId)
         if (response.success && response.data) {
           setSenseis(response.data)
         } else {
@@ -99,159 +144,51 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         setLoadingSenseis(false)
       } else {
         setSenseis([])
-        setFormData(prev => ({ ...prev, entrenador_id: null }))
       }
     }
     loadSenseis()
-  }, [formData.club_id])
+  }, [watchClubId])
 
   useEffect(() => {
     if (judoka) {
-      const ap = judoka.apellido_paterno ?? judoka.apellidos?.trim().split(/\s+/)[0] ?? ''
-      const am = judoka.apellido_materno ?? judoka.apellidos?.trim().split(/\s+/).slice(1).join(' ') ?? ''
-      setFormData({
-        ...judoka,
-        club_id: judoka.club_id || null,
-        entrenador_id: judoka.entrenador_id || null,
+      reset({
+        club_id: judoka.club_id || '',
+        entrenador_id: judoka.entrenador_id || '',
         nombres: judoka.nombres || '',
-        apellido_paterno: ap,
-        apellido_materno: am,
+        apellido_paterno: judoka.apellido_paterno ?? judoka.apellidos?.trim().split(/\s+/)[0] ?? '',
+        apellido_materno: judoka.apellido_materno ?? judoka.apellidos?.trim().split(/\s+/).slice(1).join(' ') ?? '',
         email: judoka.email || '',
-        fecha_nacimiento: judoka.fecha_nacimiento || '',
+        fecha_nacimiento: judoka.fecha_nacimiento || null,
         numero_celular: judoka.numero_celular || '',
         ci: judoka.ci || '',
         genero: judoka.genero || '',
         categoria: judoka.categoria || '',
         peso_competitivo: judoka.peso_competitivo || null,
         cinturon_actual: judoka.cinturon_actual || '',
-        activo: judoka.activo
+        activo: judoka.activo,
       })
     }
-  }, [judoka])
+  }, [judoka, reset])
 
   // Si es un sensei o encargado creando un nuevo judoka, pre-completar el club
   useEffect(() => {
     if (!judoka && user && user.club_id) {
       if (user.rol === 'sensei') {
-        // Sensei: pre-completar club y entrenador (él mismo)
-        setFormData(prev => ({
+        reset(prev => ({
           ...prev,
-          club_id: user.club_id,
-          entrenador_id: user.id
+          club_id: user.club_id!,
+          entrenador_id: user.sensei_id || ''
         }))
       } else if (user.rol === 'encargado') {
-        // Encargado: solo pre-completar club, puede elegir el entrenador
-        setFormData(prev => ({
+        reset(prev => ({
           ...prev,
-          club_id: user.club_id
+          club_id: user.club_id!
         }))
       }
     }
-  }, [judoka, user])
+  }, [judoka, user, reset])
 
-  const validateEmail = (email: string) => {
-    if (!email) return true
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  }
-
-  const validateCI = (ci: string) => {
-    if (!ci) return false
-    return /^\d{1,7}(-[A-Z]{1,3})?$/.test(ci)
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-
-    if (submitted) setSubmitted(false)
-    
-    // Validación de CI
-    if (name === 'ci') {
-      const val = value.toUpperCase()
-      if (/^\d{0,7}(-([A-Z]{0,3})?)?$/.test(val)) {
-        setFormData(prev => ({ ...prev, [name]: val }))
-        setError(null)
-      }
-      return
-    } 
-
-    // Validación de celular (8 números)
-    if (name === 'numero_celular') {
-      const filtered = value.replace(/[^0-9]/g, '').slice(0, 8)
-      setFormData(prev => ({ ...prev, [name]: filtered }))
-      setError(null)
-      return
-    }
-
-    setFormData(prev => ({
-      ...prev,
-      [name]: value === '' ? (name === 'nombres' || name === 'apellido_paterno' || name === 'apellido_materno' ? '' : null) : value
-    }))
-    setError(null)
-    setSuccess(false)
-  }
-
-  const handleSelectChange = (e: SelectChangeEvent<string>) => {
-    const { name, value } = e.target
-    if (!name) return
-
-    if (submitted) setSubmitted(false)
-
-    setFormData(prev => ({
-      ...prev,
-      [name]: value === '' ? null : value
-    }))
-    setError(null)
-    setSuccess(false)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitted(true)
-
-    // Validaciones
-    const names = (formData.nombres ?? '').trim()
-    const paterno = (formData.apellido_paterno ?? '').trim()
-    const materno = (formData.apellido_materno ?? '').trim()
-    const ci = (formData.ci ?? '').trim()
-    const email = (formData.email ?? '').trim()
-    const cel = (formData.numero_celular ?? '').trim()
-
-    if (!ci || !validateCI(ci)) {
-      setError(!ci ? 'El Carnet de Identidad es requerido' : 'Formato de CI inválido: 1234567-CB')
-      return
-    }
-
-    if (!names) {
-      setError('El nombre es obligatorio')
-      return
-    }
-
-    if (!paterno && !materno) {
-      setError('Se requiere al menos un apellido')
-      return
-    }
-
-    if (email && !validateEmail(email)) {
-      setError('Email inválido')
-      return
-    }
-
-    if (cel && cel.length !== 8) {
-      setError('El número de celular debe tener exactamente 8 dígitos')
-      return
-    }
-
-    if (!judoka) {
-      if (!email) {
-        setError('El email es obligatorio para nuevos judokas')
-        return
-      }
-      if (!formData.password || formData.password.length < 8) {
-        setError('La contraseña es obligatoria y debe tener al menos 8 caracteres')
-        return
-      }
-    }
-
+  const onSubmit = async (data: z.infer<typeof judokaSchema>) => {
     setLoading(true)
     setError(null)
     setSuccess(false)
@@ -259,39 +196,26 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     try {
       let response
       
+      const payload = {
+        ...data,
+        club_id: data.club_id || null,
+        entrenador_id: data.entrenador_id || null,
+        apellido_paterno: data.apellido_paterno?.trim() || null,
+        apellido_materno: data.apellido_materno?.trim() || null,
+        fecha_nacimiento: data.fecha_nacimiento || null,
+        numero_celular: data.numero_celular || null,
+        genero: data.genero || null,
+        categoria: data.categoria || null,
+        cinturon_actual: data.cinturon_actual || null,
+      }
+
       if (judoka) {
-        // Actualizar
-        const updateData: JudokaUpdate = {
-          club_id: formData.club_id || null,
-          entrenador_id: formData.entrenador_id || null,
-          nombres: names,
-          apellido_paterno: paterno,
-          apellido_materno: materno,
-          email: email || undefined,
-          fecha_nacimiento: formData.fecha_nacimiento || null,
-          numero_celular: cel || null,
-          ci: ci || null,
-          genero: formData.genero || null,
-          categoria: formData.categoria || null,
-          peso_competitivo: formData.peso_competitivo || null,
-          cinturon_actual: formData.cinturon_actual || null,
-          activo: formData.activo
-        }
-        response = await judokaController.updateJudoka(judoka.id, updateData)
+        response = await judokaController.updateJudoka(judoka.id, payload as JudokaUpdate)
       } else {
-        // Crear
         const createData: JudokaCreate = {
-          ...formData as JudokaCreate,
-          usuario_id: 'temp-user-id', 
-          nombres: names,
-          apellido_paterno: paterno,
-          apellido_materno: materno,
-          email: email || undefined,
-          password: 'password' in formData ? formData.password : undefined,
-          fecha_nacimiento: formData.fecha_nacimiento || '',
-          numero_celular: cel || null,
-          ci: ci,
-          genero: formData.genero
+          ...(payload as JudokaCreate),
+          usuario_id: 'temp-user-id',
+          password: data.password || undefined,
         }
         response = await judokaController.createJudoka(createData)
       }
@@ -307,24 +231,14 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         setError(response.error || 'Error al guardar el judoka')
       }
     } catch (err: any) {
-      setError(err.message || 'Error inesperado')
+      setError(err instanceof Error ? err.message : 'Error inesperado')
     } finally {
       setLoading(false)
     }
   }
 
-  const paternoVal = (formData.apellido_paterno ?? '').trim()
-  const maternoVal = (formData.apellido_materno ?? '').trim()
-  const apellidoError = submitted && !paternoVal && !maternoVal
-  const ciVal = (formData.ci ?? '').trim()
-  const ciError = submitted && (!ciVal || !validateCI(ciVal))
-  const emailVal = (formData.email ?? '').trim()
-  const emailError = submitted && emailVal && !validateEmail(emailVal)
-  const celVal = (formData.numero_celular ?? '').trim()
-  const celError = submitted && celVal && celVal.length !== 8
-
   return (
-    <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 2 }}>
+    <Box component="form" onSubmit={handleSubmit(onSubmit, onError)} noValidate sx={{ mt: 2 }}>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
@@ -337,26 +251,28 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         </Alert>
       )}
 
-      {/* Contenedor en columna para que todos los campos tengan mismo ancho y estén uno debajo del otro */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <FormControl fullWidth>
+        <FormControl fullWidth error={fieldError('club_id').error}>
           <InputLabel>Club</InputLabel>
-          <Select
+          <Controller
             name="club_id"
-            value={formData.club_id || ''}
-            onChange={handleSelectChange}
-            disabled={loading || loadingClubes || user?.rol === 'sensei' || user?.rol === 'encargado'}
-            label="Club"
-          >
-            <MenuItem value="">
-              <em>Sin club</em>
-            </MenuItem>
-            {sortedClubes.map((club) => (
-              <MenuItem key={club.id} value={club.id}>
-                {club.nombre_club}
-              </MenuItem>
-            ))}
-          </Select>
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                label="Club"
+                disabled={loading || loadingClubes || user?.rol === 'sensei' || user?.rol === 'encargado'}
+                onFocus={() => setFocusedField('club_id')}
+                onBlur={() => setFocusedField(null)}
+              >
+                <MenuItem value=""><em>Sin club</em></MenuItem>
+                {sortedClubes.map((club) => (
+                  <MenuItem key={club.id} value={club.id}>{club.nombre_club}</MenuItem>
+                ))}
+              </Select>
+            )}
+          />
+          {fieldError('club_id').helperText && <FormHelperText>{fieldError('club_id').helperText}</FormHelperText>}
           {(user?.rol === 'sensei' || user?.rol === 'encargado') && (
             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
               Los judokas se crearán automáticamente en tu club
@@ -364,209 +280,277 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
           )}
         </FormControl>
 
-        <FormControl fullWidth>
+        <FormControl fullWidth error={fieldError('entrenador_id').error}>
           <InputLabel>Entrenador</InputLabel>
-          <Select
+          <Controller
             name="entrenador_id"
-            value={formData.entrenador_id || ''}
-            onChange={handleSelectChange}
-            disabled={loading || loadingSenseis || !formData.club_id || user?.rol === 'sensei'}
-            label="Entrenador"
-          >
-            <MenuItem value="">
-              <em>Sin entrenador</em>
-            </MenuItem>
-            {sortedSenseis.map((sensei) => (
-              <MenuItem key={sensei.id} value={sensei.id}>
-                {sensei.nombres} {sensei.apellidos}
-              </MenuItem>
-            ))}
-          </Select>
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                label="Entrenador"
+                disabled={loading || loadingSenseis || !watchClubId || user?.rol === 'sensei'}
+                onFocus={() => setFocusedField('entrenador_id')}
+                onBlur={() => setFocusedField(null)}
+              >
+                <MenuItem value=""><em>Sin entrenador</em></MenuItem>
+                {sortedSenseis.map((sensei) => (
+                  <MenuItem key={sensei.id} value={sensei.id}>
+                    {sensei.nombres} {sensei.apellidos}
+                  </MenuItem>
+                ))}
+              </Select>
+            )}
+          />
+          {fieldError('entrenador_id').helperText && <FormHelperText>{fieldError('entrenador_id').helperText}</FormHelperText>}
           {user?.rol === 'sensei' ? (
             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
               Serás asignado automáticamente como entrenador
             </Typography>
-          ) : !formData.club_id && (
+          ) : !watchClubId && (
             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
               Selecciona un club primero para ver los entrenadores disponibles
             </Typography>
           )}
         </FormControl>
 
-        <TextField
-          fullWidth
-          label="Carnet de Identidad"
+        <Controller
           name="ci"
-          value={formData.ci || ''}
-          onChange={handleChange}
-          disabled={loading}
-          error={ciError}
-          helperText={ciError ? (!ciVal ? 'El Carnet de Identidad es requerido' : 'Formato: 1234567-CB') : ''}
-          required
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              fullWidth
+              label="Carnet de Identidad"
+              required
+              disabled={loading}
+              {...fieldError('ci')}
+              onFocus={() => setFocusedField('ci')}
+              onBlur={() => setFocusedField(null)}
+              onChange={(e) => field.onChange(formatCIInput(e.target.value))}
+            />
+          )}
         />
 
-        <TextField
-          fullWidth
-          label="Nombres"
+        <Controller
           name="nombres"
-          value={formData.nombres}
-          onChange={handleChange}
-          required
-          disabled={loading}
-          error={submitted && !formData.nombres?.trim()}
-          helperText={submitted && !formData.nombres?.trim() ? 'El nombre es obligatorio' : ''}
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              fullWidth
+              label="Nombres"
+              required
+              disabled={loading}
+              {...fieldError('nombres')}
+              onFocus={() => setFocusedField('nombres')}
+              onBlur={() => setFocusedField(null)}
+              onChange={(e) => field.onChange(formatNameInput(e.target.value))}
+            />
+          )}
         />
 
-        <TextField
-          fullWidth
-          label="Apellido paterno"
+        <Controller
           name="apellido_paterno"
-          value={'apellido_paterno' in formData ? (formData.apellido_paterno ?? '') : ''}
-          onChange={handleChange}
-          disabled={loading}
-          error={apellidoError}
-          helperText={apellidoError ? 'Debe proporcionar al menos un apellido' : ''}
-        />
-        <TextField
-          fullWidth
-          label="Apellido materno"
-          name="apellido_materno"
-          value={'apellido_materno' in formData ? (formData.apellido_materno ?? '') : ''}
-          onChange={handleChange}
-          disabled={loading}
-          error={apellidoError}
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              fullWidth
+              label="Apellido paterno"
+              disabled={loading}
+              {...fieldError('apellido_paterno')}
+              onFocus={() => setFocusedField('apellido_paterno')}
+              onBlur={() => setFocusedField(null)}
+              onChange={(e) => field.onChange(formatNameInput(e.target.value))}
+            />
+          )}
         />
 
-        <TextField
-          fullWidth
-          label="Email"
+        <Controller
+          name="apellido_materno"
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              fullWidth
+              label="Apellido materno"
+              disabled={loading}
+              error={fieldError('apellido_paterno').error}
+              helperText={fieldError('apellido_paterno').error ? 'Al menos uno de los dos apellidos es requerido' : undefined}
+              onFocus={() => setFocusedField('apellido_paterno')}
+              onBlur={() => setFocusedField(null)}
+              onChange={(e) => field.onChange(formatNameInput(e.target.value))}
+            />
+          )}
+        />
+
+        <Controller
           name="email"
-          type="email"
-          value={'email' in formData ? (formData.email || '') : ''}
-          onChange={handleChange}
-          disabled={loading}
-          error={emailError || (submitted && !judoka && !emailVal)}
-          helperText={emailError ? 'Formato de email inválido' : (submitted && !judoka && !emailVal ? 'El email es obligatorio' : '')}
-          required={!judoka}
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              fullWidth
+              label="Email"
+              type="email"
+              required={!judoka}
+              disabled={loading}
+              {...fieldError('email')}
+              onFocus={() => setFocusedField('email')}
+              onBlur={() => setFocusedField(null)}
+            />
+          )}
         />
 
         {!judoka && (
-          <TextField
-              fullWidth
-              label="Contraseña"
-              name="password"
-              type={showPassword ? 'text' : 'password'}
-              value={'password' in formData ? (formData.password || '') : ''}
-              onChange={handleChange}
-              disabled={loading}
-              required
-              error={submitted && (!formData.password || formData.password.length < 8)}
-              helperText={submitted && (!formData.password || formData.password.length < 8) ? "La contraseña es obligatoria (mínimo 8 caracteres)" : ""}
-              inputProps={{ minLength: 8 }}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={() => setShowPassword(!showPassword)}
-                      onMouseDown={(e) => e.preventDefault()}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
+          <Controller
+            name="password"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label="Contraseña"
+                type={showPassword ? 'text' : 'password'}
+                required
+                disabled={loading}
+                {...fieldError('password')}
+                onFocus={() => setFocusedField('password')}
+                onBlur={() => setFocusedField(null)}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            )}
+          />
         )}
 
-        <TextField
-          fullWidth
-          label="Fecha de Nacimiento"
+        <Controller
           name="fecha_nacimiento"
-          type="date"
-          value={formData.fecha_nacimiento || ''}
-          onChange={handleChange}
-          disabled={loading}
-          InputLabelProps={{
-            shrink: true,
-          }}
+          control={control}
+          render={({ field }) => (
+            <DatePicker
+              label="Fecha de Nacimiento"
+              value={field.value ? dayjs(field.value) : null}
+              onChange={(newValue) => {
+                field.onChange(newValue && newValue.isValid() ? newValue.format('YYYY-MM-DD') : null)
+              }}
+              disabled={loading}
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  ...fieldError('fecha_nacimiento'),
+                  onFocus: () => setFocusedField('fecha_nacimiento'),
+                  onBlur: () => setFocusedField(null),
+                },
+              }}
+              format="DD/MM/YYYY"
+            />
+          )}
         />
 
-        <TextField
-          fullWidth
-          label="Número de Celular"
+        <Controller
           name="numero_celular"
-          value={formData.numero_celular || ''}
-          onChange={handleChange}
-          disabled={loading}
-          error={celError}
-          helperText={celError ? 'Debe tener exactamente 8 dígitos' : ''}
-          inputProps={{ maxLength: 8 }}
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              fullWidth
+              label="Número de Celular"
+              disabled={loading}
+              {...fieldError('numero_celular')}
+              inputProps={{ maxLength: 8 }}
+              onFocus={() => setFocusedField('numero_celular')}
+              onBlur={() => setFocusedField(null)}
+              onChange={(e) => field.onChange(formatCelularInput(e.target.value))}
+            />
+          )}
         />
 
-        <FormControl fullWidth>
+        <FormControl fullWidth error={fieldError('genero').error}>
           <InputLabel>Género</InputLabel>
-          <Select
+          <Controller
             name="genero"
-            value={formData.genero || ''}
-            onChange={handleSelectChange}
-            disabled={loading}
-            label="Género"
-          >
-            <MenuItem value="">
-              <em>Sin definir</em>
-            </MenuItem>
-            {generos.map(g => (
-              <MenuItem key={g} value={g}>{g}</MenuItem>
-            ))}
-          </Select>
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                label="Género"
+                disabled={loading}
+                onFocus={() => setFocusedField('genero')}
+                onBlur={() => setFocusedField(null)}
+              >
+                <MenuItem value=""><em>Sin definir</em></MenuItem>
+                {generos.map(g => (
+                  <MenuItem key={g} value={g}>{g}</MenuItem>
+                ))}
+              </Select>
+            )}
+          />
+          {fieldError('genero').helperText && <FormHelperText>{fieldError('genero').helperText}</FormHelperText>}
         </FormControl>
 
-        <FormControl fullWidth>
+        <FormControl fullWidth error={fieldError('categoria').error}>
           <InputLabel>Categoría</InputLabel>
-          <Select
+          <Controller
             name="categoria"
-            value={formData.categoria || ''}
-            onChange={handleSelectChange}
-            disabled={loading}
-            label="Categoría"
-          >
-            <MenuItem value="">
-              <em>Sin definir</em>
-            </MenuItem>
-            {categorias.map(c => (
-              <MenuItem key={c} value={c}>{c}</MenuItem>
-            ))}
-          </Select>
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                label="Categoría"
+                disabled={loading}
+                onFocus={() => setFocusedField('categoria')}
+                onBlur={() => setFocusedField(null)}
+              >
+                <MenuItem value=""><em>Sin definir</em></MenuItem>
+                {categorias.map(c => (
+                  <MenuItem key={c} value={c}>{c}</MenuItem>
+                ))}
+              </Select>
+            )}
+          />
+          {fieldError('categoria').helperText && <FormHelperText>{fieldError('categoria').helperText}</FormHelperText>}
         </FormControl>
 
-        <FormControl fullWidth>
+        <FormControl fullWidth error={fieldError('cinturon_actual').error}>
           <InputLabel>Cinturón Actual</InputLabel>
-          <Select
+          <Controller
             name="cinturon_actual"
-            value={formData.cinturon_actual || ''}
-            onChange={handleSelectChange}
-            disabled={loading}
-            label="Cinturón Actual"
-          >
-            <MenuItem value="">
-              <em>Sin definir</em>
-            </MenuItem>
-            {cinturones.map(c => (
-              <MenuItem key={c} value={c}>{c}</MenuItem>
-            ))}
-          </Select>
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                label="Cinturón Actual"
+                disabled={loading}
+                onFocus={() => setFocusedField('cinturon_actual')}
+                onBlur={() => setFocusedField(null)}
+              >
+                <MenuItem value=""><em>Sin definir</em></MenuItem>
+                {cinturones.map(c => (
+                  <MenuItem key={c} value={c}>{c}</MenuItem>
+                ))}
+              </Select>
+            )}
+          />
+          {fieldError('cinturon_actual').helperText && <FormHelperText>{fieldError('cinturon_actual').helperText}</FormHelperText>}
         </FormControl>
       </Box>
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
         {onCancel && (
-          <Button
-            variant="outlined"
-            onClick={onCancel}
-            disabled={loading}
-          >
+          <Button variant="outlined" onClick={onCancel} disabled={loading}>
             Cancelar
           </Button>
         )}

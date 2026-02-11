@@ -18,7 +18,12 @@ import {
   MenuItem,
   FormHelperText,
 } from '@mui/material'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import dayjs from 'dayjs'
+import 'dayjs/locale/es'
 import Visibility from '@mui/icons-material/Visibility'
+
+dayjs.locale('es')
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import { MiembroAsociacion, MiembroAsociacionCreate, MiembroAsociacionUpdate } from '@/models/asociacion'
 import { asociacionController } from '@/controllers/asociacionController'
@@ -37,6 +42,7 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [focusedField, setFocusedField] = useState<string | null>(null)
 
   // Configuración de React Hook Form con Zod
   const {
@@ -66,21 +72,19 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
 
   const showErrors = submitCount > 0
 
-  const fieldError = (name: keyof typeof errors) => ({
-    error: showErrors && !!errors[name],
-    helperText: showErrors ? (errors[name] as { message?: string } | undefined)?.message : undefined,
-  })
+  const fieldError = (name: keyof typeof errors) => {
+    const isFocused = focusedField === name
+    return {
+      error: showErrors && !!errors[name] && !isFocused,
+      helperText: (showErrors && !isFocused) ? (errors[name] as { message?: string } | undefined)?.message : undefined,
+    }
+  }
 
   const onError = (formErrors: FieldErrors<z.infer<typeof miembroAsociacionSchema>>) => {
-    // Obtener todos los campos con error
     const errorKeys = Object.keys(formErrors) as (keyof z.infer<typeof miembroAsociacionSchema>)[]
-    
     if (errorKeys.length > 0) {
-      // Intentar enfocar el primer campo con error
       const firstField = errorKeys[0]
       setFocus(firstField, { shouldSelect: true })
-
-      // Fallback: Desplazamiento manual por si setFocus no dispara el scroll en el Dialog
       setTimeout(() => {
         const element = document.getElementsByName(firstField)[0]
         if (element) {
@@ -187,6 +191,8 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
               required
               disabled={loading}
               {...fieldError('ci')}
+              onFocus={() => setFocusedField('ci')}
+              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatCIInput(e.target.value))}
             />
           )}
@@ -203,6 +209,8 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
               required
               disabled={loading}
               {...fieldError('nombres')}
+              onFocus={() => setFocusedField('nombres')}
+              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatNameInput(e.target.value))}
             />
           )}
@@ -218,6 +226,8 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
               label="Apellido paterno"
               disabled={loading}
               {...fieldError('apellido_paterno')}
+              onFocus={() => setFocusedField('apellido_paterno')}
+              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatNameInput(e.target.value))}
             />
           )}
@@ -234,6 +244,8 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
               disabled={loading}
               error={fieldError('apellido_paterno').error}
               helperText={fieldError('apellido_paterno').error ? 'Al menos uno de los dos apellidos es requerido' : undefined}
+              onFocus={() => setFocusedField('apellido_paterno')}
+              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatNameInput(e.target.value))}
             />
           )}
@@ -243,15 +255,22 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
           name="fecha_nacimiento"
           control={control}
           render={({ field }) => (
-            <TextField
-              {...field}
-              value={field.value || ''}
-              fullWidth
+            <DatePicker
               label="Fecha de Nacimiento"
-              type="date"
+              value={field.value ? dayjs(field.value) : null}
+              onChange={(newValue) => {
+                field.onChange(newValue && newValue.isValid() ? newValue.format('YYYY-MM-DD') : null)
+              }}
               disabled={loading}
-              InputLabelProps={{ shrink: true }}
-              {...fieldError('fecha_nacimiento')}
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  ...fieldError('fecha_nacimiento'),
+                  onFocus: () => setFocusedField('fecha_nacimiento'),
+                  onBlur: () => setFocusedField(null),
+                },
+              }}
+              format="DD/MM/YYYY"
             />
           )}
         />
@@ -267,6 +286,8 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
               disabled={loading}
               {...fieldError('numero_celular')}
               inputProps={{ maxLength: 8 }}
+              onFocus={() => setFocusedField('numero_celular')}
+              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatCelularInput(e.target.value))}
             />
           )}
@@ -278,7 +299,13 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
             name="genero"
             control={control}
             render={({ field }) => (
-              <Select {...field} label="Género" disabled={loading}>
+              <Select
+                {...field}
+                label="Género"
+                disabled={loading}
+                onFocus={() => setFocusedField('genero')}
+                onBlur={() => setFocusedField(null)}
+              >
                 <MenuItem value=""><em>Sin definir</em></MenuItem>
                 <MenuItem value="Masculino">Masculino</MenuItem>
                 <MenuItem value="Femenino">Femenino</MenuItem>
@@ -293,15 +320,22 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
           name="fecha_ingreso"
           control={control}
           render={({ field }) => (
-            <TextField
-              {...field}
-              value={field.value || ''}
-              fullWidth
+            <DatePicker
               label="Fecha de Ingreso"
-              type="date"
+              value={field.value ? dayjs(field.value) : null}
+              onChange={(newValue) => {
+                field.onChange(newValue && newValue.isValid() ? newValue.format('YYYY-MM-DD') : null)
+              }}
               disabled={loading}
-              InputLabelProps={{ shrink: true }}
-              {...fieldError('fecha_ingreso')}
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  ...fieldError('fecha_ingreso'),
+                  onFocus: () => setFocusedField('fecha_ingreso'),
+                  onBlur: () => setFocusedField(null),
+                },
+              }}
+              format="DD/MM/YYYY"
             />
           )}
         />
@@ -312,7 +346,13 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
             name="cargo"
             control={control}
             render={({ field }) => (
-              <Select {...field} label="Cargo" disabled={loading}>
+              <Select
+                {...field}
+                label="Cargo"
+                disabled={loading}
+                onFocus={() => setFocusedField('cargo')}
+                onBlur={() => setFocusedField(null)}
+              >
                 <MenuItem value=""><em>Sin cargo</em></MenuItem>
                 {CARGOS_ASOCIACION.map(c => (
                   <MenuItem key={c} value={c}>{c}</MenuItem>
@@ -335,6 +375,8 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
               required
               disabled={loading}
               {...fieldError('email')}
+              onFocus={() => setFocusedField('email')}
+              onBlur={() => setFocusedField(null)}
             />
           )}
         />
@@ -352,6 +394,8 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
                 required
                 disabled={loading}
                 {...fieldError('password')}
+                onFocus={() => setFocusedField('password')}
+                onBlur={() => setFocusedField(null)}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">

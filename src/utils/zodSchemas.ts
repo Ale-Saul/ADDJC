@@ -66,6 +66,40 @@ const apellidosErrorConfig = {
 export const baseUserSchema = baseUserObject.refine(validateApellidos, apellidosErrorConfig)
 
 /**
+ * Esquema específico para Judokas
+ */
+export const judokaSchema = baseUserObject.extend({
+  club_id: z.string().nullable().optional(),
+  entrenador_id: z.string().nullable().optional(),
+  categoria: z.string().nullable().optional(),
+  cinturon_actual: z.string().nullable().optional(),
+  activo: z.boolean().default(true),
+  password: z.string().optional(),
+}).refine(validateApellidos, apellidosErrorConfig)
+
+/**
+ * Esquema específico para Senseis
+ */
+export const senseiSchema = baseUserObject.extend({
+  club_id: z.string().nullable().optional(),
+  grado_dan: z.string().nullable().optional(),
+  especialidad: z.string().nullable().optional(),
+  certificacion_id: z.string().nullable().optional(),
+  activo: z.boolean().default(true),
+  password: z.string().optional(),
+}).refine(validateApellidos, apellidosErrorConfig)
+
+/**
+ * Esquema específico para Árbitros
+ */
+export const arbitroSchema = baseUserObject.extend({
+  nivel_arbitraje: z.string().nullable().optional(),
+  certificacion_id: z.string().nullable().optional(),
+  activo: z.boolean().default(true),
+  password: z.string().optional(),
+}).refine(validateApellidos, apellidosErrorConfig)
+
+/**
  * Esquema específico para Miembros de la Asociación
  */
 export const miembroAsociacionSchema = baseUserObject.extend({

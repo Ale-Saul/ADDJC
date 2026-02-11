@@ -13,6 +13,8 @@ import {
   MenuItem
 } from '@mui/material'
 import type { SelectChangeEvent } from '@mui/material/Select'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import dayjs from 'dayjs'
 import { Certificacion, CertificacionCreate, CertificacionUpdate } from '@/models/certificacion'
 import { certificacionController } from '@/controllers/certificacionController'
 import { storageService } from '@/services/storageService'
@@ -138,7 +140,7 @@ export default function CertificacionForm({
           return
         }
 
-        archivoUrl = uploadResult.url || null
+        archivoUrl = storageService.getPublicUrl('certificaciones', path)
         setUploading(false)
       }
 
@@ -219,30 +221,26 @@ export default function CertificacionForm({
           disabled={loading || uploading}
         />
 
-        <TextField
-          fullWidth
+        <DatePicker
           label="Fecha de Emisión"
-          name="fecha_emision"
-          type="date"
-          value={formData.fecha_emision}
-          onChange={handleChange}
-          InputLabelProps={{
-            shrink: true
+          value={formData.fecha_emision ? dayjs(formData.fecha_emision) : null}
+          onChange={(newValue) => {
+            setFormData(prev => ({ ...prev, fecha_emision: newValue ? newValue.format('YYYY-MM-DD') : '' }))
           }}
           disabled={loading || uploading}
+          slotProps={{ textField: { fullWidth: true } }}
+          format="DD/MM/YYYY"
         />
 
-        <TextField
-          fullWidth
+        <DatePicker
           label="Fecha de Vencimiento"
-          name="fecha_vencimiento"
-          type="date"
-          value={formData.fecha_vencimiento}
-          onChange={handleChange}
-          InputLabelProps={{
-            shrink: true
+          value={formData.fecha_vencimiento ? dayjs(formData.fecha_vencimiento) : null}
+          onChange={(newValue) => {
+            setFormData(prev => ({ ...prev, fecha_vencimiento: newValue ? newValue.format('YYYY-MM-DD') : '' }))
           }}
           disabled={loading || uploading}
+          slotProps={{ textField: { fullWidth: true } }}
+          format="DD/MM/YYYY"
         />
 
         <Box>
