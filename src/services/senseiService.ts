@@ -259,16 +259,34 @@ export const senseiService = {
     try {
       const client = getSupabaseClient()
       const { certificacion, nombres, apellido_paterno, apellido_materno, email, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url, ...senseiPayload } = sensei as SenseiUpdate & { certificacion?: string | null, numero_celular?: string, ci?: string, genero?: any }
-      const { data, error } = await client
-        .from('senseis')
-        .update(senseiPayload)
-        .eq('id', id)
-        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, correo, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url)')
-        .single()
+      
+      let usuarioId: string | null = null
 
-      if (error) throw error
+      // 1. Actualizar tabla 'senseis' solo si hay datos específicos
+      if (Object.keys(senseiPayload).length > 0) {
+        const { data, error } = await client
+          .from('senseis')
+          .update(senseiPayload)
+          .eq('id', id)
+          .select('usuario_id')
+          .single()
 
-      if (data?.usuario_id) {
+        if (error) throw error
+        usuarioId = data?.usuario_id
+      } else {
+        // Si no hay datos para 'senseis', necesitamos el usuario_id para actualizar 'usuarios'
+        const { data, error } = await client
+          .from('senseis')
+          .select('usuario_id')
+          .eq('id', id)
+          .single()
+        
+        if (error) throw error
+        usuarioId = data?.usuario_id
+      }
+
+      // 2. Actualizar tabla 'usuarios' si hay cambios en campos comunes
+      if (usuarioId && (nombres !== undefined || apellido_paterno !== undefined || apellido_materno !== undefined || email !== undefined || fecha_nacimiento !== undefined || activo !== undefined || avatar_url !== undefined || numero_celular !== undefined || ci !== undefined || genero !== undefined)) {
         const userUpdate: Record<string, unknown> = { updated_at: new Date().toISOString() }
         if (nombres !== undefined) userUpdate.nombre = nombres
         if (apellido_paterno !== undefined) userUpdate.apellido_paterno = apellido_paterno
@@ -280,24 +298,12 @@ export const senseiService = {
         if (genero !== undefined) userUpdate.genero = genero
         if (activo !== undefined) userUpdate.activo = activo
         if (avatar_url !== undefined) userUpdate.avatar_url = avatar_url
-        if (Object.keys(userUpdate).length > 1) {
-          await client.from('usuarios').update(userUpdate).eq('id', data.usuario_id)
-          
-          // Refresh data for return
-          if (data.usuarios) {
-              if (email !== undefined) data.usuarios.correo = email
-              if (fecha_nacimiento !== undefined) data.usuarios.fecha_nacimiento = fecha_nacimiento
-              if (numero_celular !== undefined) data.usuarios.numero_celular = numero_celular
-              if (sensei.ci !== undefined) data.usuarios.ci = sensei.ci
-              if (genero !== undefined) data.usuarios.genero = genero
-              if (activo !== undefined) data.usuarios.activo = activo
-              if (avatar_url !== undefined) data.usuarios.avatar_url = avatar_url
-          }
-        }
+        
+        const { error: userError } = await client.from('usuarios').update(userUpdate).eq('id', usuarioId)
+        if (userError) throw userError
       }
 
-      const mapped = data ? mapSenseiRow(data) : (data as Sensei)
-      return { success: true, data: mapped }
+      return await this.getById(id)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }

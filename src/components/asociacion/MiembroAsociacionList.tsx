@@ -22,22 +22,20 @@ import {
   Select,
   MenuItem,
   Stack,
-  Tooltip
+  Tooltip,
+  Switch
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import SearchIcon from '@mui/icons-material/Search'
-import FilterListIcon from '@mui/icons-material/FilterList'
 import ClearIcon from '@mui/icons-material/Clear'
 import {
   useReactTable,
   getCoreRowModel,
-  getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   flexRender,
-  createColumnHelper,
-  ColumnDef
+  createColumnHelper
 } from '@tanstack/react-table'
 import { MiembroAsociacion } from '@/models/asociacion'
 import { asociacionController } from '@/controllers/asociacionController'
@@ -69,12 +67,16 @@ export default function MiembroAsociacionList({
   const [cargoFilter, setCargoFilter] = useState<string>('all')
   const [estadoFilter, setEstadoFilter] = useState<string>('all')
 
+  // Estado para mantener los IDs que han sido modificados en la sesión actual
+  const [modifiedIds, setModifiedIds] = useState<Set<string>>(new Set())
+
   const loadMiembros = async () => {
     setLoading(true)
     setError(null)
-    const response = await asociacionController.getAllMiembros()
+    const response = await asociacionController.getAllMiembros(true)
     if (response.success && response.data) {
       setMiembros(response.data)
+      setModifiedIds(new Set())
     } else {
       setError(response.error || 'Error al cargar los miembros')
     }
@@ -87,6 +89,7 @@ export default function MiembroAsociacionList({
 
   useEffect(() => {
     setGlobalFilter(externalSearchTerm)
+    setModifiedIds(new Set())
   }, [externalSearchTerm])
 
   // Definición de columnas con TanStack Table
@@ -118,13 +121,62 @@ export default function MiembroAsociacionList({
     }),
     columnHelper.accessor('activo', {
       header: 'Estado',
-      cell: (info) => (
-        <Chip 
-          label={info.getValue() ? 'Activo' : 'Inactivo'} 
-          color={info.getValue() ? 'success' : 'default'}
-          size="small"
-        />
-      ),
+      cell: (info) => {
+        const isActive = info.getValue()
+        const id = info.row.original.id
+        
+        const handleToggle = async () => {
+          setModifiedIds(prev => new Set(prev).add(id))
+          setMiembros(prev => prev.map(m => m.id === id ? { ...m, activo: !isActive } : m))
+          
+          try {
+            const response = await asociacionController.updateMiembro(id, { activo: !isActive } as any)
+            if (!response.success) {
+              setMiembros(prev => prev.map(m => m.id === id ? { ...m, activo: isActive } : m))
+              setModifiedIds(prev => {
+                const next = new Set(prev)
+                next.delete(id)
+                return next
+              })
+              alert('Error al cambiar el estado: ' + (response.error || 'Error desconocido'))
+            }
+          } catch (err) {
+            setMiembros(prev => prev.map(m => m.id === id ? { ...m, activo: isActive } : m))
+            setModifiedIds(prev => {
+              const next = new Set(prev)
+              next.delete(id)
+              return next
+            })
+            console.error(err)
+            alert('Error inesperado al cambiar el estado')
+          }
+        }
+
+        return (
+          <Tooltip title={isActive ? 'Desactivar' : 'Activar'}>
+            <Switch 
+              checked={!!isActive} 
+              onChange={handleToggle}
+              sx={{
+                '& .MuiSwitch-switchBase.Mui-checked': {
+                  color: '#4caf50',
+                },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                  backgroundColor: '#4caf50',
+                  opacity: 0.5,
+                },
+                '& .MuiSwitch-switchBase:not(.Mui-checked)': {
+                  color: '#f44336',
+                },
+                '& .MuiSwitch-switchBase:not(.Mui-checked) + .MuiSwitch-track': {
+                  backgroundColor: '#f44336',
+                  opacity: 0.5,
+                },
+              }}
+            />
+          </Tooltip>
+        )
+      },
     }),
     columnHelper.display({
       id: 'acciones',
@@ -156,9 +208,9 @@ export default function MiembroAsociacionList({
     }),
   ], [onEdit, onDelete])
 
-  // Filtrado personalizado
+  // Filtrado y ordenamiento personalizado
   const filteredData = useMemo(() => {
-    return miembros.filter(m => {
+    const filtered = miembros.filter(m => {
       const matchCargo = cargoFilter === 'all' || m.cargo === cargoFilter
       const matchEstado = estadoFilter === 'all' || 
         (estadoFilter === 'activo' ? m.activo : !m.activo)
@@ -172,7 +224,17 @@ export default function MiembroAsociacionList({
 
       return matchCargo && matchEstado && matchSearch
     })
-  }, [miembros, cargoFilter, estadoFilter, globalFilter])
+
+    return [...filtered].sort((a, b) => {
+      const isAModified = modifiedIds.has(a.id)
+      const isBModified = modifiedIds.has(b.id)
+      const effectiveAActive = isAModified ? !a.activo : a.activo
+      const effectiveBActive = isBModified ? !b.activo : b.activo
+
+      if (effectiveAActive === effectiveBActive) return 0
+      return effectiveAActive ? -1 : 1
+    })
+  }, [miembros, cargoFilter, estadoFilter, globalFilter, modifiedIds])
 
   const table = useReactTable({
     data: filteredData,
@@ -191,6 +253,7 @@ export default function MiembroAsociacionList({
     setCargoFilter('all')
     setEstadoFilter('all')
     setGlobalFilter('')
+    setModifiedIds(new Set())
   }
 
   if (loading) {
@@ -209,7 +272,6 @@ export default function MiembroAsociacionList({
 
   return (
     <Box>
-      {/* Barra de Filtros */}
       <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f8f9fa' }} variant="outlined">
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
           <TextField

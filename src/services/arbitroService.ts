@@ -202,16 +202,34 @@ export const arbitroService = {
     try {
       const client = getSupabaseClient()
       const { certificacion, nombres, apellido_paterno, apellido_materno, email, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url, ...updatePayload } = arbitro as ArbitroUpdate & { certificacion?: string | null, numero_celular?: string, ci?: string, genero?: any }
-      const { data, error } = await client
-        .from('arbitros')
-        .update(updatePayload)
-        .eq('id', id)
-        .select('usuario_id')
-        .single()
+      
+      let usuarioId: string | null = null
 
-      if (error) throw error
+      // 1. Actualizar tabla 'arbitros' solo si hay datos específicos
+      if (Object.keys(updatePayload).length > 0) {
+        const { data, error } = await client
+          .from('arbitros')
+          .update(updatePayload)
+          .eq('id', id)
+          .select('usuario_id')
+          .single()
 
-      if (data?.usuario_id && (nombres !== undefined || apellido_paterno !== undefined || apellido_materno !== undefined || email !== undefined || fecha_nacimiento !== undefined || activo !== undefined || avatar_url !== undefined || numero_celular !== undefined || ci !== undefined || genero !== undefined)) {
+        if (error) throw error
+        usuarioId = data?.usuario_id
+      } else {
+        // Si no hay datos para 'arbitros', necesitamos el usuario_id para actualizar 'usuarios'
+        const { data, error } = await client
+          .from('arbitros')
+          .select('usuario_id')
+          .eq('id', id)
+          .single()
+        
+        if (error) throw error
+        usuarioId = data?.usuario_id
+      }
+
+      // 2. Actualizar tabla 'usuarios' si hay cambios en campos comunes
+      if (usuarioId && (nombres !== undefined || apellido_paterno !== undefined || apellido_materno !== undefined || email !== undefined || fecha_nacimiento !== undefined || activo !== undefined || avatar_url !== undefined || numero_celular !== undefined || ci !== undefined || genero !== undefined)) {
         const userUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
         if (nombres !== undefined) userUpdate.nombre = nombres
         if (apellido_paterno !== undefined) userUpdate.apellido_paterno = apellido_paterno
@@ -223,18 +241,12 @@ export const arbitroService = {
         if (genero !== undefined) userUpdate.genero = genero
         if (activo !== undefined) userUpdate.activo = activo
         if (avatar_url !== undefined) userUpdate.avatar_url = avatar_url
-        await client.from('usuarios').update(userUpdate).eq('id', data.usuario_id)
+        
+        const { error: userError } = await client.from('usuarios').update(userUpdate).eq('id', usuarioId)
+        if (userError) throw userError
       }
 
-      const getResult = await client
-        .from('arbitros')
-        .select(selectArbitrosWithUsuario)
-        .eq('id', id)
-        .single()
-      if (getResult.error || !getResult.data) {
-        return { success: false, error: getResult.error?.message ?? 'Error al obtener el árbitro actualizado' }
-      }
-      return { success: true, data: mapArbitroRow(getResult.data) }
+      return await this.getById(id)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }

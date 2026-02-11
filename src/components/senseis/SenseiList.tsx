@@ -22,7 +22,8 @@ import {
   Select,
   MenuItem,
   Stack,
-  Tooltip
+  Tooltip,
+  Switch
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -67,15 +68,19 @@ export default function SenseiList({
   const [especialidadFilter, setEspecialidadFilter] = useState<string>('all')
   const [estadoFilter, setEstadoFilter] = useState<string>('all')
 
+  // Estado para mantener los IDs que han sido modificados en la sesión actual
+  const [modifiedIds, setModifiedIds] = useState<Set<string>>(new Set())
+
   const loadSenseis = async () => {
     setLoading(true)
     setError(null)
     const response = clubId 
       ? await senseiController.getSenseisByClub(clubId)
-      : await senseiController.getAllSenseis()
+      : await senseiController.getAllSenseis(true)
       
     if (response.success && response.data) {
       setSenseis(response.data)
+      setModifiedIds(new Set())
     } else {
       setError(response.error || 'Error al cargar los senseis')
     }
@@ -88,6 +93,7 @@ export default function SenseiList({
 
   useEffect(() => {
     setGlobalFilter(externalSearchTerm)
+    setModifiedIds(new Set())
   }, [externalSearchTerm])
 
   // Definición de columnas con TanStack Table
@@ -119,13 +125,62 @@ export default function SenseiList({
     }),
     columnHelper.accessor('activo', {
       header: 'Estado',
-      cell: (info) => (
-        <Chip 
-          label={info.getValue() ? 'Activo' : 'Inactivo'} 
-          color={info.getValue() ? 'success' : 'default'}
-          size="small"
-        />
-      ),
+      cell: (info) => {
+        const isActive = info.getValue()
+        const id = info.row.original.id
+        
+        const handleToggle = async () => {
+          setModifiedIds(prev => new Set(prev).add(id))
+          setSenseis(prev => prev.map(s => s.id === id ? { ...s, activo: !isActive } : s))
+          
+          try {
+            const response = await senseiController.updateSensei(id, { activo: !isActive })
+            if (!response.success) {
+              setSenseis(prev => prev.map(s => s.id === id ? { ...s, activo: isActive } : s))
+              setModifiedIds(prev => {
+                const next = new Set(prev)
+                next.delete(id)
+                return next
+              })
+              alert('Error al cambiar el estado: ' + (response.error || 'Error desconocido'))
+            }
+          } catch (err) {
+            setSenseis(prev => prev.map(s => s.id === id ? { ...s, activo: isActive } : s))
+            setModifiedIds(prev => {
+              const next = new Set(prev)
+              next.delete(id)
+              return next
+            })
+            console.error(err)
+            alert('Error inesperado al cambiar el estado')
+          }
+        }
+
+        return (
+          <Tooltip title={isActive ? 'Desactivar' : 'Activar'}>
+            <Switch 
+              checked={!!isActive} 
+              onChange={handleToggle}
+              sx={{
+                '& .MuiSwitch-switchBase.Mui-checked': {
+                  color: '#4caf50',
+                },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                  backgroundColor: '#4caf50',
+                  opacity: 0.5,
+                },
+                '& .MuiSwitch-switchBase:not(.Mui-checked)': {
+                  color: '#f44336',
+                },
+                '& .MuiSwitch-switchBase:not(.Mui-checked) + .MuiSwitch-track': {
+                  backgroundColor: '#f44336',
+                  opacity: 0.5,
+                },
+              }}
+            />
+          </Tooltip>
+        )
+      },
     }),
     columnHelper.display({
       id: 'acciones',
@@ -157,9 +212,9 @@ export default function SenseiList({
     }),
   ], [onEdit, onDelete])
 
-  // Filtrado personalizado
+  // Filtrado y ordenamiento personalizado
   const filteredData = useMemo(() => {
-    return senseis.filter(s => {
+    const filtered = senseis.filter(s => {
       const matchEspecialidad = especialidadFilter === 'all' || s.especialidad === especialidadFilter
       const matchEstado = estadoFilter === 'all' || 
         (estadoFilter === 'activo' ? s.activo : !s.activo)
@@ -174,7 +229,17 @@ export default function SenseiList({
 
       return matchEspecialidad && matchEstado && matchSearch
     })
-  }, [senseis, especialidadFilter, estadoFilter, globalFilter])
+
+    return [...filtered].sort((a, b) => {
+      const isAModified = modifiedIds.has(a.id)
+      const isBModified = modifiedIds.has(b.id)
+      const effectiveAActive = isAModified ? !a.activo : a.activo
+      const effectiveBActive = isBModified ? !b.activo : b.activo
+
+      if (effectiveAActive === effectiveBActive) return 0
+      return effectiveAActive ? -1 : 1
+    })
+  }, [senseis, especialidadFilter, estadoFilter, globalFilter, modifiedIds])
 
   const table = useReactTable({
     data: filteredData,
@@ -193,6 +258,7 @@ export default function SenseiList({
     setEspecialidadFilter('all')
     setEstadoFilter('all')
     setGlobalFilter('')
+    setModifiedIds(new Set())
   }
 
   if (loading) {

@@ -22,7 +22,8 @@ import {
   Select,
   MenuItem,
   Stack,
-  Tooltip
+  Tooltip,
+  Switch
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -65,12 +66,16 @@ export default function ClubList({
   const [municipioFilter, setMunicipioFilter] = useState<string>('all')
   const [estadoFilter, setEstadoFilter] = useState<string>('all')
 
+  // Estado para mantener los IDs que han sido modificados en la sesión actual
+  const [modifiedIds, setModifiedIds] = useState<Set<string>>(new Set())
+
   const loadClubes = async () => {
     setLoading(true)
     setError(null)
-    const response = await clubController.getAllClubes()
+    const response = await clubController.getAllClubes(true)
     if (response.success && response.data) {
       setClubes(response.data)
+      setModifiedIds(new Set())
     } else {
       setError(response.error || 'Error al cargar los clubes')
     }
@@ -83,6 +88,7 @@ export default function ClubList({
 
   useEffect(() => {
     setGlobalFilter(externalSearchTerm)
+    setModifiedIds(new Set())
   }, [externalSearchTerm])
 
   // Definición de columnas con TanStack Table
@@ -107,13 +113,62 @@ export default function ClubList({
     }),
     columnHelper.accessor('activo', {
       header: 'Estado',
-      cell: (info) => (
-        <Chip 
-          label={info.getValue() ? 'Activo' : 'Inactivo'} 
-          color={info.getValue() ? 'success' : 'default'}
-          size="small"
-        />
-      ),
+      cell: (info) => {
+        const isActive = info.getValue()
+        const id = info.row.original.id
+        
+        const handleToggle = async () => {
+          setModifiedIds(prev => new Set(prev).add(id))
+          setClubes(prev => prev.map(c => c.id === id ? { ...c, activo: !isActive } : c))
+          
+          try {
+            const response = await clubController.updateClub(id, { activo: !isActive })
+            if (!response.success) {
+              setClubes(prev => prev.map(c => c.id === id ? { ...c, activo: isActive } : c))
+              setModifiedIds(prev => {
+                const next = new Set(prev)
+                next.delete(id)
+                return next
+              })
+              alert('Error al cambiar el estado: ' + (response.error || 'Error desconocido'))
+            }
+          } catch (err) {
+            setClubes(prev => prev.map(c => c.id === id ? { ...c, activo: isActive } : c))
+            setModifiedIds(prev => {
+              const next = new Set(prev)
+              next.delete(id)
+              return next
+            })
+            console.error(err)
+            alert('Error inesperado al cambiar el estado')
+          }
+        }
+
+        return (
+          <Tooltip title={isActive ? 'Desactivar' : 'Activar'}>
+            <Switch 
+              checked={!!isActive} 
+              onChange={handleToggle}
+              sx={{
+                '& .MuiSwitch-switchBase.Mui-checked': {
+                  color: '#4caf50',
+                },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                  backgroundColor: '#4caf50',
+                  opacity: 0.5,
+                },
+                '& .MuiSwitch-switchBase:not(.Mui-checked)': {
+                  color: '#f44336',
+                },
+                '& .MuiSwitch-switchBase:not(.Mui-checked) + .MuiSwitch-track': {
+                  backgroundColor: '#f44336',
+                  opacity: 0.5,
+                },
+              }}
+            />
+          </Tooltip>
+        )
+      },
     }),
     columnHelper.display({
       id: 'acciones',
@@ -145,9 +200,9 @@ export default function ClubList({
     }),
   ], [onEdit, onDelete])
 
-  // Filtrado personalizado
+  // Filtrado y ordenamiento personalizado
   const filteredData = useMemo(() => {
-    return clubes.filter(c => {
+    const filtered = clubes.filter(c => {
       const matchMunicipio = municipioFilter === 'all' || c.provincia === municipioFilter
       const matchEstado = estadoFilter === 'all' || 
         (estadoFilter === 'activo' ? c.activo : !c.activo)
@@ -161,7 +216,17 @@ export default function ClubList({
 
       return matchMunicipio && matchEstado && matchSearch
     })
-  }, [clubes, municipioFilter, estadoFilter, globalFilter])
+
+    return [...filtered].sort((a, b) => {
+      const isAModified = modifiedIds.has(a.id)
+      const isBModified = modifiedIds.has(b.id)
+      const effectiveAActive = isAModified ? !a.activo : a.activo
+      const effectiveBActive = isBModified ? !b.activo : b.activo
+
+      if (effectiveAActive === effectiveBActive) return 0
+      return effectiveAActive ? -1 : 1
+    })
+  }, [clubes, municipioFilter, estadoFilter, globalFilter, modifiedIds])
 
   const table = useReactTable({
     data: filteredData,
@@ -180,6 +245,7 @@ export default function ClubList({
     setMunicipioFilter('all')
     setEstadoFilter('all')
     setGlobalFilter('')
+    setModifiedIds(new Set())
   }
 
   if (loading) {

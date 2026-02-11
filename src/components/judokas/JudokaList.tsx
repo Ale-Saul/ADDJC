@@ -22,7 +22,8 @@ import {
   Select,
   MenuItem,
   Stack,
-  Tooltip
+  Tooltip,
+  Switch
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -74,6 +75,9 @@ export default function JudokaList({
   const [categoriaFilter, setCategoriaFilter] = useState<string>('all')
   const [estadoFilter, setEstadoFilter] = useState<string>('all')
 
+  // Estado para mantener los IDs que han sido modificados en la sesión actual
+  const [modifiedIds, setModifiedIds] = useState<Set<string>>(new Set())
+
   const loadJudokas = async () => {
     setLoading(true)
     setError(null)
@@ -84,11 +88,12 @@ export default function JudokaList({
     } else if (entrenadorId) {
       response = await judokaController.getJudokasByEntrenador(entrenadorId)
     } else {
-      response = await judokaController.getAllJudokas()
+      response = await judokaController.getAllJudokas(true)
     }
     
     if (response.success && response.data) {
       setJudokasLocal(response.data)
+      setModifiedIds(new Set())
     } else {
       setError(response.error || 'Error al cargar los judokas')
     }
@@ -104,6 +109,7 @@ export default function JudokaList({
 
   useEffect(() => {
     setGlobalFilter(externalSearchTerm)
+    setModifiedIds(new Set())
   }, [externalSearchTerm])
 
   const judokas = judokasProp || judokasLocal
@@ -138,13 +144,62 @@ export default function JudokaList({
     }),
     columnHelper.accessor('activo', {
       header: 'Estado',
-      cell: (info) => (
-        <Chip 
-          label={info.getValue() ? 'Activo' : 'Inactivo'} 
-          color={info.getValue() ? 'success' : 'default'}
-          size="small"
-        />
-      ),
+      cell: (info) => {
+        const isActive = info.getValue()
+        const id = info.row.original.id
+        
+        const handleToggle = async () => {
+          setModifiedIds(prev => new Set(prev).add(id))
+          setJudokasLocal(prev => prev.map(j => j.id === id ? { ...j, activo: !isActive } : j))
+          
+          try {
+            const response = await judokaController.updateJudoka(id, { activo: !isActive })
+            if (!response.success) {
+              setJudokasLocal(prev => prev.map(j => j.id === id ? { ...j, activo: isActive } : j))
+              setModifiedIds(prev => {
+                const next = new Set(prev)
+                next.delete(id)
+                return next
+              })
+              alert('Error al cambiar el estado: ' + (response.error || 'Error desconocido'))
+            }
+          } catch (err) {
+            setJudokasLocal(prev => prev.map(j => j.id === id ? { ...j, activo: isActive } : j))
+            setModifiedIds(prev => {
+              const next = new Set(prev)
+              next.delete(id)
+              return next
+            })
+            console.error(err)
+            alert('Error inesperado al cambiar el estado')
+          }
+        }
+
+        return (
+          <Tooltip title={isActive ? 'Desactivar' : 'Activar'}>
+            <Switch 
+              checked={!!isActive} 
+              onChange={handleToggle}
+              sx={{
+                '& .MuiSwitch-switchBase.Mui-checked': {
+                  color: '#4caf50',
+                },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                  backgroundColor: '#4caf50',
+                  opacity: 0.5,
+                },
+                '& .MuiSwitch-switchBase:not(.Mui-checked)': {
+                  color: '#f44336',
+                },
+                '& .MuiSwitch-switchBase:not(.Mui-checked) + .MuiSwitch-track': {
+                  backgroundColor: '#f44336',
+                  opacity: 0.5,
+                },
+              }}
+            />
+          </Tooltip>
+        )
+      },
     }),
     columnHelper.display({
       id: 'acciones',
@@ -176,9 +231,9 @@ export default function JudokaList({
     }),
   ], [onEdit, onDelete])
 
-  // Filtrado personalizado
+  // Filtrado y ordenamiento personalizado
   const filteredData = useMemo(() => {
-    return judokas.filter(j => {
+    const filtered = judokas.filter(j => {
       const matchCinturon = cinturonFilter === 'all' || j.cinturon_actual === cinturonFilter
       const matchCategoria = categoriaFilter === 'all' || j.categoria === categoriaFilter
       const matchEstado = estadoFilter === 'all' || 
@@ -194,7 +249,17 @@ export default function JudokaList({
 
       return matchCinturon && matchCategoria && matchEstado && matchSearch
     })
-  }, [judokas, cinturonFilter, categoriaFilter, estadoFilter, globalFilter])
+
+    return [...filtered].sort((a, b) => {
+      const isAModified = modifiedIds.has(a.id)
+      const isBModified = modifiedIds.has(b.id)
+      const effectiveAActive = isAModified ? !a.activo : a.activo
+      const effectiveBActive = isBModified ? !b.activo : b.activo
+
+      if (effectiveAActive === effectiveBActive) return 0
+      return effectiveAActive ? -1 : 1
+    })
+  }, [judokas, cinturonFilter, categoriaFilter, estadoFilter, globalFilter, modifiedIds])
 
   const table = useReactTable({
     data: filteredData,
@@ -214,6 +279,7 @@ export default function JudokaList({
     setCategoriaFilter('all')
     setEstadoFilter('all')
     setGlobalFilter('')
+    setModifiedIds(new Set())
   }
 
   if (isLoading) {

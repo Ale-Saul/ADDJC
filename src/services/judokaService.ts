@@ -256,16 +256,33 @@ export const judokaService = {
       const client = getSupabaseClient()
       const { email, nombres, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url, ...judokaPayload } = judoka as JudokaUpdate & { email?: string, numero_celular?: string, ci?: string, genero?: any }
 
-      const { data, error } = await client
-        .from('judokas')
-        .update(judokaPayload)
-        .eq('id', id)
-        .select(selectJudokasWithUsuario)
-        .single()
+      let usuarioId: string | null = null
 
-      if (error) throw error
+      // 1. Actualizar tabla 'judokas' solo si hay datos específicos
+      if (Object.keys(judokaPayload).length > 0) {
+        const { data, error } = await client
+          .from('judokas')
+          .update(judokaPayload)
+          .eq('id', id)
+          .select('usuario_id')
+          .single()
 
-      if (data?.usuario_id && (email !== undefined || nombres !== undefined || apellido_paterno !== undefined || apellido_materno !== undefined || fecha_nacimiento !== undefined || activo !== undefined || avatar_url !== undefined || numero_celular !== undefined || ci !== undefined || genero !== undefined)) {
+        if (error) throw error
+        usuarioId = data?.usuario_id
+      } else {
+        // Si no hay datos para 'judokas', necesitamos el usuario_id para actualizar 'usuarios'
+        const { data, error } = await client
+          .from('judokas')
+          .select('usuario_id')
+          .eq('id', id)
+          .single()
+        
+        if (error) throw error
+        usuarioId = data?.usuario_id
+      }
+
+      // 2. Actualizar tabla 'usuarios' si hay cambios en campos comunes
+      if (usuarioId && (email !== undefined || nombres !== undefined || apellido_paterno !== undefined || apellido_materno !== undefined || fecha_nacimiento !== undefined || activo !== undefined || avatar_url !== undefined || numero_celular !== undefined || ci !== undefined || genero !== undefined)) {
         const userUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
         if (email !== undefined) userUpdate.correo = email
         if (nombres !== undefined) userUpdate.nombre = nombres
@@ -278,21 +295,11 @@ export const judokaService = {
         if (ci !== undefined) userUpdate.ci = ci
         if (genero !== undefined) userUpdate.genero = genero
         
-        await client.from('usuarios').update(userUpdate).eq('id', data.usuario_id)
-        
-        // Refresh the returned data to include updated user info
-        if (email !== undefined || activo !== undefined || avatar_url !== undefined || numero_celular !== undefined || ci !== undefined || genero !== undefined) {
-           data.usuarios.correo = email !== undefined ? email : data.usuarios.correo
-           data.usuarios.activo = activo !== undefined ? activo : data.usuarios.activo
-           data.usuarios.avatar_url = avatar_url !== undefined ? avatar_url : data.usuarios.avatar_url
-           data.usuarios.numero_celular = numero_celular !== undefined ? numero_celular : data.usuarios.numero_celular
-           data.usuarios.ci = ci !== undefined ? ci : data.usuarios.ci
-           data.usuarios.genero = genero !== undefined ? genero : data.usuarios.genero
-        }
+        const { error: userError } = await client.from('usuarios').update(userUpdate).eq('id', usuarioId)
+        if (userError) throw userError
       }
 
-      const mapped = data ? mapJudokaRow(data) : data
-      return { success: true, data: mapped }
+      return await this.getById(id)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }

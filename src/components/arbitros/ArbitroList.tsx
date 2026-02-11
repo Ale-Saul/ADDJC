@@ -22,7 +22,8 @@ import {
   Select,
   MenuItem,
   Stack,
-  Tooltip
+  Tooltip,
+  Switch
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -64,12 +65,16 @@ export default function ArbitroList({
   const [nivelFilter, setNivelFilter] = useState<string>('all')
   const [estadoFilter, setEstadoFilter] = useState<string>('all')
 
+  // Estado para mantener los IDs que han sido modificados en la sesión actual
+  const [modifiedIds, setModifiedIds] = useState<Set<string>>(new Set())
+
   const loadArbitros = async () => {
     setLoading(true)
     setError(null)
-    const response = await arbitroController.getAllArbitros()
+    const response = await arbitroController.getAllArbitros(true)
     if (response.success && response.data) {
       setArbitros(response.data)
+      setModifiedIds(new Set())
     } else {
       setError(response.error || 'Error al cargar los árbitros')
     }
@@ -82,6 +87,7 @@ export default function ArbitroList({
 
   useEffect(() => {
     setGlobalFilter(externalSearchTerm)
+    setModifiedIds(new Set())
   }, [externalSearchTerm])
 
   // Definición de columnas con TanStack Table
@@ -109,13 +115,62 @@ export default function ArbitroList({
     }),
     columnHelper.accessor('activo', {
       header: 'Estado',
-      cell: (info) => (
-        <Chip 
-          label={info.getValue() ? 'Activo' : 'Inactivo'} 
-          color={info.getValue() ? 'success' : 'default'}
-          size="small"
-        />
-      ),
+      cell: (info) => {
+        const isActive = info.getValue()
+        const id = info.row.original.id
+        
+        const handleToggle = async () => {
+          setModifiedIds(prev => new Set(prev).add(id))
+          setArbitros(prev => prev.map(a => a.id === id ? { ...a, activo: !isActive } : a))
+          
+          try {
+            const response = await arbitroController.updateArbitro(id, { activo: !isActive })
+            if (!response.success) {
+              setArbitros(prev => prev.map(a => a.id === id ? { ...a, activo: isActive } : a))
+              setModifiedIds(prev => {
+                const next = new Set(prev)
+                next.delete(id)
+                return next
+              })
+              alert('Error al cambiar el estado: ' + (response.error || 'Error desconocido'))
+            }
+          } catch (err) {
+            setArbitros(prev => prev.map(a => a.id === id ? { ...a, activo: isActive } : a))
+            setModifiedIds(prev => {
+              const next = new Set(prev)
+              next.delete(id)
+              return next
+            })
+            console.error(err)
+            alert('Error inesperado al cambiar el estado')
+          }
+        }
+
+        return (
+          <Tooltip title={isActive ? 'Desactivar' : 'Activar'}>
+            <Switch 
+              checked={!!isActive} 
+              onChange={handleToggle}
+              sx={{
+                '& .MuiSwitch-switchBase.Mui-checked': {
+                  color: '#4caf50',
+                },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                  backgroundColor: '#4caf50',
+                  opacity: 0.5,
+                },
+                '& .MuiSwitch-switchBase:not(.Mui-checked)': {
+                  color: '#f44336',
+                },
+                '& .MuiSwitch-switchBase:not(.Mui-checked) + .MuiSwitch-track': {
+                  backgroundColor: '#f44336',
+                  opacity: 0.5,
+                },
+              }}
+            />
+          </Tooltip>
+        )
+      },
     }),
     columnHelper.display({
       id: 'acciones',
@@ -147,9 +202,9 @@ export default function ArbitroList({
     }),
   ], [onEdit, onDelete])
 
-  // Filtrado personalizado
+  // Filtrado y ordenamiento personalizado
   const filteredData = useMemo(() => {
-    return arbitros.filter(a => {
+    const filtered = arbitros.filter(a => {
       const matchNivel = nivelFilter === 'all' || a.nivel_arbitraje === nivelFilter
       const matchEstado = estadoFilter === 'all' || 
         (estadoFilter === 'activo' ? a.activo : !a.activo)
@@ -163,7 +218,17 @@ export default function ArbitroList({
 
       return matchNivel && matchEstado && matchSearch
     })
-  }, [arbitros, nivelFilter, estadoFilter, globalFilter])
+
+    return [...filtered].sort((a, b) => {
+      const isAModified = modifiedIds.has(a.id)
+      const isBModified = modifiedIds.has(b.id)
+      const effectiveAActive = isAModified ? !a.activo : a.activo
+      const effectiveBActive = isBModified ? !b.activo : b.activo
+
+      if (effectiveAActive === effectiveBActive) return 0
+      return effectiveAActive ? -1 : 1
+    })
+  }, [arbitros, nivelFilter, estadoFilter, globalFilter, modifiedIds])
 
   const table = useReactTable({
     data: filteredData,
@@ -182,6 +247,7 @@ export default function ArbitroList({
     setNivelFilter('all')
     setEstadoFilter('all')
     setGlobalFilter('')
+    setModifiedIds(new Set())
   }
 
   if (loading) {
