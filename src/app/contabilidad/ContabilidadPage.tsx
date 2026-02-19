@@ -15,6 +15,10 @@ import {
   CircularProgress,
   Alert,
   Fab,
+  Collapse,
+  Stack,
+  Tooltip,
+  IconButton
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
@@ -22,6 +26,10 @@ import AddIcon from '@mui/icons-material/Add'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import DownloadIcon from '@mui/icons-material/Download'
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
+import FilterListIcon from '@mui/icons-material/FilterList'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import ClearIcon from '@mui/icons-material/Clear'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
@@ -57,6 +65,17 @@ export default function ContabilidadPage() {
   const [tipoFiltro, setTipoFiltro] = useState<string>('todos')
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>('todos')
   const [clubFiltro, setClubFiltro] = useState<string>('todos')
+  const [showFilters, setShowFilters] = useState(false)
+
+  const clearFilters = () => {
+    const fecha = new Date()
+    fecha.setMonth(fecha.getMonth() - 1)
+    setFechaInicio(fecha.toISOString().split('T')[0])
+    setFechaFin(new Date().toISOString().split('T')[0])
+    setTipoFiltro('todos')
+    setCategoriaFiltro('todos')
+    setClubFiltro('todos')
+  }
 
   const cargarDatos = async () => {
     setLoading(true)
@@ -279,83 +298,117 @@ export default function ContabilidadPage() {
               <BalanceCards balance={balance} loading={loading} />
 
               {/* Filtros */}
-              <Paper sx={{ p: 3, mb: 3 }}>
-                <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
-                  Filtros
-                </Typography>
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexWrap: 'wrap', 
-                  gap: 2,
-                  '& > *': {
-                    flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' },
-                    minWidth: { xs: '100%', sm: '200px', md: '150px' }
-                  }
-                }}>
-                  <DatePicker
-                    label="Fecha Inicio"
-                    value={fechaInicio ? dayjs(fechaInicio) : null}
-                    onChange={(newValue) => {
-                      setFechaInicio(newValue ? newValue.format('YYYY-MM-DD') : '')
-                    }}
-                    slotProps={{ textField: { size: 'small' } }}
-                    format="DD/MM/YYYY"
-                  />
-                  <DatePicker
-                    label="Fecha Fin"
-                    value={fechaFin ? dayjs(fechaFin) : null}
-                    onChange={(newValue) => {
-                      setFechaFin(newValue ? newValue.format('YYYY-MM-DD') : '')
-                    }}
-                    slotProps={{ textField: { size: 'small' } }}
-                    format="DD/MM/YYYY"
-                  />
-                  <FormControl size="small">
-                    <InputLabel>Tipo</InputLabel>
-                    <Select
-                      value={tipoFiltro}
-                      label="Tipo"
-                      onChange={(e) => setTipoFiltro(e.target.value)}
+              <Paper sx={{ p: 3, mb: 3, backgroundColor: '#f8f9fa' }} variant="outlined">
+                <Stack spacing={2}>
+                  <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
+                    <Box sx={{ display: 'flex', gap: 2, flexGrow: 1, flexWrap: 'wrap' }}>
+                      <DatePicker
+                        label="Fecha Inicio"
+                        value={fechaInicio ? dayjs(fechaInicio) : null}
+                        onChange={(newValue) => {
+                          setFechaInicio(newValue ? newValue.format('YYYY-MM-DD') : '')
+                        }}
+                        slotProps={{ textField: { size: 'small', sx: { minWidth: 150, backgroundColor: 'white' } } }}
+                        format="DD/MM/YYYY"
+                      />
+                      <DatePicker
+                        label="Fecha Fin"
+                        value={fechaFin ? dayjs(fechaFin) : null}
+                        onChange={(newValue) => {
+                          setFechaFin(newValue ? newValue.format('YYYY-MM-DD') : '')
+                        }}
+                        slotProps={{ textField: { size: 'small', sx: { minWidth: 150, backgroundColor: 'white' } } }}
+                        format="DD/MM/YYYY"
+                      />
+                    </Box>
+
+                    <Stack direction="row" spacing={1}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<FilterListIcon />}
+                        endIcon={showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                        onClick={() => setShowFilters(!showFilters)}
+                        color={showFilters ? 'primary' : 'inherit'}
+                        sx={{ 
+                          backgroundColor: 'white',
+                          height: '40px',
+                          textTransform: 'none',
+                          borderColor: showFilters ? 'primary.main' : 'rgba(0, 0, 0, 0.23)'
+                        }}
+                      >
+                        Filtros
+                      </Button>
+
+                      {(tipoFiltro !== 'todos' || categoriaFiltro !== 'todos' || clubFiltro !== 'todos') && (
+                        <Tooltip title="Limpiar filtros">
+                          <IconButton onClick={clearFilters} color="warning" size="small">
+                            <ClearIcon />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Stack>
+                  </Stack>
+
+                  <Collapse in={showFilters}>
+                    <Stack 
+                      direction={{ xs: 'column', md: 'row' }} 
+                      spacing={2} 
+                      alignItems="center"
+                      sx={{ pt: 1 }}
                     >
+                      <FormControl size="small" sx={{ minWidth: 150, backgroundColor: 'white' }}>
+                        <InputLabel>Tipo</InputLabel>
+                        <Select
+                          value={tipoFiltro}
+                          label="Tipo"
+                          onChange={(e) => setTipoFiltro(e.target.value)}
+                        >
+                          <MenuItem value="todos">Todos</MenuItem>
+                          <MenuItem value="ingreso">Ingresos</MenuItem>
+                          <MenuItem value="egreso">Egresos</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <FormControl size="small" sx={{ minWidth: 180, backgroundColor: 'white' }}>
+                        <InputLabel>Categoría</InputLabel>
+                        <Select
+                          value={categoriaFiltro}
+                          label="Categoría"
+                          onChange={(e) => setCategoriaFiltro(e.target.value)}
+                        >
+                          <MenuItem value="todos">Todas</MenuItem>
+                          {[
+                            { val: 'donacion_club', label: 'Donación de Club' },
+                            { val: 'pago_club', label: 'Pago de Club' },
+                            { val: 'aporte_estado', label: 'Aporte del Estado' },
+                            { val: 'sponsor', label: 'Patrocinio' },
+                            { val: 'evento', label: 'Evento' },
+                            { val: 'gasto_operativo', label: 'Gasto Operativo' },
+                            { val: 'pago_proveedor', label: 'Pago a Proveedor' },
+                            { val: 'otro', label: 'Otro' }
+                          ].sort((a, b) => a.label.localeCompare(b.label)).map(cat => (
+                            <MenuItem key={cat.val} value={cat.val}>{cat.label}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <FormControl size="small" sx={{ minWidth: 180, backgroundColor: 'white' }}>
+                        <InputLabel>Club</InputLabel>
+                        <Select
+                          value={clubFiltro}
+                          label="Club"
+                          onChange={(e) => setClubFiltro(e.target.value)}
+                        >
                       <MenuItem value="todos">Todos</MenuItem>
-                      <MenuItem value="ingreso">Ingresos</MenuItem>
-                      <MenuItem value="egreso">Egresos</MenuItem>
-                    </Select>
-                  </FormControl>
-                  <FormControl size="small">
-                    <InputLabel>Categoría</InputLabel>
-                    <Select
-                      value={categoriaFiltro}
-                      label="Categoría"
-                      onChange={(e) => setCategoriaFiltro(e.target.value)}
-                    >
-                      <MenuItem value="todos">Todas</MenuItem>
-                      <MenuItem value="donacion_club">Donación de Club</MenuItem>
-                      <MenuItem value="pago_club">Pago de Club</MenuItem>
-                      <MenuItem value="aporte_estado">Aporte del Estado</MenuItem>
-                      <MenuItem value="sponsor">Patrocinio</MenuItem>
-                      <MenuItem value="evento">Evento</MenuItem>
-                      <MenuItem value="gasto_operativo">Gasto Operativo</MenuItem>
-                      <MenuItem value="pago_proveedor">Pago a Proveedor</MenuItem>
-                      <MenuItem value="otro">Otro</MenuItem>
-                    </Select>
-                  </FormControl>
-                  <FormControl size="small">
-                    <InputLabel>Club</InputLabel>
-                    <Select
-                      value={clubFiltro}
-                      label="Club"
-                      onChange={(e) => setClubFiltro(e.target.value)}
-                    >
-                      <MenuItem value="todos">Todos</MenuItem>
-                      {clubes.map(club => (
+                      {[...clubes].sort((a, b) => a.nombre_club.localeCompare(b.nombre_club)).map(club => (
                         <MenuItem key={club.id} value={club.id}>
                           {club.nombre_club}
                         </MenuItem>
                       ))}
                     </Select>
-                  </FormControl>
-                </Box>
+                      </FormControl>
+                    </Stack>
+                  </Collapse>
+                </Stack>
               </Paper>
 
               {/* Tabla de Movimientos */}

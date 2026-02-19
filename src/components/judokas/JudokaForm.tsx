@@ -116,8 +116,8 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     return nameA.localeCompare(nameB)
   })
   const generos = ["Masculino", "Femenino", "Prefiero no decir"].sort((a, b) => a.localeCompare(b))
-  const categorias = ["Preinfantil", "Infantil", "Cadete", "Junior", "Senior"]
-  const cinturones = ["Blanco", "Amarillo", "Naranja", "Verde", "Azul", "Café", "Negro"]
+  const categorias = ["Preinfantil", "Infantil", "Cadete", "Junior", "Senior"].sort((a, b) => a.localeCompare(b))
+  const cinturones = ["Blanco", "Amarillo", "Naranja", "Verde", "Azul", "Café", "Negro"].sort((a, b) => a.localeCompare(b))
 
   useEffect(() => {
     const loadClubes = async () => {

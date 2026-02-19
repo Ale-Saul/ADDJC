@@ -95,58 +95,58 @@ export const GENDERS_LIST = Object.values(GENDERS)
 
 /** Cargos para miembros de la asociación */
 export const CARGOS_ASOCIACION = [
+  'Presidente',
   'Secretario',
   'Tesorero',
-  'Presidente',
   'Vicepresidente',
   'Vocal',
 ] as const
 
 /** Municipios para clubes (Cochabamba y otras) */
 export const MUNICIPIOS = [
+  'Arani',
+  'Arque',
+  'Ayopaya',
+  'Bolívar',
+  'Carrasco',
   'Cercado',
   'Chapare',
-  'Carrasco',
-  'Mizque',
+  'Esteban Arce',
   'Germán Jordán',
-  'Ayopaya',
-  'Arque',
-  'Tapacarí',
-  'Bolívar',
+  'Mizque',
   'Moxos',
   'Pocona',
   'Punata',
   'Quillacollo',
+  'Tapacarí',
   'Tiraque',
-  'Arani',
-  'Esteban Arce',
 ] as const
 
 /** Especialidades para senseis */
 export const ESPECIALIDADES_SENSEI = [
-  'Nage-waza',
-  'Katame-waza',
   'Kata',
+  'Katame-waza',
+  'Nage-waza',
   'Randori',
 ] as const
 
 export const BELT_COLORS = [
-  'Blanco',
   'Amarillo',
-  'Naranja',
-  'Verde',
   'Azul',
+  'Blanco',
   'Marrón',
+  'Naranja',
   'Negro',
+  'Verde',
 ] as const
 
 export const CATEGORIES = [
-  'Mini',
-  'Infantil',
   'Cadete',
+  'Infantil',
   'Juvenil',
-  'Senior',
   'Master',
+  'Mini',
+  'Senior',
 ] as const
 
 export const PAGINATION = {

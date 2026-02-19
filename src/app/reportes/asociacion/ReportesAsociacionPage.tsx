@@ -19,10 +19,18 @@ import {
   MenuItem,
   Select,
   FormControl,
-  InputLabel
+  InputLabel,
+  Collapse,
+  Stack,
+  Tooltip,
+  IconButton
 } from '@mui/material'
 import DownloadIcon from '@mui/icons-material/Download'
 import AssessmentIcon from '@mui/icons-material/Assessment'
+import FilterListIcon from '@mui/icons-material/FilterList'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import ClearIcon from '@mui/icons-material/Clear'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import { pagoController } from '@/controllers/pagoController'
@@ -74,6 +82,16 @@ export default function ReportesAsociacionPage() {
   const [fechaFin, setFechaFin] = useState(() => new Date().toISOString().split('T')[0])
   const [clubSeleccionado, setClubSeleccionado] = useState<string>('todos')
   const [vistaDetalle, setVistaDetalle] = useState<'club' | 'pagos' | 'judokas'>('club')
+  const [showFilters, setShowFilters] = useState(false)
+
+  const clearFilters = () => {
+    const fecha = new Date()
+    fecha.setMonth(fecha.getMonth() - 1)
+    setFechaInicio(fecha.toISOString().split('T')[0])
+    setFechaFin(new Date().toISOString().split('T')[0])
+    setClubSeleccionado('todos')
+    setVistaDetalle('club')
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -496,55 +514,96 @@ export default function ReportesAsociacionPage() {
           </Box>
 
           {/* Filtros */}
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" mb={2}>Filtros</Typography>
-            <Box display="flex" gap={2} flexWrap="wrap">
-              <DatePicker
-                label="Fecha Inicio"
-                value={fechaInicio ? dayjs(fechaInicio) : null}
-                onChange={(newValue) => {
-                  setFechaInicio(newValue ? newValue.format('YYYY-MM-DD') : '')
-                }}
-                slotProps={{ textField: { sx: { minWidth: 200 } } }}
-                format="DD/MM/YYYY"
-              />
-              <DatePicker
-                label="Fecha Fin"
-                value={fechaFin ? dayjs(fechaFin) : null}
-                onChange={(newValue) => {
-                  setFechaFin(newValue ? newValue.format('YYYY-MM-DD') : '')
-                }}
-                slotProps={{ textField: { sx: { minWidth: 200 } } }}
-                format="DD/MM/YYYY"
-              />
-              <FormControl sx={{ minWidth: 250 }}>
-                <InputLabel>Club</InputLabel>
-                <Select
-                  value={clubSeleccionado}
-                  label="Club"
-                  onChange={(e) => setClubSeleccionado(e.target.value)}
+          <Paper sx={{ p: 3, mb: 3, backgroundColor: '#f8f9fa' }} variant="outlined">
+            <Stack spacing={2}>
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
+                <Box sx={{ display: 'flex', gap: 2, flexGrow: 1, flexWrap: 'wrap' }}>
+                  <DatePicker
+                    label="Fecha Inicio"
+                    value={fechaInicio ? dayjs(fechaInicio) : null}
+                    onChange={(newValue) => {
+                      setFechaInicio(newValue ? newValue.format('YYYY-MM-DD') : '')
+                    }}
+                    slotProps={{ textField: { size: 'small', sx: { minWidth: 150, backgroundColor: 'white' } } }}
+                    format="DD/MM/YYYY"
+                  />
+                  <DatePicker
+                    label="Fecha Fin"
+                    value={fechaFin ? dayjs(fechaFin) : null}
+                    onChange={(newValue) => {
+                      setFechaFin(newValue ? newValue.format('YYYY-MM-DD') : '')
+                    }}
+                    slotProps={{ textField: { size: 'small', sx: { minWidth: 150, backgroundColor: 'white' } } }}
+                    format="DD/MM/YYYY"
+                  />
+                </Box>
+
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<FilterListIcon />}
+                    endIcon={showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                    onClick={() => setShowFilters(!showFilters)}
+                    color={showFilters ? 'primary' : 'inherit'}
+                    sx={{ 
+                      backgroundColor: 'white',
+                      height: '40px',
+                      textTransform: 'none',
+                      borderColor: showFilters ? 'primary.main' : 'rgba(0, 0, 0, 0.23)'
+                    }}
+                  >
+                    Filtros
+                  </Button>
+
+                  {(clubSeleccionado !== 'todos' || vistaDetalle !== 'club') && (
+                    <Tooltip title="Limpiar filtros">
+                      <IconButton onClick={clearFilters} color="warning" size="small">
+                        <ClearIcon />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Stack>
+              </Stack>
+
+              <Collapse in={showFilters}>
+                <Stack 
+                  direction={{ xs: 'column', md: 'row' }} 
+                  spacing={2} 
+                  alignItems="center"
+                  sx={{ pt: 1 }}
                 >
-                  <MenuItem value="todos">Todos los clubes</MenuItem>
-                  {clubes.map(club => (
-                    <MenuItem key={club.id} value={club.id}>
-                      {club.nombre_club}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl sx={{ minWidth: 200 }}>
-                <InputLabel>Vista</InputLabel>
-                <Select
-                  value={vistaDetalle}
-                  label="Vista"
-                  onChange={(e) => setVistaDetalle(e.target.value as 'club' | 'pagos' | 'judokas')}
-                >
-                  <MenuItem value="club">Por Club</MenuItem>
-                  <MenuItem value="judokas">Por Judokas</MenuItem>
-                  <MenuItem value="pagos">Detalle de Pagos</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
+                  <FormControl size="small" sx={{ minWidth: 250, backgroundColor: 'white' }}>
+                    <InputLabel>Club</InputLabel>
+                    <Select
+                      value={clubSeleccionado}
+                      label="Club"
+                      onChange={(e) => setClubSeleccionado(e.target.value)}
+                    >
+                      <MenuItem value="todos">Todos los clubes</MenuItem>
+                      {[...clubes].sort((a, b) => a.nombre_club.localeCompare(b.nombre_club)).map(club => (
+                        <MenuItem key={club.id} value={club.id}>
+                          {club.nombre_club}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white' }}>
+                    <InputLabel>Vista</InputLabel>
+                    <Select
+                      value={vistaDetalle}
+                      label="Vista"
+                      onChange={(e) => setVistaDetalle(e.target.value as 'club' | 'pagos' | 'judokas')}
+                    >
+                      <MenuItem value="club">Por Club</MenuItem>
+                      <MenuItem value="judokas">Por Judokas</MenuItem>
+                      <MenuItem value="pagos">Detalle de Pagos</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Stack>
+              </Collapse>
+            </Stack>
           </Paper>
 
           {/* Totales Generales */}

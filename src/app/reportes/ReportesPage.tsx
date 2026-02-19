@@ -450,12 +450,16 @@ export default function ReportesPage() {
                       onChange={(e) => setTipoFiltro(e.target.value)}
                     >
                       <MenuItem value="todos">Todos los tipos</MenuItem>
-                      <MenuItem value="cuota_mensual">Cuota Mensual</MenuItem>
-                      <MenuItem value="cuota_traje">Cuota Traje</MenuItem>
-                      <MenuItem value="inscripcion">Inscripción</MenuItem>
-                      <MenuItem value="examen_grado">Examen de Grado</MenuItem>
-                      <MenuItem value="evento">Evento</MenuItem>
-                      <MenuItem value="otro">Otro</MenuItem>
+                      {[
+                        { val: 'cuota_mensual', label: 'Cuota Mensual' },
+                        { val: 'cuota_traje', label: 'Cuota Traje' },
+                        { val: 'inscripcion', label: 'Inscripción' },
+                        { val: 'examen_grado', label: 'Examen de Grado' },
+                        { val: 'evento', label: 'Evento' },
+                        { val: 'otro', label: 'Otro' }
+                      ].sort((a, b) => a.label.localeCompare(b.label)).map(tipo => (
+                        <MenuItem key={tipo.val} value={tipo.val}>{tipo.label}</MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
 

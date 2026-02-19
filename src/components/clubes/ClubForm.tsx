@@ -296,7 +296,11 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                   <MenuItem value="">
                     <em>Sin director técnico</em>
                   </MenuItem>
-                  {senseis.map((sensei) => (
+                  {[...senseis].sort((a, b) => {
+                    const nameA = (a.nombres + ' ' + (a.apellidos || '')).trim()
+                    const nameB = (b.nombres + ' ' + (b.apellidos || '')).trim()
+                    return nameA.localeCompare(nameB)
+                  }).map((sensei) => (
                     <MenuItem key={sensei.id} value={sensei.id}>
                       {sensei.nombres} {sensei.apellidos}
                       {sensei.grado_dan && ` - ${sensei.grado_dan}`}
