@@ -11,6 +11,8 @@ import {
   Select,
   MenuItem,
   TextField,
+  Collapse,
+  Stack,
   Table,
   TableBody,
   TableCell,
@@ -26,6 +28,10 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 import DownloadIcon from '@mui/icons-material/Download'
 import AssessmentIcon from '@mui/icons-material/Assessment'
+import FilterListIcon from '@mui/icons-material/FilterList'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import ClearIcon from '@mui/icons-material/Clear'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
@@ -52,6 +58,17 @@ export default function ReportesPage() {
   const [fechaFin, setFechaFin] = useState(() => new Date().toISOString().split('T')[0])
   const [estadoFiltro, setEstadoFiltro] = useState<string>('todos')
   const [tipoFiltro, setTipoFiltro] = useState<string>('todos')
+  const [senseiFiltro, setSenseiFiltro] = useState<string>('todos')
+  const [showFilters, setShowFilters] = useState(false)
+
+  // Obtener lista única de senseis de los judokas cargados
+  const senseisList = useMemo(() => {
+    const names = new Set<string>()
+    judokas.forEach(j => {
+      if (j.nombre_entrenador) names.add(j.nombre_entrenador)
+    })
+    return Array.from(names).sort()
+  }, [judokas])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -99,9 +116,15 @@ export default function ReportesPage() {
       // Filtro por tipo
       if (tipoFiltro !== 'todos' && pago.tipo_pago !== tipoFiltro) return false
 
+      // Filtro por Sensei
+      if (senseiFiltro !== 'todos') {
+        const judoka = judokas.find(j => j.id === pago.judoka_id)
+        if (judoka?.nombre_entrenador !== senseiFiltro) return false
+      }
+
       return true
     })
-  }, [pagos, fechaInicio, fechaFin, estadoFiltro, tipoFiltro])
+  }, [pagos, fechaInicio, fechaFin, estadoFiltro, tipoFiltro, senseiFiltro, judokas])
 
   // Calcular estadísticas
   const estadisticas = useMemo(() => {
@@ -287,6 +310,16 @@ export default function ReportesPage() {
     return labels[tipo] || tipo
   }
 
+  const clearFilters = () => {
+    const fecha = new Date()
+    fecha.setMonth(fecha.getMonth() - 1)
+    setFechaInicio(fecha.toISOString().split('T')[0])
+    setFechaFin(new Date().toISOString().split('T')[0])
+    setEstadoFiltro('todos')
+    setTipoFiltro('todos')
+    setSenseiFiltro('todos')
+  }
+
   if (loading) {
     return (
       <ProtectedRoute allowedRoles={['admin', 'encargado']}>
@@ -334,59 +367,114 @@ export default function ReportesPage() {
           </Box>
 
           {/* Filtros */}
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" mb={2}>Filtros</Typography>
-            <Box display="flex" gap={2} flexWrap="wrap">
-              <DatePicker
-                label="Fecha Inicio"
-                value={fechaInicio ? dayjs(fechaInicio) : null}
-                onChange={(newValue) => {
-                  setFechaInicio(newValue ? newValue.format('YYYY-MM-DD') : '')
-                }}
-                slotProps={{ textField: { sx: { minWidth: 200 } } }}
-                format="DD/MM/YYYY"
-              />
-              <DatePicker
-                label="Fecha Fin"
-                value={fechaFin ? dayjs(fechaFin) : null}
-                onChange={(newValue) => {
-                  setFechaFin(newValue ? newValue.format('YYYY-MM-DD') : '')
-                }}
-                slotProps={{ textField: { sx: { minWidth: 200 } } }}
-                format="DD/MM/YYYY"
-              />
-              <FormControl sx={{ minWidth: 200 }}>
-                <InputLabel>Estado</InputLabel>
-                <Select
-                  value={estadoFiltro}
-                  label="Estado"
-                  onChange={(e) => setEstadoFiltro(e.target.value)}
+          <Paper sx={{ p: 3, mb: 3, backgroundColor: '#f8f9fa' }} variant="outlined">
+            <Stack spacing={2}>
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
+                <Box sx={{ display: 'flex', gap: 2, flexGrow: 1, flexWrap: 'wrap' }}>
+                  <DatePicker
+                    label="Fecha Inicio"
+                    value={fechaInicio ? dayjs(fechaInicio) : null}
+                    onChange={(newValue) => {
+                      setFechaInicio(newValue ? newValue.format('YYYY-MM-DD') : '')
+                    }}
+                    slotProps={{ textField: { size: 'small', sx: { minWidth: 150, backgroundColor: 'white' } } }}
+                    format="DD/MM/YYYY"
+                  />
+                  <DatePicker
+                    label="Fecha Fin"
+                    value={fechaFin ? dayjs(fechaFin) : null}
+                    onChange={(newValue) => {
+                      setFechaFin(newValue ? newValue.format('YYYY-MM-DD') : '')
+                    }}
+                    slotProps={{ textField: { size: 'small', sx: { minWidth: 150, backgroundColor: 'white' } } }}
+                    format="DD/MM/YYYY"
+                  />
+                </Box>
+
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<FilterListIcon />}
+                    endIcon={showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                    onClick={() => setShowFilters(!showFilters)}
+                    color={showFilters ? 'primary' : 'inherit'}
+                    sx={{ 
+                      backgroundColor: 'white',
+                      height: '40px',
+                      textTransform: 'none',
+                      borderColor: showFilters ? 'primary.main' : 'rgba(0, 0, 0, 0.23)'
+                    }}
+                  >
+                    Filtros
+                  </Button>
+
+                  {(estadoFiltro !== 'todos' || tipoFiltro !== 'todos' || senseiFiltro !== 'todos') && (
+                    <Tooltip title="Limpiar filtros">
+                      <IconButton onClick={clearFilters} color="warning" size="small">
+                        <ClearIcon />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Stack>
+              </Stack>
+
+              <Collapse in={showFilters}>
+                <Stack 
+                  direction={{ xs: 'column', md: 'row' }} 
+                  spacing={2} 
+                  alignItems="center"
+                  sx={{ pt: 1 }}
                 >
-                  <MenuItem value="todos">Todos</MenuItem>
-                  <MenuItem value="pendiente">Pendiente</MenuItem>
-                  <MenuItem value="pagado">Pagado</MenuItem>
-                  <MenuItem value="vencido">Vencido</MenuItem>
-                  <MenuItem value="parcial">Parcial</MenuItem>
-                  <MenuItem value="cancelado">Cancelado</MenuItem>
-                </Select>
-              </FormControl>
-              <FormControl sx={{ minWidth: 200 }}>
-                <InputLabel>Tipo de Pago</InputLabel>
-                <Select
-                  value={tipoFiltro}
-                  label="Tipo de Pago"
-                  onChange={(e) => setTipoFiltro(e.target.value)}
-                >
-                  <MenuItem value="todos">Todos</MenuItem>
-                  <MenuItem value="cuota_mensual">Cuota Mensual</MenuItem>
-                  <MenuItem value="cuota_traje">Cuota Traje</MenuItem>
-                  <MenuItem value="inscripcion">Inscripción</MenuItem>
-                  <MenuItem value="examen_grado">Examen de Grado</MenuItem>
-                  <MenuItem value="evento">Evento</MenuItem>
-                  <MenuItem value="otro">Otro</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
+                  <FormControl size="small" sx={{ minWidth: 180, backgroundColor: 'white' }}>
+                    <InputLabel>Estado</InputLabel>
+                    <Select
+                      value={estadoFiltro}
+                      label="Estado"
+                      onChange={(e) => setEstadoFiltro(e.target.value)}
+                    >
+                      <MenuItem value="todos">Todos los estados</MenuItem>
+                      <MenuItem value="pendiente">Pendiente</MenuItem>
+                      <MenuItem value="pagado">Pagado</MenuItem>
+                      <MenuItem value="vencido">Vencido</MenuItem>
+                      <MenuItem value="parcial">Parcial</MenuItem>
+                      <MenuItem value="cancelado">Cancelado</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  <FormControl size="small" sx={{ minWidth: 180, backgroundColor: 'white' }}>
+                    <InputLabel>Tipo de Pago</InputLabel>
+                    <Select
+                      value={tipoFiltro}
+                      label="Tipo de Pago"
+                      onChange={(e) => setTipoFiltro(e.target.value)}
+                    >
+                      <MenuItem value="todos">Todos los tipos</MenuItem>
+                      <MenuItem value="cuota_mensual">Cuota Mensual</MenuItem>
+                      <MenuItem value="cuota_traje">Cuota Traje</MenuItem>
+                      <MenuItem value="inscripcion">Inscripción</MenuItem>
+                      <MenuItem value="examen_grado">Examen de Grado</MenuItem>
+                      <MenuItem value="evento">Evento</MenuItem>
+                      <MenuItem value="otro">Otro</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  <FormControl size="small" sx={{ minWidth: 180, backgroundColor: 'white' }}>
+                    <InputLabel>Sensei</InputLabel>
+                    <Select
+                      value={senseiFiltro}
+                      label="Sensei"
+                      onChange={(e) => setSenseiFiltro(e.target.value)}
+                    >
+                      <MenuItem value="todos">Todos los senseis</MenuItem>
+                      {senseisList.map(name => (
+                        <MenuItem key={name} value={name}>{name}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Stack>
+              </Collapse>
+            </Stack>
           </Paper>
 
           {/* Resumen Estadísticas */}

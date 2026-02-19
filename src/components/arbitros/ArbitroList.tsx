@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import {
+  Button,
+  Collapse,
   Table,
   TableBody,
   TableCell,
@@ -29,11 +31,13 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import SearchIcon from '@mui/icons-material/Search'
 import ClearIcon from '@mui/icons-material/Clear'
+import FilterListIcon from '@mui/icons-material/FilterList'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import {
   useReactTable,
   getCoreRowModel,
   getPaginationRowModel,
-  getSortedRowModel,
   flexRender,
   createColumnHelper
 } from '@tanstack/react-table'
@@ -64,6 +68,7 @@ export default function ArbitroList({
   const [globalFilter, setGlobalFilter] = useState(externalSearchTerm)
   const [nivelFilter, setNivelFilter] = useState<string>('all')
   const [estadoFilter, setEstadoFilter] = useState<string>('all')
+  const [showFilters, setShowFilters] = useState(false)
 
   // Estado para mantener los IDs que han sido modificados en la sesión actual
   const [modifiedIds, setModifiedIds] = useState<Set<string>>(new Set())
@@ -151,20 +156,25 @@ export default function ArbitroList({
             <Switch 
               checked={!!isActive} 
               onChange={handleToggle}
+              size="medium"
               sx={{
                 '& .MuiSwitch-switchBase.Mui-checked': {
                   color: '#4caf50',
+                  '&:hover': {
+                    backgroundColor: 'rgba(76, 175, 80, 0.08)',
+                  },
                 },
                 '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
                   backgroundColor: '#4caf50',
-                  opacity: 0.5,
                 },
-                '& .MuiSwitch-switchBase:not(.Mui-checked)': {
+                '& .MuiSwitch-switchBase': {
                   color: '#f44336',
+                  '&:hover': {
+                    backgroundColor: 'rgba(244, 67, 54, 0.08)',
+                  },
                 },
-                '& .MuiSwitch-switchBase:not(.Mui-checked) + .MuiSwitch-track': {
+                '& .MuiSwitch-switchBase + .MuiSwitch-track': {
                   backgroundColor: '#f44336',
-                  opacity: 0.5,
                 },
               }}
             />
@@ -235,7 +245,6 @@ export default function ArbitroList({
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     initialState: {
       pagination: {
         pageSize: initialItemsPerPage,
@@ -266,57 +275,86 @@ export default function ArbitroList({
 
   return (
     <Box>
+      {/* Barra de Filtros */}
       <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f8f9fa' }} variant="outlined">
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
-          <TextField
-            size="small"
-            placeholder="Buscar por carnet, nombre..."
-            value={globalFilter}
-            onChange={(e) => setGlobalFilter(e.target.value)}
-            sx={{ flexGrow: 1, backgroundColor: 'white' }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-          />
-          
-          <FormControl size="small" sx={{ minWidth: 150, backgroundColor: 'white' }}>
-            <InputLabel>Nivel</InputLabel>
-            <Select
-              value={nivelFilter}
-              label="Nivel"
-              onChange={(e) => setNivelFilter(e.target.value)}
+        <Stack spacing={2}>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
+            <TextField
+              size="small"
+              placeholder="Buscar por carnet, nombre..."
+              value={globalFilter}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              sx={{ flexGrow: 1, backgroundColor: 'white' }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<FilterListIcon />}
+              endIcon={showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              onClick={() => setShowFilters(!showFilters)}
+              color={showFilters ? 'primary' : 'inherit'}
+              sx={{ 
+                backgroundColor: 'white',
+                height: '40px',
+                textTransform: 'none',
+                borderColor: showFilters ? 'primary.main' : 'rgba(0, 0, 0, 0.23)'
+              }}
             >
-              <MenuItem value="all">Todos los niveles</MenuItem>
-              <MenuItem value="Regional">Regional</MenuItem>
-              <MenuItem value="Nacional">Nacional</MenuItem>
-              <MenuItem value="Internacional">Internacional</MenuItem>
-            </Select>
-          </FormControl>
+              Filtros
+            </Button>
 
-          <FormControl size="small" sx={{ minWidth: 150, backgroundColor: 'white' }}>
-            <InputLabel>Estado</InputLabel>
-            <Select
-              value={estadoFilter}
-              label="Estado"
-              onChange={(e) => setEstadoFilter(e.target.value)}
+            {(nivelFilter !== 'all' || estadoFilter !== 'all' || globalFilter !== '') && (
+              <Tooltip title="Limpiar filtros">
+                <IconButton onClick={clearFilters} color="warning" size="small">
+                  <ClearIcon />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Stack>
+
+          <Collapse in={showFilters}>
+            <Stack 
+              direction={{ xs: 'column', md: 'row' }} 
+              spacing={2} 
+              alignItems="center"
+              sx={{ pt: 1 }}
             >
-              <MenuItem value="all">Todos los estados</MenuItem>
-              <MenuItem value="activo">Activos</MenuItem>
-              <MenuItem value="inactivo">Inactivos</MenuItem>
-            </Select>
-          </FormControl>
+              <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white' }}>
+                <InputLabel>Nivel</InputLabel>
+                <Select
+                  value={nivelFilter}
+                  label="Nivel"
+                  onChange={(e) => setNivelFilter(e.target.value)}
+                >
+                  <MenuItem value="all">Todos los niveles</MenuItem>
+                  <MenuItem value="Regional">Regional</MenuItem>
+                  <MenuItem value="Nacional">Nacional</MenuItem>
+                  <MenuItem value="Internacional">Internacional</MenuItem>
+                </Select>
+              </FormControl>
 
-          {(nivelFilter !== 'all' || estadoFilter !== 'all' || globalFilter !== '') && (
-            <Tooltip title="Limpiar filtros">
-              <IconButton onClick={clearFilters} color="warning" size="small">
-                <ClearIcon />
-              </IconButton>
-            </Tooltip>
-          )}
+              <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white' }}>
+                <InputLabel>Estado</InputLabel>
+                <Select
+                  value={estadoFilter}
+                  label="Estado"
+                  onChange={(e) => setEstadoFilter(e.target.value)}
+                >
+                  <MenuItem value="all">Todos los estados</MenuItem>
+                  <MenuItem value="activo">Activos</MenuItem>
+                  <MenuItem value="inactivo">Inactivos</MenuItem>
+                </Select>
+              </FormControl>
+            </Stack>
+          </Collapse>
         </Stack>
       </Paper>
 

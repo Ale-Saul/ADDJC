@@ -63,6 +63,7 @@ export function useJudokas(options: UseJudokasOptions = {}) {
         'apellidos',
         'categoria',
         'cinturon_actual',
+        'nombre_entrenador',
       ])
       setFilteredJudokas(results)
     } else {

@@ -12,7 +12,7 @@ function getSupabaseClient() {
   return supabase
 }
 
-const selectJudokasWithUsuario = '*, usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, correo, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url)'
+const selectJudokasWithUsuario = '*, usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, correo, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url), senseis:entrenador_id(usuarios:usuario_id(nombre, apellido_paterno, apellido_materno))'
 
 function mapJudokaRow(row: any): Judoka {
   const u = row.usuarios
@@ -21,6 +21,11 @@ function mapJudokaRow(row: any): Judoka {
   const apellidoPaterno = u?.apellido_paterno ?? ''
   const apellidoMaterno = u?.apellido_materno ?? ''
   const apellidos = [apellidoPaterno, apellidoMaterno].filter(Boolean).join(' ')
+
+  // Mapear nombre del entrenador (sensei)
+  const s = row.senseis?.usuarios
+  const nombreEntrenador = s ? [s.nombre, s.apellido_paterno, s.apellido_materno].filter(Boolean).join(' ') : undefined
+
   return {
     ...row,
     nombres,
@@ -34,7 +39,9 @@ function mapJudokaRow(row: any): Judoka {
     genero: u?.genero ?? null,
     activo: u?.activo ?? true,
     avatar_url: u?.avatar_url ?? null,
+    nombre_entrenador: nombreEntrenador,
     usuarios: undefined,
+    senseis: undefined,
   }
 }
 

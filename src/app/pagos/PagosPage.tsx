@@ -4,6 +4,12 @@ import {
   Box,
   Typography,
   Paper,
+  Collapse,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Stack,
   Table,
   TableBody,
   TableCell,
@@ -25,6 +31,10 @@ import VisibilityIcon from '@mui/icons-material/Visibility'
 import HistoryIcon from '@mui/icons-material/History'
 import GroupAddIcon from '@mui/icons-material/GroupAdd'
 import SearchIcon from '@mui/icons-material/Search'
+import FilterListIcon from '@mui/icons-material/FilterList'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import ClearIcon from '@mui/icons-material/Clear'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
@@ -37,22 +47,63 @@ import PagosStats from '@/components/pagos/PagosStats'
 import { useJudokas } from '@/hooks/useJudokas'
 import { usePagos } from '@/hooks/usePagos'
 import { useDialog } from '@/hooks/useDialog'
+import { CATEGORIES } from '@/utils/constants'
+import { useState, useMemo } from 'react'
 
 export default function PagosPage() {
   const { user } = useAuth()
   
+  // Estados para filtros
+  const [showFilters, setShowFilters] = useState(false)
+  const [senseiFilter, setSenseiFilter] = useState<string>('all')
+  const [categoriaFilter, setCategoriaFilter] = useState<string>('all')
+  
   // Hooks personalizados
   const {
-    judokas,
+    judokas: rawJudokas,
     isLoading: loadingJudokas,
     searchTerm,
     setSearchTerm,
-  } = useJudokas({ clubId: user?.club_id, autoFetch: true })
+  } = useJudokas({ clubId: user?.club_id || undefined, autoFetch: true })
+
+  // Obtener lista única de senseis de los judokas cargados
+  const senseisList = useMemo(() => {
+    const names = new Set<string>()
+    rawJudokas.forEach(j => {
+      if (j.nombre_entrenador) names.add(j.nombre_entrenador)
+    })
+    return Array.from(names).sort()
+  }, [rawJudokas])
+
+  // Aplicar filtros adicionales y ordenar
+  const judokas = useMemo(() => {
+    let filtered = [...rawJudokas]
+    
+    if (senseiFilter !== 'all') {
+      filtered = filtered.filter(j => j.nombre_entrenador === senseiFilter)
+    }
+    
+    if (categoriaFilter !== 'all') {
+      filtered = filtered.filter(j => j.categoria === categoriaFilter)
+    }
+
+    return filtered.sort((a, b) => {
+      const nameA = a.nombre_entrenador || 'Z'
+      const nameB = b.nombre_entrenador || 'Z'
+      return nameA.localeCompare(nameB)
+    })
+  }, [rawJudokas, senseiFilter, categoriaFilter])
+
+  const clearFilters = () => {
+    setSenseiFilter('all')
+    setCategoriaFilter('all')
+    setSearchTerm('')
+  }
 
   const {
     allPagos: pagos,
     refresh: refreshPagos,
-  } = usePagos({ clubId: user?.club_id })
+  } = usePagos({ clubId: user?.club_id || undefined })
 
   // Diálogos
   const pagoDialog = useDialog()
@@ -82,15 +133,6 @@ export default function PagosPage() {
             <Typography variant="h4" component="h1">
               Gestión de Pagos y Cuotas
             </Typography>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<GroupAddIcon />}
-              onClick={() => masivoDialog.open()}
-              disabled={judokas.length === 0}
-            >
-              Crear Pago para Todos
-            </Button>
           </Box>
 
           {loadingJudokas ? (
@@ -108,47 +150,141 @@ export default function PagosPage() {
               {/* Mini Dashboard de Estadísticas */}
               <PagosStats pagos={pagos} />
 
-              <TextField
-                fullWidth
-                placeholder="Buscar judoka por nombre o apellido..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                sx={{ mb: 2 }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  )
-                }}
-              />
+              <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f8f9fa' }} variant="outlined">
+                <Stack spacing={2}>
+                  <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
+                    <TextField
+                      fullWidth
+                      size="small"
+                      placeholder="Buscar judoka por nombre o apellido..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      sx={{ flexGrow: 1, backgroundColor: 'white' }}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SearchIcon fontSize="small" />
+                          </InputAdornment>
+                        )
+                      }}
+                    />
+                    
+                    <Stack direction="row" spacing={1} sx={{ width: { xs: '100%', md: 'auto' } }}>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        startIcon={<GroupAddIcon />}
+                        onClick={() => masivoDialog.open()}
+                        disabled={judokas.length === 0}
+                        sx={{ 
+                          flexGrow: { xs: 1, md: 0 },
+                          textTransform: 'none',
+                          fontWeight: 'bold',
+                          whiteSpace: 'nowrap',
+                          height: '40px',
+                          minWidth: { md: '160px' }
+                        }}
+                      >
+                        Pago Masivo
+                      </Button>
+
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<FilterListIcon />}
+                        endIcon={showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                        onClick={() => setShowFilters(!showFilters)}
+                        color={showFilters ? 'primary' : 'inherit'}
+                        sx={{ 
+                          flexGrow: { xs: 1, md: 0 },
+                          backgroundColor: 'white',
+                          height: '40px',
+                          textTransform: 'none',
+                          borderColor: showFilters ? 'primary.main' : 'rgba(0, 0, 0, 0.23)'
+                        }}
+                      >
+                        Filtros
+                      </Button>
+
+                      {(senseiFilter !== 'all' || categoriaFilter !== 'all' || searchTerm !== '') && (
+                        <Tooltip title="Limpiar filtros">
+                          <IconButton onClick={clearFilters} color="warning" size="small">
+                            <ClearIcon />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Stack>
+                  </Stack>
+
+                  <Collapse in={showFilters}>
+                    <Stack 
+                      direction={{ xs: 'column', md: 'row' }} 
+                      spacing={2} 
+                      alignItems="center"
+                      sx={{ pt: 1 }}
+                    >
+                      <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white', flexGrow: { xs: 1, md: 0 } }}>
+                        <InputLabel>Sensei</InputLabel>
+                        <Select
+                          value={senseiFilter}
+                          label="Sensei"
+                          onChange={(e) => setSenseiFilter(e.target.value)}
+                        >
+                          <MenuItem value="all">Todos los senseis</MenuItem>
+                          {senseisList.map(name => (
+                            <MenuItem key={name} value={name}>{name}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+
+                      <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white', flexGrow: { xs: 1, md: 0 } }}>
+                        <InputLabel>Categoría</InputLabel>
+                        <Select
+                          value={categoriaFilter}
+                          label="Categoría"
+                          onChange={(e) => setCategoriaFilter(e.target.value)}
+                        >
+                          <MenuItem value="all">Todas las categorías</MenuItem>
+                          {CATEGORIES.map(cat => (
+                            <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Stack>
+                  </Collapse>
+                </Stack>
+              </Paper>
 
               {judokas.length === 0 ? (
                 <Paper sx={{ p: 3, textAlign: 'center' }}>
                   <Typography color="text.secondary">
-                    No se encontraron judokas con "{searchTerm}"
+                    No se encontraron judokas con los filtros aplicados
                   </Typography>
                 </Paper>
               ) : (
                 <TableContainer component={Paper}>
-                  <Table>
-                    <TableHead>
+                  <Table size="small">
+                    <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                       <TableRow>
-                        <TableCell>Nombre</TableCell>
-                        <TableCell>Apellidos</TableCell>
-                        <TableCell>Categoría</TableCell>
-                        <TableCell>Cinturón</TableCell>
-                        <TableCell align="center">Acciones</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>N°</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Nombre</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Apellidos</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Categoría</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Cinturón</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Sensei</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 'bold' }}>Acciones</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {judokas.map((judoka) => (
+                      {judokas.map((judoka, index) => (
                         <TableRow key={judoka.id} hover>
+                          <TableCell>{index + 1}</TableCell>
                           <TableCell>{judoka.nombres}</TableCell>
                           <TableCell>{judoka.apellidos}</TableCell>
                           <TableCell>{judoka.categoria || '-'}</TableCell>
                           <TableCell>{judoka.cinturon_actual || '-'}</TableCell>
-                      <TableCell align="center">
+                          <TableCell>{judoka.nombre_entrenador || 'No asignado'}</TableCell>
+                          <TableCell align="center">
                         <Tooltip title="Ver Pagos Pendientes">
                           <IconButton
                             color="warning"

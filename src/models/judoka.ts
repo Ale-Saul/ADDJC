@@ -16,8 +16,8 @@ export interface Judoka {
   activo: boolean
   peso_competitivo: number | null
   cinturon_actual: string | null
-  avatar_url?: string | null
-  activo: boolean
+  categoria?: string | null
+  nombre_entrenador?: string
   created_at: string
   updated_at: string
 }
