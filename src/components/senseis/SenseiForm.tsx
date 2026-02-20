@@ -15,17 +15,13 @@ import {
   FormControl,
   InputLabel,
   Typography,
-  InputAdornment,
-  IconButton,
   FormHelperText,
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
-import Visibility from '@mui/icons-material/Visibility'
 
 dayjs.locale('es')
-import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import { Sensei, SenseiCreate, SenseiUpdate } from '@/models/sensei'
 import { senseiController } from '@/controllers/senseiController'
 import { clubController } from '@/controllers/clubController'
@@ -48,7 +44,6 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
   const [loadingClubes, setLoadingClubes] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
   const [focusedField, setFocusedField] = useState<string | null>(null)
 
   // Configuración de React Hook Form con Zod
@@ -68,7 +63,6 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
       apellido_paterno: '',
       apellido_materno: '',
       email: '',
-      password: '',
       fecha_nacimiento: null as string | null,
       numero_celular: '',
       ci: '',
@@ -169,7 +163,6 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
         const createData: SenseiCreate = {
           ...(payload as SenseiCreate),
           usuario_id: 'temp-user-id',
-          password: data.password || '',
         }
         response = await senseiController.createSensei(createData)
       }
@@ -206,6 +199,10 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
       )}
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Alert severity="info" sx={{ mb: 1 }}>
+          La contraseña se generará automáticamente como <strong>Judo.[Carnet]</strong> y se enviará por correo al usuario.
+        </Alert>
+
         <FormControl fullWidth error={fieldError('club_id').error}>
           <InputLabel>Club</InputLabel>
           <Controller
@@ -322,39 +319,6 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
             />
           )}
         />
-
-        {!sensei && (
-          <Controller
-            name="password"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                fullWidth
-                label="Contraseña"
-                type={showPassword ? 'text' : 'password'}
-                required
-                disabled={loading}
-                {...fieldError('password')}
-                onFocus={() => setFocusedField('password')}
-                onBlur={() => setFocusedField(null)}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle password visibility"
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            )}
-          />
-        )}
 
         <Controller
           name="fecha_nacimiento"

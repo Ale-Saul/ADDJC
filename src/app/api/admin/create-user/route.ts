@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendEmail, getWelcomeEmailTemplate } from '@/lib/email'
 
 /**
  * API Route para crear usuarios confirmados automáticamente
@@ -204,6 +205,27 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         )
       }
+    }
+
+    // Enviar correo de bienvenida con credenciales
+    // Solo si tenemos el carnet (que se usa en la contraseña) y la contraseña
+    if (ciBody && password) {
+      const emailHtml = getWelcomeEmailTemplate(nombresTrimmed, ciBody, password)
+      
+      // Ejecutar el envío de correo de forma asíncrona sin bloquear la respuesta
+      // En Vercel/Serverless esto podría no completarse si la función termina muy rápido,
+      // pero para este entorno debería funcionar bien.
+      sendEmail({
+        to: email,
+        subject: 'Bienvenido a la Asociación de Judo - Credenciales de Acceso',
+        html: emailHtml
+      }).then(result => {
+        if (!result.success) {
+          console.error('Fallo al enviar correo de bienvenida:', result.error)
+        }
+      }).catch(err => {
+        console.error('Error inesperado al enviar correo:', err)
+      })
     }
 
     return NextResponse.json({

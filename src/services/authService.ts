@@ -127,6 +127,7 @@ export const authService = {
         numero_celular: profileData.numero_celular || null,
         genero: profileData.genero || null,
         activo: profileData.activo ?? true,
+        debe_cambiar_password: profileData.debe_cambiar_password ?? false,
         created_at: profileData.created_at,
         updated_at: profileData.updated_at,
       }
@@ -348,6 +349,7 @@ export const authService = {
         numero_celular: data.numero_celular || null,
         genero: data.genero || null,
         activo: data.activo ?? true,
+        debe_cambiar_password: data.debe_cambiar_password ?? false,
         created_at: data.created_at,
         updated_at: data.updated_at,
       }
@@ -417,6 +419,50 @@ export const authService = {
     } catch (error) {
       console.error('Error en updatePassword:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al actualizar contraseña'
+      return {
+        success: false,
+        error: errorMessage,
+      }
+    }
+  },
+
+  /**
+   * Actualizar contraseña y marcar como completado el cambio obligatorio
+   */
+  async completePasswordChange(newPassword: string, userId: string): Promise<ApiResponse<void>> {
+    try {
+      const supabase = createClient()
+      
+      // 1. Actualizar la contraseña en Auth
+      const { error: authError } = await supabase.auth.updateUser({
+        password: newPassword,
+      })
+
+      if (authError) {
+        return {
+          success: false,
+          error: authError.message || 'Error al actualizar la contraseña',
+        }
+      }
+
+      // 2. Marcar debe_cambiar_password como false en la tabla usuarios
+      const { error: dbError } = await supabase
+        .from('usuarios')
+        .update({ 
+          debe_cambiar_password: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+
+      if (dbError) {
+        console.error('Error al actualizar flag debe_cambiar_password:', dbError)
+        // No fallamos el proceso completo porque la contraseña ya se cambió en Auth
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Error en completePasswordChange:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido al completar el cambio de contraseña'
       return {
         success: false,
         error: errorMessage,
@@ -531,6 +577,7 @@ export const authService = {
           numero_celular: updatedData.numero_celular || null,
           genero: updatedData.genero || null,
           activo: updatedData.activo ?? true,
+          debe_cambiar_password: updatedData.debe_cambiar_password ?? false,
           created_at: updatedData.created_at,
           updated_at: updatedData.updated_at,
         },

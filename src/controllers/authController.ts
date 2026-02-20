@@ -182,6 +182,42 @@ export const authController = {
   },
 
   /**
+   * Actualizar contraseña y marcar como completado el cambio obligatorio
+   */
+  async completePasswordChange(newPassword: string, userId: string): Promise<ApiResponse<void>> {
+    if (!newPassword) {
+      return {
+        success: false,
+        error: 'La nueva contraseña es requerida',
+      }
+    }
+
+    if (newPassword.length < 8) {
+      return {
+        success: false,
+        error: 'La contraseña debe tener al menos 8 caracteres',
+      }
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/
+    if (!passwordRegex.test(newPassword)) {
+      return {
+        success: false,
+        error: 'La contraseña debe contener al menos una mayúscula, una minúscula y un número',
+      }
+    }
+
+    if (!userId) {
+      return {
+        success: false,
+        error: 'ID de usuario requerido',
+      }
+    }
+
+    return await authService.completePasswordChange(newPassword, userId)
+  },
+
+  /**
    * Actualizar perfil de usuario
    */
   async updateProfile(userId: string, data: Partial<User>): Promise<ApiResponse<User>> {

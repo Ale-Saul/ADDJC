@@ -52,9 +52,13 @@ export default function LoginPage() {
   // Redirigir si ya está autenticado
   useEffect(() => {
     if (mounted && !authLoading && isAuthenticated) {
-      router.push('/')
+      if (user?.debe_cambiar_password) {
+        router.push('/cambiar-password')
+      } else {
+        router.push('/')
+      }
     }
-  }, [mounted, isAuthenticated, authLoading, router])
+  }, [mounted, isAuthenticated, authLoading, user, router])
 
   const onSubmit = async (data: LoginCredentials) => {
     setError(null)
@@ -63,8 +67,12 @@ export default function LoginPage() {
     try {
       const response = await signIn(data)
       
-      if (response.success) {
-        router.push('/')
+      if (response.success && response.data) {
+        if (response.data.user.debe_cambiar_password) {
+          router.push('/cambiar-password')
+        } else {
+          router.push('/')
+        }
       } else {
         setError(response.error || 'Error al iniciar sesión')
       }

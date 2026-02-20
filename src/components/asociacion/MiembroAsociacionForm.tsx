@@ -10,8 +10,6 @@ import {
   Box,
   Alert,
   CircularProgress,
-  InputAdornment,
-  IconButton,
   FormControl,
   InputLabel,
   Select,
@@ -21,10 +19,8 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
-import Visibility from '@mui/icons-material/Visibility'
 
 dayjs.locale('es')
-import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import { MiembroAsociacion, MiembroAsociacionCreate, MiembroAsociacionUpdate } from '@/models/asociacion'
 import { asociacionController } from '@/controllers/asociacionController'
 import { CARGOS_ASOCIACION } from '@/utils/constants'
@@ -41,7 +37,6 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
   const [focusedField, setFocusedField] = useState<string | null>(null)
 
   // Configuración de React Hook Form con Zod
@@ -60,7 +55,6 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
       apellido_paterno: '',
       apellido_materno: '',
       email: '',
-      password: '',
       cargo: '',
       fecha_nacimiento: null as string | null,
       numero_celular: '',
@@ -140,7 +134,6 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
           genero: data.genero || null,
           fecha_ingreso: data.fecha_ingreso || null,
           activo: data.activo ?? true,
-          password: data.password || '',
         } as MiembroAsociacionCreate
         response = await asociacionController.createMiembro(createData)
       }
@@ -178,6 +171,10 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
       )}
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Alert severity="info" sx={{ mb: 1 }}>
+          La contraseña se generará automáticamente como <strong>Judo.[Carnet]</strong> y se enviará por correo al usuario.
+        </Alert>
+
         <Controller
           name="ci"
           control={control}
@@ -378,39 +375,6 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
             />
           )}
         />
-
-        {!miembro && (
-          <Controller
-            name="password"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                fullWidth
-                label="Contraseña"
-                type={showPassword ? 'text' : 'password'}
-                required
-                disabled={loading}
-                {...fieldError('password')}
-                onFocus={() => setFocusedField('password')}
-                onBlur={() => setFocusedField(null)}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle password visibility"
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            )}
-          />
-        )}
       </Box>
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>

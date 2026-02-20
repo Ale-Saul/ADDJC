@@ -32,6 +32,13 @@ export default function ProtectedRoute({
         return
       }
 
+      // Si debe cambiar la contraseña, redirigir a la página de cambio de contraseña
+      // Pero permitir el acceso a la propia página de cambio de contraseña
+      if (user?.debe_cambiar_password && window.location.pathname !== '/cambiar-password') {
+        router.push('/cambiar-password')
+        return
+      }
+
       // Verificar rol si se especifica
       if (requiredRole && user?.rol !== requiredRole) {
         router.push('/')

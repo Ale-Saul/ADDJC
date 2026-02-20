@@ -43,12 +43,11 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
   const [newDirectorApellidoPaterno, setNewDirectorApellidoPaterno] = useState('')
   const [newDirectorApellidoMaterno, setNewDirectorApellidoMaterno] = useState('')
   const [newDirectorEmail, setNewDirectorEmail] = useState('')
-  const [newDirectorPassword, setNewDirectorPassword] = useState('')
+  const [newDirectorCI, setNewDirectorCI] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadingSenseis, setLoadingSenseis] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
   const [isCreatingNewDirector, setIsCreatingNewDirector] = useState(false)
 
   // Configuración de React Hook Form con Zod
@@ -117,7 +116,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
       setNewDirectorApellidoPaterno('')
       setNewDirectorApellidoMaterno('')
       setNewDirectorEmail('')
-      setNewDirectorPassword('')
+      setNewDirectorCI('')
     }
   }, [club, reset])
 
@@ -139,9 +138,9 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
         newDirectorNombres.trim() !== '' &&
         (newDirectorApellidoPaterno.trim() !== '' || newDirectorApellidoMaterno.trim() !== '')
       ) {
-        // Validar email y password para el nuevo director técnico
-        if (!newDirectorEmail.trim() || !newDirectorPassword.trim()) {
-          setError('Email y contraseña son requeridos para crear un nuevo Director Técnico')
+        // Validar email y carnet para el nuevo director técnico
+        if (!newDirectorEmail.trim() || !newDirectorCI.trim()) {
+          setError('Email y carnet de identidad son requeridos para crear un nuevo Director Técnico')
           setLoading(false)
           return
         }
@@ -152,7 +151,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
           apellido_paterno: newDirectorApellidoPaterno.trim(),
           apellido_materno: newDirectorApellidoMaterno.trim(),
           email: newDirectorEmail.trim(),
-          password: newDirectorPassword.trim(),
+          ci: newDirectorCI.trim(),
           isEncargado: true, // Marcar como encargado para asignar el rol correcto
           activo: true
           // No asignamos club_id aquí porque el club aún no existe
@@ -372,7 +371,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                     setNewDirectorApellidoPaterno('')
                     setNewDirectorApellidoMaterno('')
                     setNewDirectorEmail('')
-                    setNewDirectorPassword('')
+                    setNewDirectorCI('')
                   }}
                   disabled={loading}
                 >
@@ -381,8 +380,23 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
               </Box>
                 
                 <Alert severity="info" sx={{ mb: 1 }}>
-                  El director técnico se registrará como encargado automáticamente
+                  La contraseña se generará automáticamente como <strong>Judo.[Carnet]</strong> y se enviará por correo al usuario. El director técnico se registrará como encargado automáticamente.
                 </Alert>
+
+                <TextField
+                  fullWidth
+                  label="Carnet de Identidad"
+                  name="nuevo_director_ci"
+                  value={newDirectorCI}
+                  onChange={(e) => {
+                    setNewDirectorCI(e.target.value)
+                    setError(null)
+                    setSuccess(false)
+                  }}
+                  disabled={loading}
+                  required
+                  sx={{ mb: 2 }}
+                />
 
                 <TextField
                   fullWidth
@@ -396,6 +410,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                   }}
                   disabled={loading}
                   required
+                  sx={{ mb: 2 }}
                 />
                 
                 <TextField
@@ -409,6 +424,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                     setSuccess(false)
                   }}
                   disabled={loading}
+                  sx={{ mb: 2 }}
                 />
                 
                 <TextField
@@ -422,6 +438,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                     setSuccess(false)
                   }}
                   disabled={loading}
+                  sx={{ mb: 2 }}
                 />
                 
                 <TextField
@@ -437,36 +454,6 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                   }}
                   disabled={loading}
                   required
-                />
-                
-                <TextField
-                  fullWidth
-                  label="Contraseña del Director Técnico"
-                  name="nuevo_director_password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={newDirectorPassword}
-                  onChange={(e) => {
-                    setNewDirectorPassword(e.target.value)
-                    setError(null)
-                    setSuccess(false)
-                  }}
-                  disabled={loading}
-                  required
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          aria-label="toggle password visibility"
-                          onClick={() => setShowPassword(!showPassword)}
-                          onMouseDown={(e) => e.preventDefault()}
-                          edge="end"
-                        >
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                  inputProps={{ minLength: 8 }}
                 />
               </Box>
             )}
