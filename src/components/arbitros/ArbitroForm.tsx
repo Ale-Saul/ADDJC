@@ -49,10 +49,11 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
     handleSubmit,
     reset,
     setFocus,
-    formState: { errors, submitCount },
+    formState: { errors },
   } = useForm({
     resolver: zodResolver(arbitroSchema),
-    mode: 'onChange',
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
     defaultValues: {
       nombres: '',
       apellido_paterno: '',
@@ -68,13 +69,10 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
     },
   })
 
-  const showErrors = submitCount > 0
-
   const fieldError = (name: keyof typeof errors) => {
-    const isFocused = focusedField === name
     return {
-      error: showErrors && !!errors[name] && !isFocused,
-      helperText: (showErrors && !isFocused) ? (errors[name] as { message?: string } | undefined)?.message : undefined,
+      error: !!errors[name],
+      helperText: (errors[name] as { message?: string } | undefined)?.message,
     }
   }
 

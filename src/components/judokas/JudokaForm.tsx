@@ -61,10 +61,11 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     reset,
     watch,
     setFocus,
-    formState: { errors, submitCount },
+    formState: { errors },
   } = useForm({
     resolver: zodResolver(judokaSchema),
-    mode: 'onChange',
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
     defaultValues: {
       club_id: '',
       entrenador_id: '',
@@ -84,13 +85,11 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
   })
 
   const watchClubId = watch('club_id')
-  const showErrors = submitCount > 0
 
   const fieldError = (name: keyof typeof errors) => {
-    const isFocused = focusedField === name
     return {
-      error: showErrors && !!errors[name] && !isFocused,
-      helperText: (showErrors && !isFocused) ? (errors[name] as { message?: string } | undefined)?.message : undefined,
+      error: !!errors[name],
+      helperText: (errors[name] as { message?: string } | undefined)?.message,
     }
   }
 

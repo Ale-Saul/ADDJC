@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { z } from 'zod'
+import { useForm, Controller, type FieldErrors } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   TextField,
   Button,
@@ -14,6 +17,7 @@ import {
   InputAdornment,
   IconButton,
   Typography,
+  FormHelperText,
 } from '@mui/material'
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
@@ -25,6 +29,7 @@ import { clubController } from '@/controllers/clubController'
 import { senseiController } from '@/controllers/senseiController'
 import { Sensei, SenseiCreate } from '@/models/sensei'
 import { MUNICIPIOS } from '@/utils/constants'
+import { clubSchema } from '@/utils/zodSchemas'
 
 interface ClubFormProps {
   club?: Club | null
@@ -33,14 +38,6 @@ interface ClubFormProps {
 }
 
 export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
-  const [formData, setFormData] = useState<ClubCreate | ClubUpdate>({
-    nombre_club: '',
-    provincia: '',
-    direccion: '',
-    telefono_contacto: '',
-    director_tecnico_id: null,
-    activo: true
-  })
   const [senseis, setSenseis] = useState<Sensei[]>([])
   const [newDirectorNombres, setNewDirectorNombres] = useState('')
   const [newDirectorApellidoPaterno, setNewDirectorApellidoPaterno] = useState('')
@@ -53,6 +50,33 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
   const [success, setSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [isCreatingNewDirector, setIsCreatingNewDirector] = useState(false)
+
+  // Configuración de React Hook Form con Zod
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(clubSchema),
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
+    defaultValues: {
+      nombre_club: '',
+      provincia: '',
+      direccion: '',
+      telefono_contacto: '',
+      director_tecnico_id: null as string | null,
+      activo: true
+    },
+  })
+
+  const fieldError = (name: keyof typeof errors) => {
+    return {
+      error: !!errors[name],
+      helperText: (errors[name] as { message?: string } | undefined)?.message,
+    }
+  }
 
   useEffect(() => {
     // Cargar senseis activos
@@ -80,7 +104,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
 
   useEffect(() => {
     if (club) {
-      setFormData({
+      reset({
         nombre_club: club.nombre_club,
         provincia: club.provincia || '',
         direccion: club.direccion || '',
@@ -95,38 +119,16 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
       setNewDirectorEmail('')
       setNewDirectorPassword('')
     }
-  }, [club])
+  }, [club, reset])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-    setError(null)
-    setSuccess(false)
-  }
-
-  const handleSelectChange = (e: SelectChangeEvent<string>) => {
-    const { name, value } = e.target
-    if (!name) return
-    setFormData(prev => ({
-      ...prev,
-      [name]: value === '' ? null : value
-    }))
-    setError(null)
-    setSuccess(false)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onSubmit = async (data: z.infer<typeof clubSchema>) => {
     setLoading(true)
     setError(null)
     setSuccess(false)
 
     try {
       let response
-      let directorTecnicoId = formData.director_tecnico_id || null
+      let directorTecnicoId = data.director_tecnico_id || null
       let createdSenseiId: string | null = null
 
       // Si estamos creando un club y no hay director seleccionado,
@@ -173,7 +175,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
       }
 
       const clubPayload: ClubCreate = {
-        ...(formData as ClubCreate),
+        ...(data as ClubCreate),
         director_tecnico_id: directorTecnicoId
       }
 
@@ -218,7 +220,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+    <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 2 }}>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
@@ -233,50 +235,74 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
 
       {/* Contenedor en columna para que todos los campos ocupen el mismo ancho */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <TextField
-          fullWidth
-          label="Nombre del Club"
+        <Controller
           name="nombre_club"
-          value={formData.nombre_club}
-          onChange={handleChange}
-          required
-          disabled={loading}
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              fullWidth
+              label="Nombre del Club"
+              required
+              disabled={loading}
+              {...fieldError('nombre_club')}
+            />
+          )}
         />
 
-        <FormControl fullWidth disabled={loading}>
-          <InputLabel>Municipio</InputLabel>
-          <Select
+        <FormControl fullWidth disabled={loading} error={fieldError('provincia').error} required>
+          <InputLabel required>Municipio</InputLabel>
+          <Controller
             name="provincia"
-            value={formData.provincia ?? ''}
-            label="Municipio"
-            onChange={(e: SelectChangeEvent<string>) =>
-              setFormData(prev => ({ ...prev, provincia: e.target.value }))
-            }
-          >
-            {MUNICIPIOS.map(m => (
-              <MenuItem key={m} value={m}>{m}</MenuItem>
-            ))}
-          </Select>
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                label="Municipio"
+                required
+              >
+                {MUNICIPIOS.map(m => (
+                  <MenuItem key={m} value={m}>{m}</MenuItem>
+                ))}
+              </Select>
+            )}
+          />
+          {fieldError('provincia').helperText && <FormHelperText>{fieldError('provincia').helperText}</FormHelperText>}
         </FormControl>
 
-        <TextField
-          fullWidth
-          label="Dirección"
+        <Controller
           name="direccion"
-          value={formData.direccion}
-          onChange={handleChange}
-          multiline
-          rows={3}
-          disabled={loading}
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              fullWidth
+              label="Dirección"
+              multiline
+              rows={3}
+              disabled={loading}
+              {...fieldError('direccion')}
+            />
+          )}
         />
 
-        <TextField
-          fullWidth
-          label="Teléfono de Contacto"
+        <Controller
           name="telefono_contacto"
-          value={formData.telefono_contacto}
-          onChange={handleChange}
-          disabled={loading}
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              fullWidth
+              label="Teléfono de Contacto"
+              disabled={loading}
+              {...fieldError('telefono_contacto')}
+              inputProps={{ maxLength: 8 }}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '').slice(0, 8)
+                field.onChange(val)
+              }}
+            />
+          )}
         />
 
         {/* Sección de Director Técnico */}
@@ -284,29 +310,35 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
           {!isCreatingNewDirector ? (
             // Modo: Seleccionar director técnico existente
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <FormControl fullWidth>
+              <FormControl fullWidth error={fieldError('director_tecnico_id').error}>
                 <InputLabel>Director Técnico</InputLabel>
-                <Select
+                <Controller
                   name="director_tecnico_id"
-                  value={formData.director_tecnico_id || ''}
-                  onChange={handleSelectChange}
-                  disabled={loading || loadingSenseis}
-                  label="Director Técnico"
-                >
-                  <MenuItem value="">
-                    <em>Sin director técnico</em>
-                  </MenuItem>
-                  {[...senseis].sort((a, b) => {
-                    const nameA = (a.nombres + ' ' + (a.apellidos || '')).trim()
-                    const nameB = (b.nombres + ' ' + (b.apellidos || '')).trim()
-                    return nameA.localeCompare(nameB)
-                  }).map((sensei) => (
-                    <MenuItem key={sensei.id} value={sensei.id}>
-                      {sensei.nombres} {sensei.apellidos}
-                      {sensei.grado_dan && ` - ${sensei.grado_dan}`}
-                    </MenuItem>
-                  ))}
-                </Select>
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      value={field.value || ''}
+                      disabled={loading || loadingSenseis}
+                      label="Director Técnico"
+                    >
+                      <MenuItem value="">
+                        <em>Sin director técnico</em>
+                      </MenuItem>
+                      {[...senseis].sort((a, b) => {
+                        const nameA = (a.nombres + ' ' + (a.apellidos || '')).trim()
+                        const nameB = (b.nombres + ' ' + (b.apellidos || '')).trim()
+                        return nameA.localeCompare(nameB)
+                      }).map((sensei) => (
+                        <MenuItem key={sensei.id} value={sensei.id}>
+                          {sensei.nombres} {sensei.apellidos}
+                          {sensei.grado_dan && ` - ${sensei.grado_dan}`}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  )}
+                />
+                {fieldError('director_tecnico_id').helperText && <FormHelperText>{fieldError('director_tecnico_id').helperText}</FormHelperText>}
               </FormControl>
               
               {!club && (
@@ -315,7 +347,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                   startIcon={<AddIcon />}
                   onClick={() => {
                     setIsCreatingNewDirector(true)
-                    setFormData(prev => ({ ...prev, director_tecnico_id: null }))
+                    reset(prev => ({ ...prev, director_tecnico_id: null }))
                   }}
                   disabled={loading}
                   sx={{ alignSelf: 'flex-start' }}
@@ -405,7 +437,6 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                   }}
                   disabled={loading}
                   required
-                  helperText="Email para iniciar sesión en el sistema"
                 />
                 
                 <TextField
@@ -435,7 +466,6 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                       </InputAdornment>
                     ),
                   }}
-                  helperText="Mínimo 8 caracteres"
                   inputProps={{ minLength: 8 }}
                 />
               </Box>

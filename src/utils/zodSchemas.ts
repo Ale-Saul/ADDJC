@@ -17,6 +17,13 @@ export const celularSchema = z
     message: 'El número de celular debe tener exactamente 8 dígitos',
   })
 
+// Validación de Teléfono Club: 7 u 8 dígitos
+export const telefonoClubSchema = z
+  .string()
+  .refine((val) => val === '' || /^\d{7,8}$/.test(val), {
+    message: 'El teléfono debe tener 7 u 8 dígitos',
+  })
+
 // Validación de Email
 export const emailSchema = z
   .string()
@@ -119,6 +126,18 @@ export const arbitroSchema = baseUserObject.extend({
   activo: z.boolean().default(true),
   password: z.string().optional(),
 }).refine(validateApellidos, apellidosErrorConfig)
+
+/**
+ * Esquema específico para Clubes
+ */
+export const clubSchema = z.object({
+  nombre_club: z.string().min(1, 'El nombre del club es requerido'),
+  provincia: z.string().min(1, 'El municipio es requerido'),
+  direccion: z.string().optional(),
+  telefono_contacto: telefonoClubSchema.optional(),
+  director_tecnico_id: z.string().nullable().optional(),
+  activo: z.boolean().default(true),
+})
 
 /**
  * Esquema específico para Miembros de la Asociación

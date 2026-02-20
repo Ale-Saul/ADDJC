@@ -50,10 +50,11 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
     handleSubmit,
     reset,
     setFocus,
-    formState: { errors, submitCount },
+    formState: { errors },
   } = useForm({
     resolver: zodResolver(miembroAsociacionSchema),
-    mode: 'onChange',
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
     defaultValues: {
       nombres: '',
       apellido_paterno: '',
@@ -70,13 +71,10 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
     },
   })
 
-  const showErrors = submitCount > 0
-
   const fieldError = (name: keyof typeof errors) => {
-    const isFocused = focusedField === name
     return {
-      error: showErrors && !!errors[name] && !isFocused,
-      helperText: (showErrors && !isFocused) ? (errors[name] as { message?: string } | undefined)?.message : undefined,
+      error: !!errors[name],
+      helperText: (errors[name] as { message?: string } | undefined)?.message,
     }
   }
 
