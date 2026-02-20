@@ -11,6 +11,7 @@ import {
   IconButton,
   Tooltip,
   Box,
+  Button,
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -18,6 +19,7 @@ import BlockIcon from '@mui/icons-material/Block'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import TrendingDownIcon from '@mui/icons-material/TrendingDown'
+import AddIcon from '@mui/icons-material/Add'
 import { MovimientoFinanciero } from '@/models/movimientoFinanciero'
 import * as movimientoFinancieroController from '@/controllers/movimientoFinancieroController'
 import { formatters } from '@/utils/formatters'
@@ -27,6 +29,7 @@ interface MovimientosTableProps {
   onEditar: (movimiento: MovimientoFinanciero) => void
   onEliminar: (id: string) => void
   onAnular: (id: string) => void
+  onAgregar?: () => void
 }
 
 export default function MovimientosTable({
@@ -34,6 +37,7 @@ export default function MovimientosTable({
   onEditar,
   onEliminar,
   onAnular,
+  onAgregar,
 }: MovimientosTableProps) {
   const formatCurrency = (amount: number) => {
     return `Bs. ${new Intl.NumberFormat('es-BO', {
@@ -84,9 +88,23 @@ export default function MovimientosTable({
 
   return (
     <Paper sx={{ p: 2 }}>
-      <Typography variant="h6" gutterBottom>
-        Movimientos Financieros
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h6">
+          Movimientos Financieros
+        </Typography>
+        {onAgregar && (
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={onAgregar}
+            size="small"
+            sx={{ textTransform: 'none', fontWeight: 'bold' }}
+          >
+            Nuevo Movimiento
+          </Button>
+        )}
+      </Box>
       
       {movimientos.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 4 }}>

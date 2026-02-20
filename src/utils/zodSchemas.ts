@@ -27,6 +27,27 @@ export const emailSchema = z
 export const passwordSchema = z
   .string()
   .min(8, 'La contraseña debe tener al menos 8 caracteres')
+  .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'La contraseña debe contener al menos una mayúscula, una minúscula y un número')
+
+// Esquema para Login
+export const loginSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1, 'La contraseña es requerida'),
+})
+
+// Esquema para Recuperar Contraseña (Solicitud)
+export const requestResetSchema = z.object({
+  email: emailSchema,
+})
+
+// Esquema para Restablecer Contraseña (Nueva Contraseña)
+export const resetPasswordSchema = z.object({
+  password: passwordSchema,
+  confirmPassword: z.string().min(1, 'Debes confirmar la contraseña'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Las contraseñas no coinciden',
+  path: ['confirmPassword'],
+})
 
 // Regex para nombres y apellidos: solo letras (incluye acentos y Ñ) y espacios
 const nameRegex = /^[A-Za-zÁÉÍÓÚÜáéíóúüÑñ\s]+$/

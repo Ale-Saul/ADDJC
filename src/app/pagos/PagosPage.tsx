@@ -171,24 +171,6 @@ export default function PagosPage() {
                     
                     <Stack direction="row" spacing={1} sx={{ width: { xs: '100%', md: 'auto' } }}>
                       <Button
-                        variant="contained"
-                        color="primary"
-                        startIcon={<GroupAddIcon />}
-                        onClick={() => masivoDialog.open()}
-                        disabled={judokas.length === 0}
-                        sx={{ 
-                          flexGrow: { xs: 1, md: 0 },
-                          textTransform: 'none',
-                          fontWeight: 'bold',
-                          whiteSpace: 'nowrap',
-                          height: '40px',
-                          minWidth: { md: '160px' }
-                        }}
-                      >
-                        Pago Masivo
-                      </Button>
-
-                      <Button
                         variant="outlined"
                         size="small"
                         startIcon={<FilterListIcon />}
@@ -262,7 +244,27 @@ export default function PagosPage() {
                   </Typography>
                 </Paper>
               ) : (
-                <TableContainer component={Paper}>
+                <TableContainer component={Paper} sx={{ p: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                      Lista de Judokas
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      startIcon={<GroupAddIcon />}
+                      onClick={() => masivoDialog.open()}
+                      disabled={judokas.length === 0}
+                      sx={{ 
+                        textTransform: 'none',
+                        fontWeight: 'bold',
+                        whiteSpace: 'nowrap',
+                        height: '40px'
+                      }}
+                    >
+                      Pago Masivo
+                    </Button>
+                  </Box>
                   <Table size="small">
                     <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                       <TableRow>

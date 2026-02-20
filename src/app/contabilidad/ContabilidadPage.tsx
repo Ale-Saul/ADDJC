@@ -14,7 +14,6 @@ import {
   TextField,
   CircularProgress,
   Alert,
-  Fab,
   Collapse,
   Stack,
   Tooltip,
@@ -417,19 +416,10 @@ export default function ContabilidadPage() {
                 onEditar={handleEditarMovimiento}
                 onEliminar={handleEliminarMovimiento}
                 onAnular={handleAnularMovimiento}
+                onAgregar={handleAgregarMovimiento}
               />
             </>
           )}
-
-          {/* FAB para agregar movimiento */}
-          <Fab
-            color="primary"
-            aria-label="agregar movimiento"
-            sx={{ position: 'fixed', bottom: 16, right: 16 }}
-            onClick={handleAgregarMovimiento}
-          >
-            <AddIcon />
-          </Fab>
 
           {/* Diálogo de formulario */}
           <MovimientoFormDialog

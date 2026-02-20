@@ -19,14 +19,36 @@ import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import { authController } from '@/controllers/authController'
 import { createClient } from '@/lib/supabase/client'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { requestResetSchema, resetPasswordSchema } from '@/utils/zodSchemas'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [step, setStep] = useState<'request' | 'reset'>('request')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
+  
+  // Formulario para solicitud
+  const {
+    control: controlRequest,
+    handleSubmit: handleSubmitRequest,
+    formState: { errors: errorsRequest },
+    reset: resetRequest,
+  } = useForm({
+    resolver: zodResolver(requestResetSchema),
+    defaultValues: { email: '' },
+  })
+
+  // Formulario para restablecimiento
+  const {
+    control: controlReset,
+    handleSubmit: handleSubmitReset,
+    formState: { errors: errorsReset },
+  } = useForm({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { password: '', confirmPassword: '' },
+  })
+
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -136,8 +158,7 @@ export default function ResetPasswordPage() {
     checkSession()
   }, [searchParams])
 
-  const handleRequestReset = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onResetRequest = async (data: { email: string }) => {
     setError(null)
     setLoading(true)
 
@@ -147,11 +168,11 @@ export default function ResetPasswordPage() {
         ? `${window.location.origin}/auth/callback?next=/reset-password`
         : '/auth/callback?next=/reset-password'
 
-      const response = await authController.resetPassword(email, redirectUrl)
+      const response = await authController.resetPassword(data.email, redirectUrl)
       
       if (response.success) {
         setSuccess(true)
-        setEmail('')
+        resetRequest()
       } else {
         setError(response.error || 'Error al enviar el email de recuperación')
       }
@@ -162,31 +183,12 @@ export default function ResetPasswordPage() {
     }
   }
 
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onResetPassword = async (data: any) => {
     setError(null)
-
-    // Validaciones
-    if (password !== confirmPassword) {
-      setError('Las contraseñas no coinciden')
-      return
-    }
-
-    if (password.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres')
-      return
-    }
-
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/
-    if (!passwordRegex.test(password)) {
-      setError('La contraseña debe contener al menos una mayúscula, una minúscula y un número')
-      return
-    }
-
     setLoading(true)
 
     try {
-      const response = await authController.updatePassword(password)
+      const response = await authController.updatePassword(data.password)
       
       if (response.success) {
         setSuccess(true)
@@ -301,7 +303,7 @@ export default function ResetPasswordPage() {
                     size="small"
                     onClick={() => {
                       setError(null)
-                      setEmail('')
+                      resetRequest()
                     }}
                   >
                     Intentar de nuevo
@@ -314,21 +316,26 @@ export default function ResetPasswordPage() {
 
             <Box
               component="form"
-              onSubmit={handleRequestReset}
+              onSubmit={handleSubmitRequest(onResetRequest)}
               sx={{ width: '100%', mt: 1 }}
             >
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="email"
-                label="Email"
+              <Controller
                 name="email"
-                autoComplete="email"
-                autoFocus
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading || success}
+                control={controlRequest}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    margin="normal"
+                    fullWidth
+                    id="email"
+                    label="Email"
+                    autoComplete="email"
+                    autoFocus
+                    disabled={loading || success}
+                    error={!!errorsRequest.email}
+                    helperText={errorsRequest.email?.message}
+                  />
+                )}
               />
               <Button
                 type="submit"
@@ -402,8 +409,6 @@ export default function ResetPasswordPage() {
                   onClick={() => {
                     setError(null)
                     setStep('request')
-                    setPassword('')
-                    setConfirmPassword('')
                     router.push('/reset-password')
                   }}
                 >
@@ -417,66 +422,73 @@ export default function ResetPasswordPage() {
 
           <Box
             component="form"
-            onSubmit={handleResetPassword}
+            onSubmit={handleSubmitReset(onResetPassword)}
             sx={{ width: '100%', mt: 1 }}
           >
-            <TextField
-              margin="normal"
-              required
-              fullWidth
+            <Controller
               name="password"
-              label="Nueva Contraseña"
-              type={showPassword ? 'text' : 'password'}
-              id="password"
-              inputProps={{ 'data-testid': 'password' }}
-              autoComplete="new-password"
-              autoFocus
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading || success}
-              helperText="Mínimo 8 caracteres, debe incluir mayúscula, minúscula y número"
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={() => setShowPassword(!showPassword)}
-                      onMouseDown={(e) => e.preventDefault()}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
+              control={controlReset}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  margin="normal"
+                  fullWidth
+                  label="Nueva Contraseña"
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  autoComplete="new-password"
+                  autoFocus
+                  disabled={loading || success}
+                  error={!!errorsReset.password}
+                  helperText={errorsReset.password?.message || "Mínimo 8 caracteres, debe incluir mayúscula, minúscula y número"}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle password visibility"
+                          onClick={() => setShowPassword(!showPassword)}
+                          onMouseDown={(e) => e.preventDefault()}
+                          edge="end"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              )}
             />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
+            <Controller
               name="confirmPassword"
-              label="Confirmar Nueva Contraseña"
-              type={showConfirmPassword ? 'text' : 'password'}
-              id="confirmPassword"
-              inputProps={{ 'data-testid': 'confirmPassword' }}
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              disabled={loading || success}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle confirm password visibility"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      onMouseDown={(e) => e.preventDefault()}
-                      edge="end"
-                    >
-                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
+              control={controlReset}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  margin="normal"
+                  fullWidth
+                  label="Confirmar Nueva Contraseña"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  id="confirmPassword"
+                  autoComplete="new-password"
+                  disabled={loading || success}
+                  error={!!errorsReset.confirmPassword}
+                  helperText={errorsReset.confirmPassword?.message}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle confirm password visibility"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          onMouseDown={(e) => e.preventDefault()}
+                          edge="end"
+                        >
+                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              )}
             />
             <Button
               type="submit"
