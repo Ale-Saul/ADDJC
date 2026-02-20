@@ -37,8 +37,10 @@ import ProtectedRoute from '@/components/common/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
 import { pagoController } from '@/controllers/pagoController'
 import { judokaController } from '@/controllers/judokaController'
+import { clubController } from '@/controllers/clubController'
 import { Pago } from '@/models/pago'
 import { Judoka } from '@/models/judoka'
+import { Club } from '@/models/club'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { formatters } from '@/utils/formatters'
@@ -59,7 +61,11 @@ export default function ReportesPage() {
   const [estadoFiltro, setEstadoFiltro] = useState<string>('todos')
   const [tipoFiltro, setTipoFiltro] = useState<string>('todos')
   const [senseiFiltro, setSenseiFiltro] = useState<string>('todos')
+  const [clubFiltro, setClubFiltro] = useState<string>('todos')
   const [showFilters, setShowFilters] = useState(false)
+  const [clubes, setClubes] = useState<Club[]>([])
+
+  const isAdmin = user?.rol === 'admin'
 
   // Obtener lista única de senseis de los judokas cargados
   const senseisList = useMemo(() => {
@@ -72,20 +78,33 @@ export default function ReportesPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user?.club_id) {
-        setLoading(false)
-        return
-      }
-
       try {
+        // Cargar clubes si es admin
+        if (isAdmin) {
+          const clubesResponse = await clubController.getAllClubes()
+          if (clubesResponse.success && clubesResponse.data) {
+            setClubes(clubesResponse.data)
+          }
+        }
+
         // Cargar pagos
-        const pagosResponse = await pagoController.getPagosByClub(user.club_id)
+        const pagosResponse = isAdmin 
+          ? await pagoController.getAllPagos() 
+          : user?.club_id 
+            ? await pagoController.getPagosByClub(user.club_id)
+            : { success: true, data: [] }
+
         if (pagosResponse.success && pagosResponse.data) {
           setPagos(pagosResponse.data)
         }
 
         // Cargar judokas
-        const judokasResponse = await judokaController.getJudokasByClub(user.club_id)
+        const judokasResponse = isAdmin
+          ? await judokaController.getAllJudokas(true)
+          : user?.club_id
+            ? await judokaController.getJudokasByClub(user.club_id)
+            : { success: true, data: [] }
+
         if (judokasResponse.success && judokasResponse.data) {
           setJudokas(judokasResponse.data)
         }
@@ -97,7 +116,7 @@ export default function ReportesPage() {
     }
 
     fetchData()
-  }, [user?.club_id])
+  }, [user?.club_id, isAdmin])
 
   // Filtrar pagos según criterios
   const pagosFiltrados = useMemo(() => {
@@ -116,6 +135,9 @@ export default function ReportesPage() {
       // Filtro por tipo
       if (tipoFiltro !== 'todos' && pago.tipo_pago !== tipoFiltro) return false
 
+      // Filtro por Club (Solo Admin)
+      if (isAdmin && clubFiltro !== 'todos' && pago.club_id !== clubFiltro) return false
+
       // Filtro por Sensei
       if (senseiFiltro !== 'todos') {
         const judoka = judokas.find(j => j.id === pago.judoka_id)
@@ -124,7 +146,7 @@ export default function ReportesPage() {
 
       return true
     })
-  }, [pagos, fechaInicio, fechaFin, estadoFiltro, tipoFiltro, senseiFiltro, judokas])
+  }, [pagos, fechaInicio, fechaFin, estadoFiltro, tipoFiltro, senseiFiltro, clubFiltro, judokas, isAdmin])
 
   // Calcular estadísticas
   const estadisticas = useMemo(() => {
@@ -318,6 +340,7 @@ export default function ReportesPage() {
     setEstadoFiltro('todos')
     setTipoFiltro('todos')
     setSenseiFiltro('todos')
+    setClubFiltro('todos')
   }
 
   if (loading) {
@@ -441,6 +464,24 @@ export default function ReportesPage() {
                       <MenuItem value="cancelado">Cancelado</MenuItem>
                     </Select>
                   </FormControl>
+
+                  {isAdmin && (
+                    <FormControl size="small" sx={{ minWidth: 180, backgroundColor: 'white' }}>
+                      <InputLabel>Club</InputLabel>
+                      <Select
+                        value={clubFiltro}
+                        label="Club"
+                        onChange={(e) => setClubFiltro(e.target.value)}
+                      >
+                        <MenuItem value="todos">Todos los clubes</MenuItem>
+                        {[...clubes].sort((a, b) => a.nombre_club.localeCompare(b.nombre_club)).map(club => (
+                          <MenuItem key={club.id} value={club.id}>
+                            {club.nombre_club}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  )}
 
                   <FormControl size="small" sx={{ minWidth: 180, backgroundColor: 'white' }}>
                     <InputLabel>Tipo de Pago</InputLabel>
@@ -585,6 +626,7 @@ export default function ReportesPage() {
                   <TableRow>
                     <TableCell>Fecha</TableCell>
                     <TableCell>Judoka</TableCell>
+                    {isAdmin && <TableCell>Club</TableCell>}
                     <TableCell>Concepto</TableCell>
                     <TableCell>Tipo</TableCell>
                     <TableCell align="right">Monto</TableCell>
@@ -593,33 +635,43 @@ export default function ReportesPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {pagosFiltrados.map((pago) => (
-                    <TableRow key={pago.id} hover>
-                      <TableCell>
-                        {formatters.formatDate(pago.created_at)}
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {getJudokaNombre(pago.judoka_id)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>{pago.concepto}</TableCell>
-                      <TableCell>
-                        <Typography variant="caption">
-                          {getTipoLabel(pago.tipo_pago)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2" fontWeight="bold">
-                          Bs. {pago.monto_final.toFixed(2)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>{getEstadoChip(pago.estado)}</TableCell>
-                      <TableCell>
-                        {formatters.formatDate(pago.fecha_vencimiento)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {pagosFiltrados.map((pago) => {
+                    const judoka = judokas.find(j => j.id === pago.judoka_id)
+                    return (
+                      <TableRow key={pago.id} hover>
+                        <TableCell>
+                          {formatters.formatDate(pago.created_at)}
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {getJudokaNombre(pago.judoka_id)}
+                          </Typography>
+                        </TableCell>
+                        {isAdmin && (
+                          <TableCell>
+                            <Typography variant="body2">
+                              {judoka?.nombre_club || '-'}
+                            </Typography>
+                          </TableCell>
+                        )}
+                        <TableCell>{pago.concepto}</TableCell>
+                        <TableCell>
+                          <Typography variant="caption">
+                            {getTipoLabel(pago.tipo_pago)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" fontWeight="bold">
+                            Bs. {pago.monto_final.toFixed(2)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{getEstadoChip(pago.estado)}</TableCell>
+                        <TableCell>
+                          {formatters.formatDate(pago.fecha_vencimiento)}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>

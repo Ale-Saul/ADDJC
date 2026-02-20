@@ -18,6 +18,7 @@ export interface Judoka {
   cinturon_actual: string | null
   categoria?: string | null
   nombre_entrenador?: string
+  nombre_club?: string
   created_at: string
   updated_at: string
 }

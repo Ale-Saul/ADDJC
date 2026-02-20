@@ -48,15 +48,33 @@ import { useJudokas } from '@/hooks/useJudokas'
 import { usePagos } from '@/hooks/usePagos'
 import { useDialog } from '@/hooks/useDialog'
 import { CATEGORIES } from '@/utils/constants'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { clubController } from '@/controllers/clubController'
+import { Club } from '@/models/club'
 
 export default function PagosPage() {
   const { user } = useAuth()
+  const isAdmin = user?.rol === 'admin'
   
   // Estados para filtros
   const [showFilters, setShowFilters] = useState(false)
   const [senseiFilter, setSenseiFilter] = useState<string>('all')
   const [categoriaFilter, setCategoriaFilter] = useState<string>('all')
+  const [clubFilter, setClubFiltro] = useState<string>('all')
+  const [clubes, setClubes] = useState<Club[]>([])
+  
+  // Cargar clubes solo para admins
+  useEffect(() => {
+    if (isAdmin) {
+      const loadClubes = async () => {
+        const response = await clubController.getAllClubes()
+        if (response.success && response.data) {
+          setClubes(response.data)
+        }
+      }
+      loadClubes()
+    }
+  }, [isAdmin])
   
   // Hooks personalizados
   const {
@@ -87,16 +105,38 @@ export default function PagosPage() {
       filtered = filtered.filter(j => j.categoria === categoriaFilter)
     }
 
+    if (isAdmin && clubFilter !== 'all') {
+      filtered = filtered.filter(j => j.club_id === clubFilter)
+    }
+
     return filtered.sort((a, b) => {
-      const nameA = a.nombre_entrenador || 'Z'
-      const nameB = b.nombre_entrenador || 'Z'
-      return nameA.localeCompare(nameB)
+      // 1. Ordenar por Club
+      const clubA = a.nombre_club || 'Z'
+      const clubB = b.nombre_club || 'Z'
+      const clubCompare = clubA.localeCompare(clubB)
+      if (clubCompare !== 0) return clubCompare
+
+      // 2. Ordenar por Sensei
+      const senseiA = a.nombre_entrenador || 'Z'
+      const senseiB = b.nombre_entrenador || 'Z'
+      const senseiCompare = senseiA.localeCompare(senseiB)
+      if (senseiCompare !== 0) return senseiCompare
+
+      // 3. Ordenar por Cinturón
+      const beltA = a.cinturon_actual || 'Z'
+      const beltB = b.cinturon_actual || 'Z'
+      const beltCompare = beltA.localeCompare(beltB)
+      if (beltCompare !== 0) return beltCompare
+
+      // 4. Ordenar por Nombre
+      return (a.nombres || '').localeCompare(b.nombres || '')
     })
-  }, [rawJudokas, senseiFilter, categoriaFilter])
+  }, [rawJudokas, senseiFilter, categoriaFilter, clubFilter, isAdmin])
 
   const clearFilters = () => {
     setSenseiFilter('all')
     setCategoriaFilter('all')
+    setClubFiltro('all')
     setSearchTerm('')
   }
 
@@ -188,7 +228,7 @@ export default function PagosPage() {
                         Filtros
                       </Button>
 
-                      {(senseiFilter !== 'all' || categoriaFilter !== 'all' || searchTerm !== '') && (
+                      {(senseiFilter !== 'all' || categoriaFilter !== 'all' || clubFilter !== 'all' || searchTerm !== '') && (
                         <Tooltip title="Limpiar filtros">
                           <IconButton onClick={clearFilters} color="warning" size="small">
                             <ClearIcon />
@@ -205,6 +245,24 @@ export default function PagosPage() {
                       alignItems="center"
                       sx={{ pt: 1 }}
                     >
+                      {isAdmin && (
+                        <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white', flexGrow: { xs: 1, md: 0 } }}>
+                          <InputLabel>Club</InputLabel>
+                          <Select
+                            value={clubFilter}
+                            label="Club"
+                            onChange={(e) => setClubFiltro(e.target.value)}
+                          >
+                            <MenuItem value="all">Todos los clubes</MenuItem>
+                            {[...clubes].sort((a, b) => a.nombre_club.localeCompare(b.nombre_club)).map(club => (
+                              <MenuItem key={club.id} value={club.id}>
+                                {club.nombre_club}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      )}
+
                       <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white', flexGrow: { xs: 1, md: 0 } }}>
                         <InputLabel>Sensei</InputLabel>
                         <Select
@@ -271,6 +329,7 @@ export default function PagosPage() {
                         <TableCell sx={{ fontWeight: 'bold' }}>N°</TableCell>
                         <TableCell sx={{ fontWeight: 'bold' }}>Nombre</TableCell>
                         <TableCell sx={{ fontWeight: 'bold' }}>Apellidos</TableCell>
+                        {isAdmin && <TableCell sx={{ fontWeight: 'bold' }}>Club</TableCell>}
                         <TableCell sx={{ fontWeight: 'bold' }}>Categoría</TableCell>
                         <TableCell sx={{ fontWeight: 'bold' }}>Cinturón</TableCell>
                         <TableCell sx={{ fontWeight: 'bold' }}>Sensei</TableCell>
@@ -283,6 +342,7 @@ export default function PagosPage() {
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>{judoka.nombres}</TableCell>
                           <TableCell>{judoka.apellidos}</TableCell>
+                          {isAdmin && <TableCell>{judoka.nombre_club || '-'}</TableCell>}
                           <TableCell>{judoka.categoria || '-'}</TableCell>
                           <TableCell>{judoka.cinturon_actual || '-'}</TableCell>
                           <TableCell>{judoka.nombre_entrenador || 'No asignado'}</TableCell>
