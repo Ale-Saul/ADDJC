@@ -32,6 +32,7 @@ export interface User {
   ci?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   activo: boolean
+  debe_cambiar_password?: boolean // Indica si debe cambiar la contraseña (primer login)
   created_at?: string
   updated_at?: string
 }

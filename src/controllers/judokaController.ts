@@ -1,6 +1,7 @@
 import { judokaService } from '@/services/judokaService'
 import { Judoka, JudokaCreate, JudokaUpdate } from '@/models/judoka'
 import { ApiResponse } from '@/types'
+import { generarPasswordInicial } from '@/utils/passwordUtils'
 
 export const judokaController = {
   /**
@@ -81,9 +82,13 @@ export const judokaController = {
       }
     }
 
+    // Generar contraseña automática basada en el carnet
+    const autoPassword = generarPasswordInicial(judokaData.ci || '')
+
     // Por defecto, el judoka se crea como activo
     const judokaToCreate: JudokaCreate = {
       ...judokaData,
+      password: autoPassword,
       activo: judokaData.activo !== undefined ? judokaData.activo : true
     }
 

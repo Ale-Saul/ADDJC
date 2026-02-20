@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
           ci: ciBody,
           user_type: rol === 'encargado' ? 'sensei' : rol === 'admin' ? 'admin' : rol || 'judoka',
           rol: rol || 'judoka',
+          debe_cambiar_password: true, // Marcar para cambio obligatorio
         },
       })
       authData = result.data

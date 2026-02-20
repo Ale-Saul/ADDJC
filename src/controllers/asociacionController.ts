@@ -1,6 +1,7 @@
 import { asociacionService } from '@/services/asociacionService'
 import { MiembroAsociacion, MiembroAsociacionCreate, MiembroAsociacionUpdate } from '@/models/asociacion'
 import { ApiResponse } from '@/types'
+import { generarPasswordInicial } from '@/utils/passwordUtils'
 
 export const asociacionController = {
   /**
@@ -40,9 +41,8 @@ export const asociacionController = {
       return { success: false, error: 'El email es requerido' }
     }
 
-    if (!miembroData.password || miembroData.password.length < 8) {
-      return { success: false, error: 'La contraseña debe tener al menos 8 caracteres' }
-    }
+    // Generar contraseña automática basada en el carnet
+    const autoPassword = generarPasswordInicial(miembroData.ci || '')
 
     // Validar formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -50,7 +50,12 @@ export const asociacionController = {
       return { success: false, error: 'El formato del email no es válido' }
     }
 
-    return await asociacionService.create(miembroData)
+    const miembroToCreate: MiembroAsociacionCreate = {
+      ...miembroData,
+      password: autoPassword
+    }
+
+    return await asociacionService.create(miembroToCreate)
   },
 
   /**

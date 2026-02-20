@@ -1,6 +1,7 @@
 import { arbitroService } from '@/services/arbitroService'
 import { Arbitro, ArbitroCreate, ArbitroUpdate } from '@/models/arbitro'
 import { ApiResponse } from '@/types'
+import { generarPasswordInicial } from '@/utils/passwordUtils'
 
 export const arbitroController = {
   /**
@@ -53,9 +54,13 @@ export const arbitroController = {
       return { success: false, error: 'Los apellidos no pueden exceder 200 caracteres en total' }
     }
 
+    // Generar contraseña automática basada en el carnet
+    const autoPassword = generarPasswordInicial(arbitroData.ci || '')
+
     // Por defecto, el árbitro se crea como activo
     const arbitroToCreate: ArbitroCreate = {
       ...arbitroData,
+      password: autoPassword,
       activo: arbitroData.activo !== undefined ? arbitroData.activo : true
     }
 

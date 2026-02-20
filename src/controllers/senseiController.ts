@@ -1,6 +1,7 @@
 import { senseiService } from '@/services/senseiService'
 import { Sensei, SenseiCreate, SenseiUpdate } from '@/models/sensei'
 import { ApiResponse } from '@/types'
+import { generarPasswordInicial } from '@/utils/passwordUtils'
 
 export const senseiController = {
   /**
@@ -64,9 +65,13 @@ export const senseiController = {
       return { success: false, error: 'Los apellidos no pueden exceder 200 caracteres en total' }
     }
 
+    // Generar contraseña automática basada en el carnet
+    const autoPassword = generarPasswordInicial(senseiData.ci || '')
+
     // Por defecto, el sensei se crea como activo
     const senseiToCreate: SenseiCreate = {
       ...senseiData,
+      password: autoPassword,
       activo: senseiData.activo !== undefined ? senseiData.activo : true
     }
 
