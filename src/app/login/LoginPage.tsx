@@ -25,7 +25,7 @@ import { loginSchema } from '@/utils/zodSchemas'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { signIn, isAuthenticated, loading: authLoading } = useAuth()
+  const { user, signIn, isAuthenticated, loading: authLoading } = useAuth()
   
   const {
     control,

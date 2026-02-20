@@ -378,10 +378,6 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                   Seleccionar Existente
                 </Button>
               </Box>
-                
-                <Alert severity="info" sx={{ mb: 1 }}>
-                  La contraseña se generará automáticamente como <strong>Judo.[Carnet]</strong> y se enviará por correo al usuario. El director técnico se registrará como encargado automáticamente.
-                </Alert>
 
                 <TextField
                   fullWidth
@@ -455,6 +451,10 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                   disabled={loading}
                   required
                 />
+
+                <Alert severity="info" sx={{ mt: 1 }}>
+                  La contraseña se generará automáticamente y se enviará por correo al usuario. El director técnico se registrará como encargado automáticamente.
+                </Alert>
               </Box>
             )}
           </Box>

@@ -244,10 +244,6 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
       )}
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Alert severity="info" sx={{ mb: 1 }}>
-          La contraseña se generará automáticamente como <strong>Judo.[Carnet]</strong> y se enviará por correo al usuario.
-        </Alert>
-
         <FormControl fullWidth error={fieldError('club_id').error}>
           <InputLabel>Club</InputLabel>
           <Controller
@@ -509,6 +505,12 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
           />
           {fieldError('cinturon_actual').helperText && <FormHelperText>{fieldError('cinturon_actual').helperText}</FormHelperText>}
         </FormControl>
+
+        {!judoka && (
+          <Alert severity="info" sx={{ mt: 1 }}>
+            La contraseña se generará automáticamente y se enviará por correo al usuario.
+          </Alert>
+        )}
       </Box>
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>

@@ -171,10 +171,6 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
       )}
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Alert severity="info" sx={{ mb: 1 }}>
-          La contraseña se generará automáticamente como <strong>Judo.[Carnet]</strong> y se enviará por correo al usuario.
-        </Alert>
-
         <Controller
           name="ci"
           control={control}
@@ -375,6 +371,12 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
             />
           )}
         />
+
+        {!miembro && (
+          <Alert severity="info" sx={{ mt: 1 }}>
+            La contraseña se generará automáticamente y se enviará por correo al usuario.
+          </Alert>
+        )}
       </Box>
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>

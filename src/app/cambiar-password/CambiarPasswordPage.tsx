@@ -19,13 +19,16 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import LockIcon from '@mui/icons-material/Lock'
 import { useAuth } from '@/contexts/AuthContext'
 import { authController } from '@/controllers/authController'
+import { createClient } from '@/lib/supabase/client'
 
 export default function CambiarPasswordPage() {
   const router = useRouter()
   const { user, isAuthenticated, loading: authLoading, refreshUser } = useAuth()
   
+  const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -52,7 +55,7 @@ export default function CambiarPasswordPage() {
     e.preventDefault()
     setError(null)
 
-    if (!newPassword || !confirmPassword) {
+    if (!currentPassword || !newPassword || !confirmPassword) {
       setError('Todos los campos son requeridos')
       return
     }
@@ -63,7 +66,7 @@ export default function CambiarPasswordPage() {
     }
 
     if (newPassword.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres')
+      setError('La nueva contraseña debe tener al menos 8 caracteres')
       return
     }
 
@@ -78,6 +81,21 @@ export default function CambiarPasswordPage() {
     try {
       if (!user) return
 
+      const supabase = createClient()
+      
+      // 1. Verificar la contraseña actual intentando iniciar sesión de nuevo (re-autenticación)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      })
+
+      if (signInError) {
+        setError('La contraseña actual es incorrecta')
+        setLoading(false)
+        return
+      }
+
+      // 2. Proceder con el cambio de contraseña y actualización del flag
       const response = await authController.completePasswordChange(newPassword, user.id)
       
       if (response.success) {
@@ -141,6 +159,29 @@ export default function CambiarPasswordPage() {
           )}
 
           <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%', mt: 1 }}>
+            <TextField
+              margin="normal"
+              fullWidth
+              label="Contraseña Actual"
+              type={showCurrentPassword ? 'text' : 'password'}
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              disabled={loading || success}
+              helperText="La contraseña que recibiste por correo (Judo.[Carnet])"
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      edge="end"
+                    >
+                      {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
             <TextField
               margin="normal"
               fullWidth

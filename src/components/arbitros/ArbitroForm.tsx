@@ -164,10 +164,6 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
       )}
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Alert severity="info" sx={{ mb: 1 }}>
-          La contraseña se generará automáticamente como <strong>Judo.[Carnet]</strong> y se enviará por correo al usuario.
-        </Alert>
-
         <Controller
           name="ci"
           control={control}
@@ -344,6 +340,12 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
           />
           {fieldError('nivel_arbitraje').helperText && <FormHelperText>{fieldError('nivel_arbitraje').helperText}</FormHelperText>}
         </FormControl>
+
+        {!arbitro && (
+          <Alert severity="info" sx={{ mt: 1 }}>
+            La contraseña se generará automáticamente y se enviará por correo al usuario.
+          </Alert>
+        )}
       </Box>
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
