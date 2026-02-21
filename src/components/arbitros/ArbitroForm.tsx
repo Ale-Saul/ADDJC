@@ -15,6 +15,7 @@ import {
   Select,
   MenuItem,
   FormHelperText,
+  Autocomplete,
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
@@ -295,51 +296,53 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
           )}
         />
 
-        <FormControl fullWidth error={fieldError('genero').error}>
-          <InputLabel>Género</InputLabel>
-          <Controller
-            name="genero"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                label="Género"
-                disabled={loading}
-                onFocus={() => setFocusedField('genero')}
-                onBlur={() => setFocusedField(null)}
-              >
-                <MenuItem value=""><em>Sin definir</em></MenuItem>
-                <MenuItem value="Femenino">Femenino</MenuItem>
-                <MenuItem value="Masculino">Masculino</MenuItem>
-                <MenuItem value="Prefiero no decir">Prefiero no decir</MenuItem>
-              </Select>
-            )}
-          />
-          {fieldError('genero').helperText && <FormHelperText>{fieldError('genero').helperText}</FormHelperText>}
-        </FormControl>
+        <Controller
+          name="genero"
+          control={control}
+          render={({ field }) => (
+            <Autocomplete
+              {...field}
+              options={["Femenino", "Masculino", "Prefiero no decir"]}
+              value={field.value || null}
+              onChange={(_, newValue) => {
+                field.onChange(newValue || '')
+              }}
+              disabled={loading}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Género"
+                  error={fieldError('genero').error}
+                  helperText={fieldError('genero').helperText}
+                />
+              )}
+            />
+          )}
+        />
 
-        <FormControl fullWidth error={fieldError('nivel_arbitraje').error}>
-          <InputLabel>Nivel de Arbitraje</InputLabel>
-          <Controller
-            name="nivel_arbitraje"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                label="Nivel de Arbitraje"
-                disabled={loading}
-                onFocus={() => setFocusedField('nivel_arbitraje')}
-                onBlur={() => setFocusedField(null)}
-              >
-                <MenuItem value=""><em>Sin definir</em></MenuItem>
-                <MenuItem value="Regional">Regional</MenuItem>
-                <MenuItem value="Nacional">Nacional</MenuItem>
-                <MenuItem value="Internacional">Internacional</MenuItem>
-              </Select>
-            )}
-          />
-          {fieldError('nivel_arbitraje').helperText && <FormHelperText>{fieldError('nivel_arbitraje').helperText}</FormHelperText>}
-        </FormControl>
+        <Controller
+          name="nivel_arbitraje"
+          control={control}
+          render={({ field }) => (
+            <Autocomplete
+              {...field}
+              options={["Regional", "Nacional", "Internacional"]}
+              value={field.value || null}
+              onChange={(_, newValue) => {
+                field.onChange(newValue || '')
+              }}
+              disabled={loading}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Nivel de Arbitraje"
+                  error={fieldError('nivel_arbitraje').error}
+                  helperText={fieldError('nivel_arbitraje').helperText}
+                />
+              )}
+            />
+          )}
+        />
 
         {!arbitro && (
           <Alert severity="info" sx={{ mt: 1 }}>

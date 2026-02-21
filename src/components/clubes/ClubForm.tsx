@@ -18,6 +18,7 @@ import {
   IconButton,
   Typography,
   FormHelperText,
+  Autocomplete,
 } from '@mui/material'
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
@@ -249,25 +250,32 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
           )}
         />
 
-        <FormControl fullWidth disabled={loading} error={fieldError('provincia').error} required>
-          <InputLabel required>Municipio</InputLabel>
-          <Controller
-            name="provincia"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                label="Municipio"
-                required
-              >
-                {MUNICIPIOS.map(m => (
-                  <MenuItem key={m} value={m}>{m}</MenuItem>
-                ))}
-              </Select>
-            )}
-          />
-          {fieldError('provincia').helperText && <FormHelperText>{fieldError('provincia').helperText}</FormHelperText>}
-        </FormControl>
+        <Controller
+          name="provincia"
+          control={control}
+          render={({ field }) => (
+            <Autocomplete
+              {...field}
+              options={MUNICIPIOS}
+              value={field.value || null}
+              onChange={(_, newValue) => {
+                field.onChange(newValue || '')
+              }}
+              disabled={loading}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Municipio"
+                  required
+                  error={fieldError('provincia').error}
+                  helperText={fieldError('provincia').helperText}
+                  placeholder="Escribe para buscar municipio..."
+                />
+              )}
+              noOptionsText="No se encontró el municipio"
+            />
+          )}
+        />
 
         <Controller
           name="direccion"
@@ -309,36 +317,43 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
           {!isCreatingNewDirector ? (
             // Modo: Seleccionar director técnico existente
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <FormControl fullWidth error={fieldError('director_tecnico_id').error}>
-                <InputLabel>Director Técnico</InputLabel>
-                <Controller
-                  name="director_tecnico_id"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...field}
-                      value={field.value || ''}
-                      disabled={loading || loadingSenseis}
-                      label="Director Técnico"
-                    >
-                      <MenuItem value="">
-                        <em>Sin director técnico</em>
-                      </MenuItem>
-                      {[...senseis].sort((a, b) => {
-                        const nameA = (a.nombres + ' ' + (a.apellidos || '')).trim()
-                        const nameB = (b.nombres + ' ' + (b.apellidos || '')).trim()
-                        return nameA.localeCompare(nameB)
-                      }).map((sensei) => (
-                        <MenuItem key={sensei.id} value={sensei.id}>
-                          {sensei.nombres} {sensei.apellidos}
-                          {sensei.grado_dan && ` - ${sensei.grado_dan}`}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  )}
-                />
-                {fieldError('director_tecnico_id').helperText && <FormHelperText>{fieldError('director_tecnico_id').helperText}</FormHelperText>}
-              </FormControl>
+              <Controller
+                name="director_tecnico_id"
+                control={control}
+                render={({ field }) => (
+                  <Autocomplete
+                    {...field}
+                    options={senseis.sort((a, b) => {
+                      const nameA = (a.nombres + ' ' + (a.apellidos || '')).trim()
+                      const nameB = (b.nombres + ' ' + (b.apellidos || '')).trim()
+                      return nameA.localeCompare(nameB)
+                    })}
+                    getOptionLabel={(option) => 
+                      typeof option === 'string' 
+                        ? (senseis.find(s => s.id === option)?.nombres + ' ' + (senseis.find(s => s.id === option)?.apellidos || '')).trim()
+                        : (option.nombres + ' ' + (option.apellidos || '')).trim() + (option.grado_dan ? ` - ${option.grado_dan}` : '')
+                    }
+                    isOptionEqualToValue={(option, value) => 
+                      typeof value === 'string' ? option.id === value : option.id === value?.id
+                    }
+                    value={senseis.find(s => s.id === field.value) || null}
+                    onChange={(_, newValue) => {
+                      field.onChange(newValue ? newValue.id : null)
+                    }}
+                    disabled={loading || loadingSenseis}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Director Técnico"
+                        error={fieldError('director_tecnico_id').error}
+                        helperText={fieldError('director_tecnico_id').helperText}
+                        placeholder="Escribe para buscar..."
+                      />
+                    )}
+                    noOptionsText="No se encontraron senseis"
+                  />
+                )}
+              />
               
               {!club && (
                 <Button

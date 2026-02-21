@@ -16,6 +16,7 @@ import {
   InputLabel,
   Typography,
   FormHelperText,
+  Autocomplete,
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
@@ -244,67 +245,87 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
       )}
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <FormControl fullWidth error={fieldError('club_id').error}>
-          <InputLabel>Club</InputLabel>
-          <Controller
-            name="club_id"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                label="Club"
-                disabled={loading || loadingClubes || user?.rol === 'sensei' || user?.rol === 'encargado'}
-                onFocus={() => setFocusedField('club_id')}
-                onBlur={() => setFocusedField(null)}
-              >
-                <MenuItem value=""><em>Sin club</em></MenuItem>
-                {sortedClubes.map((club) => (
-                  <MenuItem key={club.id} value={club.id}>{club.nombre_club}</MenuItem>
-                ))}
-              </Select>
-            )}
-          />
-          {fieldError('club_id').helperText && <FormHelperText>{fieldError('club_id').helperText}</FormHelperText>}
-          {(user?.rol === 'sensei' || user?.rol === 'encargado') && (
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-              Los judokas se crearán automáticamente en tu club
-            </Typography>
+        <Controller
+          name="club_id"
+          control={control}
+          render={({ field }) => (
+            <Autocomplete
+              {...field}
+              options={sortedClubes}
+              getOptionLabel={(option) => 
+                typeof option === 'string' 
+                  ? sortedClubes.find(c => c.id === option)?.nombre_club || ''
+                  : option.nombre_club
+              }
+              isOptionEqualToValue={(option, value) => 
+                typeof value === 'string' ? option.id === value : option.id === value?.id
+              }
+              value={sortedClubes.find(c => c.id === field.value) || null}
+              onChange={(_, newValue) => {
+                field.onChange(newValue ? newValue.id : '')
+              }}
+              disabled={loading || loadingClubes || user?.rol === 'sensei' || user?.rol === 'encargado'}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Club"
+                  error={fieldError('club_id').error}
+                  helperText={fieldError('club_id').helperText}
+                  placeholder="Escribe para buscar club..."
+                />
+              )}
+              noOptionsText="No se encontraron clubes"
+            />
           )}
-        </FormControl>
+        />
+        {(user?.rol === 'sensei' || user?.rol === 'encargado') && (
+          <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5, mb: 1, ml: 1 }}>
+            Los judokas se crearán automáticamente en tu club
+          </Typography>
+        )}
 
-        <FormControl fullWidth error={fieldError('entrenador_id').error}>
-          <InputLabel>Entrenador</InputLabel>
-          <Controller
-            name="entrenador_id"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                label="Entrenador"
-                disabled={loading || loadingSenseis || !watchClubId || user?.rol === 'sensei'}
-                onFocus={() => setFocusedField('entrenador_id')}
-                onBlur={() => setFocusedField(null)}
-              >
-                <MenuItem value=""><em>Sin entrenador</em></MenuItem>
-                {sortedSenseis.map((sensei) => (
-                  <MenuItem key={sensei.id} value={sensei.id}>
-                    {sensei.nombres} {sensei.apellidos}
-                  </MenuItem>
-                ))}
-              </Select>
-            )}
-          />
-          {fieldError('entrenador_id').helperText && <FormHelperText>{fieldError('entrenador_id').helperText}</FormHelperText>}
-          {user?.rol === 'sensei' ? (
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-              Serás asignado automáticamente como entrenador
-            </Typography>
-          ) : !watchClubId && (
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-              Selecciona un club primero para ver los entrenadores disponibles
-            </Typography>
+        <Controller
+          name="entrenador_id"
+          control={control}
+          render={({ field }) => (
+            <Autocomplete
+              {...field}
+              options={sortedSenseis}
+              getOptionLabel={(option) => 
+                typeof option === 'string' 
+                  ? (sortedSenseis.find(s => s.id === option)?.nombres + ' ' + (sortedSenseis.find(s => s.id === option)?.apellidos || '')).trim()
+                  : (option.nombres + ' ' + (option.apellidos || '')).trim()
+              }
+              isOptionEqualToValue={(option, value) => 
+                typeof value === 'string' ? option.id === value : option.id === value?.id
+              }
+              value={sortedSenseis.find(s => s.id === field.value) || null}
+              onChange={(_, newValue) => {
+                field.onChange(newValue ? newValue.id : '')
+              }}
+              disabled={loading || loadingSenseis || !watchClubId || user?.rol === 'sensei'}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Entrenador"
+                  error={fieldError('entrenador_id').error}
+                  helperText={fieldError('entrenador_id').helperText}
+                  placeholder={!watchClubId ? "Selecciona un club primero" : "Escribe para buscar entrenador..."}
+                />
+              )}
+              noOptionsText="No se encontraron entrenadores"
+            />
           )}
-        </FormControl>
+        />
+        {user?.rol === 'sensei' ? (
+          <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5, mb: 1, ml: 1 }}>
+            Serás asignado automáticamente como entrenador
+          </Typography>
+        ) : !watchClubId && (
+          <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5, mb: 1, ml: 1 }}>
+            Selecciona un club primero para ver los entrenadores disponibles
+          </Typography>
+        )}
 
         <Controller
           name="ci"
@@ -437,74 +458,77 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
           )}
         />
 
-        <FormControl fullWidth error={fieldError('genero').error}>
-          <InputLabel>Género</InputLabel>
-          <Controller
-            name="genero"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                label="Género"
-                disabled={loading}
-                onFocus={() => setFocusedField('genero')}
-                onBlur={() => setFocusedField(null)}
-              >
-                <MenuItem value=""><em>Sin definir</em></MenuItem>
-                {generos.map(g => (
-                  <MenuItem key={g} value={g}>{g}</MenuItem>
-                ))}
-              </Select>
-            )}
-          />
-          {fieldError('genero').helperText && <FormHelperText>{fieldError('genero').helperText}</FormHelperText>}
-        </FormControl>
+        <Controller
+          name="genero"
+          control={control}
+          render={({ field }) => (
+            <Autocomplete
+              {...field}
+              options={generos}
+              value={field.value || null}
+              onChange={(_, newValue) => {
+                field.onChange(newValue || '')
+              }}
+              disabled={loading}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Género"
+                  error={fieldError('genero').error}
+                  helperText={fieldError('genero').helperText}
+                />
+              )}
+            />
+          )}
+        />
 
-        <FormControl fullWidth error={fieldError('categoria').error}>
-          <InputLabel>Categoría</InputLabel>
-          <Controller
-            name="categoria"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                label="Categoría"
-                disabled={loading}
-                onFocus={() => setFocusedField('categoria')}
-                onBlur={() => setFocusedField(null)}
-              >
-                <MenuItem value=""><em>Sin definir</em></MenuItem>
-                {categorias.map(c => (
-                  <MenuItem key={c} value={c}>{c}</MenuItem>
-                ))}
-              </Select>
-            )}
-          />
-          {fieldError('categoria').helperText && <FormHelperText>{fieldError('categoria').helperText}</FormHelperText>}
-        </FormControl>
+        <Controller
+          name="categoria"
+          control={control}
+          render={({ field }) => (
+            <Autocomplete
+              {...field}
+              options={categorias}
+              value={field.value || null}
+              onChange={(_, newValue) => {
+                field.onChange(newValue || '')
+              }}
+              disabled={loading}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Categoría"
+                  error={fieldError('categoria').error}
+                  helperText={fieldError('categoria').helperText}
+                />
+              )}
+            />
+          )}
+        />
 
-        <FormControl fullWidth error={fieldError('cinturon_actual').error}>
-          <InputLabel>Cinturón Actual</InputLabel>
-          <Controller
-            name="cinturon_actual"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                label="Cinturón Actual"
-                disabled={loading}
-                onFocus={() => setFocusedField('cinturon_actual')}
-                onBlur={() => setFocusedField(null)}
-              >
-                <MenuItem value=""><em>Sin definir</em></MenuItem>
-                {cinturones.map(c => (
-                  <MenuItem key={c} value={c}>{c}</MenuItem>
-                ))}
-              </Select>
-            )}
-          />
-          {fieldError('cinturon_actual').helperText && <FormHelperText>{fieldError('cinturon_actual').helperText}</FormHelperText>}
-        </FormControl>
+        <Controller
+          name="cinturon_actual"
+          control={control}
+          render={({ field }) => (
+            <Autocomplete
+              {...field}
+              options={cinturones}
+              value={field.value || null}
+              onChange={(_, newValue) => {
+                field.onChange(newValue || '')
+              }}
+              disabled={loading}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Cinturón Actual"
+                  error={fieldError('cinturon_actual').error}
+                  helperText={fieldError('cinturon_actual').helperText}
+                />
+              )}
+            />
+          )}
+        />
 
         {!judoka && (
           <Alert severity="info" sx={{ mt: 1 }}>

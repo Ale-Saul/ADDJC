@@ -16,6 +16,7 @@ import {
   InputLabel,
   Typography,
   FormHelperText,
+  Autocomplete,
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
@@ -199,33 +200,44 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
       )}
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <FormControl fullWidth error={fieldError('club_id').error}>
-          <InputLabel>Club</InputLabel>
-          <Controller
-            name="club_id"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                label="Club"
-                disabled={loading || loadingClubes || user?.rol === 'encargado'}
-                onFocus={() => setFocusedField('club_id')}
-                onBlur={() => setFocusedField(null)}
-              >
-                <MenuItem value=""><em>Sin club</em></MenuItem>
-                {[...clubes].sort((a, b) => a.nombre_club.localeCompare(b.nombre_club)).map((club) => (
-                  <MenuItem key={club.id} value={club.id}>{club.nombre_club}</MenuItem>
-                ))}
-              </Select>
-            )}
-          />
-          {fieldError('club_id').helperText && <FormHelperText>{fieldError('club_id').helperText}</FormHelperText>}
-          {user?.rol === 'encargado' && (
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-              Los senseis se crearán automáticamente en tu club
-            </Typography>
+        <Controller
+          name="club_id"
+          control={control}
+          render={({ field }) => (
+            <Autocomplete
+              {...field}
+              options={clubes.sort((a, b) => a.nombre_club.localeCompare(b.nombre_club))}
+              getOptionLabel={(option) => 
+                typeof option === 'string' 
+                  ? clubes.find(c => c.id === option)?.nombre_club || ''
+                  : option.nombre_club
+              }
+              isOptionEqualToValue={(option, value) => 
+                typeof value === 'string' ? option.id === value : option.id === value?.id
+              }
+              value={clubes.find(c => c.id === field.value) || null}
+              onChange={(_, newValue) => {
+                field.onChange(newValue ? newValue.id : '')
+              }}
+              disabled={loading || loadingClubes || user?.rol === 'encargado'}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Club"
+                  error={fieldError('club_id').error}
+                  helperText={fieldError('club_id').helperText}
+                  placeholder="Escribe para buscar club..."
+                />
+              )}
+              noOptionsText="No se encontraron clubes"
+            />
           )}
-        </FormControl>
+        />
+        {user?.rol === 'encargado' && (
+          <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5, mb: 1, ml: 1 }}>
+            Los senseis se crearán automáticamente en tu club
+          </Typography>
+        )}
 
         <Controller
           name="ci"
@@ -358,81 +370,81 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
           )}
         />
 
-        <FormControl fullWidth error={fieldError('genero').error}>
-          <InputLabel>Género</InputLabel>
-          <Controller
-            name="genero"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                label="Género"
-                disabled={loading}
-                onFocus={() => setFocusedField('genero')}
-                onBlur={() => setFocusedField(null)}
-              >
-                <MenuItem value=""><em>Sin definir</em></MenuItem>
-                <MenuItem value="Femenino">Femenino</MenuItem>
-                <MenuItem value="Masculino">Masculino</MenuItem>
-                <MenuItem value="Prefiero no decir">Prefiero no decir</MenuItem>
-              </Select>
-            )}
-          />
-          {fieldError('genero').helperText && <FormHelperText>{fieldError('genero').helperText}</FormHelperText>}
-        </FormControl>
+        <Controller
+          name="genero"
+          control={control}
+          render={({ field }) => (
+            <Autocomplete
+              {...field}
+              options={["Femenino", "Masculino", "Prefiero no decir"]}
+              value={field.value || null}
+              onChange={(_, newValue) => {
+                field.onChange(newValue || '')
+              }}
+              disabled={loading}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Género"
+                  error={fieldError('genero').error}
+                  helperText={fieldError('genero').helperText}
+                />
+              )}
+            />
+          )}
+        />
 
-        <FormControl fullWidth error={fieldError('grado_dan').error}>
-          <InputLabel>Grado Dan</InputLabel>
-          <Controller
-            name="grado_dan"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                label="Grado Dan"
-                disabled={loading}
-                onFocus={() => setFocusedField('grado_dan')}
-                onBlur={() => setFocusedField(null)}
-              >
-                <MenuItem value=""><em>Sin definir</em></MenuItem>
-                <MenuItem value="1er Dan">1er Dan</MenuItem>
-                <MenuItem value="2do Dan">2do Dan</MenuItem>
-                <MenuItem value="3er Dan">3er Dan</MenuItem>
-                <MenuItem value="4to Dan">4to Dan</MenuItem>
-                <MenuItem value="5to Dan">5to Dan</MenuItem>
-                <MenuItem value="6to Dan">6to Dan</MenuItem>
-                <MenuItem value="7mo Dan">7mo Dan</MenuItem>
-                <MenuItem value="8vo Dan">8vo Dan</MenuItem>
-                <MenuItem value="9no Dan">9no Dan</MenuItem>
-                <MenuItem value="10mo Dan">10mo Dan</MenuItem>
-              </Select>
-            )}
-          />
-          {fieldError('grado_dan').helperText && <FormHelperText>{fieldError('grado_dan').helperText}</FormHelperText>}
-        </FormControl>
+        <Controller
+          name="grado_dan"
+          control={control}
+          render={({ field }) => (
+            <Autocomplete
+              {...field}
+              options={["1er Dan", "2do Dan", "3er Dan", "4to Dan", "5to Dan", "6to Dan", "7mo Dan", "8vo Dan", "9no Dan", "10mo Dan"]}
+              value={field.value || null}
+              onChange={(_, newValue) => {
+                field.onChange(newValue || '')
+              }}
+              disabled={loading}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Grado Dan"
+                  error={fieldError('grado_dan').error}
+                  helperText={fieldError('grado_dan').helperText}
+                  placeholder="Escribe para buscar grado..."
+                />
+              )}
+              noOptionsText="No se encontró el grado"
+            />
+          )}
+        />
 
-        <FormControl fullWidth error={fieldError('especialidad').error}>
-          <InputLabel>Especialidad</InputLabel>
-          <Controller
-            name="especialidad"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                label="Especialidad"
-                disabled={loading}
-                onFocus={() => setFocusedField('especialidad')}
-                onBlur={() => setFocusedField(null)}
-              >
-                <MenuItem value=""><em>Sin definir</em></MenuItem>
-                {[...ESPECIALIDADES_SENSEI].sort((a, b) => a.localeCompare(b)).map(esp => (
-                  <MenuItem key={esp} value={esp}>{esp}</MenuItem>
-                ))}
-              </Select>
-            )}
-          />
-          {fieldError('especialidad').helperText && <FormHelperText>{fieldError('especialidad').helperText}</FormHelperText>}
-        </FormControl>
+        <Controller
+          name="especialidad"
+          control={control}
+          render={({ field }) => (
+            <Autocomplete
+              {...field}
+              options={[...ESPECIALIDADES_SENSEI].sort((a, b) => a.localeCompare(b))}
+              value={field.value || null}
+              onChange={(_, newValue) => {
+                field.onChange(newValue || '')
+              }}
+              disabled={loading}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Especialidad"
+                  error={fieldError('especialidad').error}
+                  helperText={fieldError('especialidad').helperText}
+                  placeholder="Escribe para buscar especialidad..."
+                />
+              )}
+              noOptionsText="No se encontró la especialidad"
+            />
+          )}
+        />
 
         {!sensei && (
           <Alert severity="info" sx={{ mt: 1 }}>

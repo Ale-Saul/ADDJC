@@ -15,6 +15,7 @@ import {
   Select,
   MenuItem,
   FormHelperText,
+  Autocomplete,
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
@@ -284,28 +285,29 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
           )}
         />
 
-        <FormControl fullWidth error={fieldError('genero').error}>
-          <InputLabel>Género</InputLabel>
-          <Controller
-            name="genero"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                label="Género"
-                disabled={loading}
-                onFocus={() => setFocusedField('genero')}
-                onBlur={() => setFocusedField(null)}
-              >
-                <MenuItem value=""><em>Sin definir</em></MenuItem>
-                <MenuItem value="Masculino">Masculino</MenuItem>
-                <MenuItem value="Femenino">Femenino</MenuItem>
-                <MenuItem value="Prefiero no decir">Prefiero no decir</MenuItem>
-              </Select>
-            )}
-          />
-          {fieldError('genero').helperText && <FormHelperText>{fieldError('genero').helperText}</FormHelperText>}
-        </FormControl>
+        <Controller
+          name="genero"
+          control={control}
+          render={({ field }) => (
+            <Autocomplete
+              {...field}
+              options={["Masculino", "Femenino", "Prefiero no decir"]}
+              value={field.value || null}
+              onChange={(_, newValue) => {
+                field.onChange(newValue || '')
+              }}
+              disabled={loading}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Género"
+                  error={fieldError('genero').error}
+                  helperText={fieldError('genero').helperText}
+                />
+              )}
+            />
+          )}
+        />
 
         <Controller
           name="fecha_ingreso"
@@ -331,28 +333,31 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
           )}
         />
 
-        <FormControl fullWidth error={fieldError('cargo').error}>
-          <InputLabel>Cargo</InputLabel>
-          <Controller
-            name="cargo"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                label="Cargo"
-                disabled={loading}
-                onFocus={() => setFocusedField('cargo')}
-                onBlur={() => setFocusedField(null)}
-              >
-                <MenuItem value=""><em>Sin cargo</em></MenuItem>
-                {CARGOS_ASOCIACION.map(c => (
-                  <MenuItem key={c} value={c}>{c}</MenuItem>
-                ))}
-              </Select>
-            )}
-          />
-          {fieldError('cargo').helperText && <FormHelperText>{fieldError('cargo').helperText}</FormHelperText>}
-        </FormControl>
+        <Controller
+          name="cargo"
+          control={control}
+          render={({ field }) => (
+            <Autocomplete
+              {...field}
+              options={CARGOS_ASOCIACION}
+              value={field.value || null}
+              onChange={(_, newValue) => {
+                field.onChange(newValue || '')
+              }}
+              disabled={loading}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Cargo"
+                  error={fieldError('cargo').error}
+                  helperText={fieldError('cargo').helperText}
+                  placeholder="Escribe para buscar cargo..."
+                />
+              )}
+              noOptionsText="No se encontró el cargo"
+            />
+          )}
+        />
 
         <Controller
           name="email"
