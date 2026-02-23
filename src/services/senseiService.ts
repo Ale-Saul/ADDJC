@@ -92,7 +92,8 @@ export const senseiService = {
 
       const mapped = (data || [])
         .map((row: any) => mapSenseiRow(row))
-        .filter(s => s.activo)
+        // No filtramos aquí para permitir que el frontend maneje activos/inactivos
+        // .filter(s => s.activo) 
 
       return { success: true, data: mapped }
     } catch (error) {

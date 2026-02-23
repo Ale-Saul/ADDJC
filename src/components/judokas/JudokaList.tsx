@@ -107,7 +107,9 @@ export default function JudokaList({
   }
 
   useEffect(() => {
-    if (!judokasProp) {
+    if (judokasProp) {
+      setJudokasLocal(judokasProp)
+    } else {
       loadJudokas()
     }
   }, [refreshTrigger, clubId, entrenadorId, judokasProp])
@@ -117,7 +119,7 @@ export default function JudokaList({
     setModifiedIds(new Set())
   }, [externalSearchTerm])
 
-  const judokas = judokasProp || judokasLocal
+  const judokas = judokasLocal
   const isLoading = isLoadingProp !== undefined ? isLoadingProp : loading
 
   // Definición de columnas con TanStack Table

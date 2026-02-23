@@ -32,6 +32,7 @@ import { Sensei } from '@/models/sensei'
 import { useAuth } from '@/contexts/AuthContext'
 import { judokaSchema } from '@/utils/zodSchemas'
 import { formatCIInput, formatCelularInput, formatNameInput } from '@/utils/inputMasks'
+import { CATEGORIES, BELT_COLORS } from '@/utils/constants'
 
 interface JudokaFormProps {
   judoka?: Judoka | null
@@ -110,8 +111,8 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     return nameA.localeCompare(nameB)
   })
   const generos = ["Masculino", "Femenino", "Prefiero no decir"].sort((a, b) => a.localeCompare(b))
-  const categorias = ["Preinfantil", "Infantil", "Cadete", "Junior", "Senior"].sort((a, b) => a.localeCompare(b))
-  const cinturones = ["Blanco", "Amarillo", "Naranja", "Verde", "Azul", "Café", "Negro"].sort((a, b) => a.localeCompare(b))
+  const categorias = [...CATEGORIES]
+  const cinturones = [...BELT_COLORS]
 
   useEffect(() => {
     const loadClubes = async () => {

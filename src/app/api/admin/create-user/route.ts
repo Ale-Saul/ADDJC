@@ -209,6 +209,7 @@ export async function POST(request: NextRequest) {
 
     // Enviar correo de bienvenida con credenciales
     // Solo si tenemos el carnet (que se usa en la contraseña) y la contraseña
+    /* DESHABILITADO TEMPORALMENTE PARA PRUEBAS
     if (ciBody && password) {
       const emailHtml = getWelcomeEmailTemplate(nombresTrimmed, ciBody, password)
       
@@ -227,6 +228,7 @@ export async function POST(request: NextRequest) {
         console.error('Error inesperado al enviar correo:', err)
       })
     }
+    */
 
     return NextResponse.json({
       success: true,

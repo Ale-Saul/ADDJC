@@ -131,21 +131,20 @@ export const ESPECIALIDADES_SENSEI = [
 ] as const
 
 export const BELT_COLORS = [
-  'Amarillo',
-  'Azul',
   'Blanco',
-  'Marrón',
+  'Amarillo',
   'Naranja',
-  'Negro',
   'Verde',
+  'Azul',
+  'Café',
+  'Negro',
 ] as const
 
 export const CATEGORIES = [
-  'Cadete',
+  'Preinfantil',
   'Infantil',
-  'Juvenil',
-  'Master',
-  'Mini',
+  'Cadete',
+  'Junior',
   'Senior',
 ] as const
 

@@ -62,22 +62,15 @@ export const judokaService = {
         .select(selectJudokasWithUsuario)
         .order('created_at', { ascending: false })
 
-      if (!includeInactive) {
-        // Filtramos en memoria por ahora para evitar problemas con joins
-        const { data: activeData, error: activeError } = await query
-        if (activeError) throw activeError
-        
-        const mapped = (activeData || [])
-          .map(mapJudokaRow)
-          .filter(j => j.activo)
-          
-        return { success: true, data: mapped }
-      }
-
       const { data, error } = await query
       if (error) throw error
 
-      const mapped = (data || []).map(mapJudokaRow)
+      let mapped = (data || []).map(mapJudokaRow)
+      
+      if (!includeInactive) {
+        mapped = mapped.filter(j => j.activo)
+      }
+          
       return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
@@ -101,7 +94,6 @@ export const judokaService = {
 
       const mapped = (data || [])
         .map(mapJudokaRow)
-        .filter(j => j.activo) // Filtrar siempre activos por defecto en getByClub
 
       return { success: true, data: mapped }
     } catch (error) {
@@ -126,7 +118,6 @@ export const judokaService = {
 
       const mapped = (data || [])
         .map(mapJudokaRow)
-        .filter(j => j.activo) // Filtrar siempre activos por defecto en getByEntrenador
 
       return { success: true, data: mapped }
     } catch (error) {
