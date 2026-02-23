@@ -22,7 +22,9 @@ import {
   Card,
   CardContent,
   CircularProgress,
-  Chip
+  Chip,
+  Tooltip,
+  IconButton
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
@@ -260,7 +262,7 @@ export default function ReportesPage() {
     // Información del período
     doc.setFontSize(11)
     doc.text(`Período: ${formatters.formatDate(fechaInicio)} - ${formatters.formatDate(fechaFin)}`, 14, 28)
-    doc.text(`Fecha de generación: ${formatters.formatDate(new Date())}`, 14, 34)
+    doc.text(`Fecha de generación: ${formatters.formatDateTime(new Date(), true)}`, 14, 34)
     
     // Totales
     const totalCobrado = pagosFiltrados
@@ -302,6 +304,15 @@ export default function ReportesPage() {
         4: { cellWidth: 22, halign: 'right' },
         5: { cellWidth: 20 },
         6: { cellWidth: 22 }
+      },
+      didDrawPage: (data) => {
+        // Numeración de páginas (lado inferior derecho, solo número)
+        const str = `${doc.internal.getNumberOfPages()}`
+        doc.setFontSize(10)
+        const pageSize = doc.internal.pageSize
+        const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight()
+        const pageWidth = pageSize.width ? pageSize.width : pageSize.getWidth()
+        doc.text(str, pageWidth - 15, pageHeight - 10)
       }
     })
 
@@ -322,10 +333,10 @@ export default function ReportesPage() {
 
   const getTipoLabel = (tipo: string) => {
     const labels: Record<string, string> = {
-      cuota_mensual: 'Cuota Mensual',
-      cuota_traje: 'Cuota Traje',
+      mensualidad: 'Mensualidad',
       inscripcion: 'Inscripción',
-      examen_grado: 'Examen de Grado',
+      examen: 'Examen',
+      torneo: 'Torneo',
       evento: 'Evento',
       otro: 'Otro'
     }
@@ -492,10 +503,10 @@ export default function ReportesPage() {
                     >
                       <MenuItem value="todos">Todos los tipos</MenuItem>
                       {[
-                        { val: 'cuota_mensual', label: 'Cuota Mensual' },
-                        { val: 'cuota_traje', label: 'Cuota Traje' },
+                        { val: 'mensualidad', label: 'Mensualidad' },
                         { val: 'inscripcion', label: 'Inscripción' },
-                        { val: 'examen_grado', label: 'Examen de Grado' },
+                        { val: 'examen', label: 'Examen' },
+                        { val: 'torneo', label: 'Torneo' },
                         { val: 'evento', label: 'Evento' },
                         { val: 'otro', label: 'Otro' }
                       ].sort((a, b) => a.label.localeCompare(b.label)).map(tipo => (

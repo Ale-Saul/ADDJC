@@ -41,9 +41,9 @@ export const formatters = {
   },
 
   /**
-   * Formatea una fecha y hora
+   * Formatea una fecha y hora con segundos
    */
-  formatDateTime(date: string | Date): string {
+  formatDateTime(date: string | Date, includeSeconds: boolean = false): string {
     const d = new Date(date)
     return d.toLocaleString('es-ES', {
       day: '2-digit',
@@ -51,6 +51,7 @@ export const formatters = {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      second: includeSeconds ? '2-digit' : undefined
     })
   },
 

@@ -28,7 +28,7 @@ describe('HistorialPagos', () => {
     fecha_pago: '2024-01-15',
     metodo_pago: 'efectivo',
     observaciones_pago: null,
-    pagado_por: 'user-123',
+    pagador_id: 'user-123',
     created_at: '2024-01-01T00:00:00.000Z',
     updated_at: '2024-01-15T00:00:00.000Z',
     ...overrides

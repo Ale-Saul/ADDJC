@@ -244,6 +244,18 @@ export default function ReportesAsociacionPage() {
     }
   }, [resumenesPorClub, clubes])
 
+  const getTipoLabel = (tipo: string) => {
+    const labels: Record<string, string> = {
+      mensualidad: 'Mensualidad',
+      inscripcion: 'Inscripción',
+      examen: 'Examen',
+      torneo: 'Torneo',
+      evento: 'Evento',
+      otro: 'Otro'
+    }
+    return labels[tipo] || tipo
+  }
+
   const exportarPDF = () => {
     const doc = new jsPDF()
     
@@ -259,7 +271,7 @@ export default function ReportesAsociacionPage() {
     // Información
     doc.setFontSize(11)
     doc.text(`Período: ${formatters.formatDate(fechaInicio)} - ${formatters.formatDate(fechaFin)}`, 14, 28)
-    doc.text(`Fecha de generación: ${formatters.formatDate(new Date())}`, 14, 34)
+    doc.text(`Fecha de generación: ${formatters.formatDateTime(new Date(), true)}`, 14, 34)
     
     if (vistaDetalle === 'club') {
       // Totales generales
@@ -290,6 +302,14 @@ export default function ReportesAsociacionPage() {
           2: { cellWidth: 30, halign: 'right' },
           3: { cellWidth: 30, halign: 'right' },
           4: { cellWidth: 30, halign: 'right' }
+        },
+        didDrawPage: (data) => {
+          const str = `${doc.internal.getNumberOfPages()}`
+          doc.setFontSize(10)
+          const pageSize = doc.internal.pageSize
+          const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight()
+          const pageWidth = pageSize.width ? pageSize.width : pageSize.getWidth()
+          doc.text(str, pageWidth - 15, pageHeight - 10)
         }
       })
     } else if (vistaDetalle === 'judokas') {
@@ -330,6 +350,14 @@ export default function ReportesAsociacionPage() {
           4: { cellWidth: 23, halign: 'right' },
           5: { cellWidth: 23, halign: 'right' },
           6: { cellWidth: 23, halign: 'right' }
+        },
+        didDrawPage: (data) => {
+          const str = `${doc.internal.getNumberOfPages()}`
+          doc.setFontSize(10)
+          const pageSize = doc.internal.pageSize
+          const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight()
+          const pageWidth = pageSize.width ? pageSize.width : pageSize.getWidth()
+          doc.text(str, pageWidth - 15, pageHeight - 10)
         }
       })
     } else {
@@ -347,7 +375,7 @@ export default function ReportesAsociacionPage() {
         p.judoka_nombre || 'N/A',
         p.club_nombre || 'N/A',
         p.concepto,
-        p.tipo_pago,
+        getTipoLabel(p.tipo_pago),
         `Bs. ${p.monto_final.toFixed(2)}`,
         p.estado
       ])
@@ -367,6 +395,14 @@ export default function ReportesAsociacionPage() {
           4: { cellWidth: 25 },
           5: { cellWidth: 22, halign: 'right' },
           6: { cellWidth: 20, halign: 'center' }
+        },
+        didDrawPage: (data) => {
+          const str = `${doc.internal.getNumberOfPages()}`
+          doc.setFontSize(10)
+          const pageSize = doc.internal.pageSize
+          const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight()
+          const pageWidth = pageSize.width ? pageSize.width : pageSize.getWidth()
+          doc.text(str, pageWidth - 15, pageHeight - 10)
         }
       })
     }
@@ -432,7 +468,7 @@ export default function ReportesAsociacionPage() {
         p.judoka_nombre || 'N/A',
         p.club_nombre || 'N/A',
         p.concepto,
-        p.tipo_pago,
+        getTipoLabel(p.tipo_pago),
         p.monto_base.toFixed(2),
         p.tiene_descuento ? (p.tipo_descuento === 'porcentaje' ? `${p.descuento_porcentaje}%` : `Bs. ${p.descuento_monto}`) : 'N/A',
         p.monto_final.toFixed(2),
@@ -854,7 +890,7 @@ export default function ReportesAsociacionPage() {
                       </TableCell>
                       <TableCell>
                         <Typography variant="caption">
-                          {pago.tipo_pago}
+                          {getTipoLabel(pago.tipo_pago)}
                         </Typography>
                       </TableCell>
                       <TableCell align="right">

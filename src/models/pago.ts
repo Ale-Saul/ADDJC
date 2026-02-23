@@ -1,8 +1,8 @@
 export type TipoPago = 
-  | 'cuota_mensual'
-  | 'cuota_traje'
+  | 'mensualidad'
   | 'inscripcion'
-  | 'examen_grado'
+  | 'examen'
+  | 'torneo'
   | 'evento'
   | 'otro'
 
@@ -10,20 +10,21 @@ export type EstadoPago =
   | 'pendiente'
   | 'pagado'
   | 'vencido'
-  | 'parcial'
   | 'cancelado'
+  | 'reembolsado'
 
 export type TipoDescuento = 
   | 'porcentaje'
-  | 'monto'
+  | 'monto_fijo'
+  | 'ninguno'
 
 export type RazonDescuento = 
   | 'beca'
-  | 'descuento_hermanos'
-  | 'descuento_especial'
   | 'promocion'
-  | 'ayuda_social'
-  | 'ninguna'
+  | 'hermanos'
+  | 'anticipado'
+  | 'especial'
+  | 'ninguno'
 
 export interface Pago {
   id: string
@@ -46,7 +47,7 @@ export interface Pago {
   comprobante_url: string | null
   observaciones_pago: string | null
   creador_id: string
-  pagado_por: string | null
+  pagador_id: string | null
   activo: boolean
   created_at: string
   updated_at: string
@@ -91,6 +92,6 @@ export interface PagoUpdate {
   metodo_pago?: string | null
   comprobante_url?: string | null
   observaciones_pago?: string | null
-  pagado_por?: string | null
+  pagador_id?: string | null
   activo?: boolean
 }

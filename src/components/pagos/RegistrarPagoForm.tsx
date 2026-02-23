@@ -72,7 +72,7 @@ export default function RegistrarPagoForm({ pagos, onSuccess, onCancel }: Regist
           fecha_pago: formData.fecha_pago,
           metodo_pago: formData.metodo_pago,
           observaciones_pago: formData.observaciones_pago || null,
-          pagado_por: user?.id || null
+          pagador_id: user?.id || null
         })
       )
 

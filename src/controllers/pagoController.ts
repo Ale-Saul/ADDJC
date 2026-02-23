@@ -90,7 +90,7 @@ export const pagoController = {
         if (!pagoData.descuento_porcentaje || pagoData.descuento_porcentaje < 0 || pagoData.descuento_porcentaje > 100) {
           return { success: false, error: 'El descuento por porcentaje debe estar entre 0 y 100' }
         }
-      } else if (pagoData.tipo_descuento === 'monto') {
+      } else if (pagoData.tipo_descuento === 'monto_fijo') {
         if (!pagoData.descuento_monto || pagoData.descuento_monto < 0) {
           return { success: false, error: 'El descuento en monto debe ser mayor a 0' }
         }
@@ -163,7 +163,7 @@ export const pagoController = {
         if (!descuentoPorcentaje || descuentoPorcentaje < 0 || descuentoPorcentaje > 100) {
           return { success: false, error: 'El descuento por porcentaje debe estar entre 0 y 100' }
         }
-      } else if (tipoDescuento === 'monto') {
+      } else if (tipoDescuento === 'monto_fijo') {
         const descuentoMonto = pagoData.descuento_monto !== undefined 
           ? pagoData.descuento_monto 
           : existingPago.data.descuento_monto

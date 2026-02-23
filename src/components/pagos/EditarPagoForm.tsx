@@ -28,16 +28,16 @@ interface EditarPagoFormProps {
 }
 
 export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPagoFormProps) {
-  const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState({
     tipo_pago: pago.tipo_pago,
     concepto: pago.concepto,
     descripcion: pago.descripcion || '',
     monto_base: pago.monto_base,
     tiene_descuento: pago.tiene_descuento,
-    tipo_descuento: pago.tipo_descuento,
+    tipo_descuento: pago.tipo_descuento || 'ninguno',
     descuento_porcentaje: pago.descuento_porcentaje,
     descuento_monto: pago.descuento_monto,
-    razon_descuento: pago.razon_descuento,
+    razon_descuento: pago.razon_descuento || 'ninguno',
     fecha_vencimiento: pago.fecha_vencimiento
   })
   const [montoFinal, setMontoFinal] = useState(pago.monto_final)
@@ -53,7 +53,7 @@ export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPago
     if (formData.tiene_descuento) {
       if (formData.tipo_descuento === 'porcentaje' && formData.descuento_porcentaje) {
         final = montoBase - (montoBase * formData.descuento_porcentaje / 100)
-      } else if (formData.tipo_descuento === 'monto' && formData.descuento_monto) {
+      } else if (formData.tipo_descuento === 'monto_fijo' && formData.descuento_monto) {
         final = montoBase - formData.descuento_monto
       }
     }
@@ -98,10 +98,13 @@ export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPago
       ...prev,
       [name]: checked,
       ...(name === 'tiene_descuento' && !checked ? {
-        tipo_descuento: null,
+        tipo_descuento: 'ninguno',
         descuento_porcentaje: null,
         descuento_monto: null,
-        razon_descuento: null
+        razon_descuento: 'ninguno'
+      } : name === 'tiene_descuento' && checked ? {
+        tipo_descuento: 'porcentaje',
+        razon_descuento: 'beca'
       } : {})
     }))
     setError(null)
@@ -165,10 +168,10 @@ export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPago
           label="Tipo de Pago"
           required
         >
-          <MenuItem value="cuota_mensual">Cuota Mensual</MenuItem>
-          <MenuItem value="cuota_traje">Cuota Traje</MenuItem>
+          <MenuItem value="mensualidad">Mensualidad</MenuItem>
           <MenuItem value="inscripcion">Inscripción</MenuItem>
-          <MenuItem value="examen_grado">Examen de Grado</MenuItem>
+          <MenuItem value="examen">Examen</MenuItem>
+          <MenuItem value="torneo">Torneo</MenuItem>
           <MenuItem value="evento">Evento</MenuItem>
           <MenuItem value="otro">Otro</MenuItem>
         </Select>
@@ -241,13 +244,14 @@ export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPago
             <InputLabel>Tipo de Descuento</InputLabel>
             <Select
               name="tipo_descuento"
-              value={formData.tipo_descuento || ''}
+              value={formData.tipo_descuento || 'ninguno'}
               onChange={handleSelectChange}
               label="Tipo de Descuento"
               required
             >
               <MenuItem value="porcentaje">Porcentaje (%)</MenuItem>
-              <MenuItem value="monto">Monto Fijo</MenuItem>
+              <MenuItem value="monto_fijo">Monto Fijo</MenuItem>
+              <MenuItem value="ninguno">Ninguno</MenuItem>
             </Select>
           </FormControl>
 
@@ -265,7 +269,7 @@ export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPago
             />
           )}
 
-          {formData.tipo_descuento === 'monto' && (
+          {formData.tipo_descuento === 'monto_fijo' && (
             <TextField
               fullWidth
               label="Descuento (Monto)"
@@ -283,16 +287,16 @@ export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPago
             <InputLabel>Razón del Descuento</InputLabel>
             <Select
               name="razon_descuento"
-              value={formData.razon_descuento || ''}
+              value={formData.razon_descuento || 'ninguno'}
               onChange={handleSelectChange}
               label="Razón del Descuento"
             >
               <MenuItem value="beca">Beca</MenuItem>
-              <MenuItem value="descuento_hermanos">Descuento Hermanos</MenuItem>
-              <MenuItem value="descuento_especial">Descuento Especial</MenuItem>
               <MenuItem value="promocion">Promoción</MenuItem>
-              <MenuItem value="ayuda_social">Ayuda Social</MenuItem>
-              <MenuItem value="ninguna">Ninguna</MenuItem>
+              <MenuItem value="hermanos">Hermanos</MenuItem>
+              <MenuItem value="anticipado">Anticipado</MenuItem>
+              <MenuItem value="especial">Especial</MenuItem>
+              <MenuItem value="ninguno">Ninguno</MenuItem>
             </Select>
           </FormControl>
         </>
