@@ -233,7 +233,13 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
               </TableCell>
               <TableCell>
                 <Typography variant="caption">
-                  {pago.tipo_pago.replace('_', ' ')}
+                  {pago.tipo_pago === 'mensualidad' ? 'Mensualidad' :
+                   pago.tipo_pago === 'inscripcion' ? 'Inscripción' :
+                   pago.tipo_pago === 'examen' ? 'Examen' :
+                   pago.tipo_pago === 'torneo' ? 'Torneo' :
+                   pago.tipo_pago === 'evento' ? 'Evento' :
+                   pago.tipo_pago === 'otro' ? 'Otro' :
+                   pago.tipo_pago.replace('_', ' ')}
                 </Typography>
               </TableCell>
               <TableCell align="right">

@@ -34,15 +34,15 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
   const [formData, setFormData] = useState<PagoCreate>({
     judoka_id: judokaId,
     club_id: user?.club_id || '',
-    tipo_pago: 'cuota_mensual',
+    tipo_pago: 'mensualidad',
     concepto: '',
     descripcion: null,
     monto_base: '' as any,
     tiene_descuento: false,
-    tipo_descuento: null,
+    tipo_descuento: 'ninguno' as any,
     descuento_porcentaje: null,
     descuento_monto: null,
-    razon_descuento: null,
+    razon_descuento: 'ninguno' as any,
     estado: 'pendiente',
     fecha_vencimiento: '',
     fecha_pago: null,
@@ -110,10 +110,13 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
       [name]: checked,
       // Resetear valores de descuento si se desactiva
       ...(name === 'tiene_descuento' && !checked ? {
-        tipo_descuento: null,
+        tipo_descuento: 'ninguno',
         descuento_porcentaje: null,
         descuento_monto: null,
-        razon_descuento: null
+        razon_descuento: 'ninguno'
+      } : name === 'tiene_descuento' && checked ? {
+        tipo_descuento: 'porcentaje',
+        razon_descuento: 'beca'
       } : {})
     }))
     setError(null)
@@ -178,10 +181,10 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
           label="Tipo de Pago"
           required
         >
-          <MenuItem value="cuota_mensual">Cuota Mensual</MenuItem>
-          <MenuItem value="cuota_traje">Cuota Traje</MenuItem>
+          <MenuItem value="mensualidad">Mensualidad</MenuItem>
           <MenuItem value="inscripcion">Inscripción</MenuItem>
-          <MenuItem value="examen_grado">Examen de Grado</MenuItem>
+          <MenuItem value="examen">Examen</MenuItem>
+          <MenuItem value="torneo">Torneo</MenuItem>
           <MenuItem value="evento">Evento</MenuItem>
           <MenuItem value="otro">Otro</MenuItem>
         </Select>
@@ -256,13 +259,14 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
             <InputLabel>Tipo de Descuento</InputLabel>
             <Select
               name="tipo_descuento"
-              value={formData.tipo_descuento || ''}
+              value={formData.tipo_descuento || 'ninguno'}
               onChange={handleSelectChange}
               label="Tipo de Descuento"
               required
             >
               <MenuItem value="porcentaje">Porcentaje (%)</MenuItem>
-              <MenuItem value="monto">Monto Fijo</MenuItem>
+              <MenuItem value="monto_fijo">Monto Fijo</MenuItem>
+              <MenuItem value="ninguno">Ninguno</MenuItem>
             </Select>
           </FormControl>
 
@@ -280,7 +284,7 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
             />
           )}
 
-          {formData.tipo_descuento === 'monto' && (
+          {formData.tipo_descuento === 'monto_fijo' && (
             <TextField
               fullWidth
               label="Descuento (Monto)"
@@ -298,16 +302,16 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
             <InputLabel>Razón del Descuento</InputLabel>
             <Select
               name="razon_descuento"
-              value={formData.razon_descuento || ''}
+              value={formData.razon_descuento || 'ninguno'}
               onChange={handleSelectChange}
               label="Razón del Descuento"
             >
               <MenuItem value="beca">Beca</MenuItem>
-              <MenuItem value="descuento_hermanos">Descuento Hermanos</MenuItem>
-              <MenuItem value="descuento_especial">Descuento Especial</MenuItem>
               <MenuItem value="promocion">Promoción</MenuItem>
-              <MenuItem value="ayuda_social">Ayuda Social</MenuItem>
-              <MenuItem value="ninguna">Ninguna</MenuItem>
+              <MenuItem value="hermanos">Hermanos</MenuItem>
+              <MenuItem value="anticipado">Anticipado</MenuItem>
+              <MenuItem value="especial">Especial</MenuItem>
+              <MenuItem value="ninguno">Ninguno</MenuItem>
             </Select>
           </FormControl>
         </>
