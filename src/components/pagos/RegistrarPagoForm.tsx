@@ -174,7 +174,6 @@ export default function RegistrarPagoForm({ pagos, onSuccess, onCancel }: Regist
         multiline
         rows={3}
         sx={{ mb: 2 }}
-        placeholder="Ej: Pagó con billete de 100, se dio vuelto 40"
       />
 
       <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>

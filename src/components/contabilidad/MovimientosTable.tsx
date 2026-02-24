@@ -98,8 +98,12 @@ export default function MovimientosTable({
             color="primary"
             startIcon={<AddIcon />}
             onClick={onAgregar}
-            size="small"
-            sx={{ textTransform: 'none', fontWeight: 'bold' }}
+            sx={{ 
+              textTransform: 'none',
+              fontWeight: 'bold',
+              whiteSpace: 'nowrap',
+              height: '40px'
+            }}
           >
             Nuevo Movimiento
           </Button>

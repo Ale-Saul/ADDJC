@@ -13,7 +13,8 @@ import {
   InputLabel,
   Typography,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  InputAdornment
 } from '@mui/material'
 import type { SelectChangeEvent } from '@mui/material/Select'
 import { Pago } from '@/models/pago'
@@ -208,6 +209,9 @@ export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPago
         required
         inputProps={{ min: 0, step: 0.01 }}
         sx={{ mb: 2 }}
+        InputProps={{
+          startAdornment: <InputAdornment position="start">Bs.</InputAdornment>,
+        }}
       />
 
       <DatePicker

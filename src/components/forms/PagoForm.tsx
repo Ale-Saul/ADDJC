@@ -13,7 +13,8 @@ import {
   InputLabel,
   Typography,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  InputAdornment
 } from '@mui/material'
 import type { SelectChangeEvent } from '@mui/material/Select'
 import { PagoCreate } from '@/models/pago'
@@ -198,7 +199,6 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
         onChange={handleChange}
         required
         sx={{ mb: 2 }}
-        placeholder="Ej: Cuota Diciembre 2024"
       />
 
       <TextField
@@ -221,8 +221,10 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
         onChange={handleNumberChange}
         required
         inputProps={{ min: 0, step: 0.01 }}
-        placeholder="Ej: 100.00"
         sx={{ mb: 2 }}
+        InputProps={{
+          startAdornment: <InputAdornment position="start">Bs.</InputAdornment>,
+        }}
       />
 
       <DatePicker

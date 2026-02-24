@@ -260,7 +260,6 @@ export default function MovimientoFormDialog({
             required
             value={concepto}
             onChange={(e) => setConcepto(e.target.value)}
-            placeholder="Título breve del movimiento"
           />
 
           {/* Descripción */}
@@ -271,7 +270,6 @@ export default function MovimientoFormDialog({
             rows={3}
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
-            placeholder="Descripción detallada del movimiento (opcional)"
           />
 
           {/* Monto */}
@@ -333,7 +331,6 @@ export default function MovimientoFormDialog({
               required
               value={origenEntidad}
               onChange={(e) => setOrigenEntidad(e.target.value)}
-              placeholder="Nombre de la entidad (ej: Ministerio del Deporte)"
             />
           )}
 
