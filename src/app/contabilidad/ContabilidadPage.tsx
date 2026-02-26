@@ -1,17 +1,14 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
 import {
   Box,
   Typography,
   Paper,
   Button,
-  Grid,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  TextField,
   CircularProgress,
   Alert,
   Collapse,
@@ -21,7 +18,6 @@ import {
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
-import AddIcon from '@mui/icons-material/Add'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import DownloadIcon from '@mui/icons-material/Download'
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
@@ -32,165 +28,48 @@ import ClearIcon from '@mui/icons-material/Clear'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
-import * as movimientoFinancieroController from '@/controllers/movimientoFinancieroController'
-import { clubController } from '@/controllers/clubController'
-import { MovimientoFinanciero, TipoMovimiento, CategoriaMovimiento } from '@/models/movimientoFinanciero'
-import { Club } from '@/models/club'
 import BalanceCards from '@/components/contabilidad/BalanceCards'
 import MovimientosTable from '@/components/contabilidad/MovimientosTable'
 import MovimientoFormDialog from '@/components/contabilidad/MovimientoFormDialog'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { formatters } from '@/utils/formatters'
+import { useContabilidad } from '@/hooks/useContabilidad'
+import { TIPO_MOVIMIENTO, CATEGORIA_MOVIMIENTO, TIPO_MOVIMIENTO_LABELS, CATEGORIA_MOVIMIENTO_LABELS } from '@/constants/contabilidad'
+import * as movimientoFinancieroController from '@/controllers/movimientoFinancieroController'
 
 export default function ContabilidadPage() {
   const { user } = useAuth()
-  const [movimientos, setMovimientos] = useState<MovimientoFinanciero[]>([])
-  const [clubes, setClubes] = useState<Club[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  
-  // Estados para diálogo de formulario
-  const [openDialog, setOpenDialog] = useState(false)
-  const [editingMovimiento, setEditingMovimiento] = useState<MovimientoFinanciero | null>(null)
-  
-  // Filtros
-  const [fechaInicio, setFechaInicio] = useState(() => {
-    const fecha = new Date()
-    fecha.setMonth(fecha.getMonth() - 1)
-    return fecha.toISOString().split('T')[0]
-  })
-  const [fechaFin, setFechaFin] = useState(() => new Date().toISOString().split('T')[0])
-  const [tipoFiltro, setTipoFiltro] = useState<string>('todos')
-  const [categoriaFiltro, setCategoriaFiltro] = useState<string>('todos')
-  const [clubFiltro, setClubFiltro] = useState<string>('todos')
-  const [showFilters, setShowFilters] = useState(false)
-
-  const clearFilters = () => {
-    const fecha = new Date()
-    fecha.setMonth(fecha.getMonth() - 1)
-    setFechaInicio(fecha.toISOString().split('T')[0])
-    setFechaFin(new Date().toISOString().split('T')[0])
-    setTipoFiltro('todos')
-    setCategoriaFiltro('todos')
-    setClubFiltro('todos')
-  }
-
-  const cargarDatos = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      // Cargar movimientos filtrados por fecha
-      const movimientosResponse = await movimientoFinancieroController.getMovimientosByDateRange(
-        fechaInicio,
-        fechaFin
-      )
-      
-      if (movimientosResponse.success && movimientosResponse.data) {
-        setMovimientos(movimientosResponse.data)
-      } else {
-        setError(movimientosResponse.error || 'Error al cargar los movimientos')
-      }
-
-      // Cargar clubes para el filtro
-      const clubesResponse = await clubController.getAllClubes()
-      if (clubesResponse.success && clubesResponse.data) {
-        setClubes(clubesResponse.data)
-      }
-    } catch (err: any) {
-      console.error('Error al cargar datos:', err)
-      setError(err.message || 'Error al cargar los datos')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    cargarDatos()
-  }, [fechaInicio, fechaFin])
-
-  // Filtrar movimientos
-  const movimientosFiltrados = useMemo(() => {
-    return movimientos.filter(mov => {
-      // Filtro por tipo
-      if (tipoFiltro !== 'todos' && mov.tipo !== tipoFiltro) return false
-      
-      // Filtro por categoría
-      if (categoriaFiltro !== 'todos' && mov.categoria !== categoriaFiltro) return false
-      
-      // Filtro por club
-      if (clubFiltro !== 'todos' && mov.origen_club_id !== clubFiltro) return false
-      
-      // Excluir movimientos anulados por defecto
-      if (mov.estado === 'cancelado') return false
-      
-      return true
-    })
-  }, [movimientos, tipoFiltro, categoriaFiltro, clubFiltro])
-
-  // Calcular balance
-  const balance = useMemo(() => {
-    const ingresos = movimientosFiltrados
-      .filter(m => m.tipo === 'ingreso')
-      .reduce((sum, m) => sum + m.monto, 0)
-    
-    const egresos = movimientosFiltrados
-      .filter(m => m.tipo === 'egreso')
-      .reduce((sum, m) => sum + m.monto, 0)
-    
-    return {
-      total_ingresos: ingresos,
-      total_egresos: egresos,
-      balance: ingresos - egresos,
-      periodo_inicio: fechaInicio,
-      periodo_fin: fechaFin,
-    }
-  }, [movimientosFiltrados, fechaInicio, fechaFin])
-
-  const handleAgregarMovimiento = () => {
-    setEditingMovimiento(null)
-    setOpenDialog(true)
-  }
-
-  const handleEditarMovimiento = (movimiento: MovimientoFinanciero) => {
-    setEditingMovimiento(movimiento)
-    setOpenDialog(true)
-  }
-
-  const handleEliminarMovimiento = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar este movimiento?')) return
-    
-    try {
-      const response = await movimientoFinancieroController.deleteMovimiento(id)
-      if (response.success) {
-        await cargarDatos()
-      } else {
-        alert(response.error || 'Error al eliminar movimiento')
-      }
-    } catch (err: any) {
-      alert(err.message || 'Error al eliminar movimiento')
-    }
-  }
-
-  const handleAnularMovimiento = async (id: string) => {
-    if (!confirm('¿Está seguro de anular este movimiento?')) return
-    
-    try {
-      const response = await movimientoFinancieroController.anularMovimiento(id)
-      if (response.success) {
-        await cargarDatos()
-      } else {
-        alert(response.error || 'Error al anular movimiento')
-      }
-    } catch (err: any) {
-      alert(err.message || 'Error al anular movimiento')
-    }
-  }
-
-  const handleGuardarMovimiento = async () => {
-    setOpenDialog(false)
-    await cargarDatos()
-  }
+  const {
+    movimientos,
+    clubes,
+    loading,
+    error,
+    openDialog,
+    setOpenDialog,
+    editingMovimiento,
+    fechaInicio,
+    setFechaInicio,
+    fechaFin,
+    setFechaFin,
+    tipoFiltro,
+    setTipoFiltro,
+    categoriaFiltro,
+    setCategoriaFiltro,
+    clubFiltro,
+    setClubFiltro,
+    showFilters,
+    setShowFilters,
+    clearFilters,
+    cargarDatos,
+    movimientosFiltrados,
+    balance,
+    handleAgregarMovimiento,
+    handleEditarMovimiento,
+    handleEliminarMovimiento,
+    handleAnularMovimiento,
+    handleGuardarMovimiento
+  } = useContabilidad()
 
   const exportarPDF = () => {
     const doc = new jsPDF()
@@ -212,7 +91,7 @@ export default function ContabilidadPage() {
     // Tabla de movimientos
     const tableData = movimientosFiltrados.map(mov => [
       formatters.formatDate(mov.fecha),
-      mov.tipo === 'ingreso' ? 'Ingreso' : 'Egreso',
+      mov.tipo === TIPO_MOVIMIENTO.INGRESO ? 'Ingreso' : 'Egreso',
       movimientoFinancieroController.getCategoriaLabel(mov.categoria),
       mov.concepto,
       `Bs. ${mov.monto.toFixed(2)}`,
@@ -295,7 +174,7 @@ export default function ContabilidadPage() {
           </Box>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+            <Alert severity="error" sx={{ mb: 3 }}>
               {error}
             </Alert>
           )}
@@ -377,8 +256,8 @@ export default function ContabilidadPage() {
                           onChange={(e) => setTipoFiltro(e.target.value)}
                         >
                           <MenuItem value="todos">Todos</MenuItem>
-                          <MenuItem value="ingreso">Ingresos</MenuItem>
-                          <MenuItem value="egreso">Egresos</MenuItem>
+                          <MenuItem value={TIPO_MOVIMIENTO.INGRESO}>Ingresos</MenuItem>
+                          <MenuItem value={TIPO_MOVIMIENTO.EGRESO}>Egresos</MenuItem>
                         </Select>
                       </FormControl>
                       <FormControl size="small" sx={{ minWidth: 180, backgroundColor: 'white' }}>
@@ -389,17 +268,8 @@ export default function ContabilidadPage() {
                           onChange={(e) => setCategoriaFiltro(e.target.value)}
                         >
                           <MenuItem value="todos">Todas</MenuItem>
-                          {[
-                            { val: 'donacion_club', label: 'Donación de Club' },
-                            { val: 'pago_club', label: 'Pago de Club' },
-                            { val: 'aporte_estado', label: 'Aporte del Estado' },
-                            { val: 'sponsor', label: 'Patrocinio' },
-                            { val: 'evento', label: 'Evento' },
-                            { val: 'gasto_operativo', label: 'Gasto Operativo' },
-                            { val: 'pago_proveedor', label: 'Pago a Proveedor' },
-                            { val: 'otro', label: 'Otro' }
-                          ].sort((a, b) => a.label.localeCompare(b.label)).map(cat => (
-                            <MenuItem key={cat.val} value={cat.val}>{cat.label}</MenuItem>
+                          {Object.entries(CATEGORIA_MOVIMIENTO_LABELS).sort((a, b) => a[1].localeCompare(b[1])).map(([value, label]) => (
+                            <MenuItem key={value} value={value}>{label}</MenuItem>
                           ))}
                         </Select>
                       </FormControl>

@@ -15,56 +15,8 @@ import {
 } from '@/models/movimientoFinanciero';
 import * as movimientoFinancieroService from '@/services/movimientoFinancieroService';
 import { ApiResponse } from '@/types';
-
-/**
- * Validar datos de entrada para movimiento financiero
- */
-function validarMovimientoInput(movimiento: MovimientoFinancieroInput): string[] {
-  const errores: string[] = [];
-
-  // Validar campos requeridos
-  if (!movimiento.tipo) {
-    errores.push('El tipo de movimiento es requerido');
-  } else if (!['ingreso', 'egreso'].includes(movimiento.tipo)) {
-    errores.push('El tipo debe ser "ingreso" o "egreso"');
-  }
-
-  if (!movimiento.categoria) {
-    errores.push('La categoría es requerida');
-  }
-
-  if (!movimiento.monto || movimiento.monto <= 0) {
-    errores.push('El monto debe ser mayor a 0');
-  }
-
-  if (!movimiento.concepto || movimiento.concepto.trim() === '') {
-    errores.push('El concepto es requerido');
-  }
-
-  if (!movimiento.fecha) {
-    errores.push('La fecha es requerida');
-  } else {
-    const fecha = new Date(movimiento.fecha);
-    if (isNaN(fecha.getTime())) {
-      errores.push('La fecha no es válida');
-    }
-  }
-
-  // Validar que si la categoría es de club, se proporcione el club_id
-  if (
-    (movimiento.categoria === 'donacion_club' || movimiento.categoria === 'pago_club') &&
-    !movimiento.origen_club_id
-  ) {
-    errores.push('Para movimientos de club, debe especificar el club de origen');
-  }
-
-  // Validar que si es aporte del estado, se proporcione origen_entidad
-  if (movimiento.categoria === 'aporte_estado' && !movimiento.origen_entidad) {
-    errores.push('Para aportes del estado, debe especificar la entidad');
-  }
-
-  return errores;
-}
+import { createMovimientoSchema, updateMovimientoSchema } from '@/schemas/movimientoSchema';
+import { CATEGORIAS_POR_TIPO, CATEGORIA_MOVIMIENTO_LABELS } from '@/constants/contabilidad';
 
 /**
  * Obtener todos los movimientos financieros
@@ -134,10 +86,12 @@ export async function createMovimiento(
   movimiento: MovimientoFinancieroInput,
   userId: string
 ): Promise<ApiResponse<MovimientoFinanciero>> {
-  // Validar entrada
-  const errores = validarMovimientoInput(movimiento);
-  if (errores.length > 0) {
-    return { success: false, error: `Errores de validación: ${errores.join(', ')}` };
+  // Validación con Zod
+  const validation = createMovimientoSchema.safeParse(movimiento)
+  
+  if (!validation.success) {
+    const errorMessage = validation.error.errors.map(e => e.message).join(', ')
+    return { success: false, error: errorMessage }
   }
 
   if (!userId) {
@@ -164,26 +118,12 @@ export async function updateMovimiento(
     return { success: false, error: 'ID de movimiento inválido' };
   }
 
-  // Validar campos actualizados si están presentes
-  const errores: string[] = [];
-
-  if (updates.monto !== undefined && updates.monto <= 0) {
-    errores.push('El monto debe ser mayor a 0');
-  }
-
-  if (updates.concepto !== undefined && updates.concepto.trim() === '') {
-    errores.push('El concepto no puede estar vacío');
-  }
-
-  if (updates.fecha !== undefined) {
-    const fecha = new Date(updates.fecha);
-    if (isNaN(fecha.getTime())) {
-      errores.push('La fecha no es válida');
-    }
-  }
-
-  if (errores.length > 0) {
-    return { success: false, error: `Errores de validación: ${errores.join(', ')}` };
+  // Validación con Zod
+  const validation = updateMovimientoSchema.safeParse(updates)
+  
+  if (!validation.success) {
+    const errorMessage = validation.error.errors.map(e => e.message).join(', ')
+    return { success: false, error: errorMessage }
   }
 
   try {
@@ -311,26 +251,14 @@ export async function getMovimientosPorMes(anio?: number): Promise<ApiResponse<M
  * Obtener categorías disponibles según el tipo de movimiento
  */
 export function getCategoriasPorTipo(tipo: TipoMovimiento): CategoriaMovimiento[] {
-  if (tipo === 'ingreso') {
-    return ['donacion_club', 'pago_club', 'aporte_estado', 'sponsor', 'evento', 'otro'];
-  } else {
-    return ['gasto_operativo', 'pago_proveedor', 'evento', 'otro'];
-  }
+  // @ts-ignore - Validado por constantes
+  return CATEGORIAS_POR_TIPO[tipo] || [];
 }
 
 /**
  * Obtener labels amigables para categorías
  */
 export function getCategoriaLabel(categoria: CategoriaMovimiento): string {
-  const labels: Record<CategoriaMovimiento, string> = {
-    donacion_club: 'Donación de Club',
-    pago_club: 'Pago de Club',
-    aporte_estado: 'Aporte del Estado',
-    sponsor: 'Patrocinio/Sponsoreo',
-    evento: 'Evento',
-    gasto_operativo: 'Gasto Operativo',
-    pago_proveedor: 'Pago a Proveedor',
-    otro: 'Otro',
-  };
-  return labels[categoria] || categoria;
+  // @ts-ignore - Validado por constantes
+  return CATEGORIA_MOVIMIENTO_LABELS[categoria] || categoria;
 }

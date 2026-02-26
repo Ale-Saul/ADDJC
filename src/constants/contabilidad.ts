@@ -1,0 +1,62 @@
+export const TIPO_MOVIMIENTO = {
+  INGRESO: 'ingreso',
+  EGRESO: 'egreso',
+} as const
+
+export const CATEGORIA_MOVIMIENTO = {
+  DONACION_CLUB: 'donacion_club',
+  PAGO_CLUB: 'pago_club',
+  APORTE_ESTADO: 'aporte_estado',
+  SPONSOR: 'sponsor',
+  EVENTO: 'evento',
+  GASTO_OPERATIVO: 'gasto_operativo',
+  PAGO_PROVEEDOR: 'pago_proveedor',
+  OTRO: 'otro',
+} as const
+
+export const ESTADO_MOVIMIENTO = {
+  REGISTRADO: 'registrado',
+  APROBADO: 'aprobado',
+  CANCELADO: 'cancelado',
+} as const
+
+// Labels para UI
+export const TIPO_MOVIMIENTO_LABELS = {
+  [TIPO_MOVIMIENTO.INGRESO]: 'Ingreso',
+  [TIPO_MOVIMIENTO.EGRESO]: 'Egreso',
+}
+
+export const CATEGORIA_MOVIMIENTO_LABELS = {
+  [CATEGORIA_MOVIMIENTO.DONACION_CLUB]: 'Donación de Club',
+  [CATEGORIA_MOVIMIENTO.PAGO_CLUB]: 'Pago de Club',
+  [CATEGORIA_MOVIMIENTO.APORTE_ESTADO]: 'Aporte del Estado',
+  [CATEGORIA_MOVIMIENTO.SPONSOR]: 'Patrocinio/Sponsoreo',
+  [CATEGORIA_MOVIMIENTO.EVENTO]: 'Evento',
+  [CATEGORIA_MOVIMIENTO.GASTO_OPERATIVO]: 'Gasto Operativo',
+  [CATEGORIA_MOVIMIENTO.PAGO_PROVEEDOR]: 'Pago a Proveedor',
+  [CATEGORIA_MOVIMIENTO.OTRO]: 'Otro',
+}
+
+export const ESTADO_MOVIMIENTO_LABELS = {
+  [ESTADO_MOVIMIENTO.REGISTRADO]: 'Registrado',
+  [ESTADO_MOVIMIENTO.APROBADO]: 'Aprobado',
+  [ESTADO_MOVIMIENTO.CANCELADO]: 'Cancelado',
+}
+
+// Categorías disponibles por tipo
+export const CATEGORIAS_POR_TIPO = {
+  [TIPO_MOVIMIENTO.INGRESO]: [
+    CATEGORIA_MOVIMIENTO.DONACION_CLUB,
+    CATEGORIA_MOVIMIENTO.PAGO_CLUB,
+    CATEGORIA_MOVIMIENTO.APORTE_ESTADO,
+    CATEGORIA_MOVIMIENTO.SPONSOR,
+    CATEGORIA_MOVIMIENTO.EVENTO,
+    CATEGORIA_MOVIMIENTO.OTRO,
+  ],
+  [TIPO_MOVIMIENTO.EGRESO]: [
+    CATEGORIA_MOVIMIENTO.GASTO_OPERATIVO,
+    CATEGORIA_MOVIMIENTO.PAGO_PROVEEDOR,
+    CATEGORIA_MOVIMIENTO.EVENTO,
+    CATEGORIA_MOVIMIENTO.OTRO,
+  ],
+}
