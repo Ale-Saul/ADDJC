@@ -56,7 +56,7 @@ export default function MovimientosTable({
         return 'default'
       case 'aprobado':
         return 'success'
-      case 'anulado':
+      case 'cancelado':
         return 'error'
       default:
         return 'default'
@@ -203,7 +203,7 @@ export default function MovimientosTable({
                           </IconButton>
                         </Tooltip>
                       )}
-                      {movimiento.estado !== 'anulado' && (
+                      {movimiento.estado !== 'cancelado' && (
                         <>
                           <Tooltip title="Editar">
                             <IconButton

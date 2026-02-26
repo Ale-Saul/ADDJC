@@ -183,19 +183,24 @@ export default function MovimientoFormDialog({
         comprobante_nombre: comprobanteNombre || undefined,
       }
 
+      let response;
       if (movimiento) {
         // Actualizar
-        await movimientoFinancieroController.updateMovimiento(movimiento.id, movimientoData)
+        response = await movimientoFinancieroController.updateMovimiento(movimiento.id, movimientoData)
       } else {
         // Crear
         if (!user?.id) {
           throw new Error('Usuario no autenticado')
         }
-        await movimientoFinancieroController.createMovimiento(movimientoData, user.id)
+        response = await movimientoFinancieroController.createMovimiento(movimientoData, user.id)
       }
 
-      onSave()
-      onClose()
+      if (response.success) {
+        onSave()
+        onClose()
+      } else {
+        setError(response.error || 'Error al guardar el movimiento')
+      }
     } catch (err: any) {
       setError(err.message || 'Error al guardar el movimiento')
     } finally {

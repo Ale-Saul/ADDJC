@@ -17,11 +17,12 @@ import {
   InputAdornment
 } from '@mui/material'
 import type { SelectChangeEvent } from '@mui/material/Select'
-import { PagoCreate } from '@/models/pago'
+import { PagoCreate, TipoPago, TipoDescuento, RazonDescuento, EstadoPago } from '@/models/pago'
 import { pagoController } from '@/controllers/pagoController'
 import { useAuth } from '@/contexts/AuthContext'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
+import { TIPO_PAGO_LABELS, TIPO_DESCUENTO, RAZON_DESCUENTO, TIPO_DESCUENTO_LABELS, RAZON_DESCUENTO_LABELS, TIPO_PAGO, ESTADO_PAGO } from '@/constants/pagos'
 
 interface PagoFormProps {
   judokaId: string
@@ -35,16 +36,16 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
   const [formData, setFormData] = useState<PagoCreate>({
     judoka_id: judokaId,
     club_id: user?.club_id || '',
-    tipo_pago: 'mensualidad',
+    tipo_pago: TIPO_PAGO.MENSUALIDAD as TipoPago,
     concepto: '',
     descripcion: null,
     monto_base: '' as any,
     tiene_descuento: false,
-    tipo_descuento: 'ninguno' as any,
+    tipo_descuento: TIPO_DESCUENTO.NINGUNO as TipoDescuento,
     descuento_porcentaje: null,
     descuento_monto: null,
-    razon_descuento: 'ninguno' as any,
-    estado: 'pendiente',
+    razon_descuento: RAZON_DESCUENTO.NINGUNO as RazonDescuento,
+    estado: ESTADO_PAGO.PENDIENTE as EstadoPago,
     fecha_vencimiento: '',
     fecha_pago: null,
     metodo_pago: null,
@@ -63,9 +64,9 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
     let final = montoBase
 
     if (formData.tiene_descuento) {
-      if (formData.tipo_descuento === 'porcentaje' && formData.descuento_porcentaje) {
+      if (formData.tipo_descuento === TIPO_DESCUENTO.PORCENTAJE && formData.descuento_porcentaje) {
         final = montoBase - (montoBase * formData.descuento_porcentaje / 100)
-      } else if (formData.tipo_descuento === 'monto' && formData.descuento_monto) {
+      } else if (formData.tipo_descuento === TIPO_DESCUENTO.MONTO_FIJO && formData.descuento_monto) {
         final = montoBase - formData.descuento_monto
       }
     }
@@ -111,13 +112,13 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
       [name]: checked,
       // Resetear valores de descuento si se desactiva
       ...(name === 'tiene_descuento' && !checked ? {
-        tipo_descuento: 'ninguno',
+        tipo_descuento: TIPO_DESCUENTO.NINGUNO,
         descuento_porcentaje: null,
         descuento_monto: null,
-        razon_descuento: 'ninguno'
+        razon_descuento: RAZON_DESCUENTO.NINGUNO
       } : name === 'tiene_descuento' && checked ? {
-        tipo_descuento: 'porcentaje',
-        razon_descuento: 'beca'
+        tipo_descuento: TIPO_DESCUENTO.PORCENTAJE,
+        razon_descuento: RAZON_DESCUENTO.BECA
       } : {})
     }))
     setError(null)
@@ -182,12 +183,9 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
           label="Tipo de Pago"
           required
         >
-          <MenuItem value="mensualidad">Mensualidad</MenuItem>
-          <MenuItem value="inscripcion">Inscripción</MenuItem>
-          <MenuItem value="examen">Examen</MenuItem>
-          <MenuItem value="torneo">Torneo</MenuItem>
-          <MenuItem value="evento">Evento</MenuItem>
-          <MenuItem value="otro">Otro</MenuItem>
+          {Object.entries(TIPO_PAGO_LABELS).map(([value, label]) => (
+            <MenuItem key={value} value={value}>{label}</MenuItem>
+          ))}
         </Select>
       </FormControl>
 
@@ -261,18 +259,18 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
             <InputLabel>Tipo de Descuento</InputLabel>
             <Select
               name="tipo_descuento"
-              value={formData.tipo_descuento || 'ninguno'}
+              value={formData.tipo_descuento || TIPO_DESCUENTO.NINGUNO}
               onChange={handleSelectChange}
               label="Tipo de Descuento"
               required
             >
-              <MenuItem value="porcentaje">Porcentaje (%)</MenuItem>
-              <MenuItem value="monto_fijo">Monto Fijo</MenuItem>
-              <MenuItem value="ninguno">Ninguno</MenuItem>
+              {Object.entries(TIPO_DESCUENTO_LABELS).map(([value, label]) => (
+                <MenuItem key={value} value={value}>{label}</MenuItem>
+              ))}
             </Select>
           </FormControl>
 
-          {formData.tipo_descuento === 'porcentaje' && (
+          {formData.tipo_descuento === TIPO_DESCUENTO.PORCENTAJE && (
             <TextField
               fullWidth
               label="Descuento (%)"
@@ -286,7 +284,7 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
             />
           )}
 
-          {formData.tipo_descuento === 'monto_fijo' && (
+          {formData.tipo_descuento === TIPO_DESCUENTO.MONTO_FIJO && (
             <TextField
               fullWidth
               label="Descuento (Monto)"
@@ -304,16 +302,13 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
             <InputLabel>Razón del Descuento</InputLabel>
             <Select
               name="razon_descuento"
-              value={formData.razon_descuento || 'ninguno'}
+              value={formData.razon_descuento || RAZON_DESCUENTO.NINGUNO}
               onChange={handleSelectChange}
               label="Razón del Descuento"
             >
-              <MenuItem value="beca">Beca</MenuItem>
-              <MenuItem value="promocion">Promoción</MenuItem>
-              <MenuItem value="hermanos">Hermanos</MenuItem>
-              <MenuItem value="anticipado">Anticipado</MenuItem>
-              <MenuItem value="especial">Especial</MenuItem>
-              <MenuItem value="ninguno">Ninguno</MenuItem>
+              {Object.entries(RAZON_DESCUENTO_LABELS).map(([value, label]) => (
+                <MenuItem key={value} value={value}>{label}</MenuItem>
+              ))}
             </Select>
           </FormControl>
         </>

@@ -19,6 +19,7 @@ import { pagoController } from '@/controllers/pagoController'
 import { useAuth } from '@/contexts/AuthContext'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
+import { ESTADO_PAGO, METODO_PAGO, METODO_PAGO_LABELS } from '@/constants/pagos'
 
 interface RegistrarPagoFormProps {
   pagos: Pago[]
@@ -30,7 +31,7 @@ export default function RegistrarPagoForm({ pagos, onSuccess, onCancel }: Regist
   const { user } = useAuth()
   const [formData, setFormData] = useState({
     fecha_pago: new Date().toISOString().split('T')[0], // Hoy por defecto
-    metodo_pago: 'efectivo',
+    metodo_pago: METODO_PAGO.EFECTIVO as string,
     observaciones_pago: ''
   })
   const [loading, setLoading] = useState(false)
@@ -68,7 +69,7 @@ export default function RegistrarPagoForm({ pagos, onSuccess, onCancel }: Regist
       // Actualizar todos los pagos seleccionados
       const updatePromises = pagos.map(pago => 
         pagoController.updatePago(pago.id, {
-          estado: 'pagado',
+          estado: ESTADO_PAGO.PAGADO,
           fecha_pago: formData.fecha_pago,
           metodo_pago: formData.metodo_pago,
           observaciones_pago: formData.observaciones_pago || null,
@@ -157,11 +158,9 @@ export default function RegistrarPagoForm({ pagos, onSuccess, onCancel }: Regist
           label="Método de Pago"
           required
         >
-          <MenuItem value="efectivo">Efectivo</MenuItem>
-          <MenuItem value="transferencia">Transferencia Bancaria</MenuItem>
-          <MenuItem value="qr">QR/Billetera Digital</MenuItem>
-          <MenuItem value="tarjeta">Tarjeta</MenuItem>
-          <MenuItem value="otro">Otro</MenuItem>
+          {Object.entries(METODO_PAGO_LABELS).map(([value, label]) => (
+            <MenuItem key={value} value={value}>{label}</MenuItem>
+          ))}
         </Select>
       </FormControl>
 

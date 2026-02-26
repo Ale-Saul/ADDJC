@@ -14,6 +14,7 @@ import {
   CategoriaMovimiento,
 } from '@/models/movimientoFinanciero';
 import * as movimientoFinancieroService from '@/services/movimientoFinancieroService';
+import { ApiResponse } from '@/types';
 
 /**
  * Validar datos de entrada para movimiento financiero
@@ -68,12 +69,13 @@ function validarMovimientoInput(movimiento: MovimientoFinancieroInput): string[]
 /**
  * Obtener todos los movimientos financieros
  */
-export async function getAllMovimientos(): Promise<MovimientoFinanciero[]> {
+export async function getAllMovimientos(): Promise<ApiResponse<MovimientoFinanciero[]>> {
   try {
-    return await movimientoFinancieroService.getAllMovimientos();
+    const data = await movimientoFinancieroService.getAllMovimientos();
+    return { success: true, data };
   } catch (error: any) {
     console.error('Error en controller al obtener movimientos:', error);
-    throw new Error('No se pudieron obtener los movimientos financieros');
+    return { success: false, error: 'No se pudieron obtener los movimientos financieros' };
   }
 }
 
@@ -83,40 +85,45 @@ export async function getAllMovimientos(): Promise<MovimientoFinanciero[]> {
 export async function getMovimientosByDateRange(
   fechaInicio: string,
   fechaFin: string
-): Promise<MovimientoFinanciero[]> {
+): Promise<ApiResponse<MovimientoFinanciero[]>> {
   // Validar fechas
   const inicio = new Date(fechaInicio);
   const fin = new Date(fechaFin);
 
   if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
-    throw new Error('Las fechas proporcionadas no son válidas');
+    return { success: false, error: 'Las fechas proporcionadas no son válidas' };
   }
 
   if (inicio > fin) {
-    throw new Error('La fecha de inicio no puede ser posterior a la fecha de fin');
+    return { success: false, error: 'La fecha de inicio no puede ser posterior a la fecha de fin' };
   }
 
   try {
-    return await movimientoFinancieroService.getMovimientosByDateRange(fechaInicio, fechaFin);
+    const data = await movimientoFinancieroService.getMovimientosByDateRange(fechaInicio, fechaFin);
+    return { success: true, data };
   } catch (error: any) {
     console.error('Error en controller al obtener movimientos por fecha:', error);
-    throw new Error('No se pudieron obtener los movimientos financieros');
+    return { success: false, error: 'No se pudieron obtener los movimientos financieros' };
   }
 }
 
 /**
  * Obtener un movimiento financiero por ID
  */
-export async function getMovimientoById(id: string): Promise<MovimientoFinanciero | null> {
+export async function getMovimientoById(id: string): Promise<ApiResponse<MovimientoFinanciero>> {
   if (!id || id.trim() === '') {
-    throw new Error('ID de movimiento inválido');
+    return { success: false, error: 'ID de movimiento inválido' };
   }
 
   try {
-    return await movimientoFinancieroService.getMovimientoById(id);
+    const data = await movimientoFinancieroService.getMovimientoById(id);
+    if (!data) {
+      return { success: false, error: 'Movimiento no encontrado' };
+    }
+    return { success: true, data };
   } catch (error: any) {
     console.error('Error en controller al obtener movimiento:', error);
-    throw new Error('No se pudo obtener el movimiento financiero');
+    return { success: false, error: 'No se pudo obtener el movimiento financiero' };
   }
 }
 
@@ -126,22 +133,23 @@ export async function getMovimientoById(id: string): Promise<MovimientoFinancier
 export async function createMovimiento(
   movimiento: MovimientoFinancieroInput,
   userId: string
-): Promise<MovimientoFinanciero> {
+): Promise<ApiResponse<MovimientoFinanciero>> {
   // Validar entrada
   const errores = validarMovimientoInput(movimiento);
   if (errores.length > 0) {
-    throw new Error(`Errores de validación:\n${errores.join('\n')}`);
+    return { success: false, error: `Errores de validación: ${errores.join(', ')}` };
   }
 
   if (!userId) {
-    throw new Error('Usuario no autenticado');
+    return { success: false, error: 'Usuario no autenticado' };
   }
 
   try {
-    return await movimientoFinancieroService.createMovimiento(movimiento, userId);
+    const data = await movimientoFinancieroService.createMovimiento(movimiento, userId);
+    return { success: true, data };
   } catch (error: any) {
     console.error('Error en controller al crear movimiento:', error);
-    throw new Error('No se pudo crear el movimiento financiero');
+    return { success: false, error: 'No se pudo crear el movimiento financiero' };
   }
 }
 
@@ -151,9 +159,9 @@ export async function createMovimiento(
 export async function updateMovimiento(
   id: string,
   updates: MovimientoFinancieroUpdate
-): Promise<MovimientoFinanciero> {
+): Promise<ApiResponse<MovimientoFinanciero>> {
   if (!id || id.trim() === '') {
-    throw new Error('ID de movimiento inválido');
+    return { success: false, error: 'ID de movimiento inválido' };
   }
 
   // Validar campos actualizados si están presentes
@@ -175,46 +183,49 @@ export async function updateMovimiento(
   }
 
   if (errores.length > 0) {
-    throw new Error(`Errores de validación:\n${errores.join('\n')}`);
+    return { success: false, error: `Errores de validación: ${errores.join(', ')}` };
   }
 
   try {
-    return await movimientoFinancieroService.updateMovimiento(id, updates);
+    const data = await movimientoFinancieroService.updateMovimiento(id, updates);
+    return { success: true, data };
   } catch (error: any) {
     console.error('Error en controller al actualizar movimiento:', error);
-    throw new Error('No se pudo actualizar el movimiento financiero');
+    return { success: false, error: 'No se pudo actualizar el movimiento financiero' };
   }
 }
 
 /**
  * Eliminar un movimiento financiero
  */
-export async function deleteMovimiento(id: string): Promise<void> {
+export async function deleteMovimiento(id: string): Promise<ApiResponse<void>> {
   if (!id || id.trim() === '') {
-    throw new Error('ID de movimiento inválido');
+    return { success: false, error: 'ID de movimiento inválido' };
   }
 
   try {
     await movimientoFinancieroService.deleteMovimiento(id);
+    return { success: true };
   } catch (error: any) {
     console.error('Error en controller al eliminar movimiento:', error);
-    throw new Error('No se pudo eliminar el movimiento financiero');
+    return { success: false, error: 'No se pudo eliminar el movimiento financiero' };
   }
 }
 
 /**
  * Anular un movimiento financiero (no se elimina, solo cambia estado)
  */
-export async function anularMovimiento(id: string): Promise<MovimientoFinanciero> {
+export async function anularMovimiento(id: string): Promise<ApiResponse<MovimientoFinanciero>> {
   if (!id || id.trim() === '') {
-    throw new Error('ID de movimiento inválido');
+    return { success: false, error: 'ID de movimiento inválido' };
   }
 
   try {
-    return await movimientoFinancieroService.anularMovimiento(id);
+    const data = await movimientoFinancieroService.anularMovimiento(id);
+    return { success: true, data };
   } catch (error: any) {
     console.error('Error en controller al anular movimiento:', error);
-    throw new Error('No se pudo anular el movimiento financiero');
+    return { success: false, error: 'No se pudo anular el movimiento financiero' };
   }
 }
 
@@ -224,24 +235,25 @@ export async function anularMovimiento(id: string): Promise<MovimientoFinanciero
 export async function getBalance(
   fechaInicio: string,
   fechaFin: string
-): Promise<BalanceFinanciero> {
+): Promise<ApiResponse<BalanceFinanciero>> {
   // Validar fechas
   const inicio = new Date(fechaInicio);
   const fin = new Date(fechaFin);
 
   if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
-    throw new Error('Las fechas proporcionadas no son válidas');
+    return { success: false, error: 'Las fechas proporcionadas no son válidas' };
   }
 
   if (inicio > fin) {
-    throw new Error('La fecha de inicio no puede ser posterior a la fecha de fin');
+    return { success: false, error: 'La fecha de inicio no puede ser posterior a la fecha de fin' };
   }
 
   try {
-    return await movimientoFinancieroService.getBalance(fechaInicio, fechaFin);
+    const data = await movimientoFinancieroService.getBalance(fechaInicio, fechaFin);
+    return { success: true, data };
   } catch (error: any) {
     console.error('Error en controller al obtener balance:', error);
-    throw new Error('No se pudo calcular el balance');
+    return { success: false, error: 'No se pudo calcular el balance' };
   }
 }
 
@@ -251,45 +263,47 @@ export async function getBalance(
 export async function getResumenPorCategoria(
   fechaInicio?: string,
   fechaFin?: string
-): Promise<ResumenPorCategoria[]> {
+): Promise<ApiResponse<ResumenPorCategoria[]>> {
   // Si se proporcionan fechas, validarlas
   if (fechaInicio && fechaFin) {
     const inicio = new Date(fechaInicio);
     const fin = new Date(fechaFin);
 
     if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
-      throw new Error('Las fechas proporcionadas no son válidas');
+      return { success: false, error: 'Las fechas proporcionadas no son válidas' };
     }
 
     if (inicio > fin) {
-      throw new Error('La fecha de inicio no puede ser posterior a la fecha de fin');
+      return { success: false, error: 'La fecha de inicio no puede ser posterior a la fecha de fin' };
     }
   }
 
   try {
-    return await movimientoFinancieroService.getResumenPorCategoria(fechaInicio, fechaFin);
+    const data = await movimientoFinancieroService.getResumenPorCategoria(fechaInicio, fechaFin);
+    return { success: true, data };
   } catch (error: any) {
     console.error('Error en controller al obtener resumen por categoría:', error);
-    throw new Error('No se pudo obtener el resumen por categoría');
+    return { success: false, error: 'No se pudo obtener el resumen por categoría' };
   }
 }
 
 /**
  * Obtener movimientos agrupados por mes
  */
-export async function getMovimientosPorMes(anio?: number): Promise<MovimientosPorMes[]> {
+export async function getMovimientosPorMes(anio?: number): Promise<ApiResponse<MovimientosPorMes[]>> {
   // Validar año si se proporciona
   if (anio !== undefined) {
     if (anio < 2000 || anio > 2100) {
-      throw new Error('Año no válido');
+      return { success: false, error: 'Año no válido' };
     }
   }
 
   try {
-    return await movimientoFinancieroService.getMovimientosPorMes(anio);
+    const data = await movimientoFinancieroService.getMovimientosPorMes(anio);
+    return { success: true, data };
   } catch (error: any) {
     console.error('Error en controller al obtener movimientos por mes:', error);
-    throw new Error('No se pudo obtener los movimientos por mes');
+    return { success: false, error: 'No se pudo obtener los movimientos por mes' };
   }
 }
 

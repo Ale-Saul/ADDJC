@@ -17,10 +17,11 @@ import {
   InputAdornment
 } from '@mui/material'
 import type { SelectChangeEvent } from '@mui/material/Select'
-import { Pago } from '@/models/pago'
+import { Pago, TipoDescuento, RazonDescuento } from '@/models/pago'
 import { pagoController } from '@/controllers/pagoController'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
+import { TIPO_PAGO_LABELS, TIPO_DESCUENTO, RAZON_DESCUENTO, TIPO_DESCUENTO_LABELS, RAZON_DESCUENTO_LABELS } from '@/constants/pagos'
 
 interface EditarPagoFormProps {
   pago: Pago
@@ -35,10 +36,10 @@ export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPago
     descripcion: pago.descripcion || '',
     monto_base: pago.monto_base,
     tiene_descuento: pago.tiene_descuento,
-    tipo_descuento: pago.tipo_descuento || 'ninguno',
+    tipo_descuento: (pago.tipo_descuento || TIPO_DESCUENTO.NINGUNO) as TipoDescuento,
     descuento_porcentaje: pago.descuento_porcentaje,
     descuento_monto: pago.descuento_monto,
-    razon_descuento: pago.razon_descuento || 'ninguno',
+    razon_descuento: (pago.razon_descuento || RAZON_DESCUENTO.NINGUNO) as RazonDescuento,
     fecha_vencimiento: pago.fecha_vencimiento
   })
   const [montoFinal, setMontoFinal] = useState(pago.monto_final)
@@ -52,9 +53,9 @@ export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPago
     let final = montoBase
 
     if (formData.tiene_descuento) {
-      if (formData.tipo_descuento === 'porcentaje' && formData.descuento_porcentaje) {
+      if (formData.tipo_descuento === TIPO_DESCUENTO.PORCENTAJE && formData.descuento_porcentaje) {
         final = montoBase - (montoBase * formData.descuento_porcentaje / 100)
-      } else if (formData.tipo_descuento === 'monto_fijo' && formData.descuento_monto) {
+      } else if (formData.tipo_descuento === TIPO_DESCUENTO.MONTO_FIJO && formData.descuento_monto) {
         final = montoBase - formData.descuento_monto
       }
     }
@@ -99,13 +100,13 @@ export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPago
       ...prev,
       [name]: checked,
       ...(name === 'tiene_descuento' && !checked ? {
-        tipo_descuento: 'ninguno',
+        tipo_descuento: TIPO_DESCUENTO.NINGUNO,
         descuento_porcentaje: null,
         descuento_monto: null,
-        razon_descuento: 'ninguno'
+        razon_descuento: RAZON_DESCUENTO.NINGUNO
       } : name === 'tiene_descuento' && checked ? {
-        tipo_descuento: 'porcentaje',
-        razon_descuento: 'beca'
+        tipo_descuento: TIPO_DESCUENTO.PORCENTAJE,
+        razon_descuento: RAZON_DESCUENTO.BECA
       } : {})
     }))
     setError(null)
@@ -169,12 +170,9 @@ export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPago
           label="Tipo de Pago"
           required
         >
-          <MenuItem value="mensualidad">Mensualidad</MenuItem>
-          <MenuItem value="inscripcion">Inscripción</MenuItem>
-          <MenuItem value="examen">Examen</MenuItem>
-          <MenuItem value="torneo">Torneo</MenuItem>
-          <MenuItem value="evento">Evento</MenuItem>
-          <MenuItem value="otro">Otro</MenuItem>
+          {Object.entries(TIPO_PAGO_LABELS).map(([value, label]) => (
+            <MenuItem key={value} value={value}>{label}</MenuItem>
+          ))}
         </Select>
       </FormControl>
 
@@ -248,18 +246,18 @@ export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPago
             <InputLabel>Tipo de Descuento</InputLabel>
             <Select
               name="tipo_descuento"
-              value={formData.tipo_descuento || 'ninguno'}
+              value={formData.tipo_descuento || TIPO_DESCUENTO.NINGUNO}
               onChange={handleSelectChange}
               label="Tipo de Descuento"
               required
             >
-              <MenuItem value="porcentaje">Porcentaje (%)</MenuItem>
-              <MenuItem value="monto_fijo">Monto Fijo</MenuItem>
-              <MenuItem value="ninguno">Ninguno</MenuItem>
+              {Object.entries(TIPO_DESCUENTO_LABELS).map(([value, label]) => (
+                <MenuItem key={value} value={value}>{label}</MenuItem>
+              ))}
             </Select>
           </FormControl>
 
-          {formData.tipo_descuento === 'porcentaje' && (
+          {formData.tipo_descuento === TIPO_DESCUENTO.PORCENTAJE && (
             <TextField
               fullWidth
               label="Descuento (%)"
@@ -273,7 +271,7 @@ export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPago
             />
           )}
 
-          {formData.tipo_descuento === 'monto_fijo' && (
+          {formData.tipo_descuento === TIPO_DESCUENTO.MONTO_FIJO && (
             <TextField
               fullWidth
               label="Descuento (Monto)"
@@ -291,16 +289,13 @@ export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPago
             <InputLabel>Razón del Descuento</InputLabel>
             <Select
               name="razon_descuento"
-              value={formData.razon_descuento || 'ninguno'}
+              value={formData.razon_descuento || RAZON_DESCUENTO.NINGUNO}
               onChange={handleSelectChange}
               label="Razón del Descuento"
             >
-              <MenuItem value="beca">Beca</MenuItem>
-              <MenuItem value="promocion">Promoción</MenuItem>
-              <MenuItem value="hermanos">Hermanos</MenuItem>
-              <MenuItem value="anticipado">Anticipado</MenuItem>
-              <MenuItem value="especial">Especial</MenuItem>
-              <MenuItem value="ninguno">Ninguno</MenuItem>
+              {Object.entries(RAZON_DESCUENTO_LABELS).map(([value, label]) => (
+                <MenuItem key={value} value={value}>{label}</MenuItem>
+              ))}
             </Select>
           </FormControl>
         </>

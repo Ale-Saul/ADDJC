@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import {
   TextField,
   Button,
@@ -16,13 +15,11 @@ import {
   FormControlLabel,
   InputAdornment
 } from '@mui/material'
-import type { SelectChangeEvent } from '@mui/material/Select'
-import { PagoCreate } from '@/models/pago'
-import { pagoController } from '@/controllers/pagoController'
-import { useAuth } from '@/contexts/AuthContext'
 import { Judoka } from '@/models/judoka'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
+import { usePagoMasivo } from '@/hooks/usePagoMasivo'
+import { TIPO_PAGO, TIPO_DESCUENTO, RAZON_DESCUENTO, TIPO_PAGO_LABELS, TIPO_DESCUENTO_LABELS, RAZON_DESCUENTO_LABELS } from '@/constants/pagos'
 
 interface PagoMasivoFormProps {
   judokas: Judoka[]
@@ -31,146 +28,20 @@ interface PagoMasivoFormProps {
 }
 
 export default function PagoMasivoForm({ judokas, onSuccess, onCancel }: PagoMasivoFormProps) {
-  const { user } = useAuth()
-    const [formData, setFormData] = useState({
-    tipo_pago: 'mensualidad',
-    concepto: '',
-    descripcion: '',
-    monto_base: '' as any,
-    tiene_descuento: false,
-    tipo_descuento: 'ninguno' as 'porcentaje' | 'monto_fijo' | 'ninguno',
-    descuento_porcentaje: null as number | null,
-    descuento_monto: null as number | null,
-    razon_descuento: 'ninguno' as string | null,
-    fecha_vencimiento: ''
-  })
-  const [montoFinal, setMontoFinal] = useState(0)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-  const [createdCount, setCreatedCount] = useState(0)
-
-  // Calcular monto final
-  useEffect(() => {
-    const montoBase = typeof formData.monto_base === 'string' ? parseFloat(formData.monto_base) || 0 : formData.monto_base
-    let final = montoBase
-
-    if (formData.tiene_descuento) {
-      if (formData.tipo_descuento === 'porcentaje' && formData.descuento_porcentaje) {
-        final = montoBase - (montoBase * formData.descuento_porcentaje / 100)
-      } else if (formData.tipo_descuento === 'monto_fijo' && formData.descuento_monto) {
-        final = montoBase - formData.descuento_monto
-      }
-    }
-
-    setMontoFinal(Math.max(0, final))
-  }, [formData.monto_base, formData.tiene_descuento, formData.tipo_descuento, formData.descuento_porcentaje, formData.descuento_monto])
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value === '' ? null : value
-    }))
-    setError(null)
-    setSuccess(false)
-  }
-
-  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value === '' ? 0 : parseFloat(value)
-    }))
-    setError(null)
-    setSuccess(false)
-  }
-
-  const handleSelectChange = (e: SelectChangeEvent<string>) => {
-    const { name, value } = e.target
-    if (!name) return
-    setFormData(prev => ({
-      ...prev,
-      [name]: value === '' ? null : value
-    }))
-    setError(null)
-    setSuccess(false)
-  }
-
-  const handleSwitchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: checked,
-      ...(name === 'tiene_descuento' && !checked ? {
-        tipo_descuento: 'ninguno',
-        descuento_porcentaje: null,
-        descuento_monto: null,
-        razon_descuento: 'ninguno'
-      } : name === 'tiene_descuento' && checked ? {
-        tipo_descuento: 'porcentaje',
-        razon_descuento: 'beca'
-      } : {})
-    }))
-    setError(null)
-    setSuccess(false)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    setSuccess(false)
-    setCreatedCount(0)
-
-    try {
-      let successCount = 0
-      let errorCount = 0
-
-      // Crear un pago para cada judoka
-      for (const judoka of judokas) {
-        const pagoData: PagoCreate = {
-          judoka_id: judoka.id,
-          club_id: user?.club_id || '',
-          tipo_pago: formData.tipo_pago as any,
-          concepto: formData.concepto,
-          descripcion: formData.descripcion || null,
-          monto_base: typeof formData.monto_base === 'string' ? parseFloat(formData.monto_base) : formData.monto_base,
-          tiene_descuento: formData.tiene_descuento,
-          tipo_descuento: formData.tipo_descuento,
-          descuento_porcentaje: formData.descuento_porcentaje,
-          descuento_monto: formData.descuento_monto,
-          razon_descuento: formData.razon_descuento as any,
-          monto_final: montoFinal,
-          estado: 'pendiente',
-          fecha_vencimiento: formData.fecha_vencimiento,
-          creador_id: user?.id || ''
-        }
-
-        const response = await pagoController.createPago(pagoData)
-        if (response.success) {
-          successCount++
-          setCreatedCount(successCount)
-        } else {
-          errorCount++
-        }
-      }
-
-      if (errorCount > 0) {
-        setError(`Se crearon ${successCount} pagos correctamente y ${errorCount} fallaron`)
-      } else {
-        setSuccess(true)
-        setTimeout(() => {
-          onSuccess?.()
-        }, 1500)
-      }
-    } catch (err) {
-      console.error('Error al crear pagos masivos:', err)
-      setError('Error inesperado al crear los pagos')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const {
+    formData,
+    montoFinal,
+    loading,
+    error,
+    success,
+    createdCount,
+    handleChange,
+    handleNumberChange,
+    handleSelectChange,
+    handleSwitchChange,
+    setFechaVencimiento,
+    handleSubmit
+  } = usePagoMasivo({ judokas, onSuccess })
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
@@ -205,12 +76,9 @@ export default function PagoMasivoForm({ judokas, onSuccess, onCancel }: PagoMas
           label="Tipo de Pago"
           required
         >
-          <MenuItem value="mensualidad">Mensualidad</MenuItem>
-          <MenuItem value="inscripcion">Inscripción</MenuItem>
-          <MenuItem value="examen">Examen</MenuItem>
-          <MenuItem value="torneo">Torneo</MenuItem>
-          <MenuItem value="evento">Evento</MenuItem>
-          <MenuItem value="otro">Otro</MenuItem>
+          {Object.entries(TIPO_PAGO_LABELS).map(([value, label]) => (
+            <MenuItem key={value} value={value}>{label}</MenuItem>
+          ))}
         </Select>
       </FormControl>
 
@@ -254,7 +122,7 @@ export default function PagoMasivoForm({ judokas, onSuccess, onCancel }: PagoMas
         label="Fecha de Vencimiento"
         value={formData.fecha_vencimiento ? dayjs(formData.fecha_vencimiento) : null}
         onChange={(newValue) => {
-          setFormData(prev => ({ ...prev, fecha_vencimiento: newValue ? newValue.format('YYYY-MM-DD') : '' }))
+          setFechaVencimiento(newValue ? newValue.format('YYYY-MM-DD') : '')
         }}
         slotProps={{
           textField: {
@@ -284,18 +152,18 @@ export default function PagoMasivoForm({ judokas, onSuccess, onCancel }: PagoMas
             <InputLabel>Tipo de Descuento</InputLabel>
             <Select
               name="tipo_descuento"
-              value={formData.tipo_descuento || 'ninguno'}
+              value={formData.tipo_descuento || TIPO_DESCUENTO.NINGUNO}
               onChange={handleSelectChange}
               label="Tipo de Descuento"
               required
             >
-              <MenuItem value="porcentaje">Porcentaje (%)</MenuItem>
-              <MenuItem value="monto_fijo">Monto Fijo</MenuItem>
-              <MenuItem value="ninguno">Ninguno</MenuItem>
+              {Object.entries(TIPO_DESCUENTO_LABELS).map(([value, label]) => (
+                <MenuItem key={value} value={value}>{label}</MenuItem>
+              ))}
             </Select>
           </FormControl>
 
-          {formData.tipo_descuento === 'porcentaje' && (
+          {formData.tipo_descuento === TIPO_DESCUENTO.PORCENTAJE && (
             <TextField
               fullWidth
               label="Descuento (%)"
@@ -309,7 +177,7 @@ export default function PagoMasivoForm({ judokas, onSuccess, onCancel }: PagoMas
             />
           )}
 
-          {formData.tipo_descuento === 'monto_fijo' && (
+          {formData.tipo_descuento === TIPO_DESCUENTO.MONTO_FIJO && (
             <TextField
               fullWidth
               label="Descuento (Monto)"
@@ -327,16 +195,13 @@ export default function PagoMasivoForm({ judokas, onSuccess, onCancel }: PagoMas
             <InputLabel>Razón del Descuento</InputLabel>
             <Select
               name="razon_descuento"
-              value={formData.razon_descuento || 'ninguno'}
+              value={formData.razon_descuento || RAZON_DESCUENTO.NINGUNO}
               onChange={handleSelectChange}
               label="Razón del Descuento"
             >
-              <MenuItem value="beca">Beca</MenuItem>
-              <MenuItem value="promocion">Promoción</MenuItem>
-              <MenuItem value="hermanos">Hermanos</MenuItem>
-              <MenuItem value="anticipado">Anticipado</MenuItem>
-              <MenuItem value="especial">Especial</MenuItem>
-              <MenuItem value="ninguno">Ninguno</MenuItem>
+              {Object.entries(RAZON_DESCUENTO_LABELS).map(([value, label]) => (
+                <MenuItem key={value} value={value}>{label}</MenuItem>
+              ))}
             </Select>
           </FormControl>
         </>

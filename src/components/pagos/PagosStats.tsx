@@ -8,6 +8,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import PeopleIcon from '@mui/icons-material/People'
 import { Pago } from '@/models/pago'
 import { formatters } from '@/utils/formatters'
+import { ESTADO_PAGO } from '@/constants/pagos'
 
 interface PagosStatsProps {
   pagos: Pago[]
@@ -23,11 +24,11 @@ export default function PagosStats({ pagos }: PagosStatsProps) {
 
     // Total pendiente (solo pagos pendientes, no vencidos)
     const totalPendiente = pagos
-      .filter(p => p.estado === 'pendiente' && p.activo)
+      .filter(p => p.estado === ESTADO_PAGO.PENDIENTE && p.activo)
       .reduce((sum, p) => sum + p.monto_final, 0)
 
     // Total vencido + días promedio de atraso
-    const pagosVencidos = pagos.filter(p => p.estado === 'vencido' && p.activo)
+    const pagosVencidos = pagos.filter(p => p.estado === ESTADO_PAGO.VENCIDO && p.activo)
     const totalVencido = pagosVencidos.reduce((sum, p) => sum + p.monto_final, 0)
     
     const diasVencidos = pagosVencidos.map(p => {
@@ -44,7 +45,7 @@ export default function PagosStats({ pagos }: PagosStatsProps) {
     // Total cobrado este mes
     const totalCobradoMes = pagos
       .filter(p => {
-        if (p.estado !== 'pagado' || !p.fecha_pago) return false
+        if (p.estado !== ESTADO_PAGO.PAGADO || !p.fecha_pago) return false
         const fechaPago = new Date(p.fecha_pago)
         return fechaPago >= inicioMes && fechaPago <= hoy
       })
@@ -53,7 +54,7 @@ export default function PagosStats({ pagos }: PagosStatsProps) {
     // Judokas únicos con deuda (pendiente o vencido)
     const judokasConDeuda = new Set(
       pagos
-        .filter(p => (p.estado === 'pendiente' || p.estado === 'vencido') && p.activo)
+        .filter(p => (p.estado === ESTADO_PAGO.PENDIENTE || p.estado === ESTADO_PAGO.VENCIDO) && p.activo)
         .map(p => p.judoka_id)
     ).size
 

@@ -1,30 +1,12 @@
-export type TipoPago = 
-  | 'mensualidad'
-  | 'inscripcion'
-  | 'examen'
-  | 'torneo'
-  | 'evento'
-  | 'otro'
+import { TIPO_PAGO, ESTADO_PAGO, TIPO_DESCUENTO, RAZON_DESCUENTO } from '@/constants/pagos'
 
-export type EstadoPago = 
-  | 'pendiente'
-  | 'pagado'
-  | 'vencido'
-  | 'cancelado'
-  | 'reembolsado'
+export type TipoPago = typeof TIPO_PAGO[keyof typeof TIPO_PAGO]
 
-export type TipoDescuento = 
-  | 'porcentaje'
-  | 'monto_fijo'
-  | 'ninguno'
+export type EstadoPago = typeof ESTADO_PAGO[keyof typeof ESTADO_PAGO]
 
-export type RazonDescuento = 
-  | 'beca'
-  | 'promocion'
-  | 'hermanos'
-  | 'anticipado'
-  | 'especial'
-  | 'ninguno'
+export type TipoDescuento = typeof TIPO_DESCUENTO[keyof typeof TIPO_DESCUENTO]
+
+export type RazonDescuento = typeof RAZON_DESCUENTO[keyof typeof RAZON_DESCUENTO]
 
 export interface Pago {
   id: string

@@ -18,7 +18,7 @@ export type CategoriaMovimiento =
 export type EstadoMovimiento = 
   | 'registrado'     // Movimiento registrado
   | 'aprobado'       // Aprobado (para futuro flujo de aprobación)
-  | 'anulado';       // Anulado/cancelado
+  | 'cancelado';     // Anulado/cancelado
 
 export interface MovimientoFinanciero {
   id: string;

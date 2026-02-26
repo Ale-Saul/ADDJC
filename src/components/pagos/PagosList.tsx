@@ -29,6 +29,7 @@ import { pagoController } from '@/controllers/pagoController'
 import RegistrarPagoForm from './RegistrarPagoForm'
 import EditarPagoForm from './EditarPagoForm'
 import { formatters } from '@/utils/formatters'
+import { ESTADO_PAGO, TIPO_PAGO_LABELS } from '@/constants/pagos'
 
 interface PagosListProps {
   judokaId: string
@@ -51,7 +52,7 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
       if (response.success && response.data) {
         // Filtrar solo pagos pendientes y vencidos
         const pagosPendientes = response.data.filter(
-          p => p.estado === 'pendiente' || p.estado === 'vencido'
+          p => p.estado === ESTADO_PAGO.PENDIENTE || p.estado === ESTADO_PAGO.VENCIDO
         )
         setPagos(pagosPendientes)
       }
@@ -135,19 +136,19 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
 
   const getEstadoChip = (estado: string) => {
     const colores: Record<string, 'success' | 'warning' | 'error' | 'default' | 'info'> = {
-      pagado: 'success',
-      pendiente: 'warning',
-      vencido: 'error',
-      parcial: 'info',
-      cancelado: 'default'
+      [ESTADO_PAGO.PAGADO]: 'success',
+      [ESTADO_PAGO.PENDIENTE]: 'warning',
+      [ESTADO_PAGO.VENCIDO]: 'error',
+      [ESTADO_PAGO.CANCELADO]: 'default',
+      [ESTADO_PAGO.REEMBOLSADO]: 'info'
     }
 
     const labels: Record<string, string> = {
-      pagado: 'Pagado',
-      pendiente: 'Pendiente',
-      vencido: 'Vencido',
-      parcial: 'Parcial',
-      cancelado: 'Cancelado'
+      [ESTADO_PAGO.PAGADO]: 'Pagado',
+      [ESTADO_PAGO.PENDIENTE]: 'Pendiente',
+      [ESTADO_PAGO.VENCIDO]: 'Vencido',
+      [ESTADO_PAGO.CANCELADO]: 'Cancelado',
+      [ESTADO_PAGO.REEMBOLSADO]: 'Reembolsado'
     }
 
     return (
@@ -233,13 +234,7 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
               </TableCell>
               <TableCell>
                 <Typography variant="caption">
-                  {pago.tipo_pago === 'mensualidad' ? 'Mensualidad' :
-                   pago.tipo_pago === 'inscripcion' ? 'Inscripción' :
-                   pago.tipo_pago === 'examen' ? 'Examen' :
-                   pago.tipo_pago === 'torneo' ? 'Torneo' :
-                   pago.tipo_pago === 'evento' ? 'Evento' :
-                   pago.tipo_pago === 'otro' ? 'Otro' :
-                   pago.tipo_pago.replace('_', ' ')}
+                  {TIPO_PAGO_LABELS[pago.tipo_pago as keyof typeof TIPO_PAGO_LABELS] || pago.tipo_pago}
                 </Typography>
               </TableCell>
               <TableCell align="right">
@@ -257,7 +252,7 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
               <TableCell>{formatters.formatDate(pago.fecha_vencimiento)}</TableCell>
               <TableCell>{getEstadoChip(pago.estado)}</TableCell>
               <TableCell align="center">
-                {(pago.estado === 'pendiente' || pago.estado === 'vencido') && (
+                {(pago.estado === ESTADO_PAGO.PENDIENTE || pago.estado === ESTADO_PAGO.VENCIDO) && (
                   <Tooltip title="Editar Pago">
                     <IconButton
                       color="primary"

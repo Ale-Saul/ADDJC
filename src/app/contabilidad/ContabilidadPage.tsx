@@ -81,11 +81,16 @@ export default function ContabilidadPage() {
     setError(null)
     try {
       // Cargar movimientos filtrados por fecha
-      const movimientosData = await movimientoFinancieroController.getMovimientosByDateRange(
+      const movimientosResponse = await movimientoFinancieroController.getMovimientosByDateRange(
         fechaInicio,
         fechaFin
       )
-      setMovimientos(movimientosData)
+      
+      if (movimientosResponse.success && movimientosResponse.data) {
+        setMovimientos(movimientosResponse.data)
+      } else {
+        setError(movimientosResponse.error || 'Error al cargar los movimientos')
+      }
 
       // Cargar clubes para el filtro
       const clubesResponse = await clubController.getAllClubes()
@@ -117,7 +122,7 @@ export default function ContabilidadPage() {
       if (clubFiltro !== 'todos' && mov.origen_club_id !== clubFiltro) return false
       
       // Excluir movimientos anulados por defecto
-      if (mov.estado === 'anulado') return false
+      if (mov.estado === 'cancelado') return false
       
       return true
     })
@@ -156,8 +161,12 @@ export default function ContabilidadPage() {
     if (!confirm('¿Está seguro de eliminar este movimiento?')) return
     
     try {
-      await movimientoFinancieroController.deleteMovimiento(id)
-      await cargarDatos()
+      const response = await movimientoFinancieroController.deleteMovimiento(id)
+      if (response.success) {
+        await cargarDatos()
+      } else {
+        alert(response.error || 'Error al eliminar movimiento')
+      }
     } catch (err: any) {
       alert(err.message || 'Error al eliminar movimiento')
     }
@@ -167,8 +176,12 @@ export default function ContabilidadPage() {
     if (!confirm('¿Está seguro de anular este movimiento?')) return
     
     try {
-      await movimientoFinancieroController.anularMovimiento(id)
-      await cargarDatos()
+      const response = await movimientoFinancieroController.anularMovimiento(id)
+      if (response.success) {
+        await cargarDatos()
+      } else {
+        alert(response.error || 'Error al anular movimiento')
+      }
     } catch (err: any) {
       alert(err.message || 'Error al anular movimiento')
     }

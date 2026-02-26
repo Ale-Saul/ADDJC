@@ -46,6 +46,7 @@ import { Club } from '@/models/club'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { formatters } from '@/utils/formatters'
+import { ESTADO_PAGO, TIPO_PAGO_LABELS, TIPO_DESCUENTO, TIPO_PAGO } from '@/constants/pagos'
 
 export default function ReportesPage() {
   const { user } = useAuth()
@@ -153,15 +154,15 @@ export default function ReportesPage() {
   // Calcular estadísticas
   const estadisticas = useMemo(() => {
     const totalGenerado = pagosFiltrados
-      .filter(p => p.estado === 'pagado')
+      .filter(p => p.estado === ESTADO_PAGO.PAGADO)
       .reduce((sum, p) => sum + p.monto_final, 0)
 
     const totalPendiente = pagosFiltrados
-      .filter(p => p.estado === 'pendiente' || p.estado === 'vencido')
+      .filter(p => p.estado === ESTADO_PAGO.PENDIENTE || p.estado === ESTADO_PAGO.VENCIDO)
       .reduce((sum, p) => sum + p.monto_final, 0)
 
     const totalVencido = pagosFiltrados
-      .filter(p => p.estado === 'vencido')
+      .filter(p => p.estado === ESTADO_PAGO.VENCIDO)
       .reduce((sum, p) => sum + p.monto_final, 0)
 
     // Desglose por tipo de pago
@@ -172,7 +173,7 @@ export default function ReportesPage() {
       }
       acc[tipo].total += pago.monto_final
       acc[tipo].cantidad += 1
-      if (pago.estado === 'pagado') {
+      if (pago.estado === ESTADO_PAGO.PAGADO) {
         acc[tipo].pagado += pago.monto_final
       }
       return acc
@@ -215,7 +216,7 @@ export default function ReportesPage() {
       p.concepto,
       p.tipo_pago,
       p.monto_base.toFixed(2),
-      p.tiene_descuento ? (p.tipo_descuento === 'porcentaje' ? `${p.descuento_porcentaje}%` : `Bs. ${p.descuento_monto}`) : '-',
+      p.tiene_descuento ? (p.tipo_descuento === TIPO_DESCUENTO.PORCENTAJE ? `${p.descuento_porcentaje}%` : `Bs. ${p.descuento_monto}`) : '-',
       p.monto_final.toFixed(2),
       p.estado,
       formatters.formatDate(p.fecha_vencimiento),
@@ -224,11 +225,11 @@ export default function ReportesPage() {
 
     // Calcular totales
     const totalCobrado = pagosFiltrados
-      .filter(p => p.estado === 'pagado')
+      .filter(p => p.estado === ESTADO_PAGO.PAGADO)
       .reduce((sum, p) => sum + p.monto_final, 0)
     
     const totalPendiente = pagosFiltrados
-      .filter(p => p.estado === 'pendiente' || p.estado === 'vencido')
+      .filter(p => p.estado === ESTADO_PAGO.PENDIENTE || p.estado === ESTADO_PAGO.VENCIDO)
       .reduce((sum, p) => sum + p.monto_final, 0)
 
     // Agregar líneas de totales
@@ -266,11 +267,11 @@ export default function ReportesPage() {
     
     // Totales
     const totalCobrado = pagosFiltrados
-      .filter(p => p.estado === 'pagado')
+      .filter(p => p.estado === ESTADO_PAGO.PAGADO)
       .reduce((sum, p) => sum + p.monto_final, 0)
     
     const totalPendiente = pagosFiltrados
-      .filter(p => p.estado === 'pendiente' || p.estado === 'vencido')
+      .filter(p => p.estado === ESTADO_PAGO.PENDIENTE || p.estado === ESTADO_PAGO.VENCIDO)
       .reduce((sum, p) => sum + p.monto_final, 0)
 
     doc.setFontSize(10)
@@ -322,25 +323,17 @@ export default function ReportesPage() {
 
   const getEstadoChip = (estado: string) => {
     const colores: Record<string, 'success' | 'warning' | 'error' | 'default' | 'info'> = {
-      pagado: 'success',
-      pendiente: 'warning',
-      vencido: 'error',
-      parcial: 'info',
-      cancelado: 'default'
+      [ESTADO_PAGO.PAGADO]: 'success',
+      [ESTADO_PAGO.PENDIENTE]: 'warning',
+      [ESTADO_PAGO.VENCIDO]: 'error',
+      [ESTADO_PAGO.CANCELADO]: 'default',
+      [ESTADO_PAGO.REEMBOLSADO]: 'info'
     }
     return <Chip label={estado} color={colores[estado] || 'default'} size="small" />
   }
 
   const getTipoLabel = (tipo: string) => {
-    const labels: Record<string, string> = {
-      mensualidad: 'Mensualidad',
-      inscripcion: 'Inscripción',
-      examen: 'Examen',
-      torneo: 'Torneo',
-      evento: 'Evento',
-      otro: 'Otro'
-    }
-    return labels[tipo] || tipo
+    return TIPO_PAGO_LABELS[tipo as keyof typeof TIPO_PAGO_LABELS] || tipo
   }
 
   const clearFilters = () => {
@@ -468,11 +461,10 @@ export default function ReportesPage() {
                       onChange={(e) => setEstadoFiltro(e.target.value)}
                     >
                       <MenuItem value="todos">Todos los estados</MenuItem>
-                      <MenuItem value="pendiente">Pendiente</MenuItem>
-                      <MenuItem value="pagado">Pagado</MenuItem>
-                      <MenuItem value="vencido">Vencido</MenuItem>
-                      <MenuItem value="parcial">Parcial</MenuItem>
-                      <MenuItem value="cancelado">Cancelado</MenuItem>
+                      <MenuItem value={ESTADO_PAGO.PENDIENTE}>Pendiente</MenuItem>
+                      <MenuItem value={ESTADO_PAGO.PAGADO}>Pagado</MenuItem>
+                      <MenuItem value={ESTADO_PAGO.VENCIDO}>Vencido</MenuItem>
+                      <MenuItem value={ESTADO_PAGO.CANCELADO}>Cancelado</MenuItem>
                     </Select>
                   </FormControl>
 
@@ -502,15 +494,8 @@ export default function ReportesPage() {
                       onChange={(e) => setTipoFiltro(e.target.value)}
                     >
                       <MenuItem value="todos">Todos los tipos</MenuItem>
-                      {[
-                        { val: 'mensualidad', label: 'Mensualidad' },
-                        { val: 'inscripcion', label: 'Inscripción' },
-                        { val: 'examen', label: 'Examen' },
-                        { val: 'torneo', label: 'Torneo' },
-                        { val: 'evento', label: 'Evento' },
-                        { val: 'otro', label: 'Otro' }
-                      ].sort((a, b) => a.label.localeCompare(b.label)).map(tipo => (
-                        <MenuItem key={tipo.val} value={tipo.val}>{tipo.label}</MenuItem>
+                      {Object.entries(TIPO_PAGO_LABELS).sort((a, b) => a[1].localeCompare(b[1])).map(([value, label]) => (
+                        <MenuItem key={value} value={value}>{label}</MenuItem>
                       ))}
                     </Select>
                   </FormControl>
@@ -542,7 +527,7 @@ export default function ReportesPage() {
                   Bs. {estadisticas.totalGenerado.toFixed(2)}
                 </Typography>
                 <Typography variant="caption" color="#000">
-                  {pagosFiltrados.filter(p => p.estado === 'pagado').length} pagos cobrados
+                  {pagosFiltrados.filter(p => p.estado === ESTADO_PAGO.PAGADO).length} pagos cobrados
                 </Typography>
               </CardContent>
             </Card>
@@ -554,7 +539,7 @@ export default function ReportesPage() {
                   Bs. {estadisticas.totalPendiente.toFixed(2)}
                 </Typography>
                 <Typography variant="caption" color="#000">
-                  {pagosFiltrados.filter(p => p.estado === 'pendiente' || p.estado === 'vencido').length} pagos pendientes
+                  {pagosFiltrados.filter(p => p.estado === ESTADO_PAGO.PENDIENTE || p.estado === ESTADO_PAGO.VENCIDO).length} pagos pendientes
                 </Typography>
               </CardContent>
             </Card>
@@ -566,7 +551,7 @@ export default function ReportesPage() {
                   Bs. {estadisticas.totalVencido.toFixed(2)}
                 </Typography>
                 <Typography variant="caption" color="#000">
-                  {pagosFiltrados.filter(p => p.estado === 'vencido').length} pagos vencidos
+                  {pagosFiltrados.filter(p => p.estado === ESTADO_PAGO.VENCIDO).length} pagos vencidos
                 </Typography>
               </CardContent>
             </Card>
