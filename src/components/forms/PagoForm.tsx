@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import {
   TextField,
   Button,
@@ -17,12 +16,10 @@ import {
   InputAdornment
 } from '@mui/material'
 import type { SelectChangeEvent } from '@mui/material/Select'
-import { PagoCreate, TipoPago, TipoDescuento, RazonDescuento, EstadoPago } from '@/models/pago'
-import { pagoController } from '@/controllers/pagoController'
-import { useAuth } from '@/contexts/AuthContext'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
-import { TIPO_PAGO_LABELS, TIPO_DESCUENTO, RAZON_DESCUENTO, TIPO_DESCUENTO_LABELS, RAZON_DESCUENTO_LABELS, TIPO_PAGO, ESTADO_PAGO } from '@/constants/pagos'
+import { TIPO_PAGO_LABELS, TIPO_DESCUENTO, TIPO_DESCUENTO_LABELS, RAZON_DESCUENTO_LABELS } from '@/constants/pagos'
+import { usePagoForm } from '@/hooks/usePagoForm'
 
 interface PagoFormProps {
   judokaId: string
@@ -32,127 +29,31 @@ interface PagoFormProps {
 }
 
 export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }: PagoFormProps) {
-  const { user } = useAuth()
-  const [formData, setFormData] = useState<PagoCreate>({
-    judoka_id: judokaId,
-    club_id: user?.club_id || '',
-    tipo_pago: TIPO_PAGO.MENSUALIDAD as TipoPago,
-    concepto: '',
-    descripcion: null,
-    monto_base: '' as any,
-    tiene_descuento: false,
-    tipo_descuento: TIPO_DESCUENTO.NINGUNO as TipoDescuento,
-    descuento_porcentaje: null,
-    descuento_monto: null,
-    razon_descuento: RAZON_DESCUENTO.NINGUNO as RazonDescuento,
-    estado: ESTADO_PAGO.PENDIENTE as EstadoPago,
-    fecha_vencimiento: '',
-    fecha_pago: null,
-    metodo_pago: null,
-    comprobante_url: null,
-    creador_id: user?.id || '',
-    activo: true
-  })
-  const [montoFinal, setMontoFinal] = useState(0)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-
-  // Calcular monto final cuando cambian los valores
-  useEffect(() => {
-    const montoBase = typeof formData.monto_base === 'string' ? parseFloat(formData.monto_base) || 0 : formData.monto_base
-    let final = montoBase
-
-    if (formData.tiene_descuento) {
-      if (formData.tipo_descuento === TIPO_DESCUENTO.PORCENTAJE && formData.descuento_porcentaje) {
-        final = montoBase - (montoBase * formData.descuento_porcentaje / 100)
-      } else if (formData.tipo_descuento === TIPO_DESCUENTO.MONTO_FIJO && formData.descuento_monto) {
-        final = montoBase - formData.descuento_monto
-      }
-    }
-
-    setMontoFinal(Math.max(0, final))
-  }, [formData.monto_base, formData.tiene_descuento, formData.tipo_descuento, formData.descuento_porcentaje, formData.descuento_monto])
+  const { state, dispatch, montoFinal, handleSubmit } = usePagoForm({ judokaId, onSuccess })
+  const { formData, loading, error, success } = state
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value === '' ? null : value
-    }))
-    setError(null)
-    setSuccess(false)
+    dispatch({ type: 'SET_FIELD', field: name as any, value: value === '' ? null : value })
   }
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value === '' ? 0 : parseFloat(value)
-    }))
-    setError(null)
-    setSuccess(false)
+    dispatch({ type: 'SET_FIELD', field: name as any, value: value === '' ? 0 : parseFloat(value) })
   }
 
   const handleSelectChange = (e: SelectChangeEvent<string>) => {
     const { name, value } = e.target
     if (!name) return
-    setFormData(prev => ({
-      ...prev,
-      [name]: value === '' ? null : value
-    }))
-    setError(null)
-    setSuccess(false)
+    dispatch({ type: 'SET_FIELD', field: name as any, value: value === '' ? null : value })
   }
 
   const handleSwitchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: checked,
-      // Resetear valores de descuento si se desactiva
-      ...(name === 'tiene_descuento' && !checked ? {
-        tipo_descuento: TIPO_DESCUENTO.NINGUNO,
-        descuento_porcentaje: null,
-        descuento_monto: null,
-        razon_descuento: RAZON_DESCUENTO.NINGUNO
-      } : name === 'tiene_descuento' && checked ? {
-        tipo_descuento: TIPO_DESCUENTO.PORCENTAJE,
-        razon_descuento: RAZON_DESCUENTO.BECA
-      } : {})
-    }))
-    setError(null)
-    setSuccess(false)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    setSuccess(false)
-
-    try {
-      // Agregar monto_final calculado antes de enviar
-      const pagoConMontoFinal = {
-        ...formData,
-        monto_final: montoFinal
-      }
-
-      const response = await pagoController.createPago(pagoConMontoFinal)
-
-      if (response.success) {
-        setSuccess(true)
-        setTimeout(() => {
-          onSuccess?.()
-        }, 1500)
-      } else {
-        setError(response.error || 'Error al crear el pago')
-      }
-    } catch (err) {
-      console.error('Error al crear pago:', err)
-      setError('Error inesperado al crear el pago')
-    } finally {
-      setLoading(false)
+    dispatch({ type: 'SET_FIELD', field: name as any, value: checked })
+    if (name === 'tiene_descuento') {
+      if (!checked) dispatch({ type: 'RESET_DISCOUNT' })
+      else dispatch({ type: 'INIT_DISCOUNT' })
     }
   }
 
@@ -163,7 +64,7 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
       </Typography>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => dispatch({ type: 'SET_ERROR', payload: null })}>
           {error}
         </Alert>
       )}
@@ -229,7 +130,7 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
         label="Fecha de Vencimiento"
         value={formData.fecha_vencimiento ? dayjs(formData.fecha_vencimiento) : null}
         onChange={(newValue) => {
-          setFormData(prev => ({ ...prev, fecha_vencimiento: newValue ? newValue.format('YYYY-MM-DD') : '' }))
+          dispatch({ type: 'SET_FIELD', field: 'fecha_vencimiento', value: newValue ? newValue.format('YYYY-MM-DD') : '' })
         }}
         slotProps={{
           textField: {
@@ -259,7 +160,7 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
             <InputLabel>Tipo de Descuento</InputLabel>
             <Select
               name="tipo_descuento"
-              value={formData.tipo_descuento || TIPO_DESCUENTO.NINGUNO}
+              value={formData.tipo_descuento || TIPO_DESCUENTO.PORCENTAJE}
               onChange={handleSelectChange}
               label="Tipo de Descuento"
               required
@@ -302,7 +203,7 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
             <InputLabel>Razón del Descuento</InputLabel>
             <Select
               name="razon_descuento"
-              value={formData.razon_descuento || RAZON_DESCUENTO.NINGUNO}
+              value={formData.razon_descuento || ''}
               onChange={handleSelectChange}
               label="Razón del Descuento"
             >

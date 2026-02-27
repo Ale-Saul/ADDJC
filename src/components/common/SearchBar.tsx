@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useSyncExternalStore, useEffect, useCallback } from 'react'
 import { TextField, InputAdornment, Box } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
 import ClearIcon from '@mui/icons-material/Clear'
@@ -13,6 +13,15 @@ interface SearchBarProps {
   fullWidth?: boolean
 }
 
+const emptySubscribe = () => () => {}
+function useIsClient() {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  )
+}
+
 export default function SearchBar({ 
   placeholder = 'Buscar...', 
   onSearch, 
@@ -20,14 +29,8 @@ export default function SearchBar({
   fullWidth = true 
 }: SearchBarProps) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [mounted, setMounted] = useState(false)
+  const isClient = useIsClient()
 
-  // Evitar problemas de hidratación
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  // Memoizar la función de búsqueda para evitar recreaciones
   const debouncedSearch = useCallback(
     (value: string) => {
       const timer = setTimeout(() => {
@@ -39,15 +42,17 @@ export default function SearchBar({
   )
 
   useEffect(() => {
-    if (!mounted) return
+    if (!isClient) return
     const cleanup = debouncedSearch(searchTerm)
     return cleanup
-  }, [searchTerm, debouncedSearch, mounted])
+  }, [searchTerm, debouncedSearch, isClient])
 
   const handleClear = () => {
     setSearchTerm('')
     onSearch('')
   }
+
+  if (!isClient) return null
 
   return (
     <Box sx={{ mb: 2 }}>
@@ -81,4 +86,3 @@ export default function SearchBar({
     </Box>
   )
 }
-

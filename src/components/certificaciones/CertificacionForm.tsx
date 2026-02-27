@@ -279,10 +279,11 @@ export default function CertificacionForm({
           {filePreview && (
             <Box mt={1}>
               {filePreview.startsWith('data:image') ? (
-                <img
+                <Box
+                  component="img"
                   src={filePreview}
                   alt="Preview"
-                  style={{ maxWidth: '200px', maxHeight: '200px', objectFit: 'contain' }}
+                  sx={{ maxWidth: '200px', maxHeight: '200px', objectFit: 'contain' }}
                 />
               ) : filePreview.startsWith('http') ? (
                 <Button

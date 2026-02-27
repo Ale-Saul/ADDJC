@@ -1,32 +1,23 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { z } from 'zod'
-import { useForm, Controller, type FieldErrors } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import {
   TextField,
   Button,
   Box,
   Alert,
   CircularProgress,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormHelperText,
   Autocomplete,
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
+import { Controller } from 'react-hook-form'
 
 dayjs.locale('es')
-import { MiembroAsociacion, MiembroAsociacionCreate, MiembroAsociacionUpdate } from '@/models/asociacion'
-import { asociacionController } from '@/controllers/asociacionController'
+import { MiembroAsociacion } from '@/models/asociacion'
 import { CARGOS_ASOCIACION } from '@/utils/constants'
-import { miembroAsociacionSchema } from '@/utils/zodSchemas'
 import { formatCIInput, formatCelularInput, formatNameInput } from '@/utils/inputMasks'
+import { useMiembroAsociacionForm } from '@/hooks/useMiembroAsociacionForm'
 
 interface MiembroAsociacionFormProps {
   miembro?: MiembroAsociacion | null
@@ -35,36 +26,17 @@ interface MiembroAsociacionFormProps {
 }
 
 export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: MiembroAsociacionFormProps) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-  const [focusedField, setFocusedField] = useState<string | null>(null)
-
-  // Configuración de React Hook Form con Zod
   const {
+    state,
+    dispatch,
     control,
     handleSubmit,
-    reset,
-    setFocus,
-    formState: { errors },
-  } = useForm({
-    resolver: zodResolver(miembroAsociacionSchema),
-    mode: 'onSubmit',
-    reValidateMode: 'onChange',
-    defaultValues: {
-      nombres: '',
-      apellido_paterno: '',
-      apellido_materno: '',
-      email: '',
-      cargo: '',
-      fecha_nacimiento: null as string | null,
-      numero_celular: '',
-      ci: '',
-      genero: '',
-      fecha_ingreso: null as string | null,
-      activo: true,
-    },
-  })
+    onSubmit,
+    onError,
+    errors
+  } = useMiembroAsociacionForm({ miembro, onSuccess })
+
+  const { loading, error, success } = state
 
   const fieldError = (name: keyof typeof errors) => {
     return {
@@ -73,94 +45,10 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
     }
   }
 
-  const onError = (formErrors: FieldErrors<z.infer<typeof miembroAsociacionSchema>>) => {
-    const errorKeys = Object.keys(formErrors) as (keyof z.infer<typeof miembroAsociacionSchema>)[]
-    if (errorKeys.length > 0) {
-      const firstField = errorKeys[0]
-      setFocus(firstField, { shouldSelect: true })
-      setTimeout(() => {
-        const element = document.getElementsByName(firstField)[0]
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }
-      }, 100)
-    }
-  }
-
-  // Efecto para cargar datos del miembro en edición
-  useEffect(() => {
-    if (miembro) {
-      reset({
-        nombres: miembro.nombres,
-        apellido_paterno: miembro.apellido_paterno ?? miembro.apellidos?.split(/\s+/)[0] ?? '',
-        apellido_materno: miembro.apellido_materno ?? miembro.apellidos?.split(/\s+/).slice(1).join(' ') ?? '',
-        email: miembro.email,
-        cargo: miembro.cargo ?? '',
-        fecha_nacimiento: miembro.fecha_nacimiento || null,
-        numero_celular: miembro.numero_celular || '',
-        ci: miembro.ci || '',
-        genero: miembro.genero || '',
-        fecha_ingreso: miembro.fecha_ingreso || null,
-        activo: miembro.activo,
-      })
-    }
-  }, [miembro, reset])
-
-  const onSubmit = async (data: z.infer<typeof miembroAsociacionSchema>) => {
-    setLoading(true)
-    setError(null)
-    setSuccess(false)
-
-    try {
-      let response
-
-      if (miembro) {
-        const updateData: MiembroAsociacionUpdate = {
-          ...data,
-          cargo: data.cargo || null,
-          fecha_nacimiento: data.fecha_nacimiento || null,
-          numero_celular: data.numero_celular || null,
-          ci: data.ci || null,
-          genero: data.genero || null,
-          fecha_ingreso: data.fecha_ingreso || null,
-        } as MiembroAsociacionUpdate
-        response = await asociacionController.updateMiembro(miembro.id, updateData)
-      } else {
-        const createData: MiembroAsociacionCreate = {
-          ...data,
-          cargo: data.cargo || null,
-          fecha_nacimiento: data.fecha_nacimiento || null,
-          numero_celular: data.numero_celular || null,
-          ci: data.ci || null,
-          genero: data.genero || null,
-          fecha_ingreso: data.fecha_ingreso || null,
-          activo: data.activo ?? true,
-        } as MiembroAsociacionCreate
-        response = await asociacionController.createMiembro(createData)
-      }
-
-      if (response.success) {
-        setSuccess(true)
-        if (onSuccess) {
-          setTimeout(() => {
-            onSuccess()
-          }, 1000)
-        }
-      } else {
-        setError(response.error || 'Error al guardar el miembro')
-      }
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Error inesperado'
-      setError(errorMessage)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
     <Box component="form" onSubmit={handleSubmit(onSubmit, onError)} sx={{ mt: 2 }}>
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => dispatch({ type: 'SET_ERROR', payload: null })}>
           {error}
         </Alert>
       )}
@@ -183,8 +71,6 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
               required
               disabled={loading}
               {...fieldError('ci')}
-              onFocus={() => setFocusedField('ci')}
-              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatCIInput(e.target.value))}
             />
           )}
@@ -201,8 +87,6 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
               required
               disabled={loading}
               {...fieldError('nombres')}
-              onFocus={() => setFocusedField('nombres')}
-              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatNameInput(e.target.value))}
             />
           )}
@@ -218,8 +102,6 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
               label="Apellido paterno"
               disabled={loading}
               {...fieldError('apellido_paterno')}
-              onFocus={() => setFocusedField('apellido_paterno')}
-              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatNameInput(e.target.value))}
             />
           )}
@@ -236,8 +118,6 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
               disabled={loading}
               error={fieldError('apellido_paterno').error}
               helperText={fieldError('apellido_paterno').error ? 'Al menos uno de los dos apellidos es requerido' : undefined}
-              onFocus={() => setFocusedField('apellido_paterno')}
-              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatNameInput(e.target.value))}
             />
           )}
@@ -258,8 +138,6 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
                 textField: {
                   fullWidth: true,
                   ...fieldError('fecha_nacimiento'),
-                  onFocus: () => setFocusedField('fecha_nacimiento'),
-                  onBlur: () => setFocusedField(null),
                 },
               }}
               format="DD/MM/YYYY"
@@ -278,8 +156,6 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
               disabled={loading}
               {...fieldError('numero_celular')}
               inputProps={{ maxLength: 8 }}
-              onFocus={() => setFocusedField('numero_celular')}
-              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatCelularInput(e.target.value))}
             />
           )}
@@ -293,9 +169,7 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
               {...field}
               options={["Masculino", "Femenino", "Prefiero no decir"]}
               value={field.value || null}
-              onChange={(_, newValue) => {
-                field.onChange(newValue || '')
-              }}
+              onChange={(_, newValue) => field.onChange(newValue || '')}
               disabled={loading}
               renderInput={(params) => (
                 <TextField
@@ -324,8 +198,6 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
                 textField: {
                   fullWidth: true,
                   ...fieldError('fecha_ingreso'),
-                  onFocus: () => setFocusedField('fecha_ingreso'),
-                  onBlur: () => setFocusedField(null),
                 },
               }}
               format="DD/MM/YYYY"
@@ -341,9 +213,7 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
               {...field}
               options={CARGOS_ASOCIACION}
               value={field.value || null}
-              onChange={(_, newValue) => {
-                field.onChange(newValue || '')
-              }}
+              onChange={(_, newValue) => field.onChange(newValue || '')}
               disabled={loading}
               renderInput={(params) => (
                 <TextField
@@ -371,8 +241,6 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
               required
               disabled={loading}
               {...fieldError('email')}
-              onFocus={() => setFocusedField('email')}
-              onBlur={() => setFocusedField(null)}
             />
           )}
         />

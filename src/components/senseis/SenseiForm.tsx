@@ -1,36 +1,24 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { z } from 'zod'
-import { useForm, Controller, type FieldErrors } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import {
   TextField,
   Button,
   Box,
   Alert,
   CircularProgress,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
   Typography,
-  FormHelperText,
   Autocomplete,
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
+import { Controller } from 'react-hook-form'
 
 dayjs.locale('es')
-import { Sensei, SenseiCreate, SenseiUpdate } from '@/models/sensei'
-import { senseiController } from '@/controllers/senseiController'
-import { clubController } from '@/controllers/clubController'
-import { Club } from '@/models/club'
-import { useAuth } from '@/contexts/AuthContext'
+import { Sensei } from '@/models/sensei'
 import { ESPECIALIDADES_SENSEI } from '@/utils/constants'
-import { senseiSchema } from '@/utils/zodSchemas'
 import { formatCIInput, formatCelularInput, formatNameInput } from '@/utils/inputMasks'
+import { useSenseiForm } from '@/hooks/useSenseiForm'
 
 interface SenseiFormProps {
   sensei?: Sensei | null
@@ -39,40 +27,18 @@ interface SenseiFormProps {
 }
 
 export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormProps) {
-  const { user } = useAuth()
-  const [clubes, setClubes] = useState<Club[]>([])
-  const [loading, setLoading] = useState(false)
-  const [loadingClubes, setLoadingClubes] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-  const [focusedField, setFocusedField] = useState<string | null>(null)
-
-  // Configuración de React Hook Form con Zod
   const {
+    state,
+    dispatch,
     control,
     handleSubmit,
-    reset,
-    setFocus,
-    formState: { errors },
-  } = useForm({
-    resolver: zodResolver(senseiSchema),
-    mode: 'onSubmit',
-    reValidateMode: 'onChange',
-    defaultValues: {
-      club_id: '',
-      nombres: '',
-      apellido_paterno: '',
-      apellido_materno: '',
-      email: '',
-      fecha_nacimiento: null as string | null,
-      numero_celular: '',
-      ci: '',
-      genero: '',
-      grado_dan: '',
-      especialidad: '',
-      activo: true,
-    },
-  })
+    onSubmit,
+    onError,
+    errors,
+    user
+  } = useSenseiForm({ sensei, onSuccess })
+
+  const { clubes, loading, loadingClubes, error, success } = state
 
   const fieldError = (name: keyof typeof errors) => {
     return {
@@ -81,114 +47,10 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
     }
   }
 
-  const onError = (formErrors: FieldErrors<z.infer<typeof senseiSchema>>) => {
-    const errorKeys = Object.keys(formErrors) as (keyof z.infer<typeof senseiSchema>)[]
-    if (errorKeys.length > 0) {
-      const firstField = errorKeys[0]
-      setFocus(firstField, { shouldSelect: true })
-      setTimeout(() => {
-        const element = document.getElementsByName(firstField)[0]
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }
-      }, 100)
-    }
-  }
-
-  useEffect(() => {
-    const loadClubes = async () => {
-      const response = await clubController.getAllClubes(false)
-      if (response.success && response.data) {
-        setClubes(response.data)
-      }
-      setLoadingClubes(false)
-    }
-    loadClubes()
-  }, [])
-
-  useEffect(() => {
-    if (sensei) {
-      const s = sensei as Sensei
-      const apParts = s.apellidos?.trim().split(/\s+/) ?? []
-      reset({
-        club_id: s.club_id || '',
-        nombres: s.nombres,
-        apellido_paterno: s.apellido_paterno ?? apParts[0] ?? '',
-        apellido_materno: s.apellido_materno ?? apParts.slice(1).join(' ') ?? '',
-        email: s.email || '',
-        fecha_nacimiento: s.fecha_nacimiento || null,
-        numero_celular: s.numero_celular || '',
-        ci: s.ci || '',
-        genero: s.genero || '',
-        grado_dan: s.grado_dan || '',
-        especialidad: s.especialidad || '',
-        activo: s.activo,
-      })
-    }
-  }, [sensei, reset])
-
-  // Si es un encargado creando un nuevo sensei, pre-completar el club
-  useEffect(() => {
-    if (!sensei && user?.rol === 'encargado' && user.club_id) {
-      reset(prev => ({
-        ...prev,
-        club_id: user.club_id!
-      }))
-    }
-  }, [sensei, user, reset])
-
-  const onSubmit = async (data: z.infer<typeof senseiSchema>) => {
-    setLoading(true)
-    setError(null)
-    setSuccess(false)
-
-    try {
-      let response
-      
-      const payload = {
-        ...data,
-        club_id: data.club_id || null,
-        apellido_paterno: data.apellido_paterno?.trim() || null,
-        apellido_materno: data.apellido_materno?.trim() || null,
-        fecha_nacimiento: data.fecha_nacimiento || null,
-        numero_celular: data.numero_celular || null,
-        ci: data.ci || null,
-        genero: data.genero || null,
-        grado_dan: data.grado_dan || null,
-        especialidad: data.especialidad || null,
-      }
-
-      if (sensei) {
-        response = await senseiController.updateSensei(sensei.id, payload as SenseiUpdate)
-      } else {
-        const createData: SenseiCreate = {
-          ...(payload as SenseiCreate),
-          usuario_id: 'temp-user-id',
-        }
-        response = await senseiController.createSensei(createData)
-      }
-
-      if (response.success) {
-        setSuccess(true)
-        if (onSuccess) {
-          setTimeout(() => {
-            onSuccess()
-          }, 1000)
-        }
-      } else {
-        setError(response.error || 'Error al guardar el sensei')
-      }
-    } catch (err: any) {
-      setError(err instanceof Error ? err.message : 'Error inesperado')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
     <Box component="form" onSubmit={handleSubmit(onSubmit, onError)} noValidate sx={{ mt: 2 }}>
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => dispatch({ type: 'SET_ERROR', payload: null })}>
           {error}
         </Alert>
       )}
@@ -216,9 +78,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
                 typeof value === 'string' ? option.id === value : option.id === value?.id
               }
               value={clubes.find(c => c.id === field.value) || null}
-              onChange={(_, newValue) => {
-                field.onChange(newValue ? newValue.id : '')
-              }}
+              onChange={(_, newValue) => field.onChange(newValue ? newValue.id : '')}
               disabled={loading || loadingClubes || user?.rol === 'encargado'}
               renderInput={(params) => (
                 <TextField
@@ -250,8 +110,6 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               required
               disabled={loading}
               {...fieldError('ci')}
-              onFocus={() => setFocusedField('ci')}
-              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatCIInput(e.target.value))}
             />
           )}
@@ -268,8 +126,6 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               required
               disabled={loading}
               {...fieldError('nombres')}
-              onFocus={() => setFocusedField('nombres')}
-              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatNameInput(e.target.value))}
             />
           )}
@@ -285,8 +141,6 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               label="Apellido paterno"
               disabled={loading}
               {...fieldError('apellido_paterno')}
-              onFocus={() => setFocusedField('apellido_paterno')}
-              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatNameInput(e.target.value))}
             />
           )}
@@ -303,8 +157,6 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               disabled={loading}
               error={fieldError('apellido_paterno').error}
               helperText={fieldError('apellido_paterno').error ? 'Al menos uno de los dos apellidos es requerido' : undefined}
-              onFocus={() => setFocusedField('apellido_paterno')}
-              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatNameInput(e.target.value))}
             />
           )}
@@ -322,8 +174,6 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               required
               disabled={loading}
               {...fieldError('email')}
-              onFocus={() => setFocusedField('email')}
-              onBlur={() => setFocusedField(null)}
             />
           )}
         />
@@ -343,8 +193,6 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
                 textField: {
                   fullWidth: true,
                   ...fieldError('fecha_nacimiento'),
-                  onFocus: () => setFocusedField('fecha_nacimiento'),
-                  onBlur: () => setFocusedField(null),
                 },
               }}
               format="DD/MM/YYYY"
@@ -363,8 +211,6 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               disabled={loading}
               {...fieldError('numero_celular')}
               inputProps={{ maxLength: 8 }}
-              onFocus={() => setFocusedField('numero_celular')}
-              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatCelularInput(e.target.value))}
             />
           )}
@@ -378,9 +224,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               {...field}
               options={["Femenino", "Masculino", "Prefiero no decir"]}
               value={field.value || null}
-              onChange={(_, newValue) => {
-                field.onChange(newValue || '')
-              }}
+              onChange={(_, newValue) => field.onChange(newValue || '')}
               disabled={loading}
               renderInput={(params) => (
                 <TextField
@@ -402,9 +246,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               {...field}
               options={["1er Dan", "2do Dan", "3er Dan", "4to Dan", "5to Dan", "6to Dan", "7mo Dan", "8vo Dan", "9no Dan", "10mo Dan"]}
               value={field.value || null}
-              onChange={(_, newValue) => {
-                field.onChange(newValue || '')
-              }}
+              onChange={(_, newValue) => field.onChange(newValue || '')}
               disabled={loading}
               renderInput={(params) => (
                 <TextField
@@ -428,9 +270,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               {...field}
               options={[...ESPECIALIDADES_SENSEI].sort((a, b) => a.localeCompare(b))}
               value={field.value || null}
-              onChange={(_, newValue) => {
-                field.onChange(newValue || '')
-              }}
+              onChange={(_, newValue) => field.onChange(newValue || '')}
               disabled={loading}
               renderInput={(params) => (
                 <TextField

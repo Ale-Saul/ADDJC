@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useSyncExternalStore, useEffect } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import {
   Box,
   Container,
@@ -21,9 +21,20 @@ import { useAuth } from '@/contexts/AuthContext'
 import { authController } from '@/controllers/authController'
 import { createClient } from '@/lib/supabase/client'
 
+const emptySubscribe = () => () => {}
+function useIsClient() {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  )
+}
+
 export default function CambiarPasswordPage() {
   const router = useRouter()
+  const pathname = usePathname()
   const { user, isAuthenticated, loading: authLoading, refreshUser } = useAuth()
+  const isClient = useIsClient()
   
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -34,22 +45,17 @@ export default function CambiarPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   // Redirigir si no está autenticado o si ya cambió su contraseña
   useEffect(() => {
-    if (mounted && !authLoading) {
+    if (isClient && !authLoading) {
       if (!isAuthenticated) {
         router.push('/login')
       } else if (user && !user.debe_cambiar_password) {
         router.push('/')
       }
     }
-  }, [mounted, isAuthenticated, authLoading, user, router])
+  }, [isClient, isAuthenticated, authLoading, user, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -114,7 +120,7 @@ export default function CambiarPasswordPage() {
     }
   }
 
-  if (!mounted || authLoading) {
+  if (!isClient || authLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
         <CircularProgress />

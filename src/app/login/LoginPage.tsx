@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useSyncExternalStore, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Box,
@@ -23,9 +23,19 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { loginSchema } from '@/utils/zodSchemas'
 
+const emptySubscribe = () => () => {}
+function useIsClient() {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  )
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const { user, signIn, isAuthenticated, loading: authLoading } = useAuth()
+  const isClient = useIsClient()
   
   const {
     control,
@@ -41,24 +51,18 @@ export default function LoginPage() {
 
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [mounted, setMounted] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-
-  // Evitar problemas de hidratación
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   // Redirigir si ya está autenticado
   useEffect(() => {
-    if (mounted && !authLoading && isAuthenticated) {
+    if (isClient && !authLoading && isAuthenticated) {
       if (user?.debe_cambiar_password) {
         router.push('/cambiar-password')
       } else {
         router.push('/')
       }
     }
-  }, [mounted, isAuthenticated, authLoading, user, router])
+  }, [isClient, isAuthenticated, authLoading, user, router])
 
   const onSubmit = async (data: LoginCredentials) => {
     setError(null)
@@ -84,7 +88,7 @@ export default function LoginPage() {
   }
 
   // No renderizar Material UI hasta que esté montado en el cliente (evitar hidratación)
-  if (!mounted) {
+  if (!isClient) {
     return null
   }
 
@@ -92,7 +96,6 @@ export default function LoginPage() {
   if (authLoading) {
     return (
       <Box
-        suppressHydrationWarning
         sx={{
           display: 'flex',
           justifyContent: 'center',
@@ -112,7 +115,6 @@ export default function LoginPage() {
 
   return (
     <Box
-      suppressHydrationWarning
       sx={{
         display: 'flex',
         justifyContent: 'center',
@@ -137,13 +139,11 @@ export default function LoginPage() {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             Sistema de Gestión - Asociación de Judo
           </Typography>
-
           {error && (
             <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
               {error}
             </Alert>
           )}
-
           <Box
             component="form"
             onSubmit={handleSubmit(onSubmit)}
@@ -160,7 +160,6 @@ export default function LoginPage() {
                   id="email"
                   label="Email"
                   autoComplete="email"
-                  autoFocus
                   disabled={loading}
                   error={!!errors.email}
                   helperText={errors.email?.message}
@@ -223,4 +222,3 @@ export default function LoginPage() {
     </Box>
   )
 }
-

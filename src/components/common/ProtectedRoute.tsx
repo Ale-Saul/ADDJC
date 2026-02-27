@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useSyncExternalStore } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { Box, CircularProgress, Typography } from '@mui/material'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -11,30 +11,35 @@ interface ProtectedRouteProps {
   allowedRoles?: ('admin' | 'asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka')[]
 }
 
+// Suscriptor simple para detectar si estamos en el cliente
+const emptySubscribe = () => () => {}
+function useIsClient() {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  )
+}
+
 export default function ProtectedRoute({
   children,
   requiredRole,
   allowedRoles,
 }: ProtectedRouteProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const { user, loading, isAuthenticated } = useAuth()
-  const [mounted, setMounted] = useState(false)
-
-  // Evitar problemas de hidratación - solo renderizar en el cliente
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const isClient = useIsClient()
 
   useEffect(() => {
-    if (mounted && !loading) {
+    if (isClient && !loading) {
       if (!isAuthenticated) {
         router.push('/login')
         return
       }
 
       // Si debe cambiar la contraseña, redirigir a la página de cambio de contraseña
-      // Pero permitir el acceso a la propia página de cambio de contraseña
-      if (user?.debe_cambiar_password && window.location.pathname !== '/cambiar-password') {
+      if (user?.debe_cambiar_password && pathname !== '/cambiar-password') {
         router.push('/cambiar-password')
         return
       }
@@ -51,10 +56,10 @@ export default function ProtectedRoute({
         return
       }
     }
-  }, [mounted, loading, isAuthenticated, user, requiredRole, allowedRoles, router])
+  }, [isClient, loading, isAuthenticated, user, requiredRole, allowedRoles, router, pathname])
 
-  // No renderizar nada hasta que esté montado en el cliente
-  if (!mounted) {
+  // No renderizar nada hasta que esté montado en el cliente (evitar flash de hidratación)
+  if (!isClient) {
     return (
       <Box
         sx={{
@@ -135,4 +140,3 @@ export default function ProtectedRoute({
 
   return <>{children}</>
 }
-
