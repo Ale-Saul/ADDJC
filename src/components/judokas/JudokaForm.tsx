@@ -1,5 +1,9 @@
 'use client'
 
+import { useState, useEffect } from 'react'
+import { z } from 'zod'
+import { useForm, Controller, type FieldErrors } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   TextField,
   Button,
@@ -11,18 +15,24 @@ import {
   FormControl,
   InputLabel,
   Typography,
+  FormHelperText,
   Autocomplete,
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
-import { Controller } from 'react-hook-form'
 
 dayjs.locale('es')
-import { Judoka } from '@/models/judoka'
+import { Judoka, JudokaCreate, JudokaUpdate } from '@/models/judoka'
+import { judokaController } from '@/controllers/judokaController'
+import { clubController } from '@/controllers/clubController'
+import { senseiController } from '@/controllers/senseiController'
+import { Club } from '@/models/club'
+import { Sensei } from '@/models/sensei'
+import { useAuth } from '@/contexts/AuthContext'
+import { judokaSchema } from '@/utils/zodSchemas'
 import { formatCIInput, formatCelularInput, formatNameInput } from '@/utils/inputMasks'
 import { CATEGORIES, BELT_COLORS } from '@/utils/constants'
-import { useJudokaForm } from '@/hooks/useJudokaForm'
 
 interface JudokaFormProps {
   judoka?: Judoka | null
@@ -31,21 +41,46 @@ interface JudokaFormProps {
 }
 
 export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormProps) {
+  const { user } = useAuth()
+  const [clubes, setClubes] = useState<Club[]>([])
+  const [senseis, setSenseis] = useState<Sensei[]>([])
+  const [loading, setLoading] = useState(false)
+  const [loadingClubes, setLoadingClubes] = useState(true)
+  const [loadingSenseis, setLoadingSenseis] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+  const [focusedField, setFocusedField] = useState<string | null>(null)
+
+  // Configuración de React Hook Form con Zod
   const {
-    state,
     control,
     handleSubmit,
-    onSubmit,
-    onError,
-    errors,
-    watchClubId,
-    sortedClubes,
-    sortedSenseis,
-    user,
-    dispatch
-  } = useJudokaForm({ judoka, onSuccess })
+    reset,
+    watch,
+    setFocus,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(judokaSchema),
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
+    defaultValues: {
+      club_id: '',
+      entrenador_id: '',
+      nombres: '',
+      apellido_paterno: '',
+      apellido_materno: '',
+      email: '',
+      fecha_nacimiento: null as string | null,
+      numero_celular: '',
+      ci: '',
+      genero: '',
+      categoria: '',
+      cinturon_actual: '',
+      activo: true,
+    },
+  })
 
-  const { loading, loadingClubes, loadingSenseis, error, success } = state
+  const watchClubId = watch('club_id')
 
   const fieldError = (name: keyof typeof errors) => {
     return {
@@ -54,14 +89,152 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     }
   }
 
+  const onError = (formErrors: FieldErrors<z.infer<typeof judokaSchema>>) => {
+    const errorKeys = Object.keys(formErrors) as (keyof z.infer<typeof judokaSchema>)[]
+    if (errorKeys.length > 0) {
+      const firstField = errorKeys[0]
+      setFocus(firstField, { shouldSelect: true })
+      setTimeout(() => {
+        const element = document.getElementsByName(firstField)[0]
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }, 100)
+    }
+  }
+
+  // Opciones ordenadas alfabéticamente
+  const sortedClubes = [...clubes].sort((a, b) => a.nombre_club.localeCompare(b.nombre_club))
+  const sortedSenseis = [...senseis].sort((a, b) => {
+    const nameA = (a.nombres + ' ' + (a.apellidos || '')).trim()
+    const nameB = (b.nombres + ' ' + (b.apellidos || '')).trim()
+    return nameA.localeCompare(nameB)
+  })
   const generos = ["Masculino", "Femenino", "Prefiero no decir"].sort((a, b) => a.localeCompare(b))
   const categorias = [...CATEGORIES]
   const cinturones = [...BELT_COLORS]
 
+  useEffect(() => {
+    const loadClubes = async () => {
+      const response = await clubController.getAllClubes(false)
+      if (response.success && response.data) {
+        setClubes(response.data)
+      }
+      setLoadingClubes(false)
+    }
+    loadClubes()
+  }, [])
+
+  // Cargar senseis cuando se selecciona un club
+  useEffect(() => {
+    const loadSenseis = async () => {
+      if (watchClubId) {
+        setLoadingSenseis(true)
+        const response = await senseiController.getSenseisByClub(watchClubId)
+        if (response.success && response.data) {
+          setSenseis(response.data)
+        } else {
+          setSenseis([])
+        }
+        setLoadingSenseis(false)
+      } else {
+        setSenseis([])
+      }
+    }
+    loadSenseis()
+  }, [watchClubId])
+
+  useEffect(() => {
+    if (judoka) {
+      reset({
+        club_id: judoka.club_id || '',
+        entrenador_id: judoka.entrenador_id || '',
+        nombres: judoka.nombres || '',
+        apellido_paterno: judoka.apellido_paterno ?? judoka.apellidos?.trim().split(/\s+/)[0] ?? '',
+        apellido_materno: judoka.apellido_materno ?? judoka.apellidos?.trim().split(/\s+/).slice(1).join(' ') ?? '',
+        email: judoka.email || '',
+        fecha_nacimiento: judoka.fecha_nacimiento || null,
+        numero_celular: judoka.numero_celular || '',
+        ci: judoka.ci || '',
+        genero: judoka.genero || '',
+        categoria: judoka.categoria || '',
+        peso_competitivo: judoka.peso_competitivo || null,
+        cinturon_actual: judoka.cinturon_actual || '',
+        activo: judoka.activo,
+      })
+    }
+  }, [judoka, reset])
+
+  // Si es un sensei o encargado creando un nuevo judoka, pre-completar el club
+  useEffect(() => {
+    if (!judoka && user && user.club_id) {
+      if (user.rol === 'sensei') {
+        reset(prev => ({
+          ...prev,
+          club_id: user.club_id!,
+          entrenador_id: user.sensei_id || ''
+        }))
+      } else if (user.rol === 'encargado') {
+        reset(prev => ({
+          ...prev,
+          club_id: user.club_id!
+        }))
+      }
+    }
+  }, [judoka, user, reset])
+
+  const onSubmit = async (data: z.infer<typeof judokaSchema>) => {
+    setLoading(true)
+    setError(null)
+    setSuccess(false)
+
+    try {
+      let response
+      
+      const payload = {
+        ...data,
+        club_id: data.club_id || null,
+        entrenador_id: data.entrenador_id || null,
+        apellido_paterno: data.apellido_paterno?.trim() || null,
+        apellido_materno: data.apellido_materno?.trim() || null,
+        fecha_nacimiento: data.fecha_nacimiento || null,
+        numero_celular: data.numero_celular || null,
+        genero: data.genero || null,
+        categoria: data.categoria || null,
+        cinturon_actual: data.cinturon_actual || null,
+      }
+
+      if (judoka) {
+        response = await judokaController.updateJudoka(judoka.id, payload as JudokaUpdate)
+      } else {
+        const createData: JudokaCreate = {
+          ...(payload as JudokaCreate),
+          usuario_id: 'temp-user-id',
+        }
+        response = await judokaController.createJudoka(createData)
+      }
+
+      if (response.success) {
+        setSuccess(true)
+        if (onSuccess) {
+          setTimeout(() => {
+            onSuccess()
+          }, 500)
+        }
+      } else {
+        setError(response.error || 'Error al guardar el judoka')
+      }
+    } catch (err: any) {
+      setError(err instanceof Error ? err.message : 'Error inesperado')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <Box component="form" onSubmit={handleSubmit(onSubmit, onError)} noValidate sx={{ mt: 2 }}>
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => dispatch({ type: 'SET_ERROR', payload: null })}>
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
@@ -166,6 +339,8 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               required
               disabled={loading}
               {...fieldError('ci')}
+              onFocus={() => setFocusedField('ci')}
+              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatCIInput(e.target.value))}
             />
           )}
@@ -182,6 +357,8 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               required
               disabled={loading}
               {...fieldError('nombres')}
+              onFocus={() => setFocusedField('nombres')}
+              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatNameInput(e.target.value))}
             />
           )}
@@ -197,6 +374,8 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               label="Apellido paterno"
               disabled={loading}
               {...fieldError('apellido_paterno')}
+              onFocus={() => setFocusedField('apellido_paterno')}
+              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatNameInput(e.target.value))}
             />
           )}
@@ -213,6 +392,8 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               disabled={loading}
               error={fieldError('apellido_paterno').error}
               helperText={fieldError('apellido_paterno').error ? 'Al menos uno de los dos apellidos es requerido' : undefined}
+              onFocus={() => setFocusedField('apellido_paterno')}
+              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatNameInput(e.target.value))}
             />
           )}
@@ -230,6 +411,8 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               required={!judoka}
               disabled={loading}
               {...fieldError('email')}
+              onFocus={() => setFocusedField('email')}
+              onBlur={() => setFocusedField(null)}
             />
           )}
         />
@@ -249,6 +432,8 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
                 textField: {
                   fullWidth: true,
                   ...fieldError('fecha_nacimiento'),
+                  onFocus: () => setFocusedField('fecha_nacimiento'),
+                  onBlur: () => setFocusedField(null),
                 },
               }}
               format="DD/MM/YYYY"
@@ -267,6 +452,8 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               disabled={loading}
               {...fieldError('numero_celular')}
               inputProps={{ maxLength: 8 }}
+              onFocus={() => setFocusedField('numero_celular')}
+              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatCelularInput(e.target.value))}
             />
           )}
@@ -369,3 +556,4 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     </Box>
   )
 }
+

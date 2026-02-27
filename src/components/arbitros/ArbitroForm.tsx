@@ -1,22 +1,31 @@
 'use client'
 
+import { useState, useEffect } from 'react'
+import { z } from 'zod'
+import { useForm, Controller, type FieldErrors } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   TextField,
   Button,
   Box,
   Alert,
   CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormHelperText,
   Autocomplete,
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
-import { Controller } from 'react-hook-form'
 
 dayjs.locale('es')
-import { Arbitro } from '@/models/arbitro'
+import { Arbitro, ArbitroCreate, ArbitroUpdate } from '@/models/arbitro'
+import { arbitroController } from '@/controllers/arbitroController'
+import { arbitroSchema } from '@/utils/zodSchemas'
 import { formatCIInput, formatCelularInput, formatNameInput } from '@/utils/inputMasks'
-import { useArbitroForm } from '@/hooks/useArbitroForm'
 
 interface ArbitroFormProps {
   arbitro?: Arbitro | null
@@ -25,17 +34,35 @@ interface ArbitroFormProps {
 }
 
 export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFormProps) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+  const [focusedField, setFocusedField] = useState<string | null>(null)
+
+  // Configuración de React Hook Form con Zod
   const {
-    state,
-    dispatch,
     control,
     handleSubmit,
-    onSubmit,
-    onError,
-    errors
-  } = useArbitroForm({ arbitro, onSuccess })
-
-  const { loading, error, success } = state
+    reset,
+    setFocus,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(arbitroSchema),
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
+    defaultValues: {
+      nombres: '',
+      apellido_paterno: '',
+      apellido_materno: '',
+      email: '',
+      fecha_nacimiento: null as string | null,
+      numero_celular: '',
+      ci: '',
+      genero: '',
+      nivel_arbitraje: '',
+      activo: true,
+    },
+  })
 
   const fieldError = (name: keyof typeof errors) => {
     return {
@@ -44,10 +71,89 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
     }
   }
 
+  const onError = (formErrors: FieldErrors<z.infer<typeof arbitroSchema>>) => {
+    const errorKeys = Object.keys(formErrors) as (keyof z.infer<typeof arbitroSchema>)[]
+    if (errorKeys.length > 0) {
+      const firstField = errorKeys[0]
+      setFocus(firstField, { shouldSelect: true })
+      setTimeout(() => {
+        const element = document.getElementsByName(firstField)[0]
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }, 100)
+    }
+  }
+
+  useEffect(() => {
+    if (arbitro) {
+      const ap = arbitro.apellidos?.trim().split(/\s+/) ?? []
+      const a = arbitro as Arbitro
+      reset({
+        nombres: a.nombres,
+        apellido_paterno: a.apellido_paterno ?? ap[0] ?? '',
+        apellido_materno: a.apellido_materno ?? ap.slice(1).join(' ') ?? '',
+        email: a.email || '',
+        fecha_nacimiento: a.fecha_nacimiento || null,
+        numero_celular: a.numero_celular || '',
+        ci: a.ci || '',
+        genero: a.genero || '',
+        nivel_arbitraje: a.nivel_arbitraje || '',
+        activo: a.activo,
+      })
+    }
+  }, [arbitro, reset])
+
+  const onSubmit = async (data: z.infer<typeof arbitroSchema>) => {
+    setLoading(true)
+    setError(null)
+    setSuccess(false)
+
+    try {
+      let response
+      
+      const payload = {
+        ...data,
+        apellido_paterno: data.apellido_paterno?.trim() || null,
+        apellido_materno: data.apellido_materno?.trim() || null,
+        fecha_nacimiento: data.fecha_nacimiento || null,
+        numero_celular: data.numero_celular || null,
+        ci: data.ci || null,
+        genero: data.genero || null,
+        nivel_arbitraje: data.nivel_arbitraje || null,
+      }
+
+      if (arbitro) {
+        response = await arbitroController.updateArbitro(arbitro.id, payload as ArbitroUpdate)
+      } else {
+        const createData: ArbitroCreate = {
+          ...(payload as ArbitroCreate),
+          usuario_id: 'temp-user-id',
+        }
+        response = await arbitroController.createArbitro(createData)
+      }
+
+      if (response.success) {
+        setSuccess(true)
+        if (onSuccess) {
+          setTimeout(() => {
+            onSuccess()
+          }, 1000)
+        }
+      } else {
+        setError(response.error || 'Error al guardar el árbitro')
+      }
+    } catch (err: any) {
+      setError(err instanceof Error ? err.message : 'Error inesperado')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <Box component="form" onSubmit={handleSubmit(onSubmit, onError)} noValidate sx={{ mt: 2 }}>
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => dispatch({ type: 'SET_ERROR', payload: null })}>
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
@@ -70,6 +176,8 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
               required
               disabled={loading}
               {...fieldError('ci')}
+              onFocus={() => setFocusedField('ci')}
+              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatCIInput(e.target.value))}
             />
           )}
@@ -86,6 +194,8 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
               required
               disabled={loading}
               {...fieldError('nombres')}
+              onFocus={() => setFocusedField('nombres')}
+              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatNameInput(e.target.value))}
             />
           )}
@@ -101,6 +211,8 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
               label="Apellido paterno"
               disabled={loading}
               {...fieldError('apellido_paterno')}
+              onFocus={() => setFocusedField('apellido_paterno')}
+              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatNameInput(e.target.value))}
             />
           )}
@@ -117,6 +229,8 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
               disabled={loading}
               error={fieldError('apellido_paterno').error}
               helperText={fieldError('apellido_paterno').error ? 'Al menos uno de los dos apellidos es requerido' : undefined}
+              onFocus={() => setFocusedField('apellido_paterno')}
+              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatNameInput(e.target.value))}
             />
           )}
@@ -134,6 +248,8 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
               required
               disabled={loading}
               {...fieldError('email')}
+              onFocus={() => setFocusedField('email')}
+              onBlur={() => setFocusedField(null)}
             />
           )}
         />
@@ -153,6 +269,8 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
                 textField: {
                   fullWidth: true,
                   ...fieldError('fecha_nacimiento'),
+                  onFocus: () => setFocusedField('fecha_nacimiento'),
+                  onBlur: () => setFocusedField(null),
                 },
               }}
               format="DD/MM/YYYY"
@@ -171,6 +289,8 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
               disabled={loading}
               {...fieldError('numero_celular')}
               inputProps={{ maxLength: 8 }}
+              onFocus={() => setFocusedField('numero_celular')}
+              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatCelularInput(e.target.value))}
             />
           )}
@@ -184,7 +304,9 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
               {...field}
               options={["Femenino", "Masculino", "Prefiero no decir"]}
               value={field.value || null}
-              onChange={(_, newValue) => field.onChange(newValue || '')}
+              onChange={(_, newValue) => {
+                field.onChange(newValue || '')
+              }}
               disabled={loading}
               renderInput={(params) => (
                 <TextField
@@ -206,7 +328,9 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
               {...field}
               options={["Regional", "Nacional", "Internacional"]}
               value={field.value || null}
-              onChange={(_, newValue) => field.onChange(newValue || '')}
+              onChange={(_, newValue) => {
+                field.onChange(newValue || '')
+              }}
               disabled={loading}
               renderInput={(params) => (
                 <TextField

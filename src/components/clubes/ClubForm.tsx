@@ -1,20 +1,36 @@
 'use client'
 
+import { useState, useEffect } from 'react'
+import { z } from 'zod'
+import { useForm, Controller, type FieldErrors } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   TextField,
   Button,
   Box,
   Alert,
   CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  InputAdornment,
+  IconButton,
   Typography,
+  FormHelperText,
   Autocomplete,
 } from '@mui/material'
+import Visibility from '@mui/icons-material/Visibility'
+import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import AddIcon from '@mui/icons-material/Add'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import { Controller } from 'react-hook-form'
-import { Club } from '@/models/club'
+import type { SelectChangeEvent } from '@mui/material/Select'
+import { Club, ClubCreate, ClubUpdate } from '@/models/club'
+import { clubController } from '@/controllers/clubController'
+import { senseiController } from '@/controllers/senseiController'
+import { Sensei, SenseiCreate } from '@/models/sensei'
 import { MUNICIPIOS } from '@/utils/constants'
-import { useClubForm } from '@/hooks/useClubForm'
+import { clubSchema } from '@/utils/zodSchemas'
 
 interface ClubFormProps {
   club?: Club | null
@@ -23,17 +39,37 @@ interface ClubFormProps {
 }
 
 export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
+  const [senseis, setSenseis] = useState<Sensei[]>([])
+  const [newDirectorNombres, setNewDirectorNombres] = useState('')
+  const [newDirectorApellidoPaterno, setNewDirectorApellidoPaterno] = useState('')
+  const [newDirectorApellidoMaterno, setNewDirectorApellidoMaterno] = useState('')
+  const [newDirectorEmail, setNewDirectorEmail] = useState('')
+  const [newDirectorCI, setNewDirectorCI] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [loadingSenseis, setLoadingSenseis] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+  const [isCreatingNewDirector, setIsCreatingNewDirector] = useState(false)
+
+  // Configuración de React Hook Form con Zod
   const {
-    state,
-    dispatch,
     control,
     handleSubmit,
-    onSubmit,
-    errors,
-    reset
-  } = useClubForm({ club, onSuccess })
-
-  const { senseis, newDirector, loading, loadingSenseis, error, success, isCreatingNewDirector } = state
+    reset,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(clubSchema),
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
+    defaultValues: {
+      nombre_club: '',
+      provincia: '',
+      direccion: '',
+      telefono_contacto: '',
+      director_tecnico_id: null as string | null,
+      activo: true
+    },
+  })
 
   const fieldError = (name: keyof typeof errors) => {
     return {
@@ -42,10 +78,151 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
     }
   }
 
+  useEffect(() => {
+    // Cargar senseis activos
+    const loadSenseis = async () => {
+      const response = await senseiController.getAllSenseis(false)
+      if (response.success && response.data) {
+        // Si estamos editando un club, filtrar solo senseis del club o sin club
+        if (club) {
+          const senseisDisponibles = response.data.filter(
+            sensei => sensei.club_id === club.id || sensei.club_id === null
+          )
+          setSenseis(senseisDisponibles)
+        } else {
+          // Si estamos creando un club nuevo, mostrar solo senseis sin club
+          const senseisSinClub = response.data.filter(
+            sensei => sensei.club_id === null
+          )
+          setSenseis(senseisSinClub)
+        }
+      }
+      setLoadingSenseis(false)
+    }
+    loadSenseis()
+  }, [club])
+
+  useEffect(() => {
+    if (club) {
+      reset({
+        nombre_club: club.nombre_club,
+        provincia: club.provincia || '',
+        direccion: club.direccion || '',
+        telefono_contacto: club.telefono_contacto || '',
+        director_tecnico_id: club.director_tecnico_id || null,
+        activo: club.activo
+      })
+      // Al editar un club no usamos los campos de nuevo director
+      setNewDirectorNombres('')
+      setNewDirectorApellidoPaterno('')
+      setNewDirectorApellidoMaterno('')
+      setNewDirectorEmail('')
+      setNewDirectorCI('')
+    }
+  }, [club, reset])
+
+  const onSubmit = async (data: z.infer<typeof clubSchema>) => {
+    setLoading(true)
+    setError(null)
+    setSuccess(false)
+
+    try {
+      let response
+      let directorTecnicoId = data.director_tecnico_id || null
+      let createdSenseiId: string | null = null
+
+      // Si estamos creando un club y no hay director seleccionado,
+      // pero sí se ingresó nombre y apellido, crear automáticamente un Sensei como Encargado
+      if (
+        !club &&
+        !directorTecnicoId &&
+        newDirectorNombres.trim() !== '' &&
+        (newDirectorApellidoPaterno.trim() !== '' || newDirectorApellidoMaterno.trim() !== '')
+      ) {
+        // Validar email y carnet para el nuevo director técnico
+        if (!newDirectorEmail.trim() || !newDirectorCI.trim()) {
+          setError('Email y carnet de identidad son requeridos para crear un nuevo Director Técnico')
+          setLoading(false)
+          return
+        }
+
+        const senseiToCreate: SenseiCreate = {
+          usuario_id: 'temp-user-id', // el servicio creará el usuario real
+          nombres: newDirectorNombres.trim(),
+          apellido_paterno: newDirectorApellidoPaterno.trim(),
+          apellido_materno: newDirectorApellidoMaterno.trim(),
+          email: newDirectorEmail.trim(),
+          ci: newDirectorCI.trim(),
+          isEncargado: true, // Marcar como encargado para asignar el rol correcto
+          activo: true
+          // No asignamos club_id aquí porque el club aún no existe
+        }
+
+        const senseiResponse = await senseiController.createSensei(senseiToCreate)
+
+        if (!senseiResponse.success || !senseiResponse.data) {
+          const errorMessage = senseiResponse.error || 'Error al crear el director técnico (sensei)'
+          setError(errorMessage)
+          setLoading(false)
+          return
+        }
+
+        // Guardamos el ID del sensei creado para actualizarlo después con el club_id
+        createdSenseiId = senseiResponse.data.id
+
+        // En la tabla clubes guardamos el id de la tabla senseis
+        directorTecnicoId = senseiResponse.data.id
+      }
+
+      const clubPayload: ClubCreate = {
+        ...(data as ClubCreate),
+        director_tecnico_id: directorTecnicoId
+      }
+
+      if (club) {
+        // Actualizar
+        response = await clubController.updateClub(club.id, clubPayload)
+      } else {
+        // Crear
+        response = await clubController.createClub(clubPayload)
+
+        // Si se creó un sensei nuevo y el club se creó exitosamente,
+        // actualizar el sensei con el club_id del club recién creado
+        if (response.success && response.data && createdSenseiId) {
+          const updateSenseiResponse = await senseiController.updateSensei(
+            createdSenseiId,
+            { club_id: response.data.id }
+          )
+
+          if (!updateSenseiResponse.success) {
+            // No fallamos la creación del club, solo mostramos un warning
+            console.warn('Club creado pero no se pudo asociar al sensei:', updateSenseiResponse.error)
+          }
+        }
+      }
+
+      if (response.success) {
+        setSuccess(true)
+        if (onSuccess) {
+          setTimeout(() => {
+            onSuccess()
+          }, 1000)
+        }
+      } else {
+        setError(response.error || 'Error al guardar el club')
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error inesperado'
+      setError(errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 2 }}>
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => dispatch({ type: 'SET_ERROR', payload: null })}>
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
@@ -56,6 +233,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
         </Alert>
       )}
 
+      {/* Contenedor en columna para que todos los campos ocupen el mismo ancho */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Controller
           name="nombre_club"
@@ -80,7 +258,9 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
               {...field}
               options={MUNICIPIOS}
               value={field.value || null}
-              onChange={(_, newValue) => field.onChange(newValue || '')}
+              onChange={(_, newValue) => {
+                field.onChange(newValue || '')
+              }}
               disabled={loading}
               renderInput={(params) => (
                 <TextField
@@ -132,8 +312,10 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
           )}
         />
 
+        {/* Sección de Director Técnico */}
         <Box sx={{ mt: 1 }}>
           {!isCreatingNewDirector ? (
+            // Modo: Seleccionar director técnico existente
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Controller
                 name="director_tecnico_id"
@@ -155,7 +337,9 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                       typeof value === 'string' ? option.id === value : option.id === value?.id
                     }
                     value={senseis.find(s => s.id === field.value) || null}
-                    onChange={(_, newValue) => field.onChange(newValue ? newValue.id : null)}
+                    onChange={(_, newValue) => {
+                      field.onChange(newValue ? newValue.id : null)
+                    }}
                     disabled={loading || loadingSenseis}
                     renderInput={(params) => (
                       <TextField
@@ -170,12 +354,13 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                   />
                 )}
               />
+              
               {!club && (
                 <Button
                   variant="outlined"
                   startIcon={<AddIcon />}
                   onClick={() => {
-                    dispatch({ type: 'SET_IS_CREATING_NEW_DIRECTOR', payload: true })
+                    setIsCreatingNewDirector(true)
                     reset(prev => ({ ...prev, director_tecnico_id: null }))
                   }}
                   disabled={loading}
@@ -186,6 +371,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
               )}
             </Box>
           ) : (
+            // Modo: Crear nuevo director técnico (solo disponible al crear club)
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
@@ -195,8 +381,12 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                   size="small"
                   startIcon={<ArrowBackIcon />}
                   onClick={() => {
-                    dispatch({ type: 'SET_IS_CREATING_NEW_DIRECTOR', payload: false })
-                    dispatch({ type: 'RESET_NEW_DIRECTOR' })
+                    setIsCreatingNewDirector(false)
+                    setNewDirectorNombres('')
+                    setNewDirectorApellidoPaterno('')
+                    setNewDirectorApellidoMaterno('')
+                    setNewDirectorEmail('')
+                    setNewDirectorCI('')
                   }}
                   disabled={loading}
                 >
@@ -204,65 +394,94 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
                 </Button>
               </Box>
 
-              <TextField
-                fullWidth
-                label="Carnet de Identidad"
-                value={newDirector.ci}
-                onChange={(e) => dispatch({ type: 'SET_NEW_DIRECTOR_FIELD', field: 'ci', value: e.target.value })}
-                disabled={loading}
-                required
-                sx={{ mb: 2 }}
-              />
+                <TextField
+                  fullWidth
+                  label="Carnet de Identidad"
+                  name="nuevo_director_ci"
+                  value={newDirectorCI}
+                  onChange={(e) => {
+                    setNewDirectorCI(e.target.value)
+                    setError(null)
+                    setSuccess(false)
+                  }}
+                  disabled={loading}
+                  required
+                  sx={{ mb: 2 }}
+                />
 
-              <TextField
-                fullWidth
-                label="Nombre del Director Técnico"
-                value={newDirector.nombres}
-                onChange={(e) => dispatch({ type: 'SET_NEW_DIRECTOR_FIELD', field: 'nombres', value: e.target.value })}
-                disabled={loading}
-                required
-                sx={{ mb: 2 }}
-              />
-              
-              <TextField
-                fullWidth
-                label="Apellido Paterno del Director Técnico"
-                value={newDirector.apellidoPaterno}
-                onChange={(e) => dispatch({ type: 'SET_NEW_DIRECTOR_FIELD', field: 'apellidoPaterno', value: e.target.value })}
-                disabled={loading}
-                sx={{ mb: 2 }}
-              />
-              
-              <TextField
-                fullWidth
-                label="Apellido Materno del Director Técnico"
-                value={newDirector.apellidoMaterno}
-                onChange={(e) => dispatch({ type: 'SET_NEW_DIRECTOR_FIELD', field: 'apellidoMaterno', value: e.target.value })}
-                disabled={loading}
-                sx={{ mb: 2 }}
-              />
-              
-              <TextField
-                fullWidth
-                label="Email del Director Técnico"
-                type="email"
-                value={newDirector.email}
-                onChange={(e) => dispatch({ type: 'SET_NEW_DIRECTOR_FIELD', field: 'email', value: e.target.value })}
-                disabled={loading}
-                required
-              />
+                <TextField
+                  fullWidth
+                  label="Nombre del Director Técnico"
+                  name="nuevo_director_nombres"
+                  value={newDirectorNombres}
+                  onChange={(e) => {
+                    setNewDirectorNombres(e.target.value)
+                    setError(null)
+                    setSuccess(false)
+                  }}
+                  disabled={loading}
+                  required
+                  sx={{ mb: 2 }}
+                />
+                
+                <TextField
+                  fullWidth
+                  label="Apellido Paterno del Director Técnico"
+                  name="nuevo_director_apellido_paterno"
+                  value={newDirectorApellidoPaterno}
+                  onChange={(e) => {
+                    setNewDirectorApellidoPaterno(e.target.value)
+                    setError(null)
+                    setSuccess(false)
+                  }}
+                  disabled={loading}
+                  sx={{ mb: 2 }}
+                />
+                
+                <TextField
+                  fullWidth
+                  label="Apellido Materno del Director Técnico"
+                  name="nuevo_director_apellido_materno"
+                  value={newDirectorApellidoMaterno}
+                  onChange={(e) => {
+                    setNewDirectorApellidoMaterno(e.target.value)
+                    setError(null)
+                    setSuccess(false)
+                  }}
+                  disabled={loading}
+                  sx={{ mb: 2 }}
+                />
+                
+                <TextField
+                  fullWidth
+                  label="Email del Director Técnico"
+                  name="nuevo_director_email"
+                  type="email"
+                  value={newDirectorEmail}
+                  onChange={(e) => {
+                    setNewDirectorEmail(e.target.value)
+                    setError(null)
+                    setSuccess(false)
+                  }}
+                  disabled={loading}
+                  required
+                />
 
-              <Alert severity="info" sx={{ mt: 1 }}>
-                La contraseña se generará automáticamente y se enviará por correo al usuario. El director técnico se registrará como encargado automáticamente.
-              </Alert>
-            </Box>
-          )}
+                <Alert severity="info" sx={{ mt: 1 }}>
+                  La contraseña se generará automáticamente y se enviará por correo al usuario. El director técnico se registrará como encargado automáticamente.
+                </Alert>
+              </Box>
+            )}
+          </Box>
         </Box>
-      </Box>
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
         {onCancel && (
-          <Button variant="outlined" onClick={onCancel} disabled={loading}>
+          <Button
+            variant="outlined"
+            onClick={onCancel}
+            disabled={loading}
+          >
             Cancelar
           </Button>
         )}
@@ -278,3 +497,4 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
     </Box>
   )
 }
+
