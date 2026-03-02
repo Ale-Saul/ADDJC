@@ -39,9 +39,20 @@ yarn-error.log*
 # vercel
 .vercel
 
+# agents and skills
+.agent/
+.agents/
+.augment/
+.claude/
+.continue/
+.cortex/
+.codebuddy/
+.commandcode/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
 
 react-doctor.txt
 .cursorrules
+skills-lock.json

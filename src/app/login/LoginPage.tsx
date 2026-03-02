@@ -76,9 +76,9 @@ export default function LoginPage() {
       } else {
         setError(response.error || 'Error al iniciar sesión')
       }
+      setLoading(false)
     } catch (err) {
       setError('Error inesperado al iniciar sesión')
-    } finally {
       setLoading(false)
     }
   }
@@ -153,18 +153,17 @@ export default function LoginPage() {
               name="email"
               control={control}
               render={({ field }) => (
-                <TextField
-                  {...field}
-                  margin="normal"
-                  fullWidth
-                  id="email"
-                  label="Email"
-                  autoComplete="email"
-                  autoFocus
-                  disabled={loading}
-                  error={!!errors.email}
-                  helperText={errors.email?.message}
-                />
+                  <TextField
+                    {...field}
+                    margin="normal"
+                    fullWidth
+                    id="email"
+                    label="Email"
+                    autoComplete="email"
+                    disabled={loading}
+                    error={!!errors.email}
+                    helperText={errors.email?.message}
+                  />
               )}
             />
             <Controller
@@ -203,10 +202,10 @@ export default function LoginPage() {
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2 }}
+              sx={{ mt: 3, mb: 2, height: '48px' }}
               disabled={loading}
             >
-              {loading ? <CircularProgress size={24} /> : 'Iniciar Sesión'}
+              {loading ? <CircularProgress size={24} color="inherit" /> : 'Iniciar Sesión'}
             </Button>
             <Box sx={{ textAlign: 'center', mt: 2 }}>
               <Link

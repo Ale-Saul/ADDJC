@@ -37,9 +37,25 @@ export const authService = {
       })
 
       // Obtener el perfil del usuario con el cliente autenticado
+      // OPTIMIZACIÓN: Seleccionamos solo las columnas necesarias para el objeto User
       const { data: profileData, error: profileError } = await supabaseWithSession
         .from('usuarios')
-        .select('*')
+        .select(`
+          id, 
+          correo, 
+          nombre, 
+          apellido_paterno, 
+          apellido_materno, 
+          rol, 
+          avatar_url, 
+          fecha_nacimiento, 
+          numero_celular, 
+          genero, 
+          activo, 
+          debe_cambiar_password, 
+          created_at, 
+          updated_at
+        `)
         .eq('auth_user_id', data.user.id)
         .single()
       
@@ -60,49 +76,29 @@ export const authService = {
       if (userRole === 'judoka') {
         const { data: judokaData } = await supabaseWithSession
           .from('judokas')
-          .select('id, club_id')
+          .select('id, club_id, clubes(nombre_club)')
           .eq('usuario_id', profileData.id)
           .single()
         
         if (judokaData) {
           judokaId = judokaData.id
-          
-          if (judokaData.club_id) {
-            const { data: clubData } = await supabaseWithSession
-              .from('clubes')
-              .select('nombre_club')
-              .eq('id', judokaData.club_id)
-              .single()
-              
-            clubInfo = {
-              club_id: judokaData.club_id,
-              club_nombre: clubData?.nombre_club || null
-            }
+          clubInfo = {
+            club_id: judokaData.club_id,
+            club_nombre: (judokaData.clubes as any)?.nombre_club || null
           }
         }
       } else if (userRole === 'sensei' || userRole === 'encargado') {
-        // 1. Obtener datos del sensei primero (sin join para evitar problemas)
         const { data: senseiData } = await supabaseWithSession
           .from('senseis')
-          .select('id, club_id')
+          .select('id, club_id, clubes(nombre_club)')
           .eq('usuario_id', profileData.id)
           .single()
           
         if (senseiData) {
           senseiId = senseiData.id
-          
-          if (senseiData.club_id) {
-            // 2. Si tiene club, obtener nombre del club
-            const { data: clubData } = await supabaseWithSession
-              .from('clubes')
-              .select('nombre_club')
-              .eq('id', senseiData.club_id)
-              .single()
-              
-            clubInfo = {
-              club_id: senseiData.club_id,
-              club_nombre: clubData?.nombre_club || null
-            }
+          clubInfo = {
+            club_id: senseiData.club_id,
+            club_nombre: (senseiData.clubes as any)?.nombre_club || null
           }
         }
       }

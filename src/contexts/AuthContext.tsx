@@ -34,10 +34,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setUser(null)
       }
+      setLoading(false)
     } catch (error) {
       console.error('Error al cargar usuario:', error)
       setUser(null)
-    } finally {
       setLoading(false)
     }
   }
