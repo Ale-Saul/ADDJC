@@ -45,9 +45,11 @@ async function createUserWithAdminAPI(
     const result = await response.json()
 
     if (!result.success) {
+      // Si hay detalles del error en el JSON, los mostramos
+      const detailedError = result.details ? `${result.error} (${result.details})` : result.error
       return {
         success: false,
-        error: result.error || 'Error al crear usuario',
+        error: detailedError || 'Error al crear usuario',
       }
     }
 

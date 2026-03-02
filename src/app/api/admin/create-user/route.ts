@@ -90,22 +90,27 @@ export async function POST(request: NextRequest) {
     // El trigger handle_new_user crea la fila en usuarios usando estos metadata
     let authData, authError
     try {
+      // LOG PARA DEPURACIÓN: Ver qué estamos enviando exactamente
+      const userMetadata = {
+        nombres: nombresTrimmed,
+        apellido_paterno: apellidoPaterno,
+        apellido_materno: apellidoMaterno,
+        fecha_nacimiento: fechaNacimiento,
+        genero,
+        numero_celular: numeroCelularBody,
+        ci: ciBody,
+        user_type: rol === 'encargado' ? 'sensei' : rol === 'admin' ? 'admin' : rol || 'judoka',
+        rol: rol || 'judoka',
+        debe_cambiar_password: true,
+      }
+      
+      console.log('Intentando crear usuario en Auth con metadata:', userMetadata)
+
       const result = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
-        email_confirm: true, // Auto-confirmar email
-        user_metadata: {
-          nombres: nombresTrimmed,
-          apellido_paterno: apellidoPaterno,
-          apellido_materno: apellidoMaterno,
-          fecha_nacimiento: fechaNacimiento,
-          genero,
-          numero_celular: numeroCelularBody,
-          ci: ciBody,
-          user_type: rol === 'encargado' ? 'sensei' : rol === 'admin' ? 'admin' : rol || 'judoka',
-          rol: rol || 'judoka',
-          debe_cambiar_password: true, // Marcar para cambio obligatorio
-        },
+        email_confirm: true,
+        user_metadata: userMetadata,
       })
       authData = result.data
       authError = result.error
@@ -121,27 +126,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (authError) {
-      console.error('Error al crear usuario con Admin API:', {
-        message: authError.message,
-        status: authError.status,
-      })
+      console.error('Error detallado de Supabase Auth Admin:', authError)
       
       // Mensaje de error más descriptivo
       let errorMessage = authError.message || 'Error desconocido'
       
-      // Mapear códigos de error comunes de Supabase
-      if (authError.message?.includes('duplicate') || 
-          authError.message?.includes('already exists') ||
-          authError.message?.includes('already registered') ||
-          (authError as any).code === 'PGRST204') {
-        errorMessage = 'Este email ya está registrado en el sistema'
-      } else if (authError.message?.includes('invalid') || 
-                 authError.message?.includes('format') ||
-                 authError.message?.includes('Invalid email')) {
-        errorMessage = 'El formato del email no es válido'
-      } else if (authError.message?.includes('password') || 
-                 authError.message?.includes('Password')) {
-        errorMessage = 'La contraseña no cumple con los requisitos mínimos'
+      // Si el error viene de la base de datos (trigger o tabla usuarios)
+      if (authError.message?.includes('Database error')) {
+        // Intentar extraer el mensaje de error de Postgres si está disponible
+        errorMessage = `Error de base de datos al crear el perfil: ${authError.message}. Esto suele ser causado por el trigger 'handle_new_user' fallando. Revisa los logs de Supabase -> Database -> Error Logs.`
       }
       
       // Retornar el error con el mensaje descriptivo
@@ -149,7 +142,8 @@ export async function POST(request: NextRequest) {
         { 
           success: false, 
           error: errorMessage,
-          details: authError.message // Incluir el mensaje original para debugging
+          details: authError.message,
+          code: (authError as any).code
         },
         { status: 400 }
       )

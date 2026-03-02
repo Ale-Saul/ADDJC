@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import {
   Button,
   Collapse,
@@ -11,7 +11,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip,
   IconButton,
   Box,
   CircularProgress,
@@ -42,9 +41,9 @@ import {
   createColumnHelper
 } from '@tanstack/react-table'
 import { Club } from '@/models/club'
-import { clubController } from '@/controllers/clubController'
 import Pagination from '@/components/common/Pagination'
 import { MUNICIPIOS } from '@/utils/constants'
+import { useClubList } from '@/hooks/useClubList'
 
 interface ClubListProps {
   onEdit?: (club: Club) => void
@@ -61,42 +60,17 @@ export default function ClubList({
   searchTerm: externalSearchTerm = '', 
   itemsPerPage: initialItemsPerPage = 10 
 }: ClubListProps) {
-  const [clubes, setClubes] = useState<Club[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  
-  // Estados para filtros
-  const [globalFilter, setGlobalFilter] = useState(externalSearchTerm)
-  const [municipioFilter, setMunicipioFilter] = useState<string>('all')
-  const [estadoFilter, setEstadoFilter] = useState<string>('all')
-  const [showFilters, setShowFilters] = useState(false)
-
-  // Estado para mantener los IDs que han sido modificados en la sesión actual
-  const [modifiedIds, setModifiedIds] = useState<Set<string>>(new Set())
-
-  const loadClubes = async () => {
-    setLoading(true)
-    setError(null)
-    const response = await clubController.getAllClubes(true)
-    if (response.success && response.data) {
-      setClubes(response.data)
-      setModifiedIds(new Set())
-    } else {
-      setError(response.error || 'Error al cargar los clubes')
-    }
-    setLoading(false)
-  }
+  const { state, dispatch, loadClubes, toggleStatus, filteredData } = useClubList(externalSearchTerm)
+  const { loading, error, globalFilter, municipioFilter, estadoFilter, showFilters } = state
 
   useEffect(() => {
     loadClubes()
-  }, [refreshTrigger])
+  }, [loadClubes, refreshTrigger])
 
   useEffect(() => {
-    setGlobalFilter(externalSearchTerm)
-    setModifiedIds(new Set())
-  }, [externalSearchTerm])
+    dispatch({ type: 'SET_GLOBAL_FILTER', payload: externalSearchTerm })
+  }, [externalSearchTerm, dispatch])
 
-  // Definición de columnas con TanStack Table
   const columnHelper = createColumnHelper<Club>()
   
   const columns = useMemo(() => [
@@ -121,59 +95,17 @@ export default function ClubList({
       cell: (info) => {
         const isActive = info.getValue()
         const id = info.row.original.id
-        
-        const handleToggle = async () => {
-          setModifiedIds(prev => new Set(prev).add(id))
-          setClubes(prev => prev.map(c => c.id === id ? { ...c, activo: !isActive } : c))
-          
-          try {
-            const response = await clubController.updateClub(id, { activo: !isActive })
-            if (!response.success) {
-              setClubes(prev => prev.map(c => c.id === id ? { ...c, activo: isActive } : c))
-              setModifiedIds(prev => {
-                const next = new Set(prev)
-                next.delete(id)
-                return next
-              })
-              alert('Error al cambiar el estado: ' + (response.error || 'Error desconocido'))
-            }
-          } catch (err) {
-            setClubes(prev => prev.map(c => c.id === id ? { ...c, activo: isActive } : c))
-            setModifiedIds(prev => {
-              const next = new Set(prev)
-              next.delete(id)
-              return next
-            })
-            console.error(err)
-            alert('Error inesperado al cambiar el estado')
-          }
-        }
-
         return (
           <Tooltip title={isActive ? 'Desactivar' : 'Activar'}>
             <Switch 
               checked={!!isActive} 
-              onChange={handleToggle}
+              onChange={() => toggleStatus(id, !!isActive)}
               size="medium"
               sx={{
-                '& .MuiSwitch-switchBase.Mui-checked': {
-                  color: '#4caf50',
-                  '&:hover': {
-                    backgroundColor: 'rgba(76, 175, 80, 0.08)',
-                  },
-                },
-                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                  backgroundColor: '#4caf50',
-                },
-                '& .MuiSwitch-switchBase': {
-                  color: '#f44336',
-                  '&:hover': {
-                    backgroundColor: 'rgba(244, 67, 54, 0.08)',
-                  },
-                },
-                '& .MuiSwitch-switchBase + .MuiSwitch-track': {
-                  backgroundColor: '#f44336',
-                },
+                '& .MuiSwitch-switchBase.Mui-checked': { color: '#4caf50' },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#4caf50' },
+                '& .MuiSwitch-switchBase': { color: '#f44336' },
+                '& .MuiSwitch-switchBase + .MuiSwitch-track': { backgroundColor: '#f44336' },
               }}
             />
           </Tooltip>
@@ -186,57 +118,19 @@ export default function ClubList({
       cell: (info) => (
         <Box textAlign="right">
           {onEdit && (
-            <IconButton 
-              size="small" 
-              color="primary" 
-              onClick={() => onEdit(info.row.original)}
-              title="Editar"
-            >
+            <IconButton size="small" color="primary" onClick={() => onEdit(info.row.original)} title="Editar" aria-label="Editar club">
               <EditIcon fontSize="small" />
             </IconButton>
           )}
           {onDelete && (
-            <IconButton 
-              size="small" 
-              color="error" 
-              onClick={() => onDelete(info.row.original)}
-              title="Eliminar"
-            >
+            <IconButton size="small" color="error" onClick={() => onDelete(info.row.original)} title="Eliminar" aria-label="Eliminar club">
               <DeleteIcon fontSize="small" />
             </IconButton>
           )}
         </Box>
       ),
     }),
-  ], [onEdit, onDelete])
-
-  // Filtrado y ordenamiento personalizado
-  const filteredData = useMemo(() => {
-    const filtered = clubes.filter(c => {
-      const matchMunicipio = municipioFilter === 'all' || c.provincia === municipioFilter
-      const matchEstado = estadoFilter === 'all' || 
-        (estadoFilter === 'activo' ? c.activo : !c.activo)
-      
-      const search = globalFilter.toLowerCase()
-      const matchSearch = !search || 
-        c.nombre_club?.toLowerCase().includes(search) ||
-        c.provincia?.toLowerCase().includes(search) ||
-        c.direccion?.toLowerCase().includes(search) ||
-        c.telefono_contacto?.toLowerCase().includes(search)
-
-      return matchMunicipio && matchEstado && matchSearch
-    })
-
-    return [...filtered].sort((a, b) => {
-      const isAModified = modifiedIds.has(a.id)
-      const isBModified = modifiedIds.has(b.id)
-      const effectiveAActive = isAModified ? !a.activo : a.activo
-      const effectiveBActive = isBModified ? !b.activo : b.activo
-
-      if (effectiveAActive === effectiveBActive) return 0
-      return effectiveAActive ? -1 : 1
-    })
-  }, [clubes, municipioFilter, estadoFilter, globalFilter, modifiedIds])
+  ], [onEdit, onDelete, toggleStatus])
 
   const table = useReactTable({
     data: filteredData,
@@ -250,13 +144,6 @@ export default function ClubList({
     },
   })
 
-  const clearFilters = () => {
-    setMunicipioFilter('all')
-    setEstadoFilter('all')
-    setGlobalFilter('')
-    setModifiedIds(new Set())
-  }
-
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
@@ -266,22 +153,19 @@ export default function ClubList({
   }
 
   if (error) {
-    return (
-      <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
-    )
+    return <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
   }
 
   return (
     <Box>
-      {/* Barra de Filtros */}
       <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f8f9fa' }} variant="outlined">
         <Stack spacing={2}>
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
             <TextField
               size="small"
-              placeholder="Buscar por nombre, municipio, dirección..."
+              placeholder="Buscar por nombre, municipio..."
               value={globalFilter}
-              onChange={(e) => setGlobalFilter(e.target.value)}
+              onChange={(e) => dispatch({ type: 'SET_GLOBAL_FILTER', payload: e.target.value })}
               sx={{ flexGrow: 1, backgroundColor: 'white' }}
               InputProps={{
                 startAdornment: (
@@ -297,21 +181,16 @@ export default function ClubList({
               size="small"
               startIcon={<FilterListIcon />}
               endIcon={showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              onClick={() => setShowFilters(!showFilters)}
+              onClick={() => dispatch({ type: 'TOGGLE_SHOW_FILTERS' })}
               color={showFilters ? 'primary' : 'inherit'}
-              sx={{ 
-                backgroundColor: 'white',
-                height: '40px',
-                textTransform: 'none',
-                borderColor: showFilters ? 'primary.main' : 'rgba(0, 0, 0, 0.23)'
-              }}
+              sx={{ backgroundColor: 'white', height: '40px', textTransform: 'none' }}
             >
               Filtros
             </Button>
 
             {(municipioFilter !== 'all' || estadoFilter !== 'all' || globalFilter !== '') && (
               <Tooltip title="Limpiar filtros">
-                <IconButton onClick={clearFilters} color="warning" size="small">
+                <IconButton onClick={() => dispatch({ type: 'CLEAR_FILTERS', initialSearch: externalSearchTerm })} color="warning" size="small">
                   <ClearIcon />
                 </IconButton>
               </Tooltip>
@@ -319,19 +198,10 @@ export default function ClubList({
           </Stack>
 
           <Collapse in={showFilters}>
-            <Stack 
-              direction={{ xs: 'column', md: 'row' }} 
-              spacing={2} 
-              alignItems="center"
-              sx={{ pt: 1 }}
-            >
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center" sx={{ pt: 1 }}>
               <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white' }}>
                 <InputLabel>Municipio</InputLabel>
-                <Select
-                  value={municipioFilter}
-                  label="Municipio"
-                  onChange={(e) => setMunicipioFilter(e.target.value)}
-                >
+                <Select value={municipioFilter} label="Municipio" onChange={(e) => dispatch({ type: 'SET_MUNICIPIO_FILTER', payload: e.target.value })}>
                   <MenuItem value="all">Todos los municipios</MenuItem>
                   {MUNICIPIOS.map(m => (
                     <MenuItem key={m} value={m}>{m}</MenuItem>
@@ -341,11 +211,7 @@ export default function ClubList({
 
               <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white' }}>
                 <InputLabel>Estado</InputLabel>
-                <Select
-                  value={estadoFilter}
-                  label="Estado"
-                  onChange={(e) => setEstadoFilter(e.target.value)}
-                >
+                <Select value={estadoFilter} label="Estado" onChange={(e) => dispatch({ type: 'SET_ESTADO_FILTER', payload: e.target.value })}>
                   <MenuItem value="all">Todos los estados</MenuItem>
                   <MenuItem value="activo">Activos</MenuItem>
                   <MenuItem value="inactivo">Inactivos</MenuItem>
@@ -371,12 +237,7 @@ export default function ClubList({
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map(header => (
                       <TableCell key={header.id} sx={{ fontWeight: 'bold', py: 1.5 }}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                       </TableCell>
                     ))}
                   </TableRow>

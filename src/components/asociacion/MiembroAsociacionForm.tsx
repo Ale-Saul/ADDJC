@@ -14,7 +14,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  FormHelperText,
   Autocomplete,
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
@@ -38,9 +37,7 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [focusedField, setFocusedField] = useState<string | null>(null)
 
-  // Configuración de React Hook Form con Zod
   const {
     control,
     handleSubmit,
@@ -66,28 +63,11 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
     },
   })
 
-  const fieldError = (name: keyof typeof errors) => {
-    return {
-      error: !!errors[name],
-      helperText: (errors[name] as { message?: string } | undefined)?.message,
-    }
-  }
+  const fieldError = (name: keyof typeof errors) => ({
+    error: !!errors[name],
+    helperText: (errors[name] as { message?: string } | undefined)?.message,
+  })
 
-  const onError = (formErrors: FieldErrors<z.infer<typeof miembroAsociacionSchema>>) => {
-    const errorKeys = Object.keys(formErrors) as (keyof z.infer<typeof miembroAsociacionSchema>)[]
-    if (errorKeys.length > 0) {
-      const firstField = errorKeys[0]
-      setFocus(firstField, { shouldSelect: true })
-      setTimeout(() => {
-        const element = document.getElementsByName(firstField)[0]
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }
-      }, 100)
-    }
-  }
-
-  // Efecto para cargar datos del miembro en edición
   useEffect(() => {
     if (miembro) {
       reset({
@@ -111,29 +91,24 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
     setError(null)
     setSuccess(false)
 
+    // Preparar payload fuera del try para el React Compiler
+    const baseData = {
+      ...data,
+      cargo: data.cargo || null,
+      fecha_nacimiento: data.fecha_nacimiento || null,
+      numero_celular: data.numero_celular || null,
+      ci: data.ci || null,
+      genero: data.genero || null,
+      fecha_ingreso: data.fecha_ingreso || null,
+    }
+
     try {
       let response
-
       if (miembro) {
-        const updateData: MiembroAsociacionUpdate = {
-          ...data,
-          cargo: data.cargo || null,
-          fecha_nacimiento: data.fecha_nacimiento || null,
-          numero_celular: data.numero_celular || null,
-          ci: data.ci || null,
-          genero: data.genero || null,
-          fecha_ingreso: data.fecha_ingreso || null,
-        } as MiembroAsociacionUpdate
-        response = await asociacionController.updateMiembro(miembro.id, updateData)
+        response = await asociacionController.updateMiembro(miembro.id, baseData as MiembroAsociacionUpdate)
       } else {
         const createData: MiembroAsociacionCreate = {
-          ...data,
-          cargo: data.cargo || null,
-          fecha_nacimiento: data.fecha_nacimiento || null,
-          numero_celular: data.numero_celular || null,
-          ci: data.ci || null,
-          genero: data.genero || null,
-          fecha_ingreso: data.fecha_ingreso || null,
+          ...baseData,
           activo: data.activo ?? true,
         } as MiembroAsociacionCreate
         response = await asociacionController.createMiembro(createData)
@@ -141,262 +116,75 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
 
       if (response.success) {
         setSuccess(true)
-        if (onSuccess) {
-          setTimeout(() => {
-            onSuccess()
-          }, 1000)
-        }
+        if (onSuccess) setTimeout(() => onSuccess(), 1000)
       } else {
-        setError(response.error || 'Error al guardar el miembro')
+        setError(response.error || 'Error al guardar')
       }
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Error inesperado'
-      setError(errorMessage)
-    } finally {
       setLoading(false)
+    } catch (err) {
+      setError('Error inesperado')
+      setLoading(false)
+    }
+  }
+
+  const onError = (formErrors: FieldErrors<z.infer<typeof miembroAsociacionSchema>>) => {
+    const errorKeys = Object.keys(formErrors) as (keyof z.infer<typeof miembroAsociacionSchema>)[]
+    if (errorKeys.length > 0) {
+      const firstField = errorKeys[0]
+      setFocus(firstField, { shouldSelect: true })
     }
   }
 
   return (
     <Box component="form" onSubmit={handleSubmit(onSubmit, onError)} sx={{ mt: 2 }}>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {miembro ? 'Miembro actualizado exitosamente' : 'Miembro creado exitosamente'}
-        </Alert>
-      )}
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+      {success && <Alert severity="success" sx={{ mb: 2 }}>{miembro ? 'Actualizado' : 'Creado'} exitosamente</Alert>}
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Controller
-          name="ci"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Carnet de Identidad"
-              required
-              disabled={loading}
-              {...fieldError('ci')}
-              onFocus={() => setFocusedField('ci')}
-              onBlur={() => setFocusedField(null)}
-              onChange={(e) => field.onChange(formatCIInput(e.target.value))}
-            />
-          )}
-        />
-
-        <Controller
-          name="nombres"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Nombres"
-              required
-              disabled={loading}
-              {...fieldError('nombres')}
-              onFocus={() => setFocusedField('nombres')}
-              onBlur={() => setFocusedField(null)}
-              onChange={(e) => field.onChange(formatNameInput(e.target.value))}
-            />
-          )}
-        />
-
-        <Controller
-          name="apellido_paterno"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Apellido paterno"
-              disabled={loading}
-              {...fieldError('apellido_paterno')}
-              onFocus={() => setFocusedField('apellido_paterno')}
-              onBlur={() => setFocusedField(null)}
-              onChange={(e) => field.onChange(formatNameInput(e.target.value))}
-            />
-          )}
-        />
-
-        <Controller
-          name="apellido_materno"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Apellido materno"
-              disabled={loading}
-              error={fieldError('apellido_paterno').error}
-              helperText={fieldError('apellido_paterno').error ? 'Al menos uno de los dos apellidos es requerido' : undefined}
-              onFocus={() => setFocusedField('apellido_paterno')}
-              onBlur={() => setFocusedField(null)}
-              onChange={(e) => field.onChange(formatNameInput(e.target.value))}
-            />
-          )}
-        />
-
-        <Controller
-          name="fecha_nacimiento"
-          control={control}
-          render={({ field }) => (
-            <DatePicker
-              label="Fecha de Nacimiento"
-              value={field.value ? dayjs(field.value) : null}
-              onChange={(newValue) => {
-                field.onChange(newValue && newValue.isValid() ? newValue.format('YYYY-MM-DD') : null)
-              }}
-              disabled={loading}
-              slotProps={{
-                textField: {
-                  fullWidth: true,
-                  ...fieldError('fecha_nacimiento'),
-                  onFocus: () => setFocusedField('fecha_nacimiento'),
-                  onBlur: () => setFocusedField(null),
-                },
-              }}
-              format="DD/MM/YYYY"
-            />
-          )}
-        />
-
-        <Controller
-          name="numero_celular"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Número de Celular"
-              disabled={loading}
-              {...fieldError('numero_celular')}
-              inputProps={{ maxLength: 8 }}
-              onFocus={() => setFocusedField('numero_celular')}
-              onBlur={() => setFocusedField(null)}
-              onChange={(e) => field.onChange(formatCelularInput(e.target.value))}
-            />
-          )}
-        />
-
-        <Controller
-          name="genero"
-          control={control}
-          render={({ field }) => (
-            <Autocomplete
-              {...field}
-              options={["Masculino", "Femenino", "Prefiero no decir"]}
-              value={field.value || null}
-              onChange={(_, newValue) => {
-                field.onChange(newValue || '')
-              }}
-              disabled={loading}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Género"
-                  error={fieldError('genero').error}
-                  helperText={fieldError('genero').helperText}
-                />
-              )}
-            />
-          )}
-        />
-
-        <Controller
-          name="fecha_ingreso"
-          control={control}
-          render={({ field }) => (
-            <DatePicker
-              label="Fecha de Ingreso"
-              value={field.value ? dayjs(field.value) : null}
-              onChange={(newValue) => {
-                field.onChange(newValue && newValue.isValid() ? newValue.format('YYYY-MM-DD') : null)
-              }}
-              disabled={loading}
-              slotProps={{
-                textField: {
-                  fullWidth: true,
-                  ...fieldError('fecha_ingreso'),
-                  onFocus: () => setFocusedField('fecha_ingreso'),
-                  onBlur: () => setFocusedField(null),
-                },
-              }}
-              format="DD/MM/YYYY"
-            />
-          )}
-        />
-
-        <Controller
-          name="cargo"
-          control={control}
-          render={({ field }) => (
-            <Autocomplete
-              {...field}
-              options={CARGOS_ASOCIACION}
-              value={field.value || null}
-              onChange={(_, newValue) => {
-                field.onChange(newValue || '')
-              }}
-              disabled={loading}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Cargo"
-                  error={fieldError('cargo').error}
-                  helperText={fieldError('cargo').helperText}
-                  placeholder="Escribe para buscar cargo..."
-                />
-              )}
-              noOptionsText="No se encontró el cargo"
-            />
-          )}
-        />
-
-        <Controller
-          name="email"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Email"
-              type="email"
-              required
-              disabled={loading}
-              {...fieldError('email')}
-              onFocus={() => setFocusedField('email')}
-              onBlur={() => setFocusedField(null)}
-            />
-          )}
-        />
-
-        {!miembro && (
-          <Alert severity="info" sx={{ mt: 1 }}>
-            La contraseña se generará automáticamente y se enviará por correo al usuario.
-          </Alert>
-        )}
+        <Controller name="ci" control={control} render={({ field }) => (
+          <TextField {...field} fullWidth label="Carnet de Identidad" required disabled={loading} {...fieldError('ci')} onChange={(e) => field.onChange(formatCIInput(e.target.value))} autoComplete="off" />
+        )} />
+        <Controller name="nombres" control={control} render={({ field }) => (
+          <TextField {...field} fullWidth label="Nombres" required disabled={loading} {...fieldError('nombres')} onChange={(e) => field.onChange(formatNameInput(e.target.value))} autoComplete="name" />
+        )} />
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Controller name="apellido_paterno" control={control} render={({ field }) => (
+            <TextField {...field} fullWidth label="Apellido Paterno" disabled={loading} {...fieldError('apellido_paterno')} onChange={(e) => field.onChange(formatNameInput(e.target.value))} autoComplete="family-name" />
+          )} />
+          <Controller name="apellido_materno" control={control} render={({ field }) => (
+            <TextField {...field} fullWidth label="Apellido Materno" disabled={loading} {...fieldError('apellido_materno')} onChange={(e) => field.onChange(formatNameInput(e.target.value))} autoComplete="family-name" />
+          )} />
+        </Box>
+        <Controller name="fecha_nacimiento" control={control} render={({ field }) => (
+          <DatePicker label="Fecha de Nacimiento" value={field.value ? dayjs(field.value) : null} onChange={(v) => field.onChange(v?.isValid() ? v.format('YYYY-MM-DD') : null)} disabled={loading} slotProps={{ textField: { fullWidth: true, ...fieldError('fecha_nacimiento'), autoComplete: 'bday' } }} format="DD/MM/YYYY" />
+        )} />
+        <Controller name="numero_celular" control={control} render={({ field }) => (
+          <TextField {...field} fullWidth label="Celular" disabled={loading} {...fieldError('numero_celular')} inputProps={{ maxLength: 8, autoComplete: 'tel' }} onChange={(e) => field.onChange(formatCelularInput(e.target.value))} />
+        )} />
+        <Controller name="genero" control={control} render={({ field }) => (
+          <Autocomplete {...field} options={["Masculino", "Femenino", "Prefiero no decir"]} 
+            noOptionsText="No hay opciones"
+            loadingText="Cargando..."
+            value={field.value || null} onChange={(_, v) => field.onChange(v || '')} disabled={loading} renderInput={(params) => <TextField {...params} label="Género" {...fieldError('genero')} inputProps={{ ...params.inputProps, autoComplete: 'off' }} />} />
+        )} />
+        <Controller name="fecha_ingreso" control={control} render={({ field }) => (
+          <DatePicker label="Fecha de Ingreso" value={field.value ? dayjs(field.value) : null} onChange={(v) => field.onChange(v?.isValid() ? v.format('YYYY-MM-DD') : null)} disabled={loading} slotProps={{ textField: { fullWidth: true, ...fieldError('fecha_ingreso'), autoComplete: 'off' } }} format="DD/MM/YYYY" />
+        )} />
+        <Controller name="cargo" control={control} render={({ field }) => (
+          <Autocomplete {...field} options={CARGOS_ASOCIACION} 
+            noOptionsText="No se encontró el cargo"
+            loadingText="Cargando..."
+            value={field.value || null} onChange={(_, v) => field.onChange(v || '')} disabled={loading} renderInput={(params) => <TextField {...params} label="Cargo" {...fieldError('cargo')} inputProps={{ ...params.inputProps, autoComplete: 'off' }} />} />
+        )} />
+        <Controller name="email" control={control} render={({ field }) => (
+          <TextField {...field} fullWidth label="Email" type="email" required disabled={loading} {...fieldError('email')} autoComplete="email" />
+        )} />
       </Box>
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-        {onCancel && (
-          <Button variant="outlined" onClick={onCancel} disabled={loading}>
-            Cancelar
-          </Button>
-        )}
-        <Button
-          type="submit"
-          variant="contained"
-          disabled={loading}
-          startIcon={loading ? <CircularProgress size={20} /> : null}
-        >
-          {loading ? 'Guardando...' : miembro ? 'Actualizar' : 'Crear'}
+        {onCancel && <Button variant="outlined" onClick={onCancel} disabled={loading}>Cancelar</Button>}
+        <Button type="submit" variant="contained" disabled={loading} sx={{ height: '40px', minWidth: '120px' }}>
+          {loading ? <CircularProgress size={24} color="inherit" /> : (miembro ? 'Actualizar' : 'Crear')}
         </Button>
       </Box>
     </Box>
