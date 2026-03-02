@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import {
   Button,
   Collapse,
@@ -42,9 +42,9 @@ import {
   createColumnHelper
 } from '@tanstack/react-table'
 import { Sensei } from '@/models/sensei'
-import { senseiController } from '@/controllers/senseiController'
 import Pagination from '@/components/common/Pagination'
 import { ESPECIALIDADES_SENSEI } from '@/utils/constants'
+import { useSenseiList } from '@/hooks/useSenseiList'
 
 interface SenseiListProps {
   onEdit?: (sensei: Sensei) => void
@@ -63,45 +63,17 @@ export default function SenseiList({
   searchTerm: externalSearchTerm = '', 
   itemsPerPage: initialItemsPerPage = 10 
 }: SenseiListProps) {
-  const [senseis, setSenseis] = useState<Sensei[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  
-  // Estados para filtros
-  const [globalFilter, setGlobalFilter] = useState(externalSearchTerm)
-  const [especialidadFilter, setEspecialidadFilter] = useState<string>('all')
-  const [estadoFilter, setEstadoFilter] = useState<string>('all')
-  const [showFilters, setShowFilters] = useState(false)
-
-  // Estado para mantener los IDs que han sido modificados en la sesión actual
-  const [modifiedIds, setModifiedIds] = useState<Set<string>>(new Set())
-
-  const loadSenseis = async () => {
-    setLoading(true)
-    setError(null)
-    const response = clubId 
-      ? await senseiController.getSenseisByClub(clubId)
-      : await senseiController.getAllSenseis(true)
-      
-    if (response.success && response.data) {
-      setSenseis(response.data)
-      setModifiedIds(new Set())
-    } else {
-      setError(response.error || 'Error al cargar los senseis')
-    }
-    setLoading(false)
-  }
+  const { state, dispatch, loadSenseis, toggleStatus, filteredData } = useSenseiList(externalSearchTerm)
+  const { loading, error, globalFilter, especialidadFilter, estadoFilter, showFilters } = state
 
   useEffect(() => {
-    loadSenseis()
-  }, [refreshTrigger, clubId])
+    loadSenseis(clubId)
+  }, [loadSenseis, refreshTrigger, clubId])
 
   useEffect(() => {
-    setGlobalFilter(externalSearchTerm)
-    setModifiedIds(new Set())
-  }, [externalSearchTerm])
+    dispatch({ type: 'SET_GLOBAL_FILTER', payload: externalSearchTerm })
+  }, [externalSearchTerm, dispatch])
 
-  // Definición de columnas con TanStack Table
   const columnHelper = createColumnHelper<Sensei>()
   
   const columns = useMemo(() => [
@@ -133,59 +105,17 @@ export default function SenseiList({
       cell: (info) => {
         const isActive = info.getValue()
         const id = info.row.original.id
-        
-        const handleToggle = async () => {
-          setModifiedIds(prev => new Set(prev).add(id))
-          setSenseis(prev => prev.map(s => s.id === id ? { ...s, activo: !isActive } : s))
-          
-          try {
-            const response = await senseiController.updateSensei(id, { activo: !isActive })
-            if (!response.success) {
-              setSenseis(prev => prev.map(s => s.id === id ? { ...s, activo: isActive } : s))
-              setModifiedIds(prev => {
-                const next = new Set(prev)
-                next.delete(id)
-                return next
-              })
-              alert('Error al cambiar el estado: ' + (response.error || 'Error desconocido'))
-            }
-          } catch (err) {
-            setSenseis(prev => prev.map(s => s.id === id ? { ...s, activo: isActive } : s))
-            setModifiedIds(prev => {
-              const next = new Set(prev)
-              next.delete(id)
-              return next
-            })
-            console.error(err)
-            alert('Error inesperado al cambiar el estado')
-          }
-        }
-
         return (
           <Tooltip title={isActive ? 'Desactivar' : 'Activar'}>
             <Switch 
               checked={!!isActive} 
-              onChange={handleToggle}
+              onChange={() => toggleStatus(id, !!isActive)}
               size="medium"
               sx={{
-                '& .MuiSwitch-switchBase.Mui-checked': {
-                  color: '#4caf50',
-                  '&:hover': {
-                    backgroundColor: 'rgba(76, 175, 80, 0.08)',
-                  },
-                },
-                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                  backgroundColor: '#4caf50',
-                },
-                '& .MuiSwitch-switchBase': {
-                  color: '#f44336',
-                  '&:hover': {
-                    backgroundColor: 'rgba(244, 67, 54, 0.08)',
-                  },
-                },
-                '& .MuiSwitch-switchBase + .MuiSwitch-track': {
-                  backgroundColor: '#f44336',
-                },
+                '& .MuiSwitch-switchBase.Mui-checked': { color: '#4caf50' },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#4caf50' },
+                '& .MuiSwitch-switchBase': { color: '#f44336' },
+                '& .MuiSwitch-switchBase + .MuiSwitch-track': { backgroundColor: '#f44336' },
               }}
             />
           </Tooltip>
@@ -198,58 +128,19 @@ export default function SenseiList({
       cell: (info) => (
         <Box textAlign="right">
           {onEdit && (
-            <IconButton 
-              size="small" 
-              color="primary" 
-              onClick={() => onEdit(info.row.original)}
-              title="Editar"
-            >
+            <IconButton size="small" color="primary" onClick={() => onEdit(info.row.original)} title="Editar" aria-label="Editar sensei">
               <EditIcon fontSize="small" />
             </IconButton>
           )}
           {onDelete && (
-            <IconButton 
-              size="small" 
-              color="error" 
-              onClick={() => onDelete(info.row.original)}
-              title="Eliminar"
-            >
+            <IconButton size="small" color="error" onClick={() => onDelete(info.row.original)} title="Eliminar" aria-label="Eliminar sensei">
               <DeleteIcon fontSize="small" />
             </IconButton>
           )}
         </Box>
       ),
     }),
-  ], [onEdit, onDelete])
-
-  // Filtrado y ordenamiento personalizado
-  const filteredData = useMemo(() => {
-    const filtered = senseis.filter(s => {
-      const matchEspecialidad = especialidadFilter === 'all' || s.especialidad === especialidadFilter
-      const matchEstado = estadoFilter === 'all' || 
-        (estadoFilter === 'activo' ? s.activo : !s.activo)
-      
-      const search = globalFilter.toLowerCase()
-      const matchSearch = !search || 
-        s.nombres?.toLowerCase().includes(search) ||
-        s.apellidos?.toLowerCase().includes(search) ||
-        s.ci?.toLowerCase().includes(search) ||
-        s.grado_dan?.toLowerCase().includes(search) ||
-        s.especialidad?.toLowerCase().includes(search)
-
-      return matchEspecialidad && matchEstado && matchSearch
-    })
-
-    return [...filtered].sort((a, b) => {
-      const isAModified = modifiedIds.has(a.id)
-      const isBModified = modifiedIds.has(b.id)
-      const effectiveAActive = isAModified ? !a.activo : a.activo
-      const effectiveBActive = isBModified ? !b.activo : b.activo
-
-      if (effectiveAActive === effectiveBActive) return 0
-      return effectiveAActive ? -1 : 1
-    })
-  }, [senseis, especialidadFilter, estadoFilter, globalFilter, modifiedIds])
+  ], [onEdit, onDelete, toggleStatus])
 
   const table = useReactTable({
     data: filteredData,
@@ -263,13 +154,6 @@ export default function SenseiList({
     },
   })
 
-  const clearFilters = () => {
-    setEspecialidadFilter('all')
-    setEstadoFilter('all')
-    setGlobalFilter('')
-    setModifiedIds(new Set())
-  }
-
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
@@ -279,14 +163,11 @@ export default function SenseiList({
   }
 
   if (error) {
-    return (
-      <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
-    )
+    return <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
   }
 
   return (
     <Box>
-      {/* Barra de Filtros */}
       <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f8f9fa' }} variant="outlined">
         <Stack spacing={2}>
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
@@ -294,7 +175,7 @@ export default function SenseiList({
               size="small"
               placeholder="Buscar por carnet, nombre, especialidad..."
               value={globalFilter}
-              onChange={(e) => setGlobalFilter(e.target.value)}
+              onChange={(e) => dispatch({ type: 'SET_GLOBAL_FILTER', payload: e.target.value })}
               sx={{ flexGrow: 1, backgroundColor: 'white' }}
               InputProps={{
                 startAdornment: (
@@ -310,21 +191,16 @@ export default function SenseiList({
               size="small"
               startIcon={<FilterListIcon />}
               endIcon={showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              onClick={() => setShowFilters(!showFilters)}
+              onClick={() => dispatch({ type: 'TOGGLE_SHOW_FILTERS' })}
               color={showFilters ? 'primary' : 'inherit'}
-              sx={{ 
-                backgroundColor: 'white',
-                height: '40px',
-                textTransform: 'none',
-                borderColor: showFilters ? 'primary.main' : 'rgba(0, 0, 0, 0.23)'
-              }}
+              sx={{ backgroundColor: 'white', height: '40px', textTransform: 'none' }}
             >
               Filtros
             </Button>
 
             {(especialidadFilter !== 'all' || estadoFilter !== 'all' || globalFilter !== '') && (
               <Tooltip title="Limpiar filtros">
-                <IconButton onClick={clearFilters} color="warning" size="small">
+                <IconButton onClick={() => dispatch({ type: 'CLEAR_FILTERS', initialSearch: externalSearchTerm })} color="warning" size="small">
                   <ClearIcon />
                 </IconButton>
               </Tooltip>
@@ -332,19 +208,10 @@ export default function SenseiList({
           </Stack>
 
           <Collapse in={showFilters}>
-            <Stack 
-              direction={{ xs: 'column', md: 'row' }} 
-              spacing={2} 
-              alignItems="center"
-              sx={{ pt: 1 }}
-            >
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center" sx={{ pt: 1 }}>
               <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white' }}>
                 <InputLabel>Especialidad</InputLabel>
-                <Select
-                  value={especialidadFilter}
-                  label="Especialidad"
-                  onChange={(e) => setEspecialidadFilter(e.target.value)}
-                >
+                <Select value={especialidadFilter} label="Especialidad" onChange={(e) => dispatch({ type: 'SET_ESPECIALIDAD_FILTER', payload: e.target.value })}>
                   <MenuItem value="all">Todas las especialidades</MenuItem>
                   {ESPECIALIDADES_SENSEI.map(esp => (
                     <MenuItem key={esp} value={esp}>{esp}</MenuItem>
@@ -354,11 +221,7 @@ export default function SenseiList({
 
               <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white' }}>
                 <InputLabel>Estado</InputLabel>
-                <Select
-                  value={estadoFilter}
-                  label="Estado"
-                  onChange={(e) => setEstadoFilter(e.target.value)}
-                >
+                <Select value={estadoFilter} label="Estado" onChange={(e) => dispatch({ type: 'SET_ESTADO_FILTER', payload: e.target.value })}>
                   <MenuItem value="all">Todos los estados</MenuItem>
                   <MenuItem value="activo">Activos</MenuItem>
                   <MenuItem value="inactivo">Inactivos</MenuItem>
@@ -384,12 +247,7 @@ export default function SenseiList({
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map(header => (
                       <TableCell key={header.id} sx={{ fontWeight: 'bold', py: 1.5 }}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                       </TableCell>
                     ))}
                   </TableRow>
