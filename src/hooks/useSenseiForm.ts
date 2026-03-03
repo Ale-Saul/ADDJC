@@ -17,7 +17,7 @@ export function useSenseiForm(sensei?: Sensei | null, user?: any, onSuccess?: ()
 
   const form = useForm({
     resolver: zodResolver(senseiSchema),
-    mode: 'onSubmit',
+    mode: 'onTouched',
     reValidateMode: 'onChange',
     defaultValues: {
       club_id: '',

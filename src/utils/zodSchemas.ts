@@ -10,7 +10,7 @@ export const ciSchema = z
   .min(1, 'El Carnet de Identidad es requerido')
   .regex(/^\d{1,7}(-[A-Za-z]{1,3})?$/, 'Formato inválido (ej: 1234567-CB)')
 
-// Validación de Celular: exactamente 8 dígitos
+// Validación de Celular: exactamente 8 dígitos o vacío
 export const celularSchema = z
   .string()
   .refine((val) => val === '' || /^\d{8}$/.test(val), {

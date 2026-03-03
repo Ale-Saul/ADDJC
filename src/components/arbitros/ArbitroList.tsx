@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import {
   Button,
   Collapse,
@@ -42,8 +42,8 @@ import {
   createColumnHelper
 } from '@tanstack/react-table'
 import { Arbitro } from '@/models/arbitro'
-import { arbitroController } from '@/controllers/arbitroController'
 import Pagination from '@/components/common/Pagination'
+import { useArbitroList } from '@/hooks/useArbitroList'
 
 interface ArbitroListProps {
   onEdit?: (arbitro: Arbitro) => void
@@ -60,42 +60,17 @@ export default function ArbitroList({
   searchTerm: externalSearchTerm = '', 
   itemsPerPage: initialItemsPerPage = 10 
 }: ArbitroListProps) {
-  const [arbitros, setArbitros] = useState<Arbitro[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  
-  // Estados para filtros
-  const [globalFilter, setGlobalFilter] = useState(externalSearchTerm)
-  const [nivelFilter, setNivelFilter] = useState<string>('all')
-  const [estadoFilter, setEstadoFilter] = useState<string>('all')
-  const [showFilters, setShowFilters] = useState(false)
-
-  // Estado para mantener los IDs que han sido modificados en la sesión actual
-  const [modifiedIds, setModifiedIds] = useState<Set<string>>(new Set())
-
-  const loadArbitros = async () => {
-    setLoading(true)
-    setError(null)
-    const response = await arbitroController.getAllArbitros(true)
-    if (response.success && response.data) {
-      setArbitros(response.data)
-      setModifiedIds(new Set())
-    } else {
-      setError(response.error || 'Error al cargar los árbitros')
-    }
-    setLoading(false)
-  }
+  const { state, dispatch, loadArbitros, toggleStatus, filteredData } = useArbitroList(externalSearchTerm)
+  const { loading, error, globalFilter, nivelFilter, estadoFilter, showFilters } = state
 
   useEffect(() => {
     loadArbitros()
-  }, [refreshTrigger])
+  }, [loadArbitros, refreshTrigger])
 
   useEffect(() => {
-    setGlobalFilter(externalSearchTerm)
-    setModifiedIds(new Set())
-  }, [externalSearchTerm])
+    dispatch({ type: 'SET_GLOBAL_FILTER', payload: externalSearchTerm })
+  }, [externalSearchTerm, dispatch])
 
-  // Definición de columnas con TanStack Table
   const columnHelper = createColumnHelper<Arbitro>()
   
   const columns = useMemo(() => [
@@ -123,59 +98,17 @@ export default function ArbitroList({
       cell: (info) => {
         const isActive = info.getValue()
         const id = info.row.original.id
-        
-        const handleToggle = async () => {
-          setModifiedIds(prev => new Set(prev).add(id))
-          setArbitros(prev => prev.map(a => a.id === id ? { ...a, activo: !isActive } : a))
-          
-          try {
-            const response = await arbitroController.updateArbitro(id, { activo: !isActive })
-            if (!response.success) {
-              setArbitros(prev => prev.map(a => a.id === id ? { ...a, activo: isActive } : a))
-              setModifiedIds(prev => {
-                const next = new Set(prev)
-                next.delete(id)
-                return next
-              })
-              alert('Error al cambiar el estado: ' + (response.error || 'Error desconocido'))
-            }
-          } catch (err) {
-            setArbitros(prev => prev.map(a => a.id === id ? { ...a, activo: isActive } : a))
-            setModifiedIds(prev => {
-              const next = new Set(prev)
-              next.delete(id)
-              return next
-            })
-            console.error(err)
-            alert('Error inesperado al cambiar el estado')
-          }
-        }
-
         return (
           <Tooltip title={isActive ? 'Desactivar' : 'Activar'}>
             <Switch 
               checked={!!isActive} 
-              onChange={handleToggle}
+              onChange={() => toggleStatus(id, !!isActive)}
               size="medium"
               sx={{
-                '& .MuiSwitch-switchBase.Mui-checked': {
-                  color: '#4caf50',
-                  '&:hover': {
-                    backgroundColor: 'rgba(76, 175, 80, 0.08)',
-                  },
-                },
-                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                  backgroundColor: '#4caf50',
-                },
-                '& .MuiSwitch-switchBase': {
-                  color: '#f44336',
-                  '&:hover': {
-                    backgroundColor: 'rgba(244, 67, 54, 0.08)',
-                  },
-                },
-                '& .MuiSwitch-switchBase + .MuiSwitch-track': {
-                  backgroundColor: '#f44336',
-                },
+                '& .MuiSwitch-switchBase.Mui-checked': { color: '#4caf50' },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#4caf50' },
+                '& .MuiSwitch-switchBase': { color: '#f44336' },
+                '& .MuiSwitch-switchBase + .MuiSwitch-track': { backgroundColor: '#f44336' },
               }}
             />
           </Tooltip>
@@ -188,57 +121,19 @@ export default function ArbitroList({
       cell: (info) => (
         <Box textAlign="right">
           {onEdit && (
-            <IconButton 
-              size="small" 
-              color="primary" 
-              onClick={() => onEdit(info.row.original)}
-              title="Editar"
-            >
+            <IconButton size="small" color="primary" onClick={() => onEdit(info.row.original)} title="Editar" aria-label="Editar árbitro">
               <EditIcon fontSize="small" />
             </IconButton>
           )}
           {onDelete && (
-            <IconButton 
-              size="small" 
-              color="error" 
-              onClick={() => onDelete(info.row.original)}
-              title="Eliminar"
-            >
+            <IconButton size="small" color="error" onClick={() => onDelete(info.row.original)} title="Eliminar" aria-label="Eliminar árbitro">
               <DeleteIcon fontSize="small" />
             </IconButton>
           )}
         </Box>
       ),
     }),
-  ], [onEdit, onDelete])
-
-  // Filtrado y ordenamiento personalizado
-  const filteredData = useMemo(() => {
-    const filtered = arbitros.filter(a => {
-      const matchNivel = nivelFilter === 'all' || a.nivel_arbitraje === nivelFilter
-      const matchEstado = estadoFilter === 'all' || 
-        (estadoFilter === 'activo' ? a.activo : !a.activo)
-      
-      const search = globalFilter.toLowerCase()
-      const matchSearch = !search || 
-        a.nombres?.toLowerCase().includes(search) ||
-        a.apellidos?.toLowerCase().includes(search) ||
-        a.ci?.toLowerCase().includes(search) ||
-        a.nivel_arbitraje?.toLowerCase().includes(search)
-
-      return matchNivel && matchEstado && matchSearch
-    })
-
-    return [...filtered].sort((a, b) => {
-      const isAModified = modifiedIds.has(a.id)
-      const isBModified = modifiedIds.has(b.id)
-      const effectiveAActive = isAModified ? !a.activo : a.activo
-      const effectiveBActive = isBModified ? !b.activo : b.activo
-
-      if (effectiveAActive === effectiveBActive) return 0
-      return effectiveAActive ? -1 : 1
-    })
-  }, [arbitros, nivelFilter, estadoFilter, globalFilter, modifiedIds])
+  ], [onEdit, onDelete, toggleStatus])
 
   const table = useReactTable({
     data: filteredData,
@@ -252,13 +147,6 @@ export default function ArbitroList({
     },
   })
 
-  const clearFilters = () => {
-    setNivelFilter('all')
-    setEstadoFilter('all')
-    setGlobalFilter('')
-    setModifiedIds(new Set())
-  }
-
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
@@ -268,14 +156,11 @@ export default function ArbitroList({
   }
 
   if (error) {
-    return (
-      <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
-    )
+    return <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
   }
 
   return (
     <Box>
-      {/* Barra de Filtros */}
       <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f8f9fa' }} variant="outlined">
         <Stack spacing={2}>
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
@@ -283,7 +168,7 @@ export default function ArbitroList({
               size="small"
               placeholder="Buscar por carnet, nombre..."
               value={globalFilter}
-              onChange={(e) => setGlobalFilter(e.target.value)}
+              onChange={(e) => dispatch({ type: 'SET_GLOBAL_FILTER', payload: e.target.value })}
               sx={{ flexGrow: 1, backgroundColor: 'white' }}
               InputProps={{
                 startAdornment: (
@@ -294,26 +179,29 @@ export default function ArbitroList({
               }}
             />
             
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<FilterListIcon />}
-              endIcon={showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              onClick={() => setShowFilters(!showFilters)}
-              color={showFilters ? 'primary' : 'inherit'}
-              sx={{ 
+            <button
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 16px',
+                borderRadius: '4px',
+                border: '1px solid rgba(0, 0, 0, 0.23)',
                 backgroundColor: 'white',
-                height: '40px',
-                textTransform: 'none',
-                borderColor: showFilters ? 'primary.main' : 'rgba(0, 0, 0, 0.23)'
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                height: '40px'
               }}
+              onClick={() => dispatch({ type: 'TOGGLE_SHOW_FILTERS' })}
             >
+              <FilterListIcon fontSize="small" />
               Filtros
-            </Button>
+              {showFilters ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+            </button>
 
             {(nivelFilter !== 'all' || estadoFilter !== 'all' || globalFilter !== '') && (
               <Tooltip title="Limpiar filtros">
-                <IconButton onClick={clearFilters} color="warning" size="small">
+                <IconButton onClick={() => dispatch({ type: 'CLEAR_FILTERS', initialSearch: externalSearchTerm })} color="warning" size="small">
                   <ClearIcon />
                 </IconButton>
               </Tooltip>
@@ -321,19 +209,10 @@ export default function ArbitroList({
           </Stack>
 
           <Collapse in={showFilters}>
-            <Stack 
-              direction={{ xs: 'column', md: 'row' }} 
-              spacing={2} 
-              alignItems="center"
-              sx={{ pt: 1 }}
-            >
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center" sx={{ pt: 1 }}>
               <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white' }}>
                 <InputLabel>Nivel</InputLabel>
-                <Select
-                  value={nivelFilter}
-                  label="Nivel"
-                  onChange={(e) => setNivelFilter(e.target.value)}
-                >
+                <Select value={nivelFilter} label="Nivel" onChange={(e) => dispatch({ type: 'SET_NIVEL_FILTER', payload: e.target.value })}>
                   <MenuItem value="all">Todos los niveles</MenuItem>
                   <MenuItem value="Regional">Regional</MenuItem>
                   <MenuItem value="Nacional">Nacional</MenuItem>
@@ -343,11 +222,7 @@ export default function ArbitroList({
 
               <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white' }}>
                 <InputLabel>Estado</InputLabel>
-                <Select
-                  value={estadoFilter}
-                  label="Estado"
-                  onChange={(e) => setEstadoFilter(e.target.value)}
-                >
+                <Select value={estadoFilter} label="Estado" onChange={(e) => dispatch({ type: 'SET_ESTADO_FILTER', payload: e.target.value })}>
                   <MenuItem value="all">Todos los estados</MenuItem>
                   <MenuItem value="activo">Activos</MenuItem>
                   <MenuItem value="inactivo">Inactivos</MenuItem>
@@ -361,7 +236,7 @@ export default function ArbitroList({
       {filteredData.length === 0 ? (
         <Box textAlign="center" py={4}>
           <Typography variant="h6" color="text.secondary">
-            No se encontraron resultados con los filtros aplicados
+            No se encontraron árbitros con los filtros aplicados
           </Typography>
         </Box>
       ) : (
@@ -373,12 +248,7 @@ export default function ArbitroList({
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map(header => (
                       <TableCell key={header.id} sx={{ fontWeight: 'bold', py: 1.5 }}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                       </TableCell>
                     ))}
                   </TableRow>

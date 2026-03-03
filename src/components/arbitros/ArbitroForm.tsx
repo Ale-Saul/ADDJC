@@ -10,11 +10,6 @@ import {
   Box,
   Alert,
   CircularProgress,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormHelperText,
   Autocomplete,
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
@@ -37,9 +32,7 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [focusedField, setFocusedField] = useState<string | null>(null)
 
-  // Configuración de React Hook Form con Zod
   const {
     control,
     handleSubmit,
@@ -48,7 +41,7 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
     formState: { errors },
   } = useForm({
     resolver: zodResolver(arbitroSchema),
-    mode: 'onSubmit',
+    mode: 'onTouched',
     reValidateMode: 'onChange',
     defaultValues: {
       nombres: '',
@@ -64,42 +57,25 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
     },
   })
 
-  const fieldError = (name: keyof typeof errors) => {
-    return {
-      error: !!errors[name],
-      helperText: (errors[name] as { message?: string } | undefined)?.message,
-    }
-  }
-
-  const onError = (formErrors: FieldErrors<z.infer<typeof arbitroSchema>>) => {
-    const errorKeys = Object.keys(formErrors) as (keyof z.infer<typeof arbitroSchema>)[]
-    if (errorKeys.length > 0) {
-      const firstField = errorKeys[0]
-      setFocus(firstField, { shouldSelect: true })
-      setTimeout(() => {
-        const element = document.getElementsByName(firstField)[0]
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }
-      }, 100)
-    }
-  }
+  const fieldError = (name: keyof typeof errors) => ({
+    error: !!errors[name],
+    helperText: (errors[name] as { message?: string } | undefined)?.message,
+  })
 
   useEffect(() => {
     if (arbitro) {
       const ap = arbitro.apellidos?.trim().split(/\s+/) ?? []
-      const a = arbitro as Arbitro
       reset({
-        nombres: a.nombres,
-        apellido_paterno: a.apellido_paterno ?? ap[0] ?? '',
-        apellido_materno: a.apellido_materno ?? ap.slice(1).join(' ') ?? '',
-        email: a.email || '',
-        fecha_nacimiento: a.fecha_nacimiento || null,
-        numero_celular: a.numero_celular || '',
-        ci: a.ci || '',
-        genero: a.genero || '',
-        nivel_arbitraje: a.nivel_arbitraje || '',
-        activo: a.activo,
+        nombres: arbitro.nombres,
+        apellido_paterno: arbitro.apellido_paterno ?? ap[0] ?? '',
+        apellido_materno: arbitro.apellido_materno ?? ap.slice(1).join(' ') ?? '',
+        email: arbitro.email || '',
+        fecha_nacimiento: arbitro.fecha_nacimiento || null,
+        numero_celular: arbitro.numero_celular || '',
+        ci: arbitro.ci || '',
+        genero: arbitro.genero || '',
+        nivel_arbitraje: arbitro.nivel_arbitraje || '',
+        activo: arbitro.activo,
       })
     }
   }, [arbitro, reset])
@@ -109,20 +85,19 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
     setError(null)
     setSuccess(false)
 
+    const payload = {
+      ...data,
+      apellido_paterno: data.apellido_paterno?.trim() || null,
+      apellido_materno: data.apellido_materno?.trim() || null,
+      fecha_nacimiento: data.fecha_nacimiento || null,
+      numero_celular: data.numero_celular || null,
+      ci: data.ci || null,
+      genero: data.genero || null,
+      nivel_arbitraje: data.nivel_arbitraje || null,
+    }
+
     try {
       let response
-      
-      const payload = {
-        ...data,
-        apellido_paterno: data.apellido_paterno?.trim() || null,
-        apellido_materno: data.apellido_materno?.trim() || null,
-        fecha_nacimiento: data.fecha_nacimiento || null,
-        numero_celular: data.numero_celular || null,
-        ci: data.ci || null,
-        genero: data.genero || null,
-        nivel_arbitraje: data.nivel_arbitraje || null,
-      }
-
       if (arbitro) {
         response = await arbitroController.updateArbitro(arbitro.id, payload as ArbitroUpdate)
       } else {
@@ -135,214 +110,65 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
 
       if (response.success) {
         setSuccess(true)
-        if (onSuccess) {
-          setTimeout(() => {
-            onSuccess()
-          }, 1000)
-        }
+        if (onSuccess) setTimeout(() => onSuccess(), 1000)
       } else {
-        setError(response.error || 'Error al guardar el árbitro')
+        setError(response.error || 'Error al guardar')
       }
-    } catch (err: any) {
-      setError(err instanceof Error ? err.message : 'Error inesperado')
-    } finally {
+      setLoading(false)
+    } catch (err) {
+      setError('Error inesperado')
       setLoading(false)
     }
   }
 
+  const onError = (formErrors: FieldErrors<z.infer<typeof arbitroSchema>>) => {
+    const errorKeys = Object.keys(formErrors) as (keyof z.infer<typeof arbitroSchema>)[]
+    if (errorKeys.length > 0) {
+      const firstField = errorKeys[0]
+      setFocus(firstField, { shouldSelect: true })
+    }
+  }
+
   return (
-    <Box component="form" onSubmit={handleSubmit(onSubmit, onError)} noValidate sx={{ mt: 2 }}>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-      
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {arbitro ? 'Árbitro actualizado exitosamente' : 'Árbitro creado exitosamente'}
-        </Alert>
-      )}
+    <Box component="form" onSubmit={handleSubmit(onSubmit, onError)} sx={{ mt: 2 }}>
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+      {success && <Alert severity="success" sx={{ mb: 2 }}>{arbitro ? 'Actualizado' : 'Creado'} exitosamente</Alert>}
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Controller
-          name="ci"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Carnet de Identidad"
-              required
-              disabled={loading}
-              {...fieldError('ci')}
-              onFocus={() => setFocusedField('ci')}
-              onBlur={() => setFocusedField(null)}
-              onChange={(e) => field.onChange(formatCIInput(e.target.value))}
-            />
-          )}
-        />
-
-        <Controller
-          name="nombres"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Nombres"
-              required
-              disabled={loading}
-              {...fieldError('nombres')}
-              onFocus={() => setFocusedField('nombres')}
-              onBlur={() => setFocusedField(null)}
-              onChange={(e) => field.onChange(formatNameInput(e.target.value))}
-            />
-          )}
-        />
-
-        <Controller
-          name="apellido_paterno"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Apellido paterno"
-              disabled={loading}
-              {...fieldError('apellido_paterno')}
-              onFocus={() => setFocusedField('apellido_paterno')}
-              onBlur={() => setFocusedField(null)}
-              onChange={(e) => field.onChange(formatNameInput(e.target.value))}
-            />
-          )}
-        />
-
-        <Controller
-          name="apellido_materno"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Apellido materno"
-              disabled={loading}
-              error={fieldError('apellido_paterno').error}
-              helperText={fieldError('apellido_paterno').error ? 'Al menos uno de los dos apellidos es requerido' : undefined}
-              onFocus={() => setFocusedField('apellido_paterno')}
-              onBlur={() => setFocusedField(null)}
-              onChange={(e) => field.onChange(formatNameInput(e.target.value))}
-            />
-          )}
-        />
-
-        <Controller
-          name="email"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Email"
-              type="email"
-              required
-              disabled={loading}
-              {...fieldError('email')}
-              onFocus={() => setFocusedField('email')}
-              onBlur={() => setFocusedField(null)}
-            />
-          )}
-        />
-
-        <Controller
-          name="fecha_nacimiento"
-          control={control}
-          render={({ field }) => (
-            <DatePicker
-              label="Fecha de Nacimiento"
-              value={field.value ? dayjs(field.value) : null}
-              onChange={(newValue) => {
-                field.onChange(newValue && newValue.isValid() ? newValue.format('YYYY-MM-DD') : null)
-              }}
-              disabled={loading}
-              slotProps={{
-                textField: {
-                  fullWidth: true,
-                  ...fieldError('fecha_nacimiento'),
-                  onFocus: () => setFocusedField('fecha_nacimiento'),
-                  onBlur: () => setFocusedField(null),
-                },
-              }}
-              format="DD/MM/YYYY"
-            />
-          )}
-        />
-
-        <Controller
-          name="numero_celular"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Número de Celular"
-              disabled={loading}
-              {...fieldError('numero_celular')}
-              inputProps={{ maxLength: 8 }}
-              onFocus={() => setFocusedField('numero_celular')}
-              onBlur={() => setFocusedField(null)}
-              onChange={(e) => field.onChange(formatCelularInput(e.target.value))}
-            />
-          )}
-        />
-
-        <Controller
-          name="genero"
-          control={control}
-          render={({ field }) => (
-            <Autocomplete
-              {...field}
-              options={["Femenino", "Masculino", "Prefiero no decir"]}
-              value={field.value || null}
-              onChange={(_, newValue) => {
-                field.onChange(newValue || '')
-              }}
-              disabled={loading}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Género"
-                  error={fieldError('genero').error}
-                  helperText={fieldError('genero').helperText}
-                />
-              )}
-            />
-          )}
-        />
-
-        <Controller
-          name="nivel_arbitraje"
-          control={control}
-          render={({ field }) => (
-            <Autocomplete
-              {...field}
-              options={["Regional", "Nacional", "Internacional"]}
-              value={field.value || null}
-              onChange={(_, newValue) => {
-                field.onChange(newValue || '')
-              }}
-              disabled={loading}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Nivel de Arbitraje"
-                  error={fieldError('nivel_arbitraje').error}
-                  helperText={fieldError('nivel_arbitraje').helperText}
-                />
-              )}
-            />
-          )}
-        />
+        <Controller name="ci" control={control} render={({ field }) => (
+          <TextField {...field} fullWidth label="Carnet de Identidad" required disabled={loading} {...fieldError('ci')} onChange={(e) => field.onChange(formatCIInput(e.target.value))} autoComplete="off" />
+        )} />
+        <Controller name="nombres" control={control} render={({ field }) => (
+          <TextField {...field} fullWidth label="Nombres" required disabled={loading} {...fieldError('nombres')} onChange={(e) => field.onChange(formatNameInput(e.target.value))} autoComplete="name" />
+        )} />
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Controller name="apellido_paterno" control={control} render={({ field }) => (
+            <TextField {...field} fullWidth label="Apellido Paterno" disabled={loading} {...fieldError('apellido_paterno')} onChange={(e) => field.onChange(formatNameInput(e.target.value))} autoComplete="off" />
+          )} />
+          <Controller name="apellido_materno" control={control} render={({ field }) => (
+            <TextField {...field} fullWidth label="Apellido Materno" disabled={loading} {...fieldError('apellido_materno')} onChange={(e) => field.onChange(formatNameInput(e.target.value))} autoComplete="off" />
+          )} />
+        </Box>
+        <Controller name="email" control={control} render={({ field }) => (
+          <TextField {...field} fullWidth label="Email" type="email" required disabled={loading} {...fieldError('email')} autoComplete="email" />
+        )} />
+        <Controller name="fecha_nacimiento" control={control} render={({ field }) => (
+          <DatePicker label="Fecha de Nacimiento" value={field.value ? dayjs(field.value) : null} onChange={(v) => field.onChange(v?.isValid() ? v.format('YYYY-MM-DD') : null)} disabled={loading} slotProps={{ textField: { fullWidth: true, ...fieldError('fecha_nacimiento'), autoComplete: 'bday' } }} format="DD/MM/YYYY" />
+        )} />
+        <Controller name="numero_celular" control={control} render={({ field }) => (
+          <TextField {...field} fullWidth label="Celular" disabled={loading} {...fieldError('numero_celular')} inputProps={{ maxLength: 8, autoComplete: 'tel' }} onChange={(e) => field.onChange(formatCelularInput(e.target.value))} />
+        )} />
+        <Controller name="genero" control={control} render={({ field }) => (
+          <Autocomplete {...field} options={["Masculino", "Femenino", "Prefiero no decir"]}
+            noOptionsText="No hay opciones"
+            value={field.value || null} onChange={(_, v) => field.onChange(v || '')} disabled={loading} renderInput={(params) => <TextField {...params} label="Género" {...fieldError('genero')} inputProps={{ ...params.inputProps, autoComplete: 'off' }} />} />
+        )} />
+        <Controller name="nivel_arbitraje" control={control} render={({ field }) => (
+          <Autocomplete {...field} options={["Regional", "Nacional", "Internacional"]}
+            noOptionsText="No se encontró el nivel"
+            loadingText="Cargando..."
+            value={field.value || null} onChange={(_, v) => field.onChange(v || '')} disabled={loading} renderInput={(params) => <TextField {...params} label="Nivel de Arbitraje" {...fieldError('nivel_arbitraje')} inputProps={{ ...params.inputProps, autoComplete: 'off' }} />} />
+        )} />
 
         {!arbitro && (
           <Alert severity="info" sx={{ mt: 1 }}>
@@ -352,18 +178,9 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
       </Box>
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-        {onCancel && (
-          <Button variant="outlined" onClick={onCancel} disabled={loading}>
-            Cancelar
-          </Button>
-        )}
-        <Button
-          type="submit"
-          variant="contained"
-          disabled={loading}
-          startIcon={loading ? <CircularProgress size={20} /> : null}
-        >
-          {loading ? 'Guardando...' : arbitro ? 'Actualizar' : 'Crear'}
+        {onCancel && <Button variant="outlined" onClick={onCancel} disabled={loading}>Cancelar</Button>}
+        <Button type="submit" variant="contained" disabled={loading} sx={{ height: '40px', minWidth: '120px' }}>
+          {loading ? <CircularProgress size={24} color="inherit" /> : (arbitro ? 'Actualizar' : 'Crear')}
         </Button>
       </Box>
     </Box>

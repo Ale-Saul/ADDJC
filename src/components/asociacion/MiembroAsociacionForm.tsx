@@ -46,7 +46,7 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
     formState: { errors },
   } = useForm({
     resolver: zodResolver(miembroAsociacionSchema),
-    mode: 'onSubmit',
+    mode: 'onTouched',
     reValidateMode: 'onChange',
     defaultValues: {
       nombres: '',
