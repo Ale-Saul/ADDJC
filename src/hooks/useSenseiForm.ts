@@ -38,14 +38,14 @@ export function useSenseiForm(sensei?: Sensei | null, user?: any, onSuccess?: ()
   const { reset } = form
 
   useEffect(() => {
-    const loadClubes = async () => {
+    const loadInitialData = async () => {
       const response = await clubController.getAllClubes(false)
       if (response.success && response.data) {
         setClubes(response.data)
       }
       setLoadingClubes(false)
     }
-    loadClubes()
+    loadInitialData()
   }, [])
 
   useEffect(() => {

@@ -516,21 +516,29 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
                 field.onChange(newValue || '')
               }}
               disabled={loading}
-              renderOption={(props, option) => (
-                <Box component="li" {...props} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Box
-                    sx={{
-                      width: 16,
-                      height: 16,
-                      borderRadius: '50%',
-                      backgroundColor: beltColorMap[option] || '#ccc',
-                      border: option === 'Blanco' ? '1px solid #ddd' : 'none',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                    }}
-                  />
-                  {option}
-                </Box>
-              )}
+              renderOption={(props, option) => {
+                const { key, ...optionProps } = props as any;
+                return (
+                  <Box 
+                    component="li" 
+                    key={key} 
+                    {...optionProps} 
+                    sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}
+                  >
+                    <Box
+                      sx={{
+                        width: 16,
+                        height: 16,
+                        borderRadius: '50%',
+                        backgroundColor: beltColorMap[option] || '#ccc',
+                        border: option === 'Blanco' ? '1px solid #ddd' : 'none',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                      }}
+                    />
+                    {option}
+                  </Box>
+                );
+              }}
               renderInput={(params) => (
                 <TextField
                   {...params}

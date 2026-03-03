@@ -115,7 +115,8 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
         setError(response.error || 'Error al guardar')
       }
       setLoading(false)
-    } catch (err) {
+    } catch (error) {
+      console.error('Error al guardar árbitro:', error)
       setError('Error inesperado')
       setLoading(false)
     }
