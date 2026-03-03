@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { z } from 'zod'
 import { useForm, Controller, type FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -10,13 +10,10 @@ import {
   Box,
   Alert,
   CircularProgress,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
   Typography,
-  FormHelperText,
   Autocomplete,
+  Stack,
+  InputAdornment,
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
@@ -49,7 +46,6 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
   const [loadingSenseis, setLoadingSenseis] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [focusedField, setFocusedField] = useState<string | null>(null)
 
   // Configuración de React Hook Form con Zod
   const {
@@ -61,7 +57,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     formState: { errors },
   } = useForm({
     resolver: zodResolver(judokaSchema),
-    mode: 'onSubmit',
+    mode: 'onTouched',
     reValidateMode: 'onChange',
     defaultValues: {
       club_id: '',
@@ -89,7 +85,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     }
   }
 
-  const onError = (formErrors: FieldErrors<z.infer<typeof judokaSchema>>) => {
+  const onError = useCallback((formErrors: FieldErrors<z.infer<typeof judokaSchema>>) => {
     const errorKeys = Object.keys(formErrors) as (keyof z.infer<typeof judokaSchema>)[]
     if (errorKeys.length > 0) {
       const firstField = errorKeys[0]
@@ -101,18 +97,29 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         }
       }, 100)
     }
-  }
+  }, [setFocus])
 
-  // Opciones ordenadas alfabéticamente
+  // Opciones ordenadas
   const sortedClubes = [...clubes].sort((a, b) => a.nombre_club.localeCompare(b.nombre_club))
   const sortedSenseis = [...senseis].sort((a, b) => {
     const nameA = (a.nombres + ' ' + (a.apellidos || '')).trim()
     const nameB = (b.nombres + ' ' + (b.apellidos || '')).trim()
     return nameA.localeCompare(nameB)
   })
-  const generos = ["Masculino", "Femenino", "Prefiero no decir"].sort((a, b) => a.localeCompare(b))
+  const generos = ["Masculino", "Femenino", "Prefiero no decir"]
   const categorias = [...CATEGORIES]
   const cinturones = [...BELT_COLORS]
+
+  // Mapa de colores para los cinturones
+  const beltColorMap: Record<string, string> = {
+    'Blanco': '#FFFFFF',
+    'Amarillo': '#FFEB3B',
+    'Naranja': '#FF9800',
+    'Verde': '#4CAF50',
+    'Azul': '#2196F3',
+    'Café': '#795548',
+    'Negro': '#212121',
+  }
 
   useEffect(() => {
     const loadClubes = async () => {
@@ -158,14 +165,13 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         ci: judoka.ci || '',
         genero: judoka.genero || '',
         categoria: judoka.categoria || '',
-        peso_competitivo: judoka.peso_competitivo || null,
         cinturon_actual: judoka.cinturon_actual || '',
         activo: judoka.activo,
       })
     }
   }, [judoka, reset])
 
-  // Si es un sensei o encargado creando un nuevo judoka, pre-completar el club
+  // Pre-completar club si es sensei o encargado
   useEffect(() => {
     if (!judoka && user && user.club_id) {
       if (user.rol === 'sensei') {
@@ -207,11 +213,8 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
       if (judoka) {
         response = await judokaController.updateJudoka(judoka.id, payload as JudokaUpdate)
       } else {
-        const createData: JudokaCreate = {
-          ...(payload as JudokaCreate),
-          usuario_id: 'temp-user-id',
-        }
-        response = await judokaController.createJudoka(createData)
+        // En creación el usuario_id será manejado por el controlador/servicio
+        response = await judokaController.createJudoka(payload as JudokaCreate)
       }
 
       if (response.success) {
@@ -245,7 +248,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         </Alert>
       )}
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Stack spacing={2}>
         <Controller
           name="club_id"
           control={control}
@@ -276,6 +279,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
                 />
               )}
               noOptionsText="No se encontraron clubes"
+              loadingText="Cargando clubes..."
             />
           )}
         />
@@ -315,6 +319,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
                 />
               )}
               noOptionsText="No se encontraron entrenadores"
+              loadingText="Cargando entrenadores..."
             />
           )}
         />
@@ -339,8 +344,6 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               required
               disabled={loading}
               {...fieldError('ci')}
-              onFocus={() => setFocusedField('ci')}
-              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatCIInput(e.target.value))}
             />
           )}
@@ -357,47 +360,43 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               required
               disabled={loading}
               {...fieldError('nombres')}
-              onFocus={() => setFocusedField('nombres')}
-              onBlur={() => setFocusedField(null)}
               onChange={(e) => field.onChange(formatNameInput(e.target.value))}
             />
           )}
         />
 
-        <Controller
-          name="apellido_paterno"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Apellido paterno"
-              disabled={loading}
-              {...fieldError('apellido_paterno')}
-              onFocus={() => setFocusedField('apellido_paterno')}
-              onBlur={() => setFocusedField(null)}
-              onChange={(e) => field.onChange(formatNameInput(e.target.value))}
-            />
-          )}
-        />
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Controller
+            name="apellido_paterno"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label="Apellido Paterno"
+                disabled={loading}
+                {...fieldError('apellido_paterno')}
+                onChange={(e) => field.onChange(formatNameInput(e.target.value))}
+              />
+            )}
+          />
 
-        <Controller
-          name="apellido_materno"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Apellido materno"
-              disabled={loading}
-              error={fieldError('apellido_paterno').error}
-              helperText={fieldError('apellido_paterno').error ? 'Al menos uno de los dos apellidos es requerido' : undefined}
-              onFocus={() => setFocusedField('apellido_paterno')}
-              onBlur={() => setFocusedField(null)}
-              onChange={(e) => field.onChange(formatNameInput(e.target.value))}
-            />
-          )}
-        />
+          <Controller
+            name="apellido_materno"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label="Apellido Materno"
+                disabled={loading}
+                error={fieldError('apellido_paterno').error}
+                helperText={fieldError('apellido_paterno').error ? 'Al menos uno de los dos apellidos es requerido' : undefined}
+                onChange={(e) => field.onChange(formatNameInput(e.target.value))}
+              />
+            )}
+          />
+        </Box>
 
         <Controller
           name="email"
@@ -411,8 +410,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               required={!judoka}
               disabled={loading}
               {...fieldError('email')}
-              onFocus={() => setFocusedField('email')}
-              onBlur={() => setFocusedField(null)}
+              autoComplete="email"
             />
           )}
         />
@@ -432,8 +430,6 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
                 textField: {
                   fullWidth: true,
                   ...fieldError('fecha_nacimiento'),
-                  onFocus: () => setFocusedField('fecha_nacimiento'),
-                  onBlur: () => setFocusedField(null),
                 },
               }}
               format="DD/MM/YYYY"
@@ -452,8 +448,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               disabled={loading}
               {...fieldError('numero_celular')}
               inputProps={{ maxLength: 8 }}
-              onFocus={() => setFocusedField('numero_celular')}
-              onBlur={() => setFocusedField(null)}
+              autoComplete="tel"
               onChange={(e) => field.onChange(formatCelularInput(e.target.value))}
             />
           )}
@@ -479,6 +474,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
                   helperText={fieldError('genero').helperText}
                 />
               )}
+              noOptionsText="No se encontraron opciones"
             />
           )}
         />
@@ -503,6 +499,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
                   helperText={fieldError('categoria').helperText}
                 />
               )}
+              noOptionsText="No se encontraron categorías"
             />
           )}
         />
@@ -519,14 +516,46 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
                 field.onChange(newValue || '')
               }}
               disabled={loading}
+              renderOption={(props, option) => (
+                <Box component="li" {...props} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Box
+                    sx={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: '50%',
+                      backgroundColor: beltColorMap[option] || '#ccc',
+                      border: option === 'Blanco' ? '1px solid #ddd' : 'none',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                    }}
+                  />
+                  {option}
+                </Box>
+              )}
               renderInput={(params) => (
                 <TextField
                   {...params}
                   label="Cinturón Actual"
                   error={fieldError('cinturon_actual').error}
                   helperText={fieldError('cinturon_actual').helperText}
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: field.value ? (
+                      <InputAdornment position="start" sx={{ ml: 1 }}>
+                        <Box
+                          sx={{
+                            width: 14,
+                            height: 14,
+                            borderRadius: '50%',
+                            backgroundColor: beltColorMap[field.value] || '#ccc',
+                            border: field.value === 'Blanco' ? '1px solid #ddd' : 'none',
+                          }}
+                        />
+                      </InputAdornment>
+                    ) : null,
+                  }}
                 />
               )}
+              noOptionsText="No se encontraron cinturones"
             />
           )}
         />
@@ -536,11 +565,11 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
             La contraseña se generará automáticamente y se enviará por correo al usuario.
           </Alert>
         )}
-      </Box>
+      </Stack>
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
         {onCancel && (
-          <Button variant="outlined" onClick={onCancel} disabled={loading}>
+          <Button variant="outlined" onClick={onCancel} disabled={loading} sx={{ height: 48 }}>
             Cancelar
           </Button>
         )}
@@ -549,6 +578,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
           variant="contained"
           disabled={loading}
           startIcon={loading ? <CircularProgress size={20} /> : null}
+          sx={{ height: 48, minWidth: 120 }}
         >
           {loading ? 'Guardando...' : judoka ? 'Actualizar' : 'Crear'}
         </Button>
@@ -556,4 +586,3 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     </Box>
   )
 }
-

@@ -11,7 +11,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip,
   IconButton,
   Box,
   CircularProgress,
@@ -42,9 +41,9 @@ import {
   createColumnHelper
 } from '@tanstack/react-table'
 import { Judoka } from '@/models/judoka'
-import { judokaController } from '@/controllers/judokaController'
 import Pagination from '@/components/common/Pagination'
 import { BELT_COLORS, CATEGORIES } from '@/utils/constants'
+import { useJudokaList } from '@/hooks/useJudokaList'
 
 interface JudokaListProps {
   judokas?: Judoka[]
@@ -69,9 +68,18 @@ export default function JudokaList({
   searchTerm: externalSearchTerm = '', 
   itemsPerPage: initialItemsPerPage = 10 
 }: JudokaListProps) {
-  const [judokasLocal, setJudokasLocal] = useState<Judoka[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { 
+    judokas, 
+    loading, 
+    error, 
+    toggleStatus,
+    modifiedIds
+  } = useJudokaList({
+    clubId,
+    entrenadorId,
+    refreshTrigger,
+    judokasProp
+  })
   
   // Estados para filtros
   const [globalFilter, setGlobalFilter] = useState(externalSearchTerm)
@@ -80,46 +88,10 @@ export default function JudokaList({
   const [estadoFilter, setEstadoFilter] = useState<string>('all')
   const [showFilters, setShowFilters] = useState(false)
 
-  // Estado para mantener los IDs que han sido modificados en la sesión actual
-  const [modifiedIds, setModifiedIds] = useState<Set<string>>(new Set())
-
-  const loadJudokas = async () => {
-    setLoading(true)
-    setError(null)
-    
-    let response
-    if (clubId) {
-      response = await judokaController.getJudokasByClub(clubId)
-    } else if (entrenadorId) {
-      response = await judokaController.getJudokasByEntrenador(entrenadorId)
-    } else {
-      response = await judokaController.getAllJudokas(true)
-    }
-    
-    if (response.success && response.data) {
-      setJudokasLocal(response.data)
-      setModifiedIds(new Set())
-    } else {
-      setError(response.error || 'Error al cargar los judokas')
-    }
-    
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    if (judokasProp) {
-      setJudokasLocal(judokasProp)
-    } else {
-      loadJudokas()
-    }
-  }, [refreshTrigger, clubId, entrenadorId, judokasProp])
-
   useEffect(() => {
     setGlobalFilter(externalSearchTerm)
-    setModifiedIds(new Set())
   }, [externalSearchTerm])
 
-  const judokas = judokasLocal
   const isLoading = isLoadingProp !== undefined ? isLoadingProp : loading
 
   // Definición de columnas con TanStack Table
@@ -147,7 +119,36 @@ export default function JudokaList({
     }),
     columnHelper.accessor('cinturon_actual', {
       header: 'Cinturón',
-      cell: (info) => info.getValue() || '-',
+      cell: (info) => {
+        const belt = info.getValue()
+        if (!belt) return '-'
+        
+        const beltColorMap: Record<string, string> = {
+          'Blanco': '#FFFFFF',
+          'Amarillo': '#FFEB3B',
+          'Naranja': '#FF9800',
+          'Verde': '#4CAF50',
+          'Azul': '#2196F3',
+          'Café': '#795548',
+          'Negro': '#212121',
+        }
+
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box
+              sx={{
+                width: 12,
+                height: 12,
+                borderRadius: '50%',
+                backgroundColor: beltColorMap[belt] || '#ccc',
+                border: belt === 'Blanco' ? '1px solid #ddd' : 'none',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+              }}
+            />
+            {belt}
+          </Box>
+        )
+      },
     }),
     columnHelper.accessor('activo', {
       header: 'Estado',
@@ -155,32 +156,7 @@ export default function JudokaList({
         const isActive = info.getValue()
         const id = info.row.original.id
         
-        const handleToggle = async () => {
-          setModifiedIds(prev => new Set(prev).add(id))
-          setJudokasLocal(prev => prev.map(j => j.id === id ? { ...j, activo: !isActive } : j))
-          
-          try {
-            const response = await judokaController.updateJudoka(id, { activo: !isActive })
-            if (!response.success) {
-              setJudokasLocal(prev => prev.map(j => j.id === id ? { ...j, activo: isActive } : j))
-              setModifiedIds(prev => {
-                const next = new Set(prev)
-                next.delete(id)
-                return next
-              })
-              alert('Error al cambiar el estado: ' + (response.error || 'Error desconocido'))
-            }
-          } catch (err) {
-            setJudokasLocal(prev => prev.map(j => j.id === id ? { ...j, activo: isActive } : j))
-            setModifiedIds(prev => {
-              const next = new Set(prev)
-              next.delete(id)
-              return next
-            })
-            console.error(err)
-            alert('Error inesperado al cambiar el estado')
-          }
-        }
+        const handleToggle = () => toggleStatus(id, !!isActive)
 
         return (
           <Tooltip title={isActive ? 'Desactivar' : 'Activar'}>
@@ -208,6 +184,7 @@ export default function JudokaList({
                   backgroundColor: '#f44336',
                 },
               }}
+              inputProps={{ 'aria-label': isActive ? 'Desactivar judoka' : 'Activar judoka' }}
             />
           </Tooltip>
         )
@@ -224,6 +201,7 @@ export default function JudokaList({
               color="primary" 
               onClick={() => onEdit(info.row.original)}
               title="Editar"
+              aria-label="Editar judoka"
             >
               <EditIcon fontSize="small" />
             </IconButton>
@@ -234,6 +212,7 @@ export default function JudokaList({
               color="error" 
               onClick={() => onDelete(info.row.original)}
               title="Eliminar"
+              aria-label="Eliminar judoka"
             >
               <DeleteIcon fontSize="small" />
             </IconButton>
@@ -241,7 +220,7 @@ export default function JudokaList({
         </Box>
       ),
     }),
-  ], [onEdit, onDelete])
+  ], [onEdit, onDelete, toggleStatus])
 
   // Filtrado y ordenamiento personalizado
   const filteredData = useMemo(() => {
@@ -290,7 +269,6 @@ export default function JudokaList({
     setCategoriaFilter('all')
     setEstadoFilter('all')
     setGlobalFilter('')
-    setModifiedIds(new Set())
   }
 
   if (isLoading) {
