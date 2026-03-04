@@ -2,6 +2,7 @@ import { senseiService } from '@/services/senseiService'
 import { Sensei, SenseiCreate, SenseiUpdate } from '@/models/sensei'
 import { ApiResponse } from '@/types'
 import { generarPasswordInicial } from '@/utils/passwordUtils'
+import { personNamesCreateSchema, personNamesUpdateSchema } from '@/utils/zodSchemas'
 
 export const senseiController = {
   /**
@@ -37,32 +38,9 @@ export const senseiController = {
    * Crear un nuevo sensei
    */
   async createSensei(senseiData: SenseiCreate): Promise<ApiResponse<Sensei>> {
-    // Validaciones de negocio
-    if (!senseiData.nombres || senseiData.nombres.trim() === '') {
-      return { success: false, error: 'El nombre es requerido' }
-    }
-
-    const paterno = (senseiData.apellido_paterno ?? '').trim()
-    const materno = (senseiData.apellido_materno ?? '').trim()
-    if (!paterno && !materno) {
-      return { success: false, error: 'Al menos un apellido (paterno o materno) es requerido' }
-    }
-
-    if (senseiData.nombres.length < 2) {
-      return { success: false, error: 'El nombre debe tener al menos 2 caracteres' }
-    }
-
-    const apellidosCompletos = [paterno, materno].filter(Boolean).join(' ')
-    if (apellidosCompletos.length < 2) {
-      return { success: false, error: 'Los apellidos deben tener al menos 2 caracteres' }
-    }
-
-    if (senseiData.nombres.length > 100) {
-      return { success: false, error: 'El nombre no puede exceder 100 caracteres' }
-    }
-
-    if (apellidosCompletos.length > 200) {
-      return { success: false, error: 'Los apellidos no pueden exceder 200 caracteres en total' }
+    const validation = personNamesCreateSchema.safeParse(senseiData)
+    if (!validation.success) {
+      return { success: false, error: validation.error.errors[0].message }
     }
 
     // Generar contraseña automática basada en el carnet
@@ -92,31 +70,9 @@ export const senseiController = {
       return { success: false, error: 'Sensei no encontrado' }
     }
 
-    // Validaciones de negocio
-    if (senseiData.nombres !== undefined) {
-      if (senseiData.nombres.trim() === '') {
-        return { success: false, error: 'El nombre no puede estar vacío' }
-      }
-
-      if (senseiData.nombres.length < 2) {
-        return { success: false, error: 'El nombre debe tener al menos 2 caracteres' }
-      }
-
-      if (senseiData.nombres.length > 100) {
-        return { success: false, error: 'El nombre no puede exceder 100 caracteres' }
-      }
-    }
-
-    if (senseiData.apellido_paterno !== undefined || senseiData.apellido_materno !== undefined) {
-      const paterno = (senseiData.apellido_paterno ?? '').trim()
-      const materno = (senseiData.apellido_materno ?? '').trim()
-      if (!paterno && !materno) {
-        return { success: false, error: 'Al menos un apellido (paterno o materno) debe estar presente' }
-      }
-      const apellidosCompletos = [paterno, materno].filter(Boolean).join(' ')
-      if (apellidosCompletos.length > 200) {
-        return { success: false, error: 'Los apellidos no pueden exceder 200 caracteres en total' }
-      }
+    const validation = personNamesUpdateSchema.safeParse(senseiData)
+    if (!validation.success) {
+      return { success: false, error: validation.error.errors[0].message }
     }
 
     return await senseiService.update(id, senseiData)

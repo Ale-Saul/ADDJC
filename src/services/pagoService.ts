@@ -1,15 +1,6 @@
-import { supabase } from '@/lib/supabase'
 import { createClient } from '@/lib/supabase/client'
 import { Pago, PagoCreate, PagoUpdate } from '@/models/pago'
 import { ApiResponse } from '@/types'
-
-// Helper para obtener el cliente correcto (navegador si está disponible, básico si no)
-function getSupabaseClient() {
-  if (typeof window !== 'undefined') {
-    return createClient()
-  }
-  return supabase
-}
 
 export const pagoService = {
   /**
@@ -17,10 +8,10 @@ export const pagoService = {
    */
   async getAll(includeInactive: boolean = false): Promise<ApiResponse<Pago[]>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       let query = client
         .from('pagos')
-        .select('*')
+        .select('id, judoka_id, club_id, tipo_pago, concepto, descripcion, monto_base, tiene_descuento, tipo_descuento, descuento_porcentaje, descuento_monto, razon_descuento, monto_final, estado, fecha_vencimiento, fecha_pago, metodo_pago, comprobante_url, observaciones_pago, creador_id, pagador_id, activo, created_at, updated_at')
         .order('created_at', { ascending: false })
 
       if (!includeInactive) {
@@ -43,10 +34,10 @@ export const pagoService = {
    */
   async getByJudoka(judokaId: string): Promise<ApiResponse<Pago[]>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { data, error } = await client
         .from('pagos')
-        .select('*')
+        .select('id, judoka_id, club_id, tipo_pago, concepto, descripcion, monto_base, tiene_descuento, tipo_descuento, descuento_porcentaje, descuento_monto, razon_descuento, monto_final, estado, fecha_vencimiento, fecha_pago, metodo_pago, comprobante_url, observaciones_pago, creador_id, pagador_id, activo, created_at, updated_at')
         .eq('judoka_id', judokaId)
         .eq('activo', true)
         .order('fecha_vencimiento', { ascending: false })
@@ -65,10 +56,10 @@ export const pagoService = {
    */
   async getByClub(clubId: string): Promise<ApiResponse<Pago[]>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { data, error } = await client
         .from('pagos')
-        .select('*')
+        .select('id, judoka_id, club_id, tipo_pago, concepto, descripcion, monto_base, tiene_descuento, tipo_descuento, descuento_porcentaje, descuento_monto, razon_descuento, monto_final, estado, fecha_vencimiento, fecha_pago, metodo_pago, comprobante_url, observaciones_pago, creador_id, pagador_id, activo, created_at, updated_at')
         .eq('club_id', clubId)
         .eq('activo', true)
         .order('fecha_vencimiento', { ascending: false })
@@ -87,10 +78,10 @@ export const pagoService = {
    */
   async getById(id: string): Promise<ApiResponse<Pago>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { data, error } = await client
         .from('pagos')
-        .select('*')
+        .select('id, judoka_id, club_id, tipo_pago, concepto, descripcion, monto_base, tiene_descuento, tipo_descuento, descuento_porcentaje, descuento_monto, razon_descuento, monto_final, estado, fecha_vencimiento, fecha_pago, metodo_pago, comprobante_url, observaciones_pago, creador_id, pagador_id, activo, created_at, updated_at')
         .eq('id', id)
         .single()
 
@@ -108,7 +99,7 @@ export const pagoService = {
    */
   async create(pago: PagoCreate): Promise<ApiResponse<Pago>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { data, error } = await client
         .from('pagos')
         .insert(pago)
@@ -146,7 +137,7 @@ export const pagoService = {
    */
   async update(id: string, pago: PagoUpdate): Promise<ApiResponse<Pago>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { data, error } = await client
         .from('pagos')
         .update(pago)
@@ -168,7 +159,7 @@ export const pagoService = {
    */
   async delete(id: string): Promise<ApiResponse<void>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { error } = await client
         .from('pagos')
         .update({ activo: false })
@@ -188,7 +179,7 @@ export const pagoService = {
    */
   async restore(id: string): Promise<ApiResponse<Pago>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { data, error } = await client
         .from('pagos')
         .update({ activo: true })

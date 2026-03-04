@@ -28,6 +28,7 @@ import { Club } from '@/models/club'
 import { Sensei } from '@/models/sensei'
 import { useAuth } from '@/contexts/AuthContext'
 import { judokaSchema } from '@/utils/zodSchemas'
+import { ROL } from '@/constants/roles'
 import { formatCIInput, formatCelularInput, formatNameInput } from '@/utils/inputMasks'
 import { CATEGORIES, BELT_COLORS } from '@/utils/constants'
 
@@ -54,10 +55,11 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     reset,
     watch,
     setFocus,
+    trigger,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(judokaSchema),
-    mode: 'onTouched',
+    mode: 'onBlur',
     reValidateMode: 'onChange',
     defaultValues: {
       club_id: '',
@@ -174,13 +176,13 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
   // Pre-completar club si es sensei o encargado
   useEffect(() => {
     if (!judoka && user && user.club_id) {
-      if (user.rol === 'sensei') {
+      if (user.rol === ROL.SENSEI) {
         reset(prev => ({
           ...prev,
           club_id: user.club_id!,
           entrenador_id: user.sensei_id || ''
         }))
-      } else if (user.rol === 'encargado') {
+      } else if (user.rol === ROL.ENCARGADO) {
         reset(prev => ({
           ...prev,
           club_id: user.club_id!
@@ -268,7 +270,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               onChange={(_, newValue) => {
                 field.onChange(newValue ? newValue.id : '')
               }}
-              disabled={loading || loadingClubes || user?.rol === 'sensei' || user?.rol === 'encargado'}
+              disabled={loading || loadingClubes || user?.rol === ROL.SENSEI || user?.rol === ROL.ENCARGADO}
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -283,7 +285,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
             />
           )}
         />
-        {(user?.rol === 'sensei' || user?.rol === 'encargado') && (
+        {(user?.rol === ROL.SENSEI || user?.rol === ROL.ENCARGADO) && (
           <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5, mb: 1, ml: 1 }}>
             Los judokas se crearán automáticamente en tu club
           </Typography>
@@ -308,7 +310,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               onChange={(_, newValue) => {
                 field.onChange(newValue ? newValue.id : '')
               }}
-              disabled={loading || loadingSenseis || !watchClubId || user?.rol === 'sensei'}
+              disabled={loading || loadingSenseis || !watchClubId || user?.rol === ROL.SENSEI}
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -323,7 +325,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
             />
           )}
         />
-        {user?.rol === 'sensei' ? (
+        {user?.rol === ROL.SENSEI ? (
           <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5, mb: 1, ml: 1 }}>
             Serás asignado automáticamente como entrenador
           </Typography>
@@ -344,7 +346,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               required
               disabled={loading}
               {...fieldError('ci')}
-              onChange={(e) => field.onChange(formatCIInput(e.target.value))}
+              onChange={(e) => { field.onChange(formatCIInput(e.target.value)); if (errors.ci) trigger('ci') }}
             />
           )}
         />
@@ -360,7 +362,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               required
               disabled={loading}
               {...fieldError('nombres')}
-              onChange={(e) => field.onChange(formatNameInput(e.target.value))}
+              onChange={(e) => { field.onChange(formatNameInput(e.target.value)); if (errors.nombres) trigger('nombres') }}
             />
           )}
         />
@@ -376,7 +378,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
                 label="Apellido Paterno"
                 disabled={loading}
                 {...fieldError('apellido_paterno')}
-                onChange={(e) => field.onChange(formatNameInput(e.target.value))}
+                onChange={(e) => { field.onChange(formatNameInput(e.target.value)); if (errors.apellido_paterno) trigger('apellido_paterno'); if (errors.apellido_materno) trigger('apellido_materno') }}
               />
             )}
           />
@@ -390,9 +392,8 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
                 fullWidth
                 label="Apellido Materno"
                 disabled={loading}
-                error={fieldError('apellido_paterno').error}
-                helperText={fieldError('apellido_paterno').error ? 'Al menos uno de los dos apellidos es requerido' : undefined}
-                onChange={(e) => field.onChange(formatNameInput(e.target.value))}
+                {...fieldError('apellido_materno')}
+                onChange={(e) => { field.onChange(formatNameInput(e.target.value)); if (errors.apellido_paterno) trigger('apellido_paterno'); if (errors.apellido_materno) trigger('apellido_materno') }}
               />
             )}
           />
@@ -411,6 +412,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               disabled={loading}
               {...fieldError('email')}
               autoComplete="email"
+              onChange={(e) => { field.onChange(e.target.value); if (errors.email) trigger('email') }}
             />
           )}
         />
@@ -423,13 +425,17 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               label="Fecha de Nacimiento"
               value={field.value ? dayjs(field.value) : null}
               onChange={(newValue) => {
-                field.onChange(newValue && newValue.isValid() ? newValue.format('YYYY-MM-DD') : null)
+                const clamped = newValue?.isValid() && newValue.year() > dayjs().year() ? newValue.year(dayjs().year()) : newValue
+                field.onChange(clamped?.isValid() ? clamped.format('YYYY-MM-DD') : null)
+                if (errors.fecha_nacimiento) trigger('fecha_nacimiento')
               }}
               disabled={loading}
+              maxDate={dayjs().endOf('year')}
               slotProps={{
                 textField: {
                   fullWidth: true,
                   ...fieldError('fecha_nacimiento'),
+                  onBlur: () => trigger('fecha_nacimiento'),
                 },
               }}
               format="DD/MM/YYYY"
@@ -449,7 +455,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
               {...fieldError('numero_celular')}
               inputProps={{ maxLength: 8 }}
               autoComplete="tel"
-              onChange={(e) => field.onChange(formatCelularInput(e.target.value))}
+              onChange={(e) => { field.onChange(formatCelularInput(e.target.value)); if (errors.numero_celular) trigger('numero_celular') }}
             />
           )}
         />

@@ -23,6 +23,7 @@ type Action =
   | { type: 'TOGGLE_SHOW_FILTERS' }
   | { type: 'CLEAR_FILTERS'; initialSearch: string }
   | { type: 'UPDATE_SENSEI_STATUS'; id: string; activo: boolean }
+  | { type: 'UPDATE_SENSEI_DATA'; id: string; data: Partial<Sensei> }
   | { type: 'ADD_MODIFIED_ID'; id: string }
   | { type: 'REMOVE_MODIFIED_ID'; id: string }
 
@@ -45,6 +46,10 @@ function reducer(state: State, action: Action): State {
     case 'UPDATE_SENSEI_STATUS': return {
       ...state,
       senseis: state.senseis.map(s => s.id === action.id ? { ...s, activo: action.activo } : s)
+    }
+    case 'UPDATE_SENSEI_DATA': return {
+      ...state,
+      senseis: state.senseis.map(s => s.id === action.id ? { ...s, ...action.data } : s)
     }
     case 'ADD_MODIFIED_ID': {
       const next = new Set(state.modifiedIds)
@@ -111,6 +116,14 @@ export function useSenseiList(initialSearch: string = '') {
     }
   }, [])
 
+  const updateLocalSensei = useCallback((id: string, data: Partial<Sensei>) => {
+    dispatch({ type: 'UPDATE_SENSEI_DATA', id, data })
+  }, [])
+
+  const deleteLocalSensei = useCallback((id: string) => {
+    dispatch({ type: 'SET_SENSEIS', payload: state.senseis.filter(s => s.id !== id) })
+  }, [state.senseis])
+
   const filteredData = useMemo(() => {
     const filtered = state.senseis.filter(s => {
       const matchEspecialidad = state.especialidadFilter === 'all' || s.especialidad === state.especialidadFilter
@@ -135,5 +148,12 @@ export function useSenseiList(initialSearch: string = '') {
     })
   }, [state.senseis, state.especialidadFilter, state.estadoFilter, state.globalFilter, state.modifiedIds])
 
-  return { state, dispatch, loadSenseis, toggleStatus, filteredData }
+  return { 
+    state, 
+    dispatch, 
+    loadSenseis, 
+    toggleStatus, 
+    updateLocalSensei,
+    filteredData 
+  }
 }

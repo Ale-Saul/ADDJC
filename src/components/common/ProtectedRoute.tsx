@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Box, CircularProgress, Typography } from '@mui/material'
 import { useAuth } from '@/contexts/AuthContext'
+import { UserRole } from '@/constants/roles'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
-  requiredRole?: 'admin' | 'asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka'
-  allowedRoles?: ('admin' | 'asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka')[]
+  requiredRole?: UserRole
+  allowedRoles?: UserRole[]
 }
 
 export default function ProtectedRoute({

@@ -1,80 +1,130 @@
 'use client'
 
 import { useState } from 'react'
-import { Box, Button, Typography, Dialog, DialogTitle, DialogContent } from '@mui/material'
+import { Alert, Box, Button, Dialog, DialogContent, DialogTitle, Snackbar, Typography } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
+import ConfirmDialog from '@/components/common/ConfirmDialog'
 import ClubList from '@/components/clubes/ClubList'
 import ClubForm from '@/components/clubes/ClubForm'
 import { Club } from '@/models/club'
 import { clubController } from '@/controllers/clubController'
-import { useRouter } from 'next/navigation'
+import { useDialog } from '@/hooks/useDialog'
+import { ROL } from '@/constants/roles'
 
 export default function ClubesPage() {
-  const router = useRouter()
-  const [openDialog, setOpenDialog] = useState(false)
+  const createDialog = useDialog()
+  const editDialog = useDialog()
+  const deleteDialog = useDialog()
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const handleCreateSuccess = () => {
-    setOpenDialog(false)
+    createDialog.close()
+    setRefreshTrigger(prev => prev + 1)
+  }
+
+  const handleEditSuccess = () => {
+    editDialog.close()
     setRefreshTrigger(prev => prev + 1)
   }
 
   const handleEdit = (club: Club) => {
-    router.push(`/clubes/${club.id}/editar`)
+    editDialog.open(club)
   }
 
-  const handleDelete = async (club: Club) => {
-    if (confirm(`¿Estás seguro de eliminar el club "${club.nombre_club}"?`)) {
-      try {
-        const response = await clubController.deleteClub(club.id)
-        if (response.success) {
-          setRefreshTrigger(prev => prev + 1)
-          alert('Club eliminado exitosamente')
-        } else {
-          alert(`Error al eliminar club: ${response.error}`)
-        }
-      } catch (error) {
-        console.error('Error al eliminar club:', error)
-        alert('Error inesperado al eliminar club')
+  const handleDelete = (club: Club) => {
+    deleteDialog.open(club)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteDialog.data) return
+    setDeleteLoading(true)
+    try {
+      const response = await clubController.deleteClub(deleteDialog.data.id)
+      if (response.success) {
+        deleteDialog.close()
+        setRefreshTrigger(prev => prev + 1)
+      } else {
+        setDeleteError(response.error || 'Error al eliminar club')
+        deleteDialog.close()
       }
+    } catch {
+      setDeleteError('Error inesperado al eliminar club')
+      deleteDialog.close()
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
   return (
-    <ProtectedRoute allowedRoles={['admin', 'asociacion']}>
+    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION]}>
       <Layout>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1">
-          Gestión de Clubes
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setOpenDialog(true)}
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+          <Typography variant="h4" component="h1">
+            Gestión de Clubes
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => createDialog.open()}
+          >
+            Nuevo Club
+          </Button>
+        </Box>
+
+        <ClubList
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          refreshTrigger={refreshTrigger}
+        />
+
+        {/* Diálogo de Creación */}
+        <Dialog open={createDialog.isOpen} onClose={createDialog.close} maxWidth="md" fullWidth>
+          <DialogTitle>Crear Nuevo Club</DialogTitle>
+          <DialogContent>
+            <ClubForm
+              onSuccess={handleCreateSuccess}
+              onCancel={createDialog.close}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* Diálogo de Edición */}
+        <Dialog open={editDialog.isOpen} onClose={editDialog.close} maxWidth="md" fullWidth>
+          <DialogTitle>Editar Club</DialogTitle>
+          <DialogContent>
+            {editDialog.data && (
+              <ClubForm
+                club={editDialog.data}
+                onSuccess={handleEditSuccess}
+                onCancel={editDialog.close}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <ConfirmDialog
+          open={deleteDialog.isOpen}
+          title="Eliminar Club"
+          message={deleteDialog.data ? `¿Estás seguro de eliminar el club "${deleteDialog.data.nombre_club}"?` : ''}
+          onConfirm={handleConfirmDelete}
+          onClose={deleteDialog.close}
+          confirmText="Eliminar"
+          loading={deleteLoading}
+        />
+
+        <Snackbar
+          open={!!deleteError}
+          autoHideDuration={4000}
+          onClose={() => setDeleteError(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         >
-          Nuevo Club
-        </Button>
-      </Box>
-
-      <ClubList
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        refreshTrigger={refreshTrigger}
-      />
-
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Crear Nuevo Club</DialogTitle>
-        <DialogContent>
-          <ClubForm
-            onSuccess={handleCreateSuccess}
-            onCancel={() => setOpenDialog(false)}
-          />
-        </DialogContent>
-      </Dialog>
-    </Layout>
+          <Alert severity="error" onClose={() => setDeleteError(null)}>{deleteError}</Alert>
+        </Snackbar>
+      </Layout>
     </ProtectedRoute>
   )
 }
-

@@ -1,27 +1,31 @@
 'use client'
 
 import { useState } from 'react'
-import { Box, Button, Typography, Dialog, DialogTitle, DialogContent } from '@mui/material'
+import { Alert, Box, Button, Dialog, DialogContent, DialogTitle, Snackbar, Typography } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
+import ConfirmDialog from '@/components/common/ConfirmDialog'
 import JudokaList from '@/components/judokas/JudokaList'
 import JudokaForm from '@/components/judokas/JudokaForm'
 import { Judoka } from '@/models/judoka'
-import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useDialog } from '@/hooks/useDialog'
 import { judokaController } from '@/controllers/judokaController'
+import { ROL } from '@/constants/roles'
 
 export default function JudokasPage() {
-  const router = useRouter()
   const { user } = useAuth()
-  const dialog = useDialog()
+  const createDialog = useDialog()
+  const editDialog = useDialog()
+  const deleteDialog = useDialog()
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   // Determinar filtros según el rol
-  const clubId = user?.rol === 'encargado' ? user.club_id : undefined
-  const entrenadorId = user?.rol === 'sensei' ? user.sensei_id : undefined
+  const clubId = user?.rol === ROL.ENCARGADO ? user.club_id : undefined
+  const entrenadorId = user?.rol === ROL.SENSEI ? user.sensei_id : undefined
 
   const handleRefresh = () => {
     setRefreshTrigger(prev => prev + 1)
@@ -29,26 +33,44 @@ export default function JudokasPage() {
 
   const handleCreateSuccess = () => {
     handleRefresh()
-    dialog.close()
+    createDialog.close()
+  }
+
+  const handleEditSuccess = () => {
+    handleRefresh()
+    editDialog.close()
   }
 
   const handleEdit = (judoka: Judoka) => {
-    router.push(`/judokas/${judoka.id}/editar`)
+    editDialog.open(judoka)
   }
 
-  const handleDelete = async (judoka: Judoka) => {
-    if (confirm(`¿Estás seguro de eliminar al judoka "${judoka.nombres} ${judoka.apellidos}"?`)) {
-      const response = await judokaController.deleteJudoka(judoka.id)
+  const handleDelete = (judoka: Judoka) => {
+    deleteDialog.open(judoka)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteDialog.data) return
+    setDeleteLoading(true)
+    try {
+      const response = await judokaController.deleteJudoka(deleteDialog.data.id)
       if (response.success) {
+        deleteDialog.close()
         handleRefresh()
       } else {
-        alert('Error al eliminar judoka: ' + response.error)
+        setDeleteError(response.error || 'Error al eliminar judoka')
+        deleteDialog.close()
       }
+    } catch {
+      setDeleteError('Error inesperado al eliminar judoka')
+      deleteDialog.close()
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
   return (
-    <ProtectedRoute allowedRoles={['admin', 'asociacion', 'sensei', 'encargado', 'judoka']}>
+    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.SENSEI, ROL.ENCARGADO, ROL.JUDOKA]}>
       <Layout>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4" component="h1">
@@ -57,7 +79,7 @@ export default function JudokasPage() {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => dialog.open()}
+            onClick={() => createDialog.open()}
             sx={{ height: 48 }}
           >
             Nuevo Judoka
@@ -70,19 +92,53 @@ export default function JudokasPage() {
           refreshTrigger={refreshTrigger}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          showUnassigned={user?.rol === ROL.ENCARGADO || user?.rol === ROL.SENSEI}
         />
 
-        <Dialog open={dialog.isOpen} onClose={dialog.close} maxWidth="md" fullWidth>
+        {/* Diálogo de Creación */}
+        <Dialog open={createDialog.isOpen} onClose={createDialog.close} maxWidth="md" fullWidth>
           <DialogTitle>Registrar Nuevo Judoka</DialogTitle>
           <DialogContent>
             <JudokaForm
               onSuccess={handleCreateSuccess}
-              onCancel={dialog.close}
+              onCancel={createDialog.close}
             />
           </DialogContent>
         </Dialog>
+
+        {/* Diálogo de Edición */}
+        <Dialog open={editDialog.isOpen} onClose={editDialog.close} maxWidth="md" fullWidth>
+          <DialogTitle>Editar Judoka</DialogTitle>
+          <DialogContent>
+            {editDialog.data && (
+              <JudokaForm
+                judoka={editDialog.data}
+                onSuccess={handleEditSuccess}
+                onCancel={editDialog.close}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <ConfirmDialog
+          open={deleteDialog.isOpen}
+          title="Eliminar Judoka"
+          message={deleteDialog.data ? `¿Estás seguro de eliminar al judoka "${deleteDialog.data.nombres} ${deleteDialog.data.apellidos}"?` : ''}
+          onConfirm={handleConfirmDelete}
+          onClose={deleteDialog.close}
+          confirmText="Eliminar"
+          loading={deleteLoading}
+        />
+
+        <Snackbar
+          open={!!deleteError}
+          autoHideDuration={4000}
+          onClose={() => setDeleteError(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert severity="error" onClose={() => setDeleteError(null)}>{deleteError}</Alert>
+        </Snackbar>
       </Layout>
     </ProtectedRoute>
   )
 }
-

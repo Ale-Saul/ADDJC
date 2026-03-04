@@ -1,15 +1,7 @@
-import { supabase } from '@/lib/supabase'
 import { createClient } from '@/lib/supabase/client'
 import { Sensei, SenseiCreate, SenseiUpdate } from '@/models/sensei'
 import { ApiResponse } from '@/types'
 import { userService } from './userService'
-
-function getSupabaseClient() {
-  if (typeof window !== 'undefined') {
-    return createClient()
-  }
-  return supabase
-}
 
 function mapSenseiRow(row: any): Sensei {
   const u = row.usuarios
@@ -39,7 +31,7 @@ export const senseiService = {
    */
   async getAll(includeInactive: boolean = false): Promise<ApiResponse<Sensei[]>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       let query = client
         .from('senseis')
         .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, correo, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url)')
@@ -81,7 +73,7 @@ export const senseiService = {
    */
   async getByClub(clubId: string): Promise<ApiResponse<Sensei[]>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { data, error } = await client
         .from('senseis')
         .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, correo, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url)')
@@ -107,7 +99,7 @@ export const senseiService = {
    */
   async getById(id: string): Promise<ApiResponse<Sensei>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { data, error } = await client
         .from('senseis')
         .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, correo, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url)')
@@ -194,7 +186,7 @@ export const senseiService = {
         ...senseiData 
       } = sensei as any
 
-      const client = getSupabaseClient()
+      const client = createClient()
       const insertPayload = {
         usuario_id: userId,
         club_id: senseiData.club_id ?? null,
@@ -258,7 +250,7 @@ export const senseiService = {
    */
   async update(id: string, sensei: SenseiUpdate): Promise<ApiResponse<Sensei>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { certificacion, nombres, apellido_paterno, apellido_materno, email, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url, ...senseiPayload } = sensei as SenseiUpdate & { certificacion?: string | null, numero_celular?: string, ci?: string, genero?: any }
       
       let usuarioId: string | null = null
@@ -316,7 +308,7 @@ export const senseiService = {
    */
   async delete(id: string): Promise<ApiResponse<void>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       
       // Obtener usuario_id primero
       const { data: sensei, error: getError } = await client
@@ -354,7 +346,7 @@ export const senseiService = {
    */
   async restore(id: string): Promise<ApiResponse<Sensei>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       
       // Get user_id first
       const { data: senseiData, error: getError } = await client

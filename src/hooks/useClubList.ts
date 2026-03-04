@@ -23,6 +23,7 @@ type Action =
   | { type: 'TOGGLE_SHOW_FILTERS' }
   | { type: 'CLEAR_FILTERS'; initialSearch: string }
   | { type: 'UPDATE_CLUB_STATUS'; id: string; activo: boolean }
+  | { type: 'UPDATE_CLUB_DATA'; id: string; data: Partial<Club> }
   | { type: 'ADD_MODIFIED_ID'; id: string }
   | { type: 'REMOVE_MODIFIED_ID'; id: string }
 
@@ -45,6 +46,10 @@ function reducer(state: State, action: Action): State {
     case 'UPDATE_CLUB_STATUS': return {
       ...state,
       clubes: state.clubes.map(c => c.id === action.id ? { ...c, activo: action.activo } : c)
+    }
+    case 'UPDATE_CLUB_DATA': return {
+      ...state,
+      clubes: state.clubes.map(c => c.id === action.id ? { ...c, ...action.data } : c)
     }
     case 'ADD_MODIFIED_ID': {
       const next = new Set(state.modifiedIds)
@@ -108,6 +113,14 @@ export function useClubList(initialSearch: string = '') {
     }
   }, [])
 
+  const updateLocalClub = useCallback((id: string, data: Partial<Club>) => {
+    dispatch({ type: 'UPDATE_CLUB_DATA', id, data })
+  }, [])
+
+  const deleteLocalClub = useCallback((id: string) => {
+    dispatch({ type: 'SET_CLUBES', payload: state.clubes.filter(c => c.id !== id) })
+  }, [state.clubes])
+
   const filteredData = useMemo(() => {
     const filtered = state.clubes.filter(c => {
       const matchMunicipio = state.municipioFilter === 'all' || c.provincia === state.municipioFilter
@@ -131,5 +144,12 @@ export function useClubList(initialSearch: string = '') {
     })
   }, [state.clubes, state.municipioFilter, state.estadoFilter, state.globalFilter, state.modifiedIds])
 
-  return { state, dispatch, loadClubes, toggleStatus, filteredData }
+  return { 
+    state, 
+    dispatch, 
+    loadClubes, 
+    toggleStatus, 
+    updateLocalClub,
+    filteredData 
+  }
 }

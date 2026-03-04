@@ -1,82 +1,137 @@
 'use client'
 
 import { useState } from 'react'
-import { Box, Button, Typography, Dialog, DialogTitle, DialogContent } from '@mui/material'
+import { Alert, Box, Button, Dialog, DialogContent, DialogTitle, Snackbar, Typography } from '@mui/material'
+import { useRouter } from 'next/navigation'
 import AddIcon from '@mui/icons-material/Add'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
+import ConfirmDialog from '@/components/common/ConfirmDialog'
 import ArbitroList from '@/components/arbitros/ArbitroList'
 import ArbitroForm from '@/components/arbitros/ArbitroForm'
 import { Arbitro } from '@/models/arbitro'
 import { arbitroController } from '@/controllers/arbitroController'
-import { useRouter } from 'next/navigation'
+import { useDialog } from '@/hooks/useDialog'
+import { ROL } from '@/constants/roles'
 
 export default function ArbitrosPage() {
   const router = useRouter()
-  const [openDialog, setOpenDialog] = useState(false)
+  const createDialog = useDialog()
+  const editDialog = useDialog()
+  const deleteDialog = useDialog()
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const handleCreateSuccess = () => {
-    setOpenDialog(false)
+    createDialog.close()
+    setRefreshTrigger(prev => prev + 1)
+  }
+
+  const handleEditSuccess = () => {
+    editDialog.close()
     setRefreshTrigger(prev => prev + 1)
   }
 
   const handleEdit = (arbitro: Arbitro) => {
-    router.push(`/arbitros/${arbitro.id}/editar`)
+    editDialog.open(arbitro)
   }
 
-  const handleDelete = async (arbitro: Arbitro) => {
-    if (confirm(`¿Estás seguro de eliminar al árbitro "${arbitro.nombres} ${arbitro.apellidos}"?`)) {
-      try {
-        const response = await arbitroController.deleteArbitro(arbitro.id)
-        if (response.success) {
-          setRefreshTrigger(prev => prev + 1)
-          alert('Árbitro eliminado exitosamente')
-        } else {
-          alert(`Error al eliminar árbitro: ${response.error}`)
-        }
-      } catch (error) {
-        console.error('Error al eliminar árbitro:', error)
-        alert('Error inesperado al eliminar árbitro')
+  const handleCertificacion = (arbitro: Arbitro) => {
+    router.push(`/arbitros/${arbitro.id}/certificaciones`)
+  }
+
+  const handleDelete = (arbitro: Arbitro) => {
+    deleteDialog.open(arbitro)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteDialog.data) return
+    setDeleteLoading(true)
+    try {
+      const response = await arbitroController.deleteArbitro(deleteDialog.data.id)
+      if (response.success) {
+        deleteDialog.close()
+        setRefreshTrigger(prev => prev + 1)
+      } else {
+        setDeleteError(response.error || 'Error al eliminar árbitro')
+        deleteDialog.close()
       }
+    } catch {
+      setDeleteError('Error inesperado al eliminar árbitro')
+      deleteDialog.close()
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
   return (
-    <ProtectedRoute allowedRoles={['admin', 'asociacion', 'arbitro']}>
+    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.ARBITRO]}>
       <Layout>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1">
-          Gestión de Árbitros
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setOpenDialog(true)}
-        >
-          Nuevo Árbitro
-        </Button>
-      </Box>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+          <Typography variant="h4" component="h1">
+            Gestión de Árbitros
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => createDialog.open()}
+          >
+            Nuevo Árbitro
+          </Button>
+        </Box>
 
-      <ArbitroList
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        refreshTrigger={refreshTrigger}
-      />
+        <ArbitroList
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onCertificacion={handleCertificacion}
+          refreshTrigger={refreshTrigger}
+        />
 
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Registrar Nuevo Árbitro</DialogTitle>
-        <DialogContent>
-          {openDialog && (
+        {/* Diálogo de Creación */}
+        <Dialog open={createDialog.isOpen} onClose={createDialog.close} maxWidth="md" fullWidth>
+          <DialogTitle>Registrar Nuevo Árbitro</DialogTitle>
+          <DialogContent>
             <ArbitroForm
               onSuccess={handleCreateSuccess}
-              onCancel={() => setOpenDialog(false)}
+              onCancel={createDialog.close}
             />
-          )}
-        </DialogContent>
-      </Dialog>
-    </Layout>
+          </DialogContent>
+        </Dialog>
+
+        {/* Diálogo de Edición */}
+        <Dialog open={editDialog.isOpen} onClose={editDialog.close} maxWidth="md" fullWidth>
+          <DialogTitle>Editar Árbitro</DialogTitle>
+          <DialogContent>
+            {editDialog.data && (
+              <ArbitroForm
+                arbitro={editDialog.data}
+                onSuccess={handleEditSuccess}
+                onCancel={editDialog.close}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <ConfirmDialog
+          open={deleteDialog.isOpen}
+          title="Eliminar Árbitro"
+          message={deleteDialog.data ? `¿Estás seguro de eliminar al árbitro "${deleteDialog.data.nombres} ${deleteDialog.data.apellidos}"?` : ''}
+          onConfirm={handleConfirmDelete}
+          onClose={deleteDialog.close}
+          confirmText="Eliminar"
+          loading={deleteLoading}
+        />
+
+        <Snackbar
+          open={!!deleteError}
+          autoHideDuration={4000}
+          onClose={() => setDeleteError(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert severity="error" onClose={() => setDeleteError(null)}>{deleteError}</Alert>
+        </Snackbar>
+      </Layout>
     </ProtectedRoute>
   )
 }
-

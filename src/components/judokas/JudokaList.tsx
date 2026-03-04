@@ -42,6 +42,8 @@ import {
 } from '@tanstack/react-table'
 import { Judoka } from '@/models/judoka'
 import Pagination from '@/components/common/Pagination'
+import ConfirmDialog from '@/components/common/ConfirmDialog'
+import { judokaController } from '@/controllers/judokaController'
 import { BELT_COLORS, CATEGORIES } from '@/utils/constants'
 import { useJudokaList } from '@/hooks/useJudokaList'
 
@@ -55,6 +57,7 @@ interface JudokaListProps {
   entrenadorId?: string
   searchTerm?: string
   itemsPerPage?: number
+  showUnassigned?: boolean
 }
 
 export default function JudokaList({ 
@@ -66,13 +69,16 @@ export default function JudokaList({
   clubId, 
   entrenadorId, 
   searchTerm: externalSearchTerm = '', 
-  itemsPerPage: initialItemsPerPage = 10 
+  itemsPerPage: initialItemsPerPage = 10,
+  showUnassigned = false
 }: JudokaListProps) {
   const { 
     judokas, 
     loading, 
     error, 
     toggleStatus,
+    updateLocalJudoka,
+    deleteLocalJudoka,
     modifiedIds
   } = useJudokaList({
     clubId,
@@ -80,13 +86,36 @@ export default function JudokaList({
     refreshTrigger,
     judokasProp
   })
+
+  const handleDelete = (judoka: Judoka) => {
+    if (onDelete) {
+      onDelete(judoka)
+    } else {
+      setPendingDelete(judoka)
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return
+    setConfirmLoading(true)
+    try {
+      const response = await judokaController.deleteJudoka(pendingDelete.id)
+      if (response.success) {
+        deleteLocalJudoka(pendingDelete.id)
+      }
+    } finally {
+      setConfirmLoading(false)
+      setPendingDelete(null)
+    }
+  }
   
-  // Estados para filtros
   const [globalFilter, setGlobalFilter] = useState(externalSearchTerm)
   const [cinturonFilter, setCinturonFilter] = useState<string>('all')
   const [categoriaFilter, setCategoriaFilter] = useState<string>('all')
   const [estadoFilter, setEstadoFilter] = useState<string>('all')
   const [showFilters, setShowFilters] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<Judoka | null>(null)
+  const [confirmLoading, setConfirmLoading] = useState(false)
 
   useEffect(() => {
     setGlobalFilter(externalSearchTerm)
@@ -210,7 +239,7 @@ export default function JudokaList({
             <IconButton 
               size="small" 
               color="error" 
-              onClick={() => onDelete(info.row.original)}
+              onClick={() => handleDelete(info.row.original)}
               title="Eliminar"
               aria-label="Eliminar judoka"
             >
@@ -225,6 +254,12 @@ export default function JudokaList({
   // Filtrado y ordenamiento personalizado
   const filteredData = useMemo(() => {
     const filtered = judokas.filter(j => {
+      // Si showUnassigned es true, mostramos los del clubId O los que no tienen club
+      const matchesClub = clubId ? (j.club_id === clubId || (showUnassigned && !j.club_id)) : true
+      const matchesEntrenador = entrenadorId ? j.entrenador_id === entrenadorId : true
+      
+      if (!matchesClub || !matchesEntrenador) return false
+
       const matchCinturon = cinturonFilter === 'all' || j.cinturon_actual === cinturonFilter
       const matchCategoria = categoriaFilter === 'all' || j.categoria === categoriaFilter
       const matchEstado = estadoFilter === 'all' || 
@@ -434,6 +469,16 @@ export default function JudokaList({
           />
         </>
       )}
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title="Eliminar Judoka"
+        message={pendingDelete ? `¿Estás seguro de eliminar al judoka "${pendingDelete.nombres} ${pendingDelete.apellidos}"?` : ''}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setPendingDelete(null)}
+        confirmText="Eliminar"
+        loading={confirmLoading}
+      />
     </Box>
   )
 }

@@ -1,20 +1,36 @@
-import { supabase } from '@/lib/supabase'
 import { createClient } from '@/lib/supabase/client'
 import { Arbitro, ArbitroCreate, ArbitroUpdate } from '@/models/arbitro'
 import { ApiResponse } from '@/types'
 import { userService } from './userService'
 
-// Helper para obtener el cliente correcto (navegador si está disponible, básico si no)
-function getSupabaseClient() {
-  if (typeof window !== 'undefined') {
-    return createClient()
-  }
-  return supabase
-}
-
 const selectArbitrosWithUsuario = '*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, correo, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url)'
 
-function mapArbitroRow(row: any): Arbitro {
+interface ArbitroUsuarioRow {
+  nombre: string | null
+  apellido_paterno: string | null
+  apellido_materno: string | null
+  correo: string | null
+  fecha_nacimiento: string | null
+  numero_celular: string | null
+  ci: string | null
+  genero: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
+  activo: boolean
+  avatar_url: string | null
+}
+
+interface ArbitroDbRow extends Record<string, unknown> {
+  id: string
+  usuario_id: string
+  nivel_arbitraje: string | null
+  certificacion_id: string | null
+  activo: boolean
+  created_at: string
+  updated_at: string
+  usuarios: ArbitroUsuarioRow | null
+  certificacion: { nombre_certificacion: string } | null
+}
+
+function mapArbitroRow(row: ArbitroDbRow): Arbitro {
   const u = row.usuarios ?? row.usuario_id
   const isUserObject = u && typeof u === 'object' && !Array.isArray(u) && ('nombre' in u || 'apellido_paterno' in u)
   const nombres = isUserObject ? (u?.nombre ?? '') : ''
@@ -45,7 +61,7 @@ export const arbitroService = {
    */
   async getAll(includeInactive: boolean = false): Promise<ApiResponse<Arbitro[]>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       let query = client
         .from('arbitros')
         .select(selectArbitrosWithUsuario)
@@ -80,7 +96,7 @@ export const arbitroService = {
    */
   async getById(id: string): Promise<ApiResponse<Arbitro>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { data, error } = await client
         .from('arbitros')
         .select(selectArbitrosWithUsuario)
@@ -135,7 +151,7 @@ export const arbitroService = {
         return { success: false, error: 'El usuario_id debe ser un UUID válido (referencia a tabla usuarios).' }
       }
 
-      const client = getSupabaseClient()
+      const client = createClient()
       const insertPayload = {
         usuario_id: usuarioId,
         nivel_arbitraje: arbitro.nivel_arbitraje ?? null,
@@ -200,7 +216,7 @@ export const arbitroService = {
    */
   async update(id: string, arbitro: ArbitroUpdate): Promise<ApiResponse<Arbitro>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { certificacion, nombres, apellido_paterno, apellido_materno, email, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url, ...updatePayload } = arbitro as ArbitroUpdate & { certificacion?: string | null, numero_celular?: string, ci?: string, genero?: any }
       
       let usuarioId: string | null = null
@@ -258,7 +274,7 @@ export const arbitroService = {
    */
   async delete(id: string): Promise<ApiResponse<void>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       
       // Obtener usuario_id primero
       const { data: arbitro, error: getError } = await client
@@ -296,7 +312,7 @@ export const arbitroService = {
    */
   async restore(id: string): Promise<ApiResponse<Arbitro>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       
       // Get user_id first
       const { data: arbitroData, error: getError } = await client

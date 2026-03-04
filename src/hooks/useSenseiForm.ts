@@ -6,9 +6,10 @@ import { Sensei, SenseiCreate, SenseiUpdate } from '@/models/sensei'
 import { senseiController } from '@/controllers/senseiController'
 import { clubController } from '@/controllers/clubController'
 import { Club } from '@/models/club'
+import { User } from '@/models/auth'
 import { senseiSchema } from '@/utils/zodSchemas'
 
-export function useSenseiForm(sensei?: Sensei | null, user?: any, onSuccess?: () => void) {
+export function useSenseiForm(sensei?: Sensei | null, user?: User, onSuccess?: () => void) {
   const [clubes, setClubes] = useState<Club[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingClubes, setLoadingClubes] = useState(true)
@@ -17,7 +18,7 @@ export function useSenseiForm(sensei?: Sensei | null, user?: any, onSuccess?: ()
 
   const form = useForm({
     resolver: zodResolver(senseiSchema),
-    mode: 'onTouched',
+    mode: 'onBlur',
     reValidateMode: 'onChange',
     defaultValues: {
       club_id: '',

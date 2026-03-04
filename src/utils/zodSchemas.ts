@@ -59,6 +59,10 @@ export const resetPasswordSchema = z.object({
 // Regex para nombres y apellidos: solo letras (incluye acentos y Ñ) y espacios
 const nameRegex = /^[A-Za-zÁÉÍÓÚÜáéíóúüÑñ\s]+$/
 
+const currentYear = new Date().getFullYear()
+const yearMsg = `El año no puede ser mayor al actual (${currentYear})`
+const notFutureYear = (val: string | null | undefined) => !val || new Date(val).getFullYear() <= currentYear
+
 // Esquema base para Usuarios (campos comunes) - Objeto puro para poder extenderlo
 const baseUserObject = z.object({
   nombres: z.string()
@@ -73,7 +77,7 @@ const baseUserObject = z.object({
     { message: 'Solo se permiten letras y espacios' }
   ),
   ci: ciSchema,
-  fecha_nacimiento: z.string().nullable().optional(),
+  fecha_nacimiento: z.string().nullable().optional().refine(notFutureYear, { message: yearMsg }),
   numero_celular: celularSchema.optional(),
   genero: z.string().optional(),
   email: emailSchema,
@@ -144,8 +148,98 @@ export const clubSchema = z.object({
  */
 export const miembroAsociacionSchema = baseUserObject.extend({
   cargo: z.string().nullable().optional(),
-  fecha_ingreso: z.string().nullable().optional(),
+  fecha_ingreso: z.string().nullable().optional().refine(notFutureYear, { message: yearMsg }),
   activo: z.boolean().default(true),
   password: z.string().optional(),
 }).refine(validateApellidos, apellidosErrorConfig)
+
+// ─── Schemas para la capa de controllers ─────────────────────────────────────
+
+/**
+ * Validación de nombres/apellidos en operaciones CREATE (sensei, judoka)
+ */
+export const personNamesCreateSchema = z.object({
+  nombres: z.string()
+    .min(2, 'El nombre debe tener al menos 2 caracteres')
+    .max(100, 'El nombre no puede exceder 100 caracteres')
+    .regex(nameRegex, 'Solo se permiten letras y espacios'),
+  apellido_paterno: z.string().optional(),
+  apellido_materno: z.string().optional(),
+}).superRefine((d, ctx) => {
+  const paterno = (d.apellido_paterno ?? '').trim()
+  const materno = (d.apellido_materno ?? '').trim()
+  if (!paterno && !materno) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Al menos un apellido (paterno o materno) es requerido', path: ['apellido_paterno'] })
+    return
+  }
+  const combined = [paterno, materno].filter(Boolean).join(' ')
+  if (combined.length < 2) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Los apellidos deben tener al menos 2 caracteres', path: ['apellido_paterno'] })
+  }
+  if (combined.length > 200) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Los apellidos no pueden exceder 200 caracteres en total', path: ['apellido_paterno'] })
+  }
+})
+
+/**
+ * Validación de nombres/apellidos en operaciones UPDATE (campos opcionales)
+ */
+export const personNamesUpdateSchema = z.object({
+  nombres: z.string()
+    .min(2, 'El nombre debe tener al menos 2 caracteres')
+    .max(100, 'El nombre no puede exceder 100 caracteres')
+    .regex(nameRegex, 'Solo se permiten letras y espacios')
+    .optional(),
+  apellido_paterno: z.string().optional(),
+  apellido_materno: z.string().optional(),
+}).superRefine((d, ctx) => {
+  if (d.apellido_paterno !== undefined || d.apellido_materno !== undefined) {
+    const paterno = (d.apellido_paterno ?? '').trim()
+    const materno = (d.apellido_materno ?? '').trim()
+    if (!paterno && !materno) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Al menos un apellido debe estar presente', path: ['apellido_paterno'] })
+      return
+    }
+    const combined = [paterno, materno].filter(Boolean).join(' ')
+    if (combined.length > 200) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Los apellidos no pueden exceder 200 caracteres en total', path: ['apellido_paterno'] })
+    }
+  }
+})
+
+/**
+ * Validación de peso_competitivo para judoka
+ */
+export const pesoSchema = z.number()
+  .min(0, 'El peso no puede ser negativo')
+  .max(300, 'El peso no puede exceder 300 kg')
+  .nullable()
+  .optional()
+
+/**
+ * Validación de club en CREATE
+ */
+export const clubControllerCreateSchema = z.object({
+  nombre_club: z.string()
+    .min(3, 'El nombre del club debe tener al menos 3 caracteres')
+    .max(200, 'El nombre del club no puede exceder 200 caracteres'),
+  telefono_contacto: z.string()
+    .max(20, 'El teléfono no puede exceder 20 caracteres')
+    .optional()
+    .nullable(),
+})
+
+/**
+ * Validación de club en UPDATE (campos opcionales)
+ */
+export const clubControllerUpdateSchema = z.object({
+  nombre_club: z.string()
+    .min(3, 'El nombre del club debe tener al menos 3 caracteres')
+    .max(200, 'El nombre del club no puede exceder 200 caracteres')
+    .optional(),
+  telefono_contacto: z.string()
+    .max(20, 'El teléfono no puede exceder 20 caracteres')
+    .optional()
+    .nullable(),
+})
 

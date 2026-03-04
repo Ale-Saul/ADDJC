@@ -51,10 +51,12 @@ export default function CertificacionForm({
     control,
     handleSubmit,
     reset,
+    trigger,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(certificacionSchema),
-    mode: 'onTouched',
+    mode: 'onBlur',
+    reValidateMode: 'onChange',
     defaultValues: {
       nombre_certificacion: '',
       descripcion: '',
@@ -169,7 +171,23 @@ export default function CertificacionForm({
           name="nombre_certificacion"
           control={control}
           render={({ field }) => (
-            <TextField {...field} fullWidth label="Nombre de la Certificación" required disabled={loading || uploading} error={!!errors.nombre_certificacion} helperText={errors.nombre_certificacion?.message} />
+            <TextField
+              {...field}
+              onChange={(e) => {
+                field.onChange(e)
+                if (errors.nombre_certificacion) trigger('nombre_certificacion')
+              }}
+              onBlur={() => {
+                field.onBlur()
+                trigger('nombre_certificacion')
+              }}
+              fullWidth
+              label="Nombre de la Certificación"
+              required
+              disabled={loading || uploading}
+              error={!!errors.nombre_certificacion}
+              helperText={errors.nombre_certificacion?.message}
+            />
           )}
         />
 
@@ -188,7 +206,10 @@ export default function CertificacionForm({
             <DatePicker
               label="Fecha de Emisión"
               value={field.value ? dayjs(field.value) : null}
-              onChange={(v) => field.onChange(v ? v.format('YYYY-MM-DD') : '')}
+              onChange={(v) => {
+                field.onChange(v ? v.format('YYYY-MM-DD') : '')
+                if (errors.fecha_emision) trigger('fecha_emision')
+              }}
               disabled={loading || uploading}
               slotProps={{ textField: { fullWidth: true, required: true, error: !!errors.fecha_emision, helperText: errors.fecha_emision?.message } }}
               format="DD/MM/YYYY"
@@ -203,7 +224,10 @@ export default function CertificacionForm({
             <DatePicker
               label="Fecha de Vencimiento"
               value={field.value ? dayjs(field.value) : null}
-              onChange={(v) => field.onChange(v ? v.format('YYYY-MM-DD') : '')}
+              onChange={(v) => {
+                field.onChange(v ? v.format('YYYY-MM-DD') : '')
+                if (errors.fecha_vencimiento) trigger('fecha_vencimiento')
+              }}
               disabled={loading || uploading}
               slotProps={{ textField: { fullWidth: true, required: true, error: !!errors.fecha_vencimiento, helperText: errors.fecha_vencimiento?.message } }}
               format="DD/MM/YYYY"

@@ -1,6 +1,7 @@
 import { authService } from '@/services/authService'
 import { ApiResponse } from '@/types'
-import { LoginCredentials, SignUpData, User, AuthSession } from '@/models/auth'
+import { LoginCredentials, SignUpData, User, AuthSession, UserRole } from '@/models/auth'
+import { ROL } from '@/constants/roles'
 
 export const authController = {
   /**
@@ -111,7 +112,7 @@ export const authController = {
     }
 
     // Validar rol
-    const validRoles = ['admin', 'asociacion', 'sensei', 'arbitro', 'judoka', 'encargado']
+    const validRoles: UserRole[] = Object.values(ROL)
     if (signUpData.rol && !validRoles.includes(signUpData.rol)) {
       return {
         success: false,
@@ -257,6 +258,31 @@ export const authController = {
       }
     }
     return await authService.uploadAvatar(userId, file)
+  },
+
+  /**
+   * Verificar la contraseña actual del usuario (re-autenticación)
+   */
+  async verifyCurrentPassword(email: string, password: string): Promise<ApiResponse<void>> {
+    if (!email || !password) {
+      return { success: false, error: 'Email y contraseña son requeridos' }
+    }
+    return await authService.verifyCurrentPassword(email, password)
+  },
+
+  /**
+   * Obtener la sesión actual
+   */
+  async getSession(): Promise<ApiResponse<boolean>> {
+    return authService.getSession()
+  },
+
+  /**
+   * Intercambiar código de autorización por sesión
+   */
+  async exchangeCodeForSession(code: string): Promise<ApiResponse<boolean>> {
+    if (!code) return { success: false, error: 'Código requerido' }
+    return authService.exchangeCodeForSession(code)
   },
 }
 

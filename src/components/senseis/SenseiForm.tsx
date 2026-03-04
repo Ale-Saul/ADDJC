@@ -18,6 +18,7 @@ import 'dayjs/locale/es'
 dayjs.locale('es')
 import { Sensei } from '@/models/sensei'
 import { useAuth } from '@/contexts/AuthContext'
+import { ROL } from '@/constants/roles'
 import { ESPECIALIDADES_SENSEI } from '@/utils/constants'
 import { senseiSchema } from '@/utils/zodSchemas'
 import { formatCIInput, formatCelularInput, formatNameInput } from '@/utils/inputMasks'
@@ -32,7 +33,7 @@ interface SenseiFormProps {
 export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormProps) {
   const { user } = useAuth()
   const { form, clubes, loading, loadingClubes, error, success, setError, onSubmit } = useSenseiForm(sensei, user, onSuccess)
-  const { control, handleSubmit, setFocus, formState: { errors } } = form
+  const { control, handleSubmit, setFocus, trigger, formState: { errors } } = form
 
   const fieldError = (name: keyof typeof errors) => {
     return {
@@ -89,7 +90,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               onChange={(_, newValue) => {
                 field.onChange(newValue ? newValue.id : '')
               }}
-              disabled={loading || loadingClubes || user?.rol === 'encargado'}
+              disabled={loading || loadingClubes || user?.rol === ROL.ENCARGADO}
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -104,7 +105,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
             />
           )}
         />
-        {user?.rol === 'encargado' && (
+        {user?.rol === ROL.ENCARGADO && (
           <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5, mb: 1, ml: 1 }}>
             Los senseis se crearán automáticamente en tu club
           </Typography>
@@ -121,7 +122,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               required
               disabled={loading}
               {...fieldError('ci')}
-              onChange={(e) => field.onChange(formatCIInput(e.target.value))}
+              onChange={(e) => { field.onChange(formatCIInput(e.target.value)); if (errors.ci) trigger('ci') }}
             />
           )}
         />
@@ -137,7 +138,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               required
               disabled={loading}
               {...fieldError('nombres')}
-              onChange={(e) => field.onChange(formatNameInput(e.target.value))}
+              onChange={(e) => { field.onChange(formatNameInput(e.target.value)); if (errors.nombres) trigger('nombres') }}
             />
           )}
         />
@@ -150,10 +151,10 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               <TextField
                 {...field}
                 fullWidth
-                label="Apellido paterno"
+                label="Apellido Paterno"
                 disabled={loading}
                 {...fieldError('apellido_paterno')}
-                onChange={(e) => field.onChange(formatNameInput(e.target.value))}
+                onChange={(e) => { field.onChange(formatNameInput(e.target.value)); if (errors.apellido_paterno) trigger('apellido_paterno'); if (errors.apellido_materno) trigger('apellido_materno') }}
               />
             )}
           />
@@ -165,11 +166,10 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               <TextField
                 {...field}
                 fullWidth
-                label="Apellido materno"
+                label="Apellido Materno"
                 disabled={loading}
-                error={fieldError('apellido_paterno').error}
-                helperText={fieldError('apellido_paterno').error ? 'Al menos uno de los dos apellidos es requerido' : undefined}
-                onChange={(e) => field.onChange(formatNameInput(e.target.value))}
+                {...fieldError('apellido_materno')}
+                onChange={(e) => { field.onChange(formatNameInput(e.target.value)); if (errors.apellido_paterno) trigger('apellido_paterno'); if (errors.apellido_materno) trigger('apellido_materno') }}
               />
             )}
           />
@@ -188,6 +188,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               disabled={loading}
               {...fieldError('email')}
               autoComplete="off"
+              onChange={(e) => { field.onChange(e.target.value); if (errors.email) trigger('email') }}
             />
           )}
         />
@@ -200,13 +201,17 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
               label="Fecha de Nacimiento"
               value={field.value ? dayjs(field.value) : null}
               onChange={(newValue) => {
-                field.onChange(newValue && newValue.isValid() ? newValue.format('YYYY-MM-DD') : null)
+                const clamped = newValue?.isValid() && newValue.year() > dayjs().year() ? newValue.year(dayjs().year()) : newValue
+                field.onChange(clamped?.isValid() ? clamped.format('YYYY-MM-DD') : null)
+                if (errors.fecha_nacimiento) trigger('fecha_nacimiento')
               }}
               disabled={loading}
+              maxDate={dayjs().endOf('year')}
               slotProps={{
                 textField: {
                   fullWidth: true,
                   ...fieldError('fecha_nacimiento'),
+                  onBlur: () => trigger('fecha_nacimiento'),
                 },
               }}
               format="DD/MM/YYYY"
@@ -215,7 +220,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
         />
 
 <Controller name="numero_celular" control={control} render={({ field }) => (
-          <TextField {...field} fullWidth label="Celular" disabled={loading} {...fieldError('numero_celular')} inputProps={{ maxLength: 8, autoComplete: 'tel' }} onChange={(e) => field.onChange(formatCelularInput(e.target.value))} />
+          <TextField {...field} fullWidth label="Celular" disabled={loading} {...fieldError('numero_celular')} inputProps={{ maxLength: 8, autoComplete: 'tel' }} onChange={(e) => { field.onChange(formatCelularInput(e.target.value)); if (errors.numero_celular) trigger('numero_celular') }} />
         )} />
 
         <Controller

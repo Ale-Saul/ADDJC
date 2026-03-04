@@ -17,6 +17,7 @@ type JudokaAction =
   | { type: 'TOGGLE_STATUS_SUCCESS'; payload: string }
   | { type: 'TOGGLE_STATUS_ERROR'; payload: string; isActive: boolean }
   | { type: 'SET_JUDOKAS'; payload: Judoka[] }
+  | { type: 'UPDATE_JUDOKA_DATA'; payload: { id: string; data: Partial<Judoka> } }
 
 function judokaReducer(state: JudokaState, action: JudokaAction): JudokaState {
   switch (action.type) {
@@ -35,7 +36,7 @@ function judokaReducer(state: JudokaState, action: JudokaAction): JudokaState {
         ),
       }
     case 'TOGGLE_STATUS_SUCCESS':
-      return { ...state } // We keep it in modifiedIds for session sorting if needed, or we could remove it
+      return { ...state }
     case 'TOGGLE_STATUS_ERROR':
       return {
         ...state,
@@ -50,6 +51,13 @@ function judokaReducer(state: JudokaState, action: JudokaAction): JudokaState {
       }
     case 'SET_JUDOKAS':
       return { ...state, judokas: action.payload, loading: false }
+    case 'UPDATE_JUDOKA_DATA':
+      return {
+        ...state,
+        judokas: state.judokas.map((j) =>
+          j.id === action.payload.id ? { ...j, ...action.payload.data } : j
+        ),
+      }
     default:
       return state
   }
@@ -77,13 +85,9 @@ export function useJudokaList(options: {
     dispatch({ type: 'FETCH_START' })
     try {
       let response
-      if (options.clubId) {
-        response = await judokaController.getJudokasByClub(options.clubId)
-      } else if (options.entrenadorId) {
-        response = await judokaController.getJudokasByEntrenador(options.entrenadorId)
-      } else {
-        response = await judokaController.getAllJudokas(true)
-      }
+      // Siempre obtenemos todos los judokas para que el filtrado por club/sin club sea local
+      // Esto permite que showUnassigned funcione correctamente sin múltiples llamadas al backend
+      response = await judokaController.getAllJudokas(true)
 
       if (response.success && response.data) {
         dispatch({ type: 'FETCH_SUCCESS', payload: response.data })
@@ -93,7 +97,7 @@ export function useJudokaList(options: {
     } catch (err) {
       dispatch({ type: 'FETCH_ERROR', payload: 'Error inesperado al cargar los judokas' })
     }
-  }, [options.clubId, options.entrenadorId, options.judokasProp])
+  }, [options.judokasProp])
 
   useEffect(() => {
     loadJudokas()
@@ -115,9 +119,19 @@ export function useJudokaList(options: {
     }
   }, [])
 
+  const updateLocalJudoka = useCallback((id: string, data: Partial<Judoka>) => {
+    dispatch({ type: 'UPDATE_JUDOKA_DATA', payload: { id, data } })
+  }, [])
+
+  const deleteLocalJudoka = useCallback((id: string) => {
+    dispatch({ type: 'SET_JUDOKAS', payload: state.judokas.filter(j => j.id !== id) })
+  }, [state.judokas])
+
   return {
     ...state,
     loadJudokas,
     toggleStatus,
+    updateLocalJudoka,
+    deleteLocalJudoka
   }
 }

@@ -1,9 +1,10 @@
 'use client'
 
-import { use, useState, useEffect } from 'react'
-import { Box, Button, Typography, CircularProgress, Alert, Dialog, DialogTitle, DialogContent, Divider } from '@mui/material'
+import { use, useState, useEffect, useCallback } from 'react'
+import { Alert, Box, Button, CircularProgress, Dialog, DialogContent, DialogTitle, Divider, Snackbar, Typography } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import Layout from '@/components/common/Layout'
+import ConfirmDialog from '@/components/common/ConfirmDialog'
 import SenseiForm from '@/components/senseis/SenseiForm'
 import CertificacionList from '@/components/certificaciones/CertificacionList'
 import CertificacionForm from '@/components/certificaciones/CertificacionForm'
@@ -26,30 +27,35 @@ export default function SenseiEditPage({ params }: SenseiEditPageProps) {
   const [openCertificacionDialog, setOpenCertificacionDialog] = useState(false)
   const [certificacionEditando, setCertificacionEditando] = useState<Certificacion | null>(null)
   const [refreshCertificaciones, setRefreshCertificaciones] = useState(0)
+  const [certToDelete, setCertToDelete] = useState<Certificacion | null>(null)
+  const [certDeleteLoading, setCertDeleteLoading] = useState(false)
+  const [certDeleteError, setCertDeleteError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  useEffect(() => {
-    const loadSensei = async () => {
-      setLoading(true)
-      setError(null)
+  const loadSensei = useCallback(async () => {
+    setLoading(true)
+    setError(null)
 
-      const response = await senseiController.getSenseiById(id)
+    const response = await senseiController.getSenseiById(id)
 
-      if (response.success && response.data) {
-        setSensei(response.data)
-      } else {
-        setError(response.error || 'Error al cargar el sensei')
-      }
-
-      setLoading(false)
+    if (response.success && response.data) {
+      setSensei(response.data)
+    } else {
+      setError(response.error || 'Error al cargar el sensei')
     }
 
+    setLoading(false)
+  }, [id])
+
+  useEffect(() => {
     if (id) {
       loadSensei()
     }
-  }, [id])
+  }, [id, loadSensei])
 
   const handleSuccess = () => {
-    router.push(`/senseis`)
+    setSuccessMessage('Sensei actualizado exitosamente')
+    loadSensei()
   }
 
   const handleAddCertificacion = () => {
@@ -62,14 +68,27 @@ export default function SenseiEditPage({ params }: SenseiEditPageProps) {
     setOpenCertificacionDialog(true)
   }
 
-  const handleDeleteCertificacion = async (certificacion: Certificacion) => {
-    if (confirm(`¿Estás seguro de eliminar la certificación "${certificacion.nombre_certificacion}"?`)) {
-      const response = await certificacionController.deleteCertificacion(certificacion.id)
+  const handleDeleteCertificacion = (certificacion: Certificacion) => {
+    setCertToDelete(certificacion)
+  }
+
+  const handleConfirmDeleteCertificacion = async () => {
+    if (!certToDelete) return
+    setCertDeleteLoading(true)
+    try {
+      const response = await certificacionController.deleteCertificacion(certToDelete.id)
       if (response.success) {
+        setCertToDelete(null)
         setRefreshCertificaciones(prev => prev + 1)
       } else {
-        alert(response.error || 'Error al eliminar la certificación')
+        setCertDeleteError(response.error || 'Error al eliminar la certificación')
+        setCertToDelete(null)
       }
+    } catch {
+      setCertDeleteError('Error inesperado al eliminar la certificación')
+      setCertToDelete(null)
+    } finally {
+      setCertDeleteLoading(false)
     }
   }
 
@@ -162,6 +181,34 @@ export default function SenseiEditPage({ params }: SenseiEditPageProps) {
               />
             </DialogContent>
           </Dialog>
+
+          <ConfirmDialog
+            open={!!certToDelete}
+            title="Eliminar Certificación"
+            message={certToDelete ? `¿Estás seguro de eliminar la certificación "${certToDelete.nombre_certificacion}"?` : ''}
+            onConfirm={handleConfirmDeleteCertificacion}
+            onClose={() => setCertToDelete(null)}
+            confirmText="Eliminar"
+            loading={certDeleteLoading}
+          />
+
+          <Snackbar
+            open={!!certDeleteError}
+            autoHideDuration={4000}
+            onClose={() => setCertDeleteError(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          >
+            <Alert severity="error" onClose={() => setCertDeleteError(null)}>{certDeleteError}</Alert>
+          </Snackbar>
+
+          <Snackbar
+            open={!!successMessage}
+            autoHideDuration={4000}
+            onClose={() => setSuccessMessage(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          >
+            <Alert severity="success" onClose={() => setSuccessMessage(null)}>{successMessage}</Alert>
+          </Snackbar>
         </>
       )}
     </Layout>

@@ -1,7 +1,7 @@
 'use client'
 
-import { use, useState, useEffect } from 'react'
-import { Box, Button, Typography, CircularProgress, Alert } from '@mui/material'
+import { use, useState, useEffect, useCallback } from 'react'
+import { Box, Button, Typography, CircularProgress, Alert, Snackbar } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import Layout from '@/components/common/Layout'
 import JudokaForm from '@/components/judokas/JudokaForm'
@@ -19,30 +19,32 @@ export default function JudokaEditPage({ params }: JudokaEditPageProps) {
   const [judoka, setJudoka] = useState<Judoka | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  useEffect(() => {
-    const loadJudoka = async () => {
-      setLoading(true)
-      setError(null)
+  const loadJudoka = useCallback(async () => {
+    setLoading(true)
+    setError(null)
 
-      const response = await judokaController.getJudokaById(id)
+    const response = await judokaController.getJudokaById(id)
 
-      if (response.success && response.data) {
-        setJudoka(response.data)
-      } else {
-        setError(response.error || 'Error al cargar el judoka')
-      }
-
-      setLoading(false)
+    if (response.success && response.data) {
+      setJudoka(response.data)
+    } else {
+      setError(response.error || 'Error al cargar el judoka')
     }
 
+    setLoading(false)
+  }, [id])
+
+  useEffect(() => {
     if (id) {
       loadJudoka()
     }
-  }, [id])
+  }, [id, loadJudoka])
 
   const handleSuccess = () => {
-    router.push(`/judokas`)
+    setSuccessMessage('Judoka actualizado exitosamente')
+    loadJudoka()
   }
 
   if (loading) {
@@ -86,6 +88,15 @@ export default function JudokaEditPage({ params }: JudokaEditPageProps) {
           onCancel={() => router.push(`/judokas`)}
         />
       )}
+
+      <Snackbar
+        open={!!successMessage}
+        autoHideDuration={4000}
+        onClose={() => setSuccessMessage(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="success" onClose={() => setSuccessMessage(null)}>{successMessage}</Alert>
+      </Snackbar>
     </Layout>
   )
 }

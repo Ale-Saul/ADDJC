@@ -1,17 +1,7 @@
-import { supabase } from '@/lib/supabase'
 import { createClient } from '@/lib/supabase/client'
 import { MiembroAsociacion, MiembroAsociacionCreate, MiembroAsociacionUpdate } from '@/models/asociacion'
 import { ApiResponse } from '@/types'
-
 import { userService } from './userService'
-
-// Helper para obtener el cliente correcto
-function getSupabaseClient() {
-  if (typeof window !== 'undefined') {
-    return createClient()
-  }
-  return supabase
-}
 
 // Función helper para crear usuarios usando Admin API
 // Removed local helper in favor of userService
@@ -23,7 +13,7 @@ export const asociacionService = {
    */
   async getAll(includeInactive: boolean = false): Promise<ApiResponse<MiembroAsociacion[]>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       let query = client
         .from('usuarios')
         .select('*, asociacion(cargo, fecha_ingreso)')
@@ -76,7 +66,7 @@ export const asociacionService = {
    */
   async getById(id: string): Promise<ApiResponse<MiembroAsociacion>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { data, error } = await client
         .from('usuarios')
         .select('*, asociacion(cargo, fecha_ingreso)')
@@ -143,7 +133,7 @@ export const asociacionService = {
       const usuarioId = userResult.data.usuarioId
 
       // Insertar en tabla asociacion con cargo
-      const client = getSupabaseClient()
+      const client = createClient()
       const { error: insertAsocError } = await client
         .from('asociacion')
         .insert({ 
@@ -167,7 +157,7 @@ export const asociacionService = {
    */
   async update(id: string, miembro: MiembroAsociacionUpdate): Promise<ApiResponse<MiembroAsociacion>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const updateData: { nombre?: string; apellido_paterno?: string; apellido_materno?: string; correo?: string; activo?: boolean; fecha_nacimiento?: string | null; numero_celular?: string | null; ci?: string | null; genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null } = {}
       if (miembro.nombres !== undefined) updateData.nombre = miembro.nombres
       if (miembro.apellido_paterno !== undefined) updateData.apellido_paterno = miembro.apellido_paterno
@@ -244,7 +234,7 @@ export const asociacionService = {
    */
   async restore(id: string): Promise<ApiResponse<MiembroAsociacion>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { error } = await client
         .from('usuarios')
         .update({ activo: true })

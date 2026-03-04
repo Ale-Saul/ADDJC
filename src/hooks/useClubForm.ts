@@ -88,10 +88,12 @@ export function useClubForm({ club, onSuccess }: UseClubFormProps) {
     control,
     handleSubmit,
     reset,
+    setFocus,
+    trigger,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(clubSchema),
-    mode: 'onSubmit',
+    mode: 'onBlur',
     reValidateMode: 'onChange',
     defaultValues: {
       nombre_club: '',
@@ -217,6 +219,8 @@ export function useClubForm({ club, onSuccess }: UseClubFormProps) {
     handleSubmit,
     onSubmit,
     errors,
-    reset
+    reset,
+    setFocus,
+    trigger
   }
 }

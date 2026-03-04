@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Button,
   Collapse,
@@ -43,6 +43,8 @@ import {
 } from '@tanstack/react-table'
 import { MiembroAsociacion } from '@/models/asociacion'
 import Pagination from '@/components/common/Pagination'
+import ConfirmDialog from '@/components/common/ConfirmDialog'
+import { asociacionController } from '@/controllers/asociacionController'
 import { formatters } from '@/utils/formatters'
 import { CARGOS_ASOCIACION } from '@/utils/constants'
 import { useMiembroAsociacionList } from '@/hooks/useMiembroAsociacionList'
@@ -62,8 +64,38 @@ export default function MiembroAsociacionList({
   searchTerm: externalSearchTerm = '', 
   itemsPerPage: initialItemsPerPage = 10 
 }: MiembroAsociacionListProps) {
-  const { state, dispatch, loadMiembros, toggleStatus, filteredData } = useMiembroAsociacionList(externalSearchTerm)
-  const { loading, error, globalFilter, cargoFilter, estadoFilter, showFilters } = state
+  const { state, dispatch, loadMiembros, toggleStatus, updateLocalMiembro, deleteLocalMiembro, filteredData } = useMiembroAsociacionList(externalSearchTerm)
+  const { loading, error, globalFilter, cargoFilter, estadoFilter, showFilters, modifiedIds } = state
+  const [pendingDelete, setPendingDelete] = useState<MiembroAsociacion | null>(null)
+  const [confirmLoading, setConfirmLoading] = useState(false)
+
+  const handleEdit = (miembro: MiembroAsociacion) => {
+    if (onEdit) {
+      onEdit(miembro)
+    }
+  }
+
+  const handleDelete = (miembro: MiembroAsociacion) => {
+    if (onDelete) {
+      onDelete(miembro)
+    } else {
+      setPendingDelete(miembro)
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return
+    setConfirmLoading(true)
+    try {
+      const response = await asociacionController.deleteMiembro(pendingDelete.id)
+      if (response.success) {
+        deleteLocalMiembro(pendingDelete.id)
+      }
+    } finally {
+      setConfirmLoading(false)
+      setPendingDelete(null)
+    }
+  }
 
   useEffect(() => {
     loadMiembros()
@@ -127,12 +159,12 @@ export default function MiembroAsociacionList({
       cell: (info) => (
         <Box textAlign="right">
           {onEdit && (
-            <IconButton size="small" color="primary" onClick={() => onEdit(info.row.original)} title="Editar" aria-label="Editar miembro">
+            <IconButton size="small" color="primary" onClick={() => handleEdit(info.row.original)} title="Editar" aria-label="Editar miembro">
               <EditIcon fontSize="small" />
             </IconButton>
           )}
           {onDelete && (
-            <IconButton size="small" color="error" onClick={() => onDelete(info.row.original)} title="Eliminar" aria-label="Eliminar miembro">
+            <IconButton size="small" color="error" onClick={() => handleDelete(info.row.original)} title="Eliminar" aria-label="Eliminar miembro">
               <DeleteIcon fontSize="small" />
             </IconButton>
           )}
@@ -276,6 +308,16 @@ export default function MiembroAsociacionList({
           />
         </>
       )}
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title="Eliminar Miembro"
+        message={pendingDelete ? `¿Estás seguro de eliminar al miembro "${pendingDelete.nombres} ${pendingDelete.apellidos}"?` : ''}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setPendingDelete(null)}
+        confirmText="Eliminar"
+        loading={confirmLoading}
+      />
     </Box>
   )
 }

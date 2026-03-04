@@ -251,7 +251,7 @@ export const authService = {
       // Buscar usuario por auth_user_id en la tabla usuarios
       const { data, error } = await supabase
         .from('usuarios')
-        .select('*')
+        .select('id, correo, nombre, apellido_paterno, apellido_materno, rol, avatar_url, fecha_nacimiento, numero_celular, ci, genero, activo, debe_cambiar_password, created_at, updated_at')
         .eq('auth_user_id', authUserId)
         .single()
 
@@ -370,7 +370,7 @@ export const authService = {
   async resetPassword(email: string, redirectUrl?: string): Promise<ApiResponse<void>> {
     try {
       const supabase = createClient()
-      const redirectTo = redirectUrl || (typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : '/reset-password')
+      const redirectTo = redirectUrl || `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/reset-password`
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo,
@@ -479,14 +479,17 @@ export const authService = {
       }
       
       if (data.avatar_url !== undefined) updates.avatar_url = data.avatar_url
+      if (data.nombres !== undefined) updates.nombre = data.nombres
+      if (data.apellido_paterno !== undefined) updates.apellido_paterno = data.apellido_paterno
+      if (data.apellido_materno !== undefined) updates.apellido_materno = data.apellido_materno
       
-      // Nota: Email (correo), nombre, apellidos, rol y club_id no se actualizan aquí por seguridad
+      // Nota: Email (correo), rol y club_id no se actualizan aquí por seguridad
       
       const { data: updatedData, error } = await supabase
         .from('usuarios')
         .update(updates)
         .eq('id', userId)
-        .select('*')
+        .select('id, correo, nombre, apellido_paterno, apellido_materno, rol, avatar_url, fecha_nacimiento, numero_celular, ci, genero, activo, debe_cambiar_password, created_at, updated_at')
         .single()
 
       if (error) {
@@ -658,6 +661,51 @@ export const authService = {
         success: false,
         error: error instanceof Error ? error.message : 'Error desconocido al subir avatar'
       }
+    }
+  },
+
+  /**
+   * Obtener la sesión actual
+   */
+  async getSession(): Promise<ApiResponse<boolean>> {
+    try {
+      const supabase = createClient()
+      const { data: { session }, error } = await supabase.auth.getSession()
+      if (error) return { success: false, error: error.message }
+      return { success: true, data: !!session }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Error al obtener sesión' }
+    }
+  },
+
+  /**
+   * Intercambiar código de autorización por sesión
+   */
+  async exchangeCodeForSession(code: string): Promise<ApiResponse<boolean>> {
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+      if (error) return { success: false, error: error.message }
+      return { success: true, data: !!data.session }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Error al intercambiar código' }
+    }
+  },
+
+  /**
+   * Verificar la contraseña actual del usuario (re-autenticación)
+   */
+  async verifyCurrentPassword(email: string, password: string): Promise<ApiResponse<void>> {
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        return { success: false, error: 'La contraseña actual es incorrecta' }
+      }
+      return { success: true }
+    } catch (error) {
+      console.error('Error en verifyCurrentPassword:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Error al verificar la contraseña' }
     }
   },
 }

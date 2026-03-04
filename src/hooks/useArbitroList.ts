@@ -23,6 +23,7 @@ type Action =
   | { type: 'TOGGLE_SHOW_FILTERS' }
   | { type: 'CLEAR_FILTERS'; initialSearch: string }
   | { type: 'UPDATE_ARBITRO_STATUS'; id: string; activo: boolean }
+  | { type: 'UPDATE_ARBITRO_DATA'; id: string; data: Partial<Arbitro> }
   | { type: 'ADD_MODIFIED_ID'; id: string }
   | { type: 'REMOVE_MODIFIED_ID'; id: string }
 
@@ -45,6 +46,10 @@ function reducer(state: State, action: Action): State {
     case 'UPDATE_ARBITRO_STATUS': return {
       ...state,
       arbitros: state.arbitros.map(a => a.id === action.id ? { ...a, activo: action.activo } : a)
+    }
+    case 'UPDATE_ARBITRO_DATA': return {
+      ...state,
+      arbitros: state.arbitros.map(a => a.id === action.id ? { ...a, ...action.data } : a)
     }
     case 'ADD_MODIFIED_ID': {
       const next = new Set(state.modifiedIds)
@@ -108,6 +113,14 @@ export function useArbitroList(initialSearch: string = '') {
     }
   }, [])
 
+  const updateLocalArbitro = useCallback((id: string, data: Partial<Arbitro>) => {
+    dispatch({ type: 'UPDATE_ARBITRO_DATA', id, data })
+  }, [])
+
+  const deleteLocalArbitro = useCallback((id: string) => {
+    dispatch({ type: 'SET_ARBITROS', payload: state.arbitros.filter(a => a.id !== id) })
+  }, [state.arbitros])
+
   const filteredData = useMemo(() => {
     const filtered = state.arbitros.filter(a => {
       const matchNivel = state.nivelFilter === 'all' || a.nivel_arbitraje === state.nivelFilter
@@ -131,5 +144,12 @@ export function useArbitroList(initialSearch: string = '') {
     })
   }, [state.arbitros, state.nivelFilter, state.estadoFilter, state.globalFilter, state.modifiedIds])
 
-  return { state, dispatch, loadArbitros, toggleStatus, filteredData }
+  return { 
+    state, 
+    dispatch, 
+    loadArbitros, 
+    toggleStatus, 
+    updateLocalArbitro,
+    filteredData 
+  }
 }

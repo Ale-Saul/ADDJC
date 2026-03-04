@@ -19,7 +19,6 @@ import {
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import { authController } from '@/controllers/authController'
-import { createClient } from '@/lib/supabase/client'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { requestResetSchema, resetPasswordSchema } from '@/utils/zodSchemas'
@@ -61,20 +60,17 @@ export default function ResetPasswordContent() {
       const errorParam = searchParams.get('error')
       if (errorParam) {
         setError(searchParams.get('error_description') || 'Error en el enlace de recuperación.')
-        setCheckingToken(false)
         return
       }
 
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (session) {
+      const sessionResponse = await authController.getSession()
+      if (sessionResponse.data) {
         setStep('reset')
       } else {
         const code = searchParams.get('code')
         if (code) {
-          const { data } = await supabase.auth.exchangeCodeForSession(code)
-          if (data.session) setStep('reset')
+          const exchangeResponse = await authController.exchangeCodeForSession(code)
+          if (exchangeResponse.data) setStep('reset')
         }
       }
     } catch (err) {
@@ -91,7 +87,9 @@ export default function ResetPasswordContent() {
   const onResetRequest = async (data: { email: string }) => {
     setError(null)
     setLoading(true)
-    const redirectUrl = `${window.location.origin}/auth/callback?next=/reset-password`
+    // Redirigir directamente al login después de usar el enlace, sin pasar por /auth/callback
+    // Esto evita que se cree una sesión automática en el servidor
+    const redirectUrl = `${window.location.host.includes('localhost') ? 'http' : 'https'}://${window.location.host}/login`
 
     try {
       const response = await authController.resetPassword(data.email, redirectUrl)
@@ -101,9 +99,9 @@ export default function ResetPasswordContent() {
       } else {
         setError(response.error || 'Error al enviar el email')
       }
-      setLoading(false)
     } catch (err) {
       setError('Error inesperado')
+    } finally {
       setLoading(false)
     }
   }
@@ -115,23 +113,21 @@ export default function ResetPasswordContent() {
       const response = await authController.updatePassword(data.password)
       if (response.success) {
         setSuccess(true)
-        const supabase = createClient()
-        await supabase.auth.signOut()
-        setTimeout(() => { window.location.href = '/login' }, 2000)
+        await authController.signOut()
+        setTimeout(() => { router.push('/login') }, 2000)
       } else {
         setError(response.error || 'Error al actualizar')
       }
-      setLoading(false)
     } catch (err) {
       setError('Error inesperado')
+    } finally {
       setLoading(false)
     }
   }
 
   const handleBackToLogin = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    window.location.href = '/login'
+    await authController.signOut()
+    router.push('/login')
   }
 
   if (checkingToken) {

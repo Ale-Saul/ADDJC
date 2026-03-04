@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import {
   Box,
@@ -8,6 +8,7 @@ import {
   Button,
   CircularProgress,
   Alert,
+  Snackbar,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import Layout from '@/components/common/Layout'
@@ -23,14 +24,9 @@ export default function AsociacionEditPage() {
   const [miembro, setMiembro] = useState<MiembroAsociacion | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (id) {
-      loadMiembro()
-    }
-  }, [id])
-
-  const loadMiembro = async () => {
+  const loadMiembro = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -46,10 +42,17 @@ export default function AsociacionEditPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [id])
+
+  useEffect(() => {
+    if (id) {
+      loadMiembro()
+    }
+  }, [id, loadMiembro])
 
   const handleSuccess = () => {
-    router.push('/asociacion')
+    setSuccessMessage('Miembro actualizado exitosamente')
+    loadMiembro()
   }
 
   const handleCancel = () => {
@@ -109,6 +112,15 @@ export default function AsociacionEditPage() {
           onSuccess={handleSuccess}
           onCancel={handleCancel}
         />
+
+        <Snackbar
+          open={!!successMessage}
+          autoHideDuration={4000}
+          onClose={() => setSuccessMessage(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert severity="success" onClose={() => setSuccessMessage(null)}>{successMessage}</Alert>
+        </Snackbar>
       </Layout>
     </ProtectedRoute>
   )

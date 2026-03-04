@@ -1,49 +1,66 @@
 'use client'
 
 import { useState } from 'react'
-import { Box, Button, Typography, Dialog, DialogTitle, DialogContent } from '@mui/material'
+import { Alert, Box, Button, Dialog, DialogContent, DialogTitle, Snackbar, Typography } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
+import ConfirmDialog from '@/components/common/ConfirmDialog'
 import MiembroAsociacionList from '@/components/asociacion/MiembroAsociacionList'
 import MiembroAsociacionForm from '@/components/asociacion/MiembroAsociacionForm'
 import { MiembroAsociacion } from '@/models/asociacion'
 import { asociacionController } from '@/controllers/asociacionController'
-import { useRouter } from 'next/navigation'
+import { useDialog } from '@/hooks/useDialog'
+import { ROL } from '@/constants/roles'
 
 export default function AsociacionPage() {
-  const router = useRouter()
-  const [openDialog, setOpenDialog] = useState(false)
+  const createDialog = useDialog()
+  const editDialog = useDialog()
+  const deleteDialog = useDialog()
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const handleCreateSuccess = () => {
-    setOpenDialog(false)
+    createDialog.close()
+    setRefreshTrigger(prev => prev + 1)
+  }
+
+  const handleEditSuccess = () => {
+    editDialog.close()
     setRefreshTrigger(prev => prev + 1)
   }
 
   const handleEdit = (miembro: MiembroAsociacion) => {
-    router.push(`/asociacion/${miembro.id}/editar`)
+    editDialog.open(miembro)
   }
 
-  const handleDelete = async (miembro: MiembroAsociacion) => {
-    if (confirm(`¿Estás seguro de eliminar al miembro "${miembro.nombres} ${miembro.apellidos}"?`)) {
-      try {
-        const response = await asociacionController.deleteMiembro(miembro.id)
-        if (response.success) {
-          setRefreshTrigger(prev => prev + 1)
-          alert('Miembro eliminado exitosamente')
-        } else {
-          alert(`Error al eliminar miembro: ${response.error}`)
-        }
-      } catch (error) {
-        console.error('Error al eliminar miembro:', error)
-        alert('Error inesperado al eliminar miembro')
+  const handleDelete = (miembro: MiembroAsociacion) => {
+    deleteDialog.open(miembro)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteDialog.data) return
+    setDeleteLoading(true)
+    try {
+      const response = await asociacionController.deleteMiembro(deleteDialog.data.id)
+      if (response.success) {
+        deleteDialog.close()
+        setRefreshTrigger(prev => prev + 1)
+      } else {
+        setDeleteError(response.error || 'Error al eliminar miembro')
+        deleteDialog.close()
       }
+    } catch {
+      setDeleteError('Error inesperado al eliminar miembro')
+      deleteDialog.close()
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
   return (
-    <ProtectedRoute allowedRoles={['admin', 'asociacion']}>
+    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION]}>
       <Layout>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4" component="h1">
@@ -52,7 +69,7 @@ export default function AsociacionPage() {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => setOpenDialog(true)}
+            onClick={() => createDialog.open()}
           >
             Nuevo Miembro
           </Button>
@@ -64,19 +81,50 @@ export default function AsociacionPage() {
           refreshTrigger={refreshTrigger}
         />
 
-        <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
+        {/* Diálogo de Creación */}
+        <Dialog open={createDialog.isOpen} onClose={createDialog.close} maxWidth="md" fullWidth>
           <DialogTitle>Registrar Nuevo Miembro</DialogTitle>
           <DialogContent>
-            {openDialog && (
+            <MiembroAsociacionForm
+              onSuccess={handleCreateSuccess}
+              onCancel={createDialog.close}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* Diálogo de Edición */}
+        <Dialog open={editDialog.isOpen} onClose={editDialog.close} maxWidth="md" fullWidth>
+          <DialogTitle>Editar Miembro</DialogTitle>
+          <DialogContent>
+            {editDialog.data && (
               <MiembroAsociacionForm
-                onSuccess={handleCreateSuccess}
-                onCancel={() => setOpenDialog(false)}
+                miembro={editDialog.data}
+                onSuccess={handleEditSuccess}
+                onCancel={editDialog.close}
               />
             )}
           </DialogContent>
         </Dialog>
+
+        <ConfirmDialog
+          open={deleteDialog.isOpen}
+          title="Eliminar Miembro"
+          message={deleteDialog.data ? `¿Estás seguro de eliminar al miembro "${deleteDialog.data.nombres} ${deleteDialog.data.apellidos}"?` : ''}
+          onConfirm={handleConfirmDelete}
+          onClose={deleteDialog.close}
+          confirmText="Eliminar"
+          loading={deleteLoading}
+        />
+
+        <Snackbar
+          open={!!deleteError}
+          autoHideDuration={4000}
+          onClose={() => setDeleteError(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert severity="error" onClose={() => setDeleteError(null)}>{deleteError}</Alert>
+        </Snackbar>
       </Layout>
     </ProtectedRoute>
   )
 }
-

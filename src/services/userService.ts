@@ -1,4 +1,3 @@
-import { supabase } from '@/lib/supabase'
 import { ApiResponse } from '@/types'
 
 /**

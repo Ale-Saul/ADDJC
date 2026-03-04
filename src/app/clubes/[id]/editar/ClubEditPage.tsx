@@ -1,7 +1,7 @@
 'use client'
 
-import { use, useState, useEffect } from 'react'
-import { Box, Button, Typography, CircularProgress, Alert } from '@mui/material'
+import { use, useState, useEffect, useCallback } from 'react'
+import { Box, Button, Typography, CircularProgress, Alert, Snackbar } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import Layout from '@/components/common/Layout'
 import ClubForm from '@/components/clubes/ClubForm'
@@ -19,30 +19,32 @@ export default function ClubEditPage({ params }: ClubEditPageProps) {
   const [club, setClub] = useState<Club | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  useEffect(() => {
-    const loadClub = async () => {
-      setLoading(true)
-      setError(null)
+  const loadClub = useCallback(async () => {
+    setLoading(true)
+    setError(null)
 
-      const response = await clubController.getClubById(id)
+    const response = await clubController.getClubById(id)
 
-      if (response.success && response.data) {
-        setClub(response.data)
-      } else {
-        setError(response.error || 'Error al cargar el club')
-      }
-
-      setLoading(false)
+    if (response.success && response.data) {
+      setClub(response.data)
+    } else {
+      setError(response.error || 'Error al cargar el club')
     }
 
+    setLoading(false)
+  }, [id])
+
+  useEffect(() => {
     if (id) {
       loadClub()
     }
-  }, [id])
+  }, [id, loadClub])
 
   const handleSuccess = () => {
-    router.push(`/clubes`)
+    setSuccessMessage('Club actualizado exitosamente')
+    loadClub()
   }
 
   if (loading) {
@@ -86,6 +88,15 @@ export default function ClubEditPage({ params }: ClubEditPageProps) {
           onCancel={() => router.push(`/clubes`)}
         />
       )}
+
+      <Snackbar
+        open={!!successMessage}
+        autoHideDuration={4000}
+        onClose={() => setSuccessMessage(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="success" onClose={() => setSuccessMessage(null)}>{successMessage}</Alert>
+      </Snackbar>
     </Layout>
   )
 }

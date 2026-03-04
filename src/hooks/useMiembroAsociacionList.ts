@@ -23,6 +23,7 @@ type Action =
   | { type: 'TOGGLE_SHOW_FILTERS' }
   | { type: 'CLEAR_FILTERS'; initialSearch: string }
   | { type: 'UPDATE_MIEMBRO_STATUS'; id: string; activo: boolean }
+  | { type: 'UPDATE_MIEMBRO_DATA'; id: string; data: Partial<MiembroAsociacion> }
   | { type: 'ADD_MODIFIED_ID'; id: string }
   | { type: 'REMOVE_MODIFIED_ID'; id: string }
 
@@ -45,6 +46,10 @@ function reducer(state: State, action: Action): State {
     case 'UPDATE_MIEMBRO_STATUS': return {
       ...state,
       miembros: state.miembros.map(m => m.id === action.id ? { ...m, activo: action.activo } : m)
+    }
+    case 'UPDATE_MIEMBRO_DATA': return {
+      ...state,
+      miembros: state.miembros.map(m => m.id === action.id ? { ...m, ...action.data } : m)
     }
     case 'ADD_MODIFIED_ID': {
       const next = new Set(state.modifiedIds)
@@ -108,6 +113,14 @@ export function useMiembroAsociacionList(initialSearch: string = '') {
     }
   }, [])
 
+  const updateLocalMiembro = useCallback((id: string, data: Partial<MiembroAsociacion>) => {
+    dispatch({ type: 'UPDATE_MIEMBRO_DATA', id, data })
+  }, [])
+
+  const deleteLocalMiembro = useCallback((id: string) => {
+    dispatch({ type: 'SET_MIEMBROS', payload: state.miembros.filter(m => m.id !== id) })
+  }, [state.miembros])
+
   const filteredData = useMemo(() => {
     const filtered = state.miembros.filter(m => {
       const matchCargo = state.cargoFilter === 'all' || m.cargo === state.cargoFilter
@@ -131,5 +144,12 @@ export function useMiembroAsociacionList(initialSearch: string = '') {
     })
   }, [state.miembros, state.cargoFilter, state.estadoFilter, state.globalFilter, state.modifiedIds])
 
-  return { state, dispatch, loadMiembros, toggleStatus, filteredData }
+  return { 
+    state, 
+    dispatch, 
+    loadMiembros, 
+    toggleStatus, 
+    updateLocalMiembro,
+    filteredData 
+  }
 }

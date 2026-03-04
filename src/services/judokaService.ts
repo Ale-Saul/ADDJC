@@ -1,20 +1,40 @@
-import { supabase } from '@/lib/supabase'
 import { createClient } from '@/lib/supabase/client'
 import { Judoka, JudokaCreate, JudokaUpdate } from '@/models/judoka'
 import { ApiResponse } from '@/types'
 import { userService } from './userService'
 
-// Helper para obtener el cliente correcto (navegador si está disponible, básico si no)
-function getSupabaseClient() {
-  if (typeof window !== 'undefined') {
-    return createClient()
-  }
-  return supabase
-}
-
 const selectJudokasWithUsuario = '*, usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, correo, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url), senseis:entrenador_id(usuarios:usuario_id(nombre, apellido_paterno, apellido_materno)), clubes:club_id(nombre_club)'
 
-function mapJudokaRow(row: any): Judoka {
+interface JudokaUsuarioRow {
+  nombre: string | null
+  apellido_paterno: string | null
+  apellido_materno: string | null
+  correo: string | null
+  fecha_nacimiento: string | null
+  numero_celular: string | null
+  ci: string | null
+  genero: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
+  activo: boolean
+  avatar_url: string | null
+}
+
+interface JudokaDbRow extends Record<string, unknown> {
+  id: string
+  usuario_id: string
+  club_id: string | null
+  entrenador_id: string | null
+  activo: boolean
+  peso_competitivo: number | null
+  cinturon_actual: string | null
+  categoria: string | null
+  created_at: string
+  updated_at: string
+  usuarios: JudokaUsuarioRow | null
+  senseis: { usuarios: Pick<JudokaUsuarioRow, 'nombre' | 'apellido_paterno' | 'apellido_materno'> | null } | null
+  clubes: { nombre_club: string } | null
+}
+
+function mapJudokaRow(row: JudokaDbRow): Judoka {
   const u = row.usuarios
   const nombres = u?.nombre ?? ''
   const email = u?.correo ?? ''
@@ -56,7 +76,7 @@ export const judokaService = {
    */
   async getAll(includeInactive: boolean = false): Promise<ApiResponse<Judoka[]>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       let query = client
         .from('judokas')
         .select(selectJudokasWithUsuario)
@@ -83,7 +103,7 @@ export const judokaService = {
    */
   async getByClub(clubId: string): Promise<ApiResponse<Judoka[]>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { data, error } = await client
         .from('judokas')
         .select(selectJudokasWithUsuario)
@@ -107,7 +127,7 @@ export const judokaService = {
    */
   async getByEntrenador(entrenadorId: string): Promise<ApiResponse<Judoka[]>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { data, error } = await client
         .from('judokas')
         .select(selectJudokasWithUsuario)
@@ -131,7 +151,7 @@ export const judokaService = {
    */
   async getById(id: string): Promise<ApiResponse<Judoka>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { data, error } = await client
         .from('judokas')
         .select(selectJudokasWithUsuario)
@@ -188,7 +208,7 @@ export const judokaService = {
         }
       }
 
-      const client = getSupabaseClient()
+      const client = createClient()
       const insertPayload = {
         usuario_id: userId,
         club_id: judoka.club_id ?? null,
@@ -256,7 +276,7 @@ export const judokaService = {
    */
   async update(id: string, judoka: JudokaUpdate): Promise<ApiResponse<Judoka>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { email, nombres, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url, ...judokaPayload } = judoka as JudokaUpdate & { email?: string, numero_celular?: string, ci?: string, genero?: any }
 
       let usuarioId: string | null = null
@@ -314,7 +334,7 @@ export const judokaService = {
    */
   async delete(id: string): Promise<ApiResponse<void>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       
       // Obtener usuario_id primero
       const { data, error: getError } = await client
@@ -349,7 +369,7 @@ export const judokaService = {
    */
   async restore(id: string): Promise<ApiResponse<Judoka>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       
       // Get user_id first
       const { data: judokaData, error: getError } = await client

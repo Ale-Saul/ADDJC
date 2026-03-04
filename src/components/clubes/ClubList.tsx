@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Button,
   Collapse,
@@ -42,6 +42,8 @@ import {
 } from '@tanstack/react-table'
 import { Club } from '@/models/club'
 import Pagination from '@/components/common/Pagination'
+import ConfirmDialog from '@/components/common/ConfirmDialog'
+import { clubController } from '@/controllers/clubController'
 import { MUNICIPIOS } from '@/utils/constants'
 import { useClubList } from '@/hooks/useClubList'
 
@@ -60,8 +62,38 @@ export default function ClubList({
   searchTerm: externalSearchTerm = '', 
   itemsPerPage: initialItemsPerPage = 10 
 }: ClubListProps) {
-  const { state, dispatch, loadClubes, toggleStatus, filteredData } = useClubList(externalSearchTerm)
-  const { loading, error, globalFilter, municipioFilter, estadoFilter, showFilters } = state
+  const { state, dispatch, loadClubes, toggleStatus, updateLocalClub, deleteLocalClub, filteredData } = useClubList(externalSearchTerm)
+  const { loading, error, globalFilter, municipioFilter, estadoFilter, showFilters, modifiedIds } = state
+  const [pendingDelete, setPendingDelete] = useState<Club | null>(null)
+  const [confirmLoading, setConfirmLoading] = useState(false)
+
+  const handleEdit = (club: Club) => {
+    if (onEdit) {
+      onEdit(club)
+    }
+  }
+
+  const handleDelete = (club: Club) => {
+    if (onDelete) {
+      onDelete(club)
+    } else {
+      setPendingDelete(club)
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return
+    setConfirmLoading(true)
+    try {
+      const response = await clubController.deleteClub(pendingDelete.id)
+      if (response.success) {
+        deleteLocalClub(pendingDelete.id)
+      }
+    } finally {
+      setConfirmLoading(false)
+      setPendingDelete(null)
+    }
+  }
 
   useEffect(() => {
     loadClubes()
@@ -118,12 +150,12 @@ export default function ClubList({
       cell: (info) => (
         <Box textAlign="right">
           {onEdit && (
-            <IconButton size="small" color="primary" onClick={() => onEdit(info.row.original)} title="Editar" aria-label="Editar club">
+            <IconButton size="small" color="primary" onClick={() => handleEdit(info.row.original)} title="Editar" aria-label="Editar club">
               <EditIcon fontSize="small" />
             </IconButton>
           )}
           {onDelete && (
-            <IconButton size="small" color="error" onClick={() => onDelete(info.row.original)} title="Eliminar" aria-label="Eliminar club">
+            <IconButton size="small" color="error" onClick={() => handleDelete(info.row.original)} title="Eliminar" aria-label="Eliminar club">
               <DeleteIcon fontSize="small" />
             </IconButton>
           )}
@@ -267,6 +299,16 @@ export default function ClubList({
           />
         </>
       )}
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title="Eliminar Club"
+        message={pendingDelete ? `¿Estás seguro de eliminar el club "${pendingDelete.nombre_club}"?` : ''}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setPendingDelete(null)}
+        confirmText="Eliminar"
+        loading={confirmLoading}
+      />
     </Box>
   )
 }

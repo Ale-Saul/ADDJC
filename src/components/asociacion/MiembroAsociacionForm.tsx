@@ -43,10 +43,11 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
     handleSubmit,
     reset,
     setFocus,
+    trigger,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(miembroAsociacionSchema),
-    mode: 'onTouched',
+    mode: 'onBlur',
     reValidateMode: 'onChange',
     defaultValues: {
       nombres: '',
@@ -142,24 +143,24 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Controller name="ci" control={control} render={({ field }) => (
-          <TextField {...field} fullWidth label="Carnet de Identidad" required disabled={loading} {...fieldError('ci')} onChange={(e) => field.onChange(formatCIInput(e.target.value))} autoComplete="off" />
+          <TextField {...field} fullWidth label="Carnet de Identidad" required disabled={loading} {...fieldError('ci')} onChange={(e) => { field.onChange(formatCIInput(e.target.value)); if (errors.ci) trigger('ci') }} autoComplete="off" />
         )} />
         <Controller name="nombres" control={control} render={({ field }) => (
-          <TextField {...field} fullWidth label="Nombres" required disabled={loading} {...fieldError('nombres')} onChange={(e) => field.onChange(formatNameInput(e.target.value))} autoComplete="name" />
+          <TextField {...field} fullWidth label="Nombres" required disabled={loading} {...fieldError('nombres')} onChange={(e) => { field.onChange(formatNameInput(e.target.value)); if (errors.nombres) trigger('nombres') }} autoComplete="name" />
         )} />
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Controller name="apellido_paterno" control={control} render={({ field }) => (
-            <TextField {...field} fullWidth label="Apellido Paterno" disabled={loading} {...fieldError('apellido_paterno')} onChange={(e) => field.onChange(formatNameInput(e.target.value))} autoComplete="family-name" />
+            <TextField {...field} fullWidth label="Apellido Paterno" disabled={loading} {...fieldError('apellido_paterno')} onChange={(e) => { field.onChange(formatNameInput(e.target.value)); if (errors.apellido_paterno) trigger('apellido_paterno'); if (errors.apellido_materno) trigger('apellido_materno') }} autoComplete="family-name" />
           )} />
           <Controller name="apellido_materno" control={control} render={({ field }) => (
-            <TextField {...field} fullWidth label="Apellido Materno" disabled={loading} {...fieldError('apellido_materno')} onChange={(e) => field.onChange(formatNameInput(e.target.value))} autoComplete="family-name" />
+            <TextField {...field} fullWidth label="Apellido Materno" disabled={loading} {...fieldError('apellido_materno')} onChange={(e) => { field.onChange(formatNameInput(e.target.value)); if (errors.apellido_paterno) trigger('apellido_paterno'); if (errors.apellido_materno) trigger('apellido_materno') }} autoComplete="family-name" />
           )} />
         </Box>
         <Controller name="fecha_nacimiento" control={control} render={({ field }) => (
-          <DatePicker label="Fecha de Nacimiento" value={field.value ? dayjs(field.value) : null} onChange={(v) => field.onChange(v?.isValid() ? v.format('YYYY-MM-DD') : null)} disabled={loading} slotProps={{ textField: { fullWidth: true, ...fieldError('fecha_nacimiento'), autoComplete: 'bday' } }} format="DD/MM/YYYY" />
+          <DatePicker label="Fecha de Nacimiento" value={field.value ? dayjs(field.value) : null} onChange={(v) => { const clamped = v?.isValid() && v.year() > dayjs().year() ? v.year(dayjs().year()) : v; field.onChange(clamped?.isValid() ? clamped.format('YYYY-MM-DD') : null); if (errors.fecha_nacimiento) trigger('fecha_nacimiento') }} disabled={loading} maxDate={dayjs().endOf('year')} slotProps={{ textField: { fullWidth: true, ...fieldError('fecha_nacimiento'), autoComplete: 'bday', onBlur: () => trigger('fecha_nacimiento') } }} format="DD/MM/YYYY" />
         )} />
         <Controller name="numero_celular" control={control} render={({ field }) => (
-          <TextField {...field} fullWidth label="Celular" disabled={loading} {...fieldError('numero_celular')} inputProps={{ maxLength: 8, autoComplete: 'tel' }} onChange={(e) => field.onChange(formatCelularInput(e.target.value))} />
+          <TextField {...field} fullWidth label="Celular" disabled={loading} {...fieldError('numero_celular')} inputProps={{ maxLength: 8, autoComplete: 'tel' }} onChange={(e) => { field.onChange(formatCelularInput(e.target.value)); if (errors.numero_celular) trigger('numero_celular') }} />
         )} />
         <Controller name="genero" control={control} render={({ field }) => (
           <Autocomplete {...field} options={["Masculino", "Femenino", "Prefiero no decir"]} 
@@ -168,7 +169,7 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
             value={field.value || null} onChange={(_, v) => field.onChange(v || '')} disabled={loading} renderInput={(params) => <TextField {...params} label="Género" {...fieldError('genero')} inputProps={{ ...params.inputProps, autoComplete: 'off' }} />} />
         )} />
         <Controller name="fecha_ingreso" control={control} render={({ field }) => (
-          <DatePicker label="Fecha de Ingreso" value={field.value ? dayjs(field.value) : null} onChange={(v) => field.onChange(v?.isValid() ? v.format('YYYY-MM-DD') : null)} disabled={loading} slotProps={{ textField: { fullWidth: true, ...fieldError('fecha_ingreso'), autoComplete: 'off' } }} format="DD/MM/YYYY" />
+          <DatePicker label="Fecha de Ingreso" value={field.value ? dayjs(field.value) : null} onChange={(v) => { const clamped = v?.isValid() && v.year() > dayjs().year() ? v.year(dayjs().year()) : v; field.onChange(clamped?.isValid() ? clamped.format('YYYY-MM-DD') : null); if (errors.fecha_ingreso) trigger('fecha_ingreso') }} disabled={loading} maxDate={dayjs().endOf('year')} slotProps={{ textField: { fullWidth: true, ...fieldError('fecha_ingreso'), autoComplete: 'off', onBlur: () => trigger('fecha_ingreso') } }} format="DD/MM/YYYY" />
         )} />
         <Controller name="cargo" control={control} render={({ field }) => (
           <Autocomplete {...field} options={CARGOS_ASOCIACION} 
@@ -177,7 +178,7 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
             value={field.value || null} onChange={(_, v) => field.onChange(v || '')} disabled={loading} renderInput={(params) => <TextField {...params} label="Cargo" {...fieldError('cargo')} inputProps={{ ...params.inputProps, autoComplete: 'off' }} />} />
         )} />
         <Controller name="email" control={control} render={({ field }) => (
-          <TextField {...field} fullWidth label="Email" type="email" required disabled={loading} {...fieldError('email')} autoComplete="email" />
+          <TextField {...field} fullWidth label="Email" type="email" required disabled={loading} {...fieldError('email')} onChange={(e) => { field.onChange(e.target.value); if (errors.email) trigger('email') }} autoComplete="email" />
         )} />
       </Box>
 

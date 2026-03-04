@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Button,
   Collapse,
@@ -29,6 +29,7 @@ import {
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
+import ArticleIcon from '@mui/icons-material/Article'
 import SearchIcon from '@mui/icons-material/Search'
 import ClearIcon from '@mui/icons-material/Clear'
 import FilterListIcon from '@mui/icons-material/FilterList'
@@ -43,12 +44,15 @@ import {
 } from '@tanstack/react-table'
 import { Sensei } from '@/models/sensei'
 import Pagination from '@/components/common/Pagination'
+import ConfirmDialog from '@/components/common/ConfirmDialog'
+import { senseiController } from '@/controllers/senseiController'
 import { ESPECIALIDADES_SENSEI } from '@/utils/constants'
 import { useSenseiList } from '@/hooks/useSenseiList'
 
 interface SenseiListProps {
   onEdit?: (sensei: Sensei) => void
   onDelete?: (sensei: Sensei) => void
+  onCertificacion?: (sensei: Sensei) => void
   refreshTrigger?: number
   clubId?: string
   searchTerm?: string
@@ -57,14 +61,45 @@ interface SenseiListProps {
 
 export default function SenseiList({ 
   onEdit, 
-  onDelete, 
+  onDelete,
+  onCertificacion,
   refreshTrigger, 
   clubId,
   searchTerm: externalSearchTerm = '', 
   itemsPerPage: initialItemsPerPage = 10 
 }: SenseiListProps) {
-  const { state, dispatch, loadSenseis, toggleStatus, filteredData } = useSenseiList(externalSearchTerm)
-  const { loading, error, globalFilter, especialidadFilter, estadoFilter, showFilters } = state
+  const { state, dispatch, loadSenseis, toggleStatus, updateLocalSensei, deleteLocalSensei, filteredData } = useSenseiList(externalSearchTerm)
+  const { loading, error, globalFilter, especialidadFilter, estadoFilter, showFilters, modifiedIds } = state
+  const [pendingDelete, setPendingDelete] = useState<Sensei | null>(null)
+  const [confirmLoading, setConfirmLoading] = useState(false)
+
+  const handleEdit = (sensei: Sensei) => {
+    if (onEdit) {
+      onEdit(sensei)
+    }
+  }
+
+  const handleDelete = (sensei: Sensei) => {
+    if (onDelete) {
+      onDelete(sensei)
+    } else {
+      setPendingDelete(sensei)
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return
+    setConfirmLoading(true)
+    try {
+      const response = await senseiController.deleteSensei(pendingDelete.id)
+      if (response.success) {
+        deleteLocalSensei(pendingDelete.id)
+      }
+    } finally {
+      setConfirmLoading(false)
+      setPendingDelete(null)
+    }
+  }
 
   useEffect(() => {
     loadSenseis(clubId)
@@ -127,20 +162,25 @@ export default function SenseiList({
       header: () => <Box textAlign="right">Acciones</Box>,
       cell: (info) => (
         <Box textAlign="right">
+          {onCertificacion && (
+            <IconButton size="small" color="success" onClick={() => onCertificacion(info.row.original)} title="Certificación" aria-label="Gestionar certificación">
+              <ArticleIcon fontSize="small" />
+            </IconButton>
+          )}
           {onEdit && (
-            <IconButton size="small" color="primary" onClick={() => onEdit(info.row.original)} title="Editar" aria-label="Editar sensei">
+            <IconButton size="small" color="primary" onClick={() => handleEdit(info.row.original)} title="Editar" aria-label="Editar sensei">
               <EditIcon fontSize="small" />
             </IconButton>
           )}
           {onDelete && (
-            <IconButton size="small" color="error" onClick={() => onDelete(info.row.original)} title="Eliminar" aria-label="Eliminar sensei">
+            <IconButton size="small" color="error" onClick={() => handleDelete(info.row.original)} title="Eliminar" aria-label="Eliminar sensei">
               <DeleteIcon fontSize="small" />
             </IconButton>
           )}
         </Box>
       ),
     }),
-  ], [onEdit, onDelete, toggleStatus])
+  ], [onEdit, onDelete, onCertificacion, toggleStatus])
 
   const table = useReactTable({
     data: filteredData,
@@ -277,6 +317,16 @@ export default function SenseiList({
           />
         </>
       )}
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title="Eliminar Sensei"
+        message={pendingDelete ? `¿Estás seguro de eliminar al sensei "${pendingDelete.nombres} ${pendingDelete.apellidos}"?` : ''}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setPendingDelete(null)}
+        confirmText="Eliminar"
+        loading={confirmLoading}
+      />
     </Box>
   )
 }

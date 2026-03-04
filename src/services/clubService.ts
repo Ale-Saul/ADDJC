@@ -1,15 +1,6 @@
-import { supabase } from '@/lib/supabase'
 import { createClient } from '@/lib/supabase/client'
 import { Club, ClubCreate, ClubUpdate } from '@/models/club'
 import { ApiResponse } from '@/types'
-
-// Helper para obtener el cliente correcto (navegador si está disponible, básico si no)
-function getSupabaseClient() {
-  if (typeof window !== 'undefined') {
-    return createClient()
-  }
-  return supabase
-}
 
 export const clubService = {
   /**
@@ -17,10 +8,10 @@ export const clubService = {
    */
   async getAll(includeInactive: boolean = false): Promise<ApiResponse<Club[]>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       let query = client
         .from('clubes')
-        .select('*')
+        .select('id, nombre_club, provincia, direccion, telefono_contacto, director_tecnico_id, activo, created_at, updated_at')
         .order('created_at', { ascending: false })
 
       if (!includeInactive) {
@@ -43,18 +34,18 @@ export const clubService = {
    */
   async getById(id: string): Promise<ApiResponse<Club>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { data, error } = await client
         .from('clubes')
-        .select('*')
+        .select('id, nombre_club, provincia, direccion, telefono_contacto, director_tecnico_id, activo, created_at, updated_at')
         .eq('id', id)
         .single()
 
       if (error) throw error
 
       return { success: true, data }
-    } catch (error: any) {
-      return { success: false, error: error.message }
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
     }
   },
 
@@ -63,7 +54,7 @@ export const clubService = {
    */
   async create(club: ClubCreate): Promise<ApiResponse<Club>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       
       // Crear el club
       const { data, error } = await client
@@ -103,8 +94,8 @@ export const clubService = {
       }
 
       return { success: true, data }
-    } catch (error: any) {
-      return { success: false, error: error.message }
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
     }
   },
 
@@ -113,7 +104,7 @@ export const clubService = {
    */
   async update(id: string, club: ClubUpdate): Promise<ApiResponse<Club>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       
       // Si se está actualizando el director técnico, manejar cambios de rol
       if (club.director_tecnico_id !== undefined) {
@@ -189,8 +180,8 @@ export const clubService = {
       if (error) throw error
 
       return { success: true, data }
-    } catch (error: any) {
-      return { success: false, error: error.message }
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
     }
   },
 
@@ -200,7 +191,7 @@ export const clubService = {
    */
   async delete(id: string): Promise<ApiResponse<void>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       
       const { error } = await client
         .from('clubes')
@@ -210,8 +201,8 @@ export const clubService = {
       if (error) throw error
 
       return { success: true }
-    } catch (error: any) {
-      return { success: false, error: error.message }
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
     }
   },
 
@@ -220,7 +211,7 @@ export const clubService = {
    */
   async restore(id: string): Promise<ApiResponse<Club>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { data, error } = await client
         .from('clubes')
         .update({ activo: true })
@@ -231,8 +222,8 @@ export const clubService = {
       if (error) throw error
 
       return { success: true, data }
-    } catch (error: any) {
-      return { success: false, error: error.message }
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
     }
   }
 }

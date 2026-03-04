@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Button,
   Collapse,
@@ -29,6 +29,7 @@ import {
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
+import ArticleIcon from '@mui/icons-material/Article'
 import SearchIcon from '@mui/icons-material/Search'
 import ClearIcon from '@mui/icons-material/Clear'
 import FilterListIcon from '@mui/icons-material/FilterList'
@@ -43,11 +44,14 @@ import {
 } from '@tanstack/react-table'
 import { Arbitro } from '@/models/arbitro'
 import Pagination from '@/components/common/Pagination'
+import ConfirmDialog from '@/components/common/ConfirmDialog'
+import { arbitroController } from '@/controllers/arbitroController'
 import { useArbitroList } from '@/hooks/useArbitroList'
 
 interface ArbitroListProps {
   onEdit?: (arbitro: Arbitro) => void
   onDelete?: (arbitro: Arbitro) => void
+  onCertificacion?: (arbitro: Arbitro) => void
   refreshTrigger?: number
   searchTerm?: string
   itemsPerPage?: number
@@ -55,13 +59,44 @@ interface ArbitroListProps {
 
 export default function ArbitroList({ 
   onEdit, 
-  onDelete, 
+  onDelete,
+  onCertificacion,
   refreshTrigger, 
   searchTerm: externalSearchTerm = '', 
   itemsPerPage: initialItemsPerPage = 10 
 }: ArbitroListProps) {
-  const { state, dispatch, loadArbitros, toggleStatus, filteredData } = useArbitroList(externalSearchTerm)
-  const { loading, error, globalFilter, nivelFilter, estadoFilter, showFilters } = state
+  const { state, dispatch, loadArbitros, toggleStatus, updateLocalArbitro, deleteLocalArbitro, filteredData } = useArbitroList(externalSearchTerm)
+  const { loading, error, globalFilter, nivelFilter, estadoFilter, showFilters, modifiedIds } = state
+  const [pendingDelete, setPendingDelete] = useState<Arbitro | null>(null)
+  const [confirmLoading, setConfirmLoading] = useState(false)
+
+  const handleEdit = (arbitro: Arbitro) => {
+    if (onEdit) {
+      onEdit(arbitro)
+    }
+  }
+
+  const handleDelete = (arbitro: Arbitro) => {
+    if (onDelete) {
+      onDelete(arbitro)
+    } else {
+      setPendingDelete(arbitro)
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return
+    setConfirmLoading(true)
+    try {
+      const response = await arbitroController.deleteArbitro(pendingDelete.id)
+      if (response.success) {
+        deleteLocalArbitro(pendingDelete.id)
+      }
+    } finally {
+      setConfirmLoading(false)
+      setPendingDelete(null)
+    }
+  }
 
   useEffect(() => {
     loadArbitros()
@@ -120,20 +155,25 @@ export default function ArbitroList({
       header: () => <Box textAlign="right">Acciones</Box>,
       cell: (info) => (
         <Box textAlign="right">
+          {onCertificacion && (
+            <IconButton size="small" color="success" onClick={() => onCertificacion(info.row.original)} title="Certificación" aria-label="Gestionar certificación">
+              <ArticleIcon fontSize="small" />
+            </IconButton>
+          )}
           {onEdit && (
-            <IconButton size="small" color="primary" onClick={() => onEdit(info.row.original)} title="Editar" aria-label="Editar árbitro">
+            <IconButton size="small" color="primary" onClick={() => handleEdit(info.row.original)} title="Editar" aria-label="Editar árbitro">
               <EditIcon fontSize="small" />
             </IconButton>
           )}
           {onDelete && (
-            <IconButton size="small" color="error" onClick={() => onDelete(info.row.original)} title="Eliminar" aria-label="Eliminar árbitro">
+            <IconButton size="small" color="error" onClick={() => handleDelete(info.row.original)} title="Eliminar" aria-label="Eliminar árbitro">
               <DeleteIcon fontSize="small" />
             </IconButton>
           )}
         </Box>
       ),
     }),
-  ], [onEdit, onDelete, toggleStatus])
+  ], [onEdit, onDelete, onCertificacion, toggleStatus])
 
   const table = useReactTable({
     data: filteredData,
@@ -278,6 +318,16 @@ export default function ArbitroList({
           />
         </>
       )}
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title="Eliminar Árbitro"
+        message={pendingDelete ? `¿Estás seguro de eliminar al árbitro "${pendingDelete.nombres} ${pendingDelete.apellidos}"?` : ''}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setPendingDelete(null)}
+        confirmText="Eliminar"
+        loading={confirmLoading}
+      />
     </Box>
   )
 }

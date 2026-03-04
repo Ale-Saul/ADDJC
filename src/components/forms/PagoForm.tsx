@@ -60,14 +60,14 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
 
   // Calcular monto final cuando cambian los valores
   useEffect(() => {
-    const montoBase = typeof formData.monto_base === 'string' ? parseFloat(formData.monto_base) || 0 : formData.monto_base
+    const montoBase = typeof formData.monto_base === 'string' ? parseFloat(formData.monto_base) || 0 : (formData.monto_base || 0)
     let final = montoBase
 
     if (formData.tiene_descuento) {
-      if (formData.tipo_descuento === TIPO_DESCUENTO.PORCENTAJE && formData.descuento_porcentaje) {
-        final = montoBase - (montoBase * formData.descuento_porcentaje / 100)
-      } else if (formData.tipo_descuento === TIPO_DESCUENTO.MONTO_FIJO && formData.descuento_monto) {
-        final = montoBase - formData.descuento_monto
+      if (formData.tipo_descuento === TIPO_DESCUENTO.PORCENTAJE && formData.descuento_porcentaje !== null) {
+        final = montoBase - (montoBase * (formData.descuento_porcentaje || 0) / 100)
+      } else if (formData.tipo_descuento === TIPO_DESCUENTO.MONTO_FIJO && formData.descuento_monto !== null) {
+        final = montoBase - (formData.descuento_monto || 0)
       }
     }
 
@@ -88,7 +88,7 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: value === '' ? 0 : parseFloat(value)
+      [name]: value === '' ? '' : parseFloat(value)
     }))
     setError(null)
     setSuccess(false)
@@ -118,7 +118,8 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
         razon_descuento: RAZON_DESCUENTO.NINGUNO
       } : name === 'tiene_descuento' && checked ? {
         tipo_descuento: TIPO_DESCUENTO.PORCENTAJE,
-        razon_descuento: RAZON_DESCUENTO.BECA
+        razon_descuento: RAZON_DESCUENTO.BECA,
+        descuento_porcentaje: 0 // Asegurar que tenga un valor inicial para mostrar los campos
       } : {})
     }))
     setError(null)
@@ -133,8 +134,11 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
 
     try {
       // Agregar monto_final calculado antes de enviar
+      const montoBaseFinal = typeof formData.monto_base === 'string' ? (parseFloat(formData.monto_base) || 0) : (formData.monto_base || 0)
+      
       const pagoConMontoFinal = {
         ...formData,
+        monto_base: montoBaseFinal,
         monto_final: montoFinal
       }
 
@@ -214,11 +218,15 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
         fullWidth
         label="Monto Base"
         name="monto_base"
-        type="number"
-        value={formData.monto_base}
-        onChange={handleNumberChange}
+        type="text"
+        value={formData.monto_base === 0 || formData.monto_base === '' ? '' : formData.monto_base}
+        onChange={(e) => {
+          const val = e.target.value.replace(/[^0-9.]/g, '')
+          setFormData(prev => ({ ...prev, monto_base: val === '' ? '' : parseFloat(val) }))
+          setError(null)
+          setSuccess(false)
+        }}
         required
-        inputProps={{ min: 0, step: 0.01 }}
         sx={{ mb: 2 }}
         InputProps={{
           startAdornment: <InputAdornment position="start">Bs.</InputAdornment>,
@@ -254,13 +262,21 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
       />
 
       {formData.tiene_descuento && (
-        <>
-          <FormControl fullWidth sx={{ mb: 2 }}>
+        <Stack spacing={3} sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2, mb: 2 }}>
+          <FormControl fullWidth>
             <InputLabel>Tipo de Descuento</InputLabel>
             <Select
               name="tipo_descuento"
-              value={formData.tipo_descuento || TIPO_DESCUENTO.NINGUNO}
-              onChange={handleSelectChange}
+              value={formData.tipo_descuento || TIPO_DESCUENTO.PORCENTAJE}
+              onChange={(e) => {
+                handleSelectChange(e);
+                // Limpiar valores al cambiar tipo
+                setFormData(prev => ({
+                  ...prev,
+                  descuento_porcentaje: e.target.value === TIPO_DESCUENTO.PORCENTAJE ? 0 : null,
+                  descuento_monto: e.target.value === TIPO_DESCUENTO.MONTO_FIJO ? 0 : null
+                }));
+              }}
               label="Tipo de Descuento"
               required
             >
@@ -270,48 +286,54 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
             </Select>
           </FormControl>
 
-          {formData.tipo_descuento === TIPO_DESCUENTO.PORCENTAJE && (
-            <TextField
-              fullWidth
-              label="Descuento (%)"
-              name="descuento_porcentaje"
-              type="number"
-              value={formData.descuento_porcentaje || ''}
-              onChange={handleNumberChange}
-              required
-              inputProps={{ min: 0, max: 100, step: 0.01 }}
-              sx={{ mb: 2 }}
-            />
-          )}
+          <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+            {(formData.tipo_descuento === TIPO_DESCUENTO.PORCENTAJE || !formData.tipo_descuento || formData.tipo_descuento === 'ninguno') && (
+              <TextField
+                fullWidth
+                label="Descuento (%)"
+                name="descuento_porcentaje"
+                type="number"
+                value={formData.descuento_porcentaje ?? ''}
+                onChange={handleNumberChange}
+                required
+                inputProps={{ min: 0, max: 100, step: 0.01 }}
+                InputProps={{
+                  endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                }}
+              />
+            )}
 
-          {formData.tipo_descuento === TIPO_DESCUENTO.MONTO_FIJO && (
-            <TextField
-              fullWidth
-              label="Descuento (Monto)"
-              name="descuento_monto"
-              type="number"
-              value={formData.descuento_monto || ''}
-              onChange={handleNumberChange}
-              required
-              inputProps={{ min: 0, step: 0.01 }}
-              sx={{ mb: 2 }}
-            />
-          )}
+            {formData.tipo_descuento === TIPO_DESCUENTO.MONTO_FIJO && (
+              <TextField
+                fullWidth
+                label="Descuento (Monto)"
+                name="descuento_monto"
+                type="number"
+                value={formData.descuento_monto ?? ''}
+                onChange={handleNumberChange}
+                required
+                inputProps={{ min: 0, step: 0.01 }}
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">Bs.</InputAdornment>,
+                }}
+              />
+            )}
 
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Razón del Descuento</InputLabel>
-            <Select
-              name="razon_descuento"
-              value={formData.razon_descuento || RAZON_DESCUENTO.NINGUNO}
-              onChange={handleSelectChange}
-              label="Razón del Descuento"
-            >
-              {Object.entries(RAZON_DESCUENTO_LABELS).map(([value, label]) => (
-                <MenuItem key={value} value={value}>{label}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </>
+            <FormControl fullWidth>
+              <InputLabel>Razón del Descuento</InputLabel>
+              <Select
+                name="razon_descuento"
+                value={formData.razon_descuento || RAZON_DESCUENTO.NINGUNO}
+                onChange={handleSelectChange}
+                label="Razón del Descuento"
+              >
+                {Object.entries(RAZON_DESCUENTO_LABELS).map(([value, label]) => (
+                  <MenuItem key={value} value={value}>{label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        </Stack>
       )}
 
       <Box sx={{ p: 2, bgcolor: 'primary.light', borderRadius: 1, mb: 2 }}>

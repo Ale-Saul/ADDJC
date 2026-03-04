@@ -2,6 +2,7 @@ import { judokaService } from '@/services/judokaService'
 import { Judoka, JudokaCreate, JudokaUpdate } from '@/models/judoka'
 import { ApiResponse } from '@/types'
 import { generarPasswordInicial } from '@/utils/passwordUtils'
+import { personNamesCreateSchema, personNamesUpdateSchema, pesoSchema } from '@/utils/zodSchemas'
 
 export const judokaController = {
   /**
@@ -48,38 +49,14 @@ export const judokaController = {
    * Crear un nuevo judoka
    */
   async createJudoka(judokaData: JudokaCreate): Promise<ApiResponse<Judoka>> {
-    // Validaciones de negocio
-    if (!judokaData.nombres || judokaData.nombres.trim() === '') {
-      return { success: false, error: 'El nombre es requerido' }
+    const namesValidation = personNamesCreateSchema.safeParse(judokaData)
+    if (!namesValidation.success) {
+      return { success: false, error: namesValidation.error.errors[0].message }
     }
 
-    const paterno = (judokaData.apellido_paterno ?? '').trim()
-    const materno = (judokaData.apellido_materno ?? '').trim()
-    if (!paterno && !materno) {
-      return { success: false, error: 'Al menos un apellido (paterno o materno) es requerido' }
-    }
-
-    const apellidosCompletos = [paterno, materno].filter(Boolean).join(' ')
-    if (apellidosCompletos.length < 2) {
-      return { success: false, error: 'Los apellidos deben tener al menos 2 caracteres' }
-    }
-
-    if (judokaData.nombres.length > 100) {
-      return { success: false, error: 'El nombre no puede exceder 100 caracteres' }
-    }
-
-    if (apellidosCompletos.length > 200) {
-      return { success: false, error: 'Los apellidos no pueden exceder 200 caracteres en total' }
-    }
-
-    // Validar peso si se proporciona
-    if (judokaData.peso_competitivo !== null && judokaData.peso_competitivo !== undefined) {
-      if (judokaData.peso_competitivo < 0) {
-        return { success: false, error: 'El peso no puede ser negativo' }
-      }
-      if (judokaData.peso_competitivo > 300) {
-        return { success: false, error: 'El peso no puede exceder 300 kg' }
-      }
+    const pesoValidation = pesoSchema.safeParse(judokaData.peso_competitivo)
+    if (!pesoValidation.success) {
+      return { success: false, error: pesoValidation.error.errors[0].message }
     }
 
     // Generar contraseña automática basada en el carnet
@@ -109,47 +86,18 @@ export const judokaController = {
       return { success: false, error: 'Judoka no encontrado' }
     }
 
-    // Validaciones de negocio
-    if (judokaData.nombres !== undefined) {
-      if (judokaData.nombres.trim() === '') {
-        return { success: false, error: 'El nombre no puede estar vacío' }
-      }
-
-      if (judokaData.nombres.length < 2) {
-        return { success: false, error: 'El nombre debe tener al menos 2 caracteres' }
-      }
-
-      if (judokaData.nombres.length > 100) {
-        return { success: false, error: 'El nombre no puede exceder 100 caracteres' }
-      }
+    const namesValidation = personNamesUpdateSchema.safeParse(judokaData)
+    if (!namesValidation.success) {
+      return { success: false, error: namesValidation.error.errors[0].message }
     }
 
-    if (judokaData.apellido_paterno !== undefined || judokaData.apellido_materno !== undefined) {
-      const paterno = (judokaData.apellido_paterno ?? '').trim()
-      const materno = (judokaData.apellido_materno ?? '').trim()
-      if (!paterno && !materno) {
-        return { success: false, error: 'Al menos un apellido (paterno o materno) debe estar presente' }
-      }
-      const apellidosCompletos = [paterno, materno].filter(Boolean).join(' ')
-      if (apellidosCompletos.length > 200) {
-        return { success: false, error: 'Los apellidos no pueden exceder 200 caracteres en total' }
-      }
+    if (judokaData.fecha_nacimiento !== undefined && judokaData.fecha_nacimiento !== null && judokaData.fecha_nacimiento.trim() === '') {
+      return { success: false, error: 'La fecha de nacimiento no puede estar vacía' }
     }
 
-    if (judokaData.fecha_nacimiento !== undefined && judokaData.fecha_nacimiento !== null) {
-      if (judokaData.fecha_nacimiento.trim() === '') {
-        return { success: false, error: 'La fecha de nacimiento no puede estar vacía' }
-      }
-    }
-
-    // Validar peso si se proporciona
-    if (judokaData.peso_competitivo !== null && judokaData.peso_competitivo !== undefined) {
-      if (judokaData.peso_competitivo < 0) {
-        return { success: false, error: 'El peso no puede ser negativo' }
-      }
-      if (judokaData.peso_competitivo > 300) {
-        return { success: false, error: 'El peso no puede exceder 300 kg' }
-      }
+    const pesoValidation = pesoSchema.safeParse(judokaData.peso_competitivo)
+    if (!pesoValidation.success) {
+      return { success: false, error: pesoValidation.error.errors[0].message }
     }
 
     return await judokaService.update(id, judokaData)
