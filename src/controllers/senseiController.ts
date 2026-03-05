@@ -40,7 +40,7 @@ export const senseiController = {
   async createSensei(senseiData: SenseiCreate): Promise<ApiResponse<Sensei>> {
     const validation = personNamesCreateSchema.safeParse(senseiData)
     if (!validation.success) {
-      return { success: false, error: validation.error.errors[0].message }
+      return { success: false, error: validation.error.issues[0]?.message ?? 'Error de validación' }
     }
 
     // Generar contraseña automática basada en el carnet
@@ -72,7 +72,7 @@ export const senseiController = {
 
     const validation = personNamesUpdateSchema.safeParse(senseiData)
     if (!validation.success) {
-      return { success: false, error: validation.error.errors[0].message }
+      return { success: false, error: validation.error.issues[0]?.message ?? 'Error de validación' }
     }
 
     return await senseiService.update(id, senseiData)

@@ -57,6 +57,8 @@ interface SenseiListProps {
   clubId?: string
   searchTerm?: string
   itemsPerPage?: number
+  showUnassigned?: boolean
+  readOnly?: boolean
 }
 
 export default function SenseiList({ 
@@ -66,7 +68,9 @@ export default function SenseiList({
   refreshTrigger, 
   clubId,
   searchTerm: externalSearchTerm = '', 
-  itemsPerPage: initialItemsPerPage = 10 
+  itemsPerPage: initialItemsPerPage = 10,
+  showUnassigned = false,
+  readOnly = false,
 }: SenseiListProps) {
   const { state, dispatch, loadSenseis, toggleStatus, updateLocalSensei, deleteLocalSensei, filteredData } = useSenseiList(externalSearchTerm)
   const { loading, error, globalFilter, especialidadFilter, estadoFilter, showFilters, modifiedIds } = state
@@ -123,6 +127,16 @@ export default function SenseiList({
     }),
     columnHelper.accessor('nombres', {
       header: 'Nombres',
+      cell: (info) => (
+        <Box>
+          <Typography variant="body2">{info.getValue()}</Typography>
+          {showUnassigned && !info.row.original.club_id && (
+            <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>
+              Sin club
+            </Typography>
+          )}
+        </Box>
+      ),
     }),
     columnHelper.accessor('apellidos', {
       header: 'Apellidos',
@@ -135,55 +149,75 @@ export default function SenseiList({
       header: 'Especialidad',
       cell: (info) => info.getValue() || '-',
     }),
-    columnHelper.accessor('activo', {
-      header: 'Estado',
-      cell: (info) => {
-        const isActive = info.getValue()
-        const id = info.row.original.id
-        return (
-          <Tooltip title={isActive ? 'Desactivar' : 'Activar'}>
-            <Switch 
-              checked={!!isActive} 
-              onChange={() => toggleStatus(id, !!isActive)}
-              size="medium"
-              sx={{
-                '& .MuiSwitch-switchBase.Mui-checked': { color: '#4caf50' },
-                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#4caf50' },
-                '& .MuiSwitch-switchBase': { color: '#f44336' },
-                '& .MuiSwitch-switchBase + .MuiSwitch-track': { backgroundColor: '#f44336' },
-              }}
-            />
-          </Tooltip>
-        )
-      },
-    }),
-    columnHelper.display({
-      id: 'acciones',
-      header: () => <Box textAlign="right">Acciones</Box>,
-      cell: (info) => (
-        <Box textAlign="right">
-          {onCertificacion && (
-            <IconButton size="small" color="success" onClick={() => onCertificacion(info.row.original)} title="Certificación" aria-label="Gestionar certificación">
-              <ArticleIcon fontSize="small" />
-            </IconButton>
-          )}
-          {onEdit && (
-            <IconButton size="small" color="primary" onClick={() => handleEdit(info.row.original)} title="Editar" aria-label="Editar sensei">
-              <EditIcon fontSize="small" />
-            </IconButton>
-          )}
-          {onDelete && (
-            <IconButton size="small" color="error" onClick={() => handleDelete(info.row.original)} title="Eliminar" aria-label="Eliminar sensei">
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          )}
-        </Box>
-      ),
-    }),
-  ], [onEdit, onDelete, onCertificacion, toggleStatus])
+    ...(!readOnly ? [
+      columnHelper.accessor('activo', {
+        header: 'Estado',
+        cell: (info) => {
+          const isActive = info.getValue()
+          const id = info.row.original.id
+          return (
+            <Tooltip title={isActive ? 'Desactivar' : 'Activar'}>
+              <Switch 
+                checked={!!isActive} 
+                onChange={() => toggleStatus(id, !!isActive)}
+                size="medium"
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': { color: '#4caf50' },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#4caf50' },
+                  '& .MuiSwitch-switchBase': { color: '#f44336' },
+                  '& .MuiSwitch-switchBase + .MuiSwitch-track': { backgroundColor: '#f44336' },
+                }}
+              />
+            </Tooltip>
+          )
+        },
+      }),
+      columnHelper.display({
+        id: 'acciones',
+        header: () => <Box textAlign="right">Acciones</Box>,
+        cell: (info) => (
+          <Box textAlign="right">
+            {onCertificacion && (
+              <IconButton size="small" color="success" onClick={() => onCertificacion(info.row.original)} title="Certificación" aria-label="Gestionar certificación">
+                <ArticleIcon fontSize="small" />
+              </IconButton>
+            )}
+            {onEdit && (
+              <IconButton size="small" color="primary" onClick={() => handleEdit(info.row.original)} title="Editar" aria-label="Editar sensei">
+                <EditIcon fontSize="small" />
+              </IconButton>
+            )}
+            {onDelete && (
+              <IconButton size="small" color="error" onClick={() => handleDelete(info.row.original)} title="Eliminar" aria-label="Eliminar sensei">
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            )}
+          </Box>
+        ),
+      }),
+    ] : []),
+  ], [onEdit, onDelete, onCertificacion, toggleStatus, readOnly, showUnassigned])
+
+  // Filtrado local por club + unassigned (encima del filteredData del hook)
+  const localFilteredData = useMemo(() => {
+    const data = filteredData.filter(s => {
+      if (clubId) {
+        return s.club_id === clubId || (showUnassigned && !s.club_id)
+      }
+      return true
+    })
+    return [...data].sort((a, b) => {
+      if (showUnassigned) {
+        const aNoClub = !a.club_id ? 1 : 0
+        const bNoClub = !b.club_id ? 1 : 0
+        if (aNoClub !== bNoClub) return aNoClub - bNoClub
+      }
+      return 0
+    })
+  }, [filteredData, clubId, showUnassigned])
 
   const table = useReactTable({
-    data: filteredData,
+    data: localFilteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -259,20 +293,22 @@ export default function SenseiList({
                 </Select>
               </FormControl>
 
-              <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white' }}>
-                <InputLabel>Estado</InputLabel>
-                <Select value={estadoFilter} label="Estado" onChange={(e) => dispatch({ type: 'SET_ESTADO_FILTER', payload: e.target.value })}>
-                  <MenuItem value="all">Todos los estados</MenuItem>
-                  <MenuItem value="activo">Activos</MenuItem>
-                  <MenuItem value="inactivo">Inactivos</MenuItem>
-                </Select>
-              </FormControl>
+              {!readOnly && (
+                <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white' }}>
+                  <InputLabel>Estado</InputLabel>
+                  <Select value={estadoFilter} label="Estado" onChange={(e) => dispatch({ type: 'SET_ESTADO_FILTER', payload: e.target.value })}>
+                    <MenuItem value="all">Todos los estados</MenuItem>
+                    <MenuItem value="activo">Activos</MenuItem>
+                    <MenuItem value="inactivo">Inactivos</MenuItem>
+                  </Select>
+                </FormControl>
+              )}
             </Stack>
           </Collapse>
         </Stack>
       </Paper>
 
-      {filteredData.length === 0 ? (
+      {localFilteredData.length === 0 ? (
         <Box textAlign="center" py={4}>
           <Typography variant="h6" color="text.secondary">
             No se encontraron senseis con los filtros aplicados

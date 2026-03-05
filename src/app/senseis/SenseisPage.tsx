@@ -91,7 +91,8 @@ export default function SenseisPage() {
           onDelete={handleDelete}
           onCertificacion={handleCertificacion}
           refreshTrigger={refreshTrigger}
-          clubId={clubId}
+          clubId={clubId || undefined}
+          showUnassigned={user?.rol === ROL.ENCARGADO}
         />
 
         {/* Diálogo de Creación */}

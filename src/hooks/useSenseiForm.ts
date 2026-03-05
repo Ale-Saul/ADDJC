@@ -21,7 +21,7 @@ export function useSenseiForm(sensei?: Sensei | null, user?: User, onSuccess?: (
     mode: 'onBlur',
     reValidateMode: 'onChange',
     defaultValues: {
-      club_id: '',
+      club_id: sensei?.club_id || (user?.rol === 'encargado' && !sensei ? user?.club_id || '' : ''),
       nombres: '',
       apellido_paterno: '',
       apellido_materno: '',

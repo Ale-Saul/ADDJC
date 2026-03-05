@@ -53,7 +53,7 @@ export const pagoController = {
     const validation = createPagoSchema.safeParse(pagoData)
     
     if (!validation.success) {
-      const errorMessage = validation.error.errors.map(e => e.message).join(', ')
+      const errorMessage = validation.error.issues.map(e => e.message).join(', ')
       return { success: false, error: errorMessage }
     }
 
@@ -74,7 +74,7 @@ export const pagoController = {
     // Validación básica de campos con Zod
     const validation = updatePagoSchema.safeParse(pagoData)
     if (!validation.success) {
-      const errorMessage = validation.error.errors.map(e => e.message).join(', ')
+      const errorMessage = validation.error.issues.map(e => e.message).join(', ')
       return { success: false, error: errorMessage }
     }
 

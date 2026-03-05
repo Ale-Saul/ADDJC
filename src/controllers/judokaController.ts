@@ -51,12 +51,12 @@ export const judokaController = {
   async createJudoka(judokaData: JudokaCreate): Promise<ApiResponse<Judoka>> {
     const namesValidation = personNamesCreateSchema.safeParse(judokaData)
     if (!namesValidation.success) {
-      return { success: false, error: namesValidation.error.errors[0].message }
+      return { success: false, error: namesValidation.error.issues[0]?.message ?? 'Error de validación' }
     }
 
     const pesoValidation = pesoSchema.safeParse(judokaData.peso_competitivo)
     if (!pesoValidation.success) {
-      return { success: false, error: pesoValidation.error.errors[0].message }
+      return { success: false, error: pesoValidation.error.issues[0]?.message ?? 'Error de validación' }
     }
 
     // Generar contraseña automática basada en el carnet
@@ -88,7 +88,7 @@ export const judokaController = {
 
     const namesValidation = personNamesUpdateSchema.safeParse(judokaData)
     if (!namesValidation.success) {
-      return { success: false, error: namesValidation.error.errors[0].message }
+      return { success: false, error: namesValidation.error.issues[0]?.message ?? 'Error de validación' }
     }
 
     if (judokaData.fecha_nacimiento !== undefined && judokaData.fecha_nacimiento !== null && judokaData.fecha_nacimiento.trim() === '') {
@@ -97,7 +97,7 @@ export const judokaController = {
 
     const pesoValidation = pesoSchema.safeParse(judokaData.peso_competitivo)
     if (!pesoValidation.success) {
-      return { success: false, error: pesoValidation.error.errors[0].message }
+      return { success: false, error: pesoValidation.error.issues[0]?.message ?? 'Error de validación' }
     }
 
     return await judokaService.update(id, judokaData)

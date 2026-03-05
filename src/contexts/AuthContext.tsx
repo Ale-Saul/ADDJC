@@ -45,7 +45,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (credentials: LoginCredentials) => {
     const response = await authController.signIn(credentials)
     if (response.success && response.data) {
-      setUser(response.data.user)
+      // Reload full profile via getCurrentUser so club_id and other
+      // role-specific fields are always fetched from a fresh session.
+      await loadUser()
     }
     return response
   }

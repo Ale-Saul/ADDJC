@@ -163,8 +163,8 @@ export const personNamesCreateSchema = z.object({
     .min(2, 'El nombre debe tener al menos 2 caracteres')
     .max(100, 'El nombre no puede exceder 100 caracteres')
     .regex(nameRegex, 'Solo se permiten letras y espacios'),
-  apellido_paterno: z.string().optional(),
-  apellido_materno: z.string().optional(),
+  apellido_paterno: z.string().nullish(),
+  apellido_materno: z.string().nullish(),
 }).superRefine((d, ctx) => {
   const paterno = (d.apellido_paterno ?? '').trim()
   const materno = (d.apellido_materno ?? '').trim()
@@ -190,10 +190,10 @@ export const personNamesUpdateSchema = z.object({
     .max(100, 'El nombre no puede exceder 100 caracteres')
     .regex(nameRegex, 'Solo se permiten letras y espacios')
     .optional(),
-  apellido_paterno: z.string().optional(),
-  apellido_materno: z.string().optional(),
+  apellido_paterno: z.string().nullish(),
+  apellido_materno: z.string().nullish(),
 }).superRefine((d, ctx) => {
-  if (d.apellido_paterno !== undefined || d.apellido_materno !== undefined) {
+  if (d.apellido_paterno != null || d.apellido_materno != null) {
     const paterno = (d.apellido_paterno ?? '').trim()
     const materno = (d.apellido_materno ?? '').trim()
     if (!paterno && !materno) {

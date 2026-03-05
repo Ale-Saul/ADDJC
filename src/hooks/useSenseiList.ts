@@ -77,13 +77,13 @@ export function useSenseiList(initialSearch: string = '') {
     modifiedIds: new Set()
   })
 
-  const loadSenseis = useCallback(async (clubId?: string) => {
+  const loadSenseis = useCallback(async (_clubId?: string) => {
     dispatch({ type: 'SET_LOADING', payload: true })
     dispatch({ type: 'SET_ERROR', payload: null })
     try {
-      const response = clubId 
-        ? await senseiController.getSenseisByClub(clubId)
-        : await senseiController.getAllSenseis(true)
+      // Siempre cargamos todos los senseis y filtramos localmente
+      // Esto permite showUnassigned (sin club) funcione igual que en judokas
+      const response = await senseiController.getAllSenseis(true)
         
       if (response.success && response.data) {
         dispatch({ type: 'SET_SENSEIS', payload: response.data })

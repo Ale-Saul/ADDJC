@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { z } from 'zod'
 import { Controller, type FieldErrors } from 'react-hook-form'
 import {
@@ -10,7 +11,11 @@ import {
   CircularProgress,
   Typography,
   Autocomplete,
+  Chip,
+  Paper,
 } from '@mui/material'
+import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1'
+import PersonRemoveAlt1Icon from '@mui/icons-material/PersonRemoveAlt1'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
@@ -32,8 +37,18 @@ interface SenseiFormProps {
 
 export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormProps) {
   const { user } = useAuth()
-  const { form, clubes, loading, loadingClubes, error, success, setError, onSubmit } = useSenseiForm(sensei, user, onSuccess)
-  const { control, handleSubmit, setFocus, trigger, formState: { errors } } = form
+  const { form, clubes, loading, loadingClubes, error, success, setError, onSubmit } = useSenseiForm(sensei, user || undefined, onSuccess)
+  const { control, handleSubmit, setFocus, trigger, setValue, formState: { errors } } = form
+
+  const isEncargado = user?.rol === ROL.ENCARGADO
+  const isEditing = !!sensei
+
+  // Local state to drive panel switching reliably (independent of watch/Autocomplete)
+  const [inMyClub, setInMyClub] = useState<boolean>(
+    !!sensei?.club_id && sensei.club_id === user?.club_id
+  )
+  const senseiHasNoClub = isEditing && !inMyClub
+  const senseiInMyClub = isEditing && inMyClub
 
   const fieldError = (name: keyof typeof errors) => {
     return {
@@ -105,10 +120,75 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
             />
           )}
         />
-        {user?.rol === ROL.ENCARGADO && (
+        {user?.rol === ROL.ENCARGADO && (isEditing ? null : (
           <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5, mb: 1, ml: 1 }}>
             Los senseis se crearán automáticamente en tu club
           </Typography>
+        ))}
+        {isEncargado && isEditing && senseiHasNoClub && user?.club_id && (
+          <Paper
+            variant="outlined"
+            sx={{
+              mt: -1,
+              mb: 1,
+              px: 2,
+              py: 1.2,
+              borderRadius: 2,
+              borderColor: 'primary.light',
+              bgcolor: 'primary.50',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              Este sensei no pertenece a ningún club
+            </Typography>
+            <Button
+              size="small"
+              variant="contained"
+              color="primary"
+              startIcon={<PersonAddAlt1Icon fontSize="small" />}
+              onClick={() => { setValue('club_id', user.club_id!, { shouldDirty: true }); setInMyClub(true) }}
+              sx={{ textTransform: 'none', borderRadius: 2, whiteSpace: 'nowrap', ml: 2 }}
+            >
+              Inscribir en {user.club_nombre || 'mi club'}
+            </Button>
+          </Paper>
+        )}
+        {isEncargado && senseiInMyClub && (
+          <Paper
+            variant="outlined"
+            sx={{
+              mt: -1,
+              mb: 1,
+              px: 2,
+              py: 1.2,
+              borderRadius: 2,
+              borderColor: 'error.light',
+              bgcolor: 'error.50',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Chip label={user?.club_nombre || 'Mi club'} color="primary" size="small" sx={{ fontWeight: 500 }} />
+              <Typography variant="body2" color="text.secondary">
+                inscrito en tu club
+              </Typography>
+            </Box>
+            <Button
+              size="small"
+              variant="outlined"
+              color="error"
+              startIcon={<PersonRemoveAlt1Icon fontSize="small" />}
+              onClick={() => { setValue('club_id', '', { shouldDirty: true }); setInMyClub(false) }}
+              sx={{ textTransform: 'none', borderRadius: 2, whiteSpace: 'nowrap', ml: 2 }}
+            >
+              Quitar del club
+            </Button>
+          </Paper>
         )}
 
         <Controller

@@ -28,7 +28,7 @@ export const clubController = {
   async createClub(clubData: ClubCreate): Promise<ApiResponse<Club>> {
     const validation = clubControllerCreateSchema.safeParse(clubData)
     if (!validation.success) {
-      return { success: false, error: validation.error.errors[0].message }
+      return { success: false, error: validation.error.issues[0]?.message ?? 'Error de validación' }
     }
 
     // Por defecto, el club se crea como activo
@@ -56,7 +56,7 @@ export const clubController = {
 
     const validation = clubControllerUpdateSchema.safeParse(clubData)
     if (!validation.success) {
-      return { success: false, error: validation.error.errors[0].message }
+      return { success: false, error: validation.error.issues[0]?.message ?? 'Error de validación' }
     }
 
     return await clubService.update(id, clubData)

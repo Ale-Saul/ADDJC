@@ -90,7 +90,7 @@ export async function createMovimiento(
   const validation = createMovimientoSchema.safeParse(movimiento)
   
   if (!validation.success) {
-    const errorMessage = validation.error.errors.map(e => e.message).join(', ')
+    const errorMessage = validation.error.issues.map(e => e.message).join(', ')
     return { success: false, error: errorMessage }
   }
 
@@ -122,7 +122,7 @@ export async function updateMovimiento(
   const validation = updateMovimientoSchema.safeParse(updates)
   
   if (!validation.success) {
-    const errorMessage = validation.error.errors.map(e => e.message).join(', ')
+    const errorMessage = validation.error.issues.map(e => e.message).join(', ')
     return { success: false, error: errorMessage }
   }
 
