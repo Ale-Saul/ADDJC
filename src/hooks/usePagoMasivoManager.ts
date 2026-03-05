@@ -127,6 +127,8 @@ export function usePagoMasivoManager({ judokas, onSuccess }: { judokas: Judoka[]
     success,
     createdCount,
     onSubmit,
-    setError
+    setError,
+    watchTieneDescuento,
+    watchTipoDescuento,
   }
 }

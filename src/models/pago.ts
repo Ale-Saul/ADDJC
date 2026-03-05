@@ -27,6 +27,7 @@ export interface Pago {
   fecha_pago: string | null
   metodo_pago: string | null
   comprobante_url: string | null
+  notas: string | null
   observaciones_pago: string | null
   creador_id: string
   pagador_id: string | null
@@ -53,6 +54,7 @@ export interface PagoCreate {
   fecha_pago?: string | null
   metodo_pago?: string | null
   comprobante_url?: string | null
+  notas?: string | null
   observaciones_pago?: string | null
   creador_id: string
   activo?: boolean
@@ -73,6 +75,7 @@ export interface PagoUpdate {
   fecha_pago?: string | null
   metodo_pago?: string | null
   comprobante_url?: string | null
+  notas?: string | null
   observaciones_pago?: string | null
   pagador_id?: string | null
   activo?: boolean

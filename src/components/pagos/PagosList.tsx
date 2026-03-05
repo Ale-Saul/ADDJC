@@ -22,7 +22,9 @@ import {
   Button,
   TextField,
   InputAdornment,
-  Stack
+  Stack,
+  Alert,
+  Snackbar,
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import PaymentIcon from '@mui/icons-material/Payment'
@@ -39,6 +41,7 @@ import {
 import { Pago } from '@/models/pago'
 import RegistrarPagoForm from './RegistrarPagoForm'
 import EditarPagoForm from './EditarPagoForm'
+import ConfirmDialog from '@/components/common/ConfirmDialog'
 import { formatters } from '@/utils/formatters'
 import { ESTADO_PAGO, TIPO_PAGO_LABELS } from '@/constants/pagos'
 import { usePagosList } from '@/hooks/usePagosList'
@@ -51,8 +54,11 @@ interface PagosListProps {
 }
 
 export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: PagosListProps) {
-  const { pagos, loading, deleting, deletePago, fetchPagos } = usePagosList(judokaId, onPagoDeleted)
-  
+  const {
+    pagos, loading, deleting, fetchError, deleteError,
+    pagoToDelete, fetchPagos, requestDelete, confirmDelete, cancelDelete, clearDeleteError,
+  } = usePagosList(judokaId, onPagoDeleted)
+
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedPagos, setSelectedPagos] = useState<string[]>([])
   const [openRegistrarDialog, setOpenRegistrarDialog] = useState(false)
@@ -62,7 +68,7 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
   // Filtrado de datos
   const filteredData = useMemo(() => {
     const search = searchTerm.toLowerCase()
-    return pagos.filter(p => 
+    return pagos.filter(p =>
       p.concepto.toLowerCase().includes(search) ||
       (p.descripcion?.toLowerCase() || '').includes(search)
     )
@@ -161,7 +167,7 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
             <IconButton
               color="error"
               size="small"
-              onClick={() => deletePago(info.row.original)}
+              onClick={() => requestDelete(info.row.original)}
               disabled={deleting === info.row.original.id}
             >
               {deleting === info.row.original.id ? (
@@ -174,7 +180,7 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
         </Box>
       ),
     }),
-  ], [deleting, deletePago])
+  ], [deleting, requestDelete])
 
   const table = useReactTable({
     data: filteredData,
@@ -208,6 +214,14 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
     return (
       <Box display="flex" justifyContent="center" p={5}>
         <CircularProgress />
+      </Box>
+    )
+  }
+
+  if (fetchError) {
+    return (
+      <Box p={2}>
+        <Alert severity="error">{fetchError}</Alert>
       </Box>
     )
   }
@@ -257,7 +271,7 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
           Registrar Seleccionados ({selectedPagos.length})
         </Button>
       </Stack>
-      
+
       <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
         <Table size="small">
           <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
@@ -293,6 +307,29 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
         onPageChange={(page) => table.setPageIndex(page - 1)}
         onItemsPerPageChange={(size) => table.setPageSize(size)}
       />
+
+      {/* Confirm delete dialog */}
+      <ConfirmDialog
+        open={!!pagoToDelete}
+        title="Eliminar pago"
+        message={`¿Estás seguro de eliminar el pago "${pagoToDelete?.concepto}"? Esta acción lo marcará como inactivo.`}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        onConfirm={confirmDelete}
+        onClose={cancelDelete}
+      />
+
+      {/* Error snackbar */}
+      <Snackbar
+        open={!!deleteError}
+        autoHideDuration={4000}
+        onClose={clearDeleteError}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="error" onClose={clearDeleteError} sx={{ width: '100%' }}>
+          {deleteError}
+        </Alert>
+      </Snackbar>
 
       <Dialog open={openRegistrarDialog} onClose={() => setOpenRegistrarDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle fontWeight="bold">Registrar Pagos</DialogTitle>

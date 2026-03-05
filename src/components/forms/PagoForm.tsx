@@ -14,7 +14,8 @@ import {
   Typography,
   Switch,
   FormControlLabel,
-  InputAdornment
+  InputAdornment,
+  Stack
 } from '@mui/material'
 import type { SelectChangeEvent } from '@mui/material/Select'
 import { PagoCreate, TipoPago, TipoDescuento, RazonDescuento, EstadoPago } from '@/models/pago'
@@ -88,7 +89,7 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: value === '' ? '' : parseFloat(value)
+      [name]: value === '' ? null : parseFloat(value)
     }))
     setError(null)
     setSuccess(false)
@@ -119,7 +120,7 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
       } : name === 'tiene_descuento' && checked ? {
         tipo_descuento: TIPO_DESCUENTO.PORCENTAJE,
         razon_descuento: RAZON_DESCUENTO.BECA,
-        descuento_porcentaje: 0 // Asegurar que tenga un valor inicial para mostrar los campos
+        descuento_porcentaje: null
       } : {})
     }))
     setError(null)
@@ -219,10 +220,10 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
         label="Monto Base"
         name="monto_base"
         type="text"
-        value={formData.monto_base === 0 || formData.monto_base === '' ? '' : formData.monto_base}
+        value={formData.monto_base || ''}
         onChange={(e) => {
           const val = e.target.value.replace(/[^0-9.]/g, '')
-          setFormData(prev => ({ ...prev, monto_base: val === '' ? '' : parseFloat(val) }))
+          setFormData(prev => ({ ...prev, monto_base: parseFloat(val) || 0 }))
           setError(null)
           setSuccess(false)
         }}
@@ -273,16 +274,18 @@ export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }
                 // Limpiar valores al cambiar tipo
                 setFormData(prev => ({
                   ...prev,
-                  descuento_porcentaje: e.target.value === TIPO_DESCUENTO.PORCENTAJE ? 0 : null,
-                  descuento_monto: e.target.value === TIPO_DESCUENTO.MONTO_FIJO ? 0 : null
+                  descuento_porcentaje: e.target.value === TIPO_DESCUENTO.PORCENTAJE ? null : null,
+                  descuento_monto: e.target.value === TIPO_DESCUENTO.MONTO_FIJO ? null : null
                 }));
               }}
               label="Tipo de Descuento"
               required
             >
-              {Object.entries(TIPO_DESCUENTO_LABELS).map(([value, label]) => (
-                <MenuItem key={value} value={value}>{label}</MenuItem>
-              ))}
+              {Object.entries(TIPO_DESCUENTO_LABELS)
+                .filter(([value]) => value !== TIPO_DESCUENTO.NINGUNO)
+                .map(([value, label]) => (
+                  <MenuItem key={value} value={value}>{label}</MenuItem>
+                ))}
             </Select>
           </FormControl>
 

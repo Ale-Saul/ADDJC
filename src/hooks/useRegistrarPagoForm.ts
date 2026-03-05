@@ -7,7 +7,6 @@ import { pagoController } from '@/controllers/pagoController'
 import { ESTADO_PAGO, METODO_PAGO } from '@/constants/pagos'
 
 const registrarPagoSchema = z.object({
-  fecha_pago: z.string().min(1, 'La fecha de pago es requerida'),
   metodo_pago: z.string().min(1, 'El método de pago es requerido'),
   observaciones_pago: z.string().optional().nullable(),
 })
@@ -21,7 +20,6 @@ export function useRegistrarPagoForm(pagos: Pago[], userId: string | undefined, 
     resolver: zodResolver(registrarPagoSchema),
     mode: 'onTouched',
     defaultValues: {
-      fecha_pago: new Date().toISOString().split('T')[0],
       metodo_pago: METODO_PAGO.EFECTIVO as string,
       observaciones_pago: '',
     },
@@ -32,10 +30,11 @@ export function useRegistrarPagoForm(pagos: Pago[], userId: string | undefined, 
     setError(null)
 
     try {
+      const fechaPago = new Date().toISOString()
       const updatePromises = pagos.map(pago => 
         pagoController.updatePago(pago.id, {
           estado: ESTADO_PAGO.PAGADO,
-          fecha_pago: data.fecha_pago,
+          fecha_pago: fechaPago,
           metodo_pago: data.metodo_pago,
           observaciones_pago: data.observaciones_pago || null,
           pagador_id: userId || null

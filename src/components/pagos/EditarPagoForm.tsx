@@ -12,7 +12,8 @@ import {
   FormControlLabel,
   InputAdornment,
   Stack,
-  Divider
+  Divider,
+  Autocomplete
 } from '@mui/material'
 import { Pago } from '@/models/pago'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
@@ -20,6 +21,10 @@ import dayjs from 'dayjs'
 import { Controller } from 'react-hook-form'
 import { TIPO_DESCUENTO, TIPO_PAGO_LABELS, TIPO_DESCUENTO_LABELS, RAZON_DESCUENTO_LABELS } from '@/constants/pagos'
 import { useEditarPagoForm } from '@/hooks/useEditarPagoForm'
+
+const TIPO_PAGO_OPTIONS = Object.entries(TIPO_PAGO_LABELS)
+  .map(([value, label]) => ({ value, label }))
+  .sort((a, b) => a.label.localeCompare(b.label, 'es'))
 
 interface EditarPagoFormProps {
   pago: Pago
@@ -64,20 +69,24 @@ export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPago
           name="tipo_pago"
           control={form.control}
           render={({ field }) => (
-            <TextField
-              {...field}
-              select
-              fullWidth
-              label="Tipo de Pago"
-              required
+            <Autocomplete
+              options={TIPO_PAGO_OPTIONS}
+              getOptionLabel={(opt) => opt.label}
+              isOptionEqualToValue={(opt, val) => opt.value === val.value}
+              value={TIPO_PAGO_OPTIONS.find(o => o.value === field.value) ?? null}
+              onChange={(_, v) => field.onChange(v?.value ?? '')}
               disabled={loading}
-              error={!!form.formState.errors.tipo_pago}
-              helperText={form.formState.errors.tipo_pago?.message}
-            >
-              {Object.entries(TIPO_PAGO_LABELS).map(([value, label]) => (
-                <MenuItem key={value} value={value}>{label}</MenuItem>
-              ))}
-            </TextField>
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Tipo de Pago"
+                  required
+                  error={!!form.formState.errors.tipo_pago}
+                  helperText={form.formState.errors.tipo_pago?.message}
+                  inputProps={{ ...params.inputProps, autoComplete: 'off' }}
+                />
+              )}
+            />
           )}
         />
 

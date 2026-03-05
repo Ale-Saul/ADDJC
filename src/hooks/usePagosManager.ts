@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import { Judoka } from '@/models/judoka'
 import { Pago } from '@/models/pago'
 import { useJudokas } from '@/hooks/useJudokas'
-import { usePagos } from '@/hooks/usePagos'
+import { pagoController } from '@/controllers/pagoController'
 import { clubController } from '@/controllers/clubController'
 import { Club } from '@/models/club'
 import { CATEGORIES } from '@/utils/constants'
@@ -10,7 +10,25 @@ import { ROL } from '@/constants/roles'
 
 export function usePagosManager(user: any) {
   const isAdmin = user?.rol === ROL.ADMIN
-  
+
+  // Estado de pagos
+  const [pagos, setPagos] = useState<Pago[]>([])
+  const [loadingPagos, setLoadingPagos] = useState(false)
+
+  const refreshPagos = useCallback(async () => {
+    setLoadingPagos(true)
+    const clubId = user?.club_id
+    const response = clubId
+      ? await pagoController.getPagosByClub(clubId)
+      : await pagoController.getAllPagos(false)
+    if (response.success && response.data) {
+      setPagos(response.data)
+    }
+    setLoadingPagos(false)
+  }, [user?.club_id])
+
+  useEffect(() => { refreshPagos() }, [refreshPagos])
+
   // Estados para filtros
   const [showFilters, setShowFilters] = useState(false)
   const [senseiFilter, setSenseiFilter] = useState<string>('all')
@@ -26,12 +44,6 @@ export function usePagosManager(user: any) {
     setSearchTerm,
     refresh: refreshJudokas
   } = useJudokas({ clubId: user?.club_id || undefined, autoFetch: true })
-
-  const {
-    allPagos: pagos,
-    isLoading: loadingPagos,
-    refresh: refreshPagos,
-  } = usePagos({ clubId: user?.club_id || undefined })
 
   // Cargar clubes solo para admins
   useEffect(() => {

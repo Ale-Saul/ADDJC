@@ -12,7 +12,8 @@ import {
   FormControlLabel,
   InputAdornment,
   Stack,
-  Divider
+  Divider,
+  Autocomplete
 } from '@mui/material'
 import { Judoka } from '@/models/judoka'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
@@ -20,6 +21,10 @@ import dayjs from 'dayjs'
 import { Controller } from 'react-hook-form'
 import { TIPO_DESCUENTO, TIPO_PAGO_LABELS, TIPO_DESCUENTO_LABELS, RAZON_DESCUENTO_LABELS } from '@/constants/pagos'
 import { usePagoMasivoManager } from '@/hooks/usePagoMasivoManager'
+
+const TIPO_PAGO_OPTIONS = Object.entries(TIPO_PAGO_LABELS)
+  .map(([value, label]) => ({ value, label }))
+  .sort((a, b) => a.label.localeCompare(b.label, 'es'))
 
 interface PagoMasivoFormProps {
   judokas: Judoka[]
@@ -36,11 +41,10 @@ export default function PagoMasivoForm({ judokas, onSuccess, onCancel }: PagoMas
     success,
     createdCount,
     onSubmit,
-    setError
+    setError,
+    watchTieneDescuento,
+    watchTipoDescuento,
   } = usePagoMasivoManager({ judokas, onSuccess })
-
-  const watchTieneDescuento = form.watch('tiene_descuento')
-  const watchTipoDescuento = form.watch('tipo_descuento')
 
   return (
     <Box component="form" onSubmit={form.handleSubmit(onSubmit)} sx={{ mt: 2 }}>
@@ -71,20 +75,24 @@ export default function PagoMasivoForm({ judokas, onSuccess, onCancel }: PagoMas
           name="tipo_pago"
           control={form.control}
           render={({ field }) => (
-            <TextField
-              {...field}
-              select
-              fullWidth
-              label="Tipo de Pago"
-              required
+            <Autocomplete
+              options={TIPO_PAGO_OPTIONS}
+              getOptionLabel={(opt) => opt.label}
+              isOptionEqualToValue={(opt, val) => opt.value === val.value}
+              value={TIPO_PAGO_OPTIONS.find(o => o.value === field.value) ?? null}
+              onChange={(_, v) => field.onChange(v?.value ?? '')}
               disabled={loading}
-              error={!!form.formState.errors.tipo_pago}
-              helperText={form.formState.errors.tipo_pago?.message}
-            >
-              {Object.entries(TIPO_PAGO_LABELS).map(([value, label]) => (
-                <MenuItem key={value} value={value}>{label}</MenuItem>
-              ))}
-            </TextField>
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Tipo de Pago"
+                  required
+                  error={!!form.formState.errors.tipo_pago}
+                  helperText={form.formState.errors.tipo_pago?.message}
+                  inputProps={{ ...params.inputProps, autoComplete: 'off' }}
+                />
+              )}
+            />
           )}
         />
 
@@ -181,7 +189,18 @@ export default function PagoMasivoForm({ judokas, onSuccess, onCancel }: PagoMas
               control={
                 <Switch
                   checked={field.value}
-                  onChange={(e) => field.onChange(e.target.checked)}
+                  onChange={(e) => {
+                    field.onChange(e.target.checked)
+                    if (e.target.checked) {
+                      form.setValue('tipo_descuento', 'porcentaje')
+                      form.setValue('descuento_porcentaje', null)
+                      form.setValue('descuento_monto', null)
+                    } else {
+                      form.setValue('tipo_descuento', 'ninguno')
+                      form.setValue('descuento_porcentaje', null)
+                      form.setValue('descuento_monto', null)
+                    }
+                  }}
                   disabled={loading}
                 />
               }
@@ -213,9 +232,11 @@ export default function PagoMasivoForm({ judokas, onSuccess, onCancel }: PagoMas
                     }
                   }}
                 >
-                  {Object.entries(TIPO_DESCUENTO_LABELS).map(([value, label]) => (
-                    <MenuItem key={value} value={value}>{label}</MenuItem>
-                  ))}
+                  {Object.entries(TIPO_DESCUENTO_LABELS)
+                    .filter(([value]) => value !== 'ninguno')
+                    .map(([value, label]) => (
+                      <MenuItem key={value} value={value}>{label}</MenuItem>
+                    ))}
                 </TextField>
               )}
             />
