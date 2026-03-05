@@ -42,34 +42,30 @@ export function useReportes() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Cargar clubes si es admin
-        if (isAdmin) {
-          const clubesResponse = await clubController.getAllClubes()
-          if (clubesResponse.success && clubesResponse.data) {
-            setClubes(clubesResponse.data)
-          }
-        }
-
-        // Cargar pagos
-        const pagosResponse = isAdmin 
-          ? await pagoController.getAllPagos() 
-          : user?.club_id 
-            ? await pagoController.getPagosByClub(user.club_id)
-            : { success: true, data: [] }
+        const [pagosResponse, judokasResponse, clubesResponse] = await Promise.all([
+          isAdmin
+            ? pagoController.getAllPagos()
+            : user?.club_id
+              ? pagoController.getPagosByClub(user.club_id)
+              : Promise.resolve({ success: true, data: [] }),
+          isAdmin
+            ? judokaController.getAllJudokas(true)
+            : user?.club_id
+              ? judokaController.getJudokasByClub(user.club_id)
+              : Promise.resolve({ success: true, data: [] }),
+          isAdmin
+            ? clubController.getAllClubes()
+            : Promise.resolve({ success: true, data: [] })
+        ])
 
         if (pagosResponse.success && pagosResponse.data) {
           setPagos(pagosResponse.data)
         }
-
-        // Cargar judokas
-        const judokasResponse = isAdmin
-          ? await judokaController.getAllJudokas(true)
-          : user?.club_id
-            ? await judokaController.getJudokasByClub(user.club_id)
-            : { success: true, data: [] }
-
         if (judokasResponse.success && judokasResponse.data) {
           setJudokas(judokasResponse.data)
+        }
+        if (clubesResponse.success && clubesResponse.data) {
+          setClubes(clubesResponse.data)
         }
       } catch (error) {
         console.error('Error al cargar datos:', error)

@@ -58,20 +58,18 @@ export function useReportesAsociacion() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Cargar todos los pagos
-        const pagosResponse = await pagoController.getAllPagos()
+        const [pagosResponse, clubesResponse, judokasResponse] = await Promise.all([
+          pagoController.getAllPagos(),
+          clubController.getAllClubes(),
+          judokaController.getAllJudokas()
+        ])
+
         if (pagosResponse.success && pagosResponse.data) {
           setPagos(pagosResponse.data)
         }
-
-        // Cargar todos los clubes
-        const clubesResponse = await clubController.getAllClubes()
         if (clubesResponse.success && clubesResponse.data) {
           setClubes(clubesResponse.data)
         }
-
-        // Cargar todos los judokas
-        const judokasResponse = await judokaController.getAllJudokas()
         if (judokasResponse.success && judokasResponse.data) {
           setJudokas(judokasResponse.data)
         }

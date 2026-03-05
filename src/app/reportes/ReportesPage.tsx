@@ -9,7 +9,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Collapse,
   Stack,
   Table,
   TableBody,
@@ -28,9 +27,6 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 import DownloadIcon from '@mui/icons-material/Download'
 import AssessmentIcon from '@mui/icons-material/Assessment'
-import FilterListIcon from '@mui/icons-material/FilterList'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ClearIcon from '@mui/icons-material/Clear'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
@@ -55,8 +51,6 @@ export default function ReportesPage() {
     setSenseiFiltro,
     clubFiltro,
     setClubFiltro,
-    showFilters,
-    setShowFilters,
     isAdmin,
     clubes,
     judokas,
@@ -148,11 +142,13 @@ export default function ReportesPage() {
       getTipoLabel(p.tipo_pago),
       `Bs. ${p.monto_final.toFixed(2)}`,
       p.estado,
-      formatters.formatDate(p.fecha_vencimiento)
+      p.estado === ESTADO_PAGO.PAGADO && p.fecha_pago
+        ? formatters.formatDateTime(p.fecha_pago)
+        : formatters.formatDate(p.fecha_vencimiento)
     ])
 
     autoTable(doc, {
-      head: [['Fecha', 'Judoka', 'Concepto', 'Tipo', 'Monto', 'Estado', 'Vencimiento']],
+      head: [['Fecha', 'Judoka', 'Concepto', 'Tipo', 'Monto', 'Estado', 'Fecha Pago / Vencimiento']],
       body: tableData,
       startY: 48,
       styles: { fontSize: 8, cellPadding: 2 },
@@ -169,7 +165,7 @@ export default function ReportesPage() {
       },
       didDrawPage: (data) => {
         // Numeración de páginas (lado inferior derecho, solo número)
-        const str = `${doc.internal.getNumberOfPages()}`
+        const str = `${doc.getNumberOfPages()}`
         doc.setFontSize(10)
         const pageSize = doc.internal.pageSize
         const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight()
@@ -224,6 +220,7 @@ export default function ReportesPage() {
                 startIcon={<DownloadIcon />}
                 onClick={exportarPDF}
                 disabled={pagosFiltrados.length === 0}
+                sx={{ minHeight: '44px', textTransform: 'none' }}
               >
                 Exportar a PDF
               </Button>
@@ -233,6 +230,7 @@ export default function ReportesPage() {
                 startIcon={<DownloadIcon />}
                 onClick={exportarExcel}
                 disabled={pagosFiltrados.length === 0}
+                sx={{ minHeight: '44px', textTransform: 'none' }}
               >
                 Exportar a Excel
               </Button>
@@ -240,127 +238,122 @@ export default function ReportesPage() {
           </Box>
 
           {/* Filtros */}
-          <Paper sx={{ p: 3, mb: 3, backgroundColor: '#f8f9fa' }} variant="outlined">
-            <Stack spacing={2}>
-              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
-                <Box sx={{ display: 'flex', gap: 2, flexGrow: 1, flexWrap: 'wrap' }}>
-                  <DatePicker
-                    label="Fecha Inicio"
-                    value={fechaInicio ? dayjs(fechaInicio) : null}
-                    onChange={(newValue) => {
-                      setFechaInicio(newValue ? newValue.format('YYYY-MM-DD') : '')
-                    }}
-                    slotProps={{ textField: { size: 'small', sx: { minWidth: 150, backgroundColor: 'white' } } }}
-                    format="DD/MM/YYYY"
-                  />
-                  <DatePicker
-                    label="Fecha Fin"
-                    value={fechaFin ? dayjs(fechaFin) : null}
-                    onChange={(newValue) => {
-                      setFechaFin(newValue ? newValue.format('YYYY-MM-DD') : '')
-                    }}
-                    slotProps={{ textField: { size: 'small', sx: { minWidth: 150, backgroundColor: 'white' } } }}
-                    format="DD/MM/YYYY"
-                  />
-                </Box>
-
-                <Stack direction="row" spacing={1}>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<FilterListIcon />}
-                    endIcon={showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                    onClick={() => setShowFilters(!showFilters)}
-                    color={showFilters ? 'primary' : 'inherit'}
-                    sx={{ 
-                      backgroundColor: 'white',
-                      height: '40px',
-                      textTransform: 'none',
-                      borderColor: showFilters ? 'primary.main' : 'rgba(0, 0, 0, 0.23)'
-                    }}
+          <Paper sx={{ p: 2.5, mb: 3, backgroundColor: '#f8f9fa', borderRadius: 2 }} variant="outlined">
+            <Stack spacing={1.5}>
+              {/* Todos los filtros en una sola fila distribuida */}
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(auto-fit, minmax(155px, 1fr))' },
+                  gap: 1.5,
+                  alignItems: 'center'
+                }}
+              >
+                <DatePicker
+                  label="Desde"
+                  value={fechaInicio ? dayjs(fechaInicio) : null}
+                  onChange={(newValue) => setFechaInicio(newValue ? newValue.format('YYYY-MM-DD') : '')}
+                  slotProps={{ textField: { size: 'small', sx: { backgroundColor: 'white' }, fullWidth: true } }}
+                  format="DD/MM/YYYY"
+                />
+                <DatePicker
+                  label="Hasta"
+                  value={fechaFin ? dayjs(fechaFin) : null}
+                  onChange={(newValue) => setFechaFin(newValue ? newValue.format('YYYY-MM-DD') : '')}
+                  slotProps={{ textField: { size: 'small', sx: { backgroundColor: 'white' }, fullWidth: true } }}
+                  format="DD/MM/YYYY"
+                />
+                <FormControl size="small" fullWidth sx={{ backgroundColor: 'white' }}>
+                  <InputLabel>Estado</InputLabel>
+                  <Select
+                    value={estadoFiltro}
+                    label="Estado"
+                    onChange={(e) => setEstadoFiltro(e.target.value)}
                   >
-                    Filtros
-                  </Button>
-
-                  {(estadoFiltro !== 'todos' || tipoFiltro !== 'todos' || senseiFiltro !== 'todos') && (
-                    <Tooltip title="Limpiar filtros">
-                      <IconButton onClick={clearFilters} color="warning" size="small">
-                        <ClearIcon />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </Stack>
-              </Stack>
-
-              <Collapse in={showFilters}>
-                <Stack 
-                  direction={{ xs: 'column', md: 'row' }} 
-                  spacing={2} 
-                  alignItems="center"
-                  sx={{ pt: 1 }}
-                >
-                  <FormControl size="small" sx={{ minWidth: 180, backgroundColor: 'white' }}>
-                    <InputLabel>Estado</InputLabel>
+                    <MenuItem value="todos">Todos los estados</MenuItem>
+                    <MenuItem value={ESTADO_PAGO.PENDIENTE}>Pendiente</MenuItem>
+                    <MenuItem value={ESTADO_PAGO.PAGADO}>Pagado</MenuItem>
+                    <MenuItem value={ESTADO_PAGO.VENCIDO}>Vencido</MenuItem>
+                    <MenuItem value={ESTADO_PAGO.CANCELADO}>Cancelado</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl size="small" fullWidth sx={{ backgroundColor: 'white' }}>
+                  <InputLabel>Tipo de Pago</InputLabel>
+                  <Select
+                    value={tipoFiltro}
+                    label="Tipo de Pago"
+                    onChange={(e) => setTipoFiltro(e.target.value)}
+                  >
+                    <MenuItem value="todos">Todos los tipos</MenuItem>
+                    {Object.entries(TIPO_PAGO_LABELS).sort((a, b) => a[1].localeCompare(b[1])).map(([value, label]) => (
+                      <MenuItem key={value} value={value}>{label}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl size="small" fullWidth sx={{ backgroundColor: 'white' }}>
+                  <InputLabel>Sensei</InputLabel>
+                  <Select
+                    value={senseiFiltro}
+                    label="Sensei"
+                    onChange={(e) => setSenseiFiltro(e.target.value)}
+                  >
+                    <MenuItem value="todos">Todos los senseis</MenuItem>
+                    {senseisList.map(name => (
+                      <MenuItem key={name} value={name}>{name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                {isAdmin && (
+                  <FormControl size="small" fullWidth sx={{ backgroundColor: 'white' }}>
+                    <InputLabel>Club</InputLabel>
                     <Select
-                      value={estadoFiltro}
-                      label="Estado"
-                      onChange={(e) => setEstadoFiltro(e.target.value)}
+                      value={clubFiltro}
+                      label="Club"
+                      onChange={(e) => setClubFiltro(e.target.value)}
                     >
-                      <MenuItem value="todos">Todos los estados</MenuItem>
-                      <MenuItem value={ESTADO_PAGO.PENDIENTE}>Pendiente</MenuItem>
-                      <MenuItem value={ESTADO_PAGO.PAGADO}>Pagado</MenuItem>
-                      <MenuItem value={ESTADO_PAGO.VENCIDO}>Vencido</MenuItem>
-                      <MenuItem value={ESTADO_PAGO.CANCELADO}>Cancelado</MenuItem>
-                    </Select>
-                  </FormControl>
-
-                  {isAdmin && (
-                    <FormControl size="small" sx={{ minWidth: 180, backgroundColor: 'white' }}>
-                      <InputLabel>Club</InputLabel>
-                      <Select
-                        value={clubFiltro}
-                        label="Club"
-                        onChange={(e) => setClubFiltro(e.target.value)}
-                      >
-                        <MenuItem value="todos">Todos los clubes</MenuItem>
-                        {[...clubes].sort((a, b) => a.nombre_club.localeCompare(b.nombre_club)).map(club => (
-                          <MenuItem key={club.id} value={club.id}>
-                            {club.nombre_club}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  )}
-
-                  <FormControl size="small" sx={{ minWidth: 180, backgroundColor: 'white' }}>
-                    <InputLabel>Tipo de Pago</InputLabel>
-                    <Select
-                      value={tipoFiltro}
-                      label="Tipo de Pago"
-                      onChange={(e) => setTipoFiltro(e.target.value)}
-                    >
-                      <MenuItem value="todos">Todos los tipos</MenuItem>
-                      {Object.entries(TIPO_PAGO_LABELS).sort((a, b) => a[1].localeCompare(b[1])).map(([value, label]) => (
-                        <MenuItem key={value} value={value}>{label}</MenuItem>
+                      <MenuItem value="todos">Todos los clubes</MenuItem>
+                      {[...clubes].sort((a, b) => a.nombre_club.localeCompare(b.nombre_club)).map(club => (
+                        <MenuItem key={club.id} value={club.id}>
+                          {club.nombre_club}
+                        </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
-
-                  <FormControl size="small" sx={{ minWidth: 180, backgroundColor: 'white' }}>
-                    <InputLabel>Sensei</InputLabel>
-                    <Select
-                      value={senseiFiltro}
-                      label="Sensei"
-                      onChange={(e) => setSenseiFiltro(e.target.value)}
+                )}
+                {(estadoFiltro !== 'todos' || tipoFiltro !== 'todos' || senseiFiltro !== 'todos' || clubFiltro !== 'todos') && (
+                  <Tooltip title="Limpiar todos los filtros">
+                    <Button
+                      variant="outlined"
+                      color="warning"
+                      size="small"
+                      startIcon={<ClearIcon />}
+                      onClick={clearFilters}
+                      fullWidth
+                      sx={{ height: '40px', textTransform: 'none' }}
                     >
-                      <MenuItem value="todos">Todos los senseis</MenuItem>
-                      {senseisList.map(name => (
-                        <MenuItem key={name} value={name}>{name}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                      Limpiar
+                    </Button>
+                  </Tooltip>
+                )}
+              </Box>
+
+              {/* Chips de filtros activos */}
+              {(estadoFiltro !== 'todos' || tipoFiltro !== 'todos' || senseiFiltro !== 'todos' || clubFiltro !== 'todos') && (
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  {estadoFiltro !== 'todos' && (
+                    <Chip size="small" label={`Estado: ${estadoFiltro}`} onDelete={() => setEstadoFiltro('todos')} color="primary" variant="outlined" />
+                  )}
+                  {tipoFiltro !== 'todos' && (
+                    <Chip size="small" label={`Tipo: ${getTipoLabel(tipoFiltro)}`} onDelete={() => setTipoFiltro('todos')} color="primary" variant="outlined" />
+                  )}
+                  {senseiFiltro !== 'todos' && (
+                    <Chip size="small" label={`Sensei: ${senseiFiltro}`} onDelete={() => setSenseiFiltro('todos')} color="primary" variant="outlined" />
+                  )}
+                  {isAdmin && clubFiltro !== 'todos' && (
+                    <Chip size="small" label={`Club: ${clubes.find(c => c.id === clubFiltro)?.nombre_club}`} onDelete={() => setClubFiltro('todos')} color="primary" variant="outlined" />
+                  )}
                 </Stack>
-              </Collapse>
+              )}
             </Stack>
           </Paper>
 
@@ -473,7 +466,7 @@ export default function ReportesPage() {
                     <TableCell>Tipo</TableCell>
                     <TableCell align="right">Monto</TableCell>
                     <TableCell>Estado</TableCell>
-                    <TableCell>Vencimiento</TableCell>
+                    <TableCell>Fecha Pago / Vencimiento</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -508,7 +501,10 @@ export default function ReportesPage() {
                         </TableCell>
                         <TableCell>{getEstadoChip(pago.estado)}</TableCell>
                         <TableCell>
-                          {formatters.formatDate(pago.fecha_vencimiento)}
+                          {pago.estado === ESTADO_PAGO.PAGADO && pago.fecha_pago
+                            ? <Typography variant="body2" color="success.dark">{formatters.formatDateTime(pago.fecha_pago)}</Typography>
+                            : formatters.formatDate(pago.fecha_vencimiento)
+                          }
                         </TableCell>
                       </TableRow>
                     )

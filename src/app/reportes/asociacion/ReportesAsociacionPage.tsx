@@ -18,16 +18,12 @@ import {
   Select,
   FormControl,
   InputLabel,
-  Collapse,
   Stack,
   Tooltip,
-  IconButton
+  Chip
 } from '@mui/material'
 import DownloadIcon from '@mui/icons-material/Download'
 import AssessmentIcon from '@mui/icons-material/Assessment'
-import FilterListIcon from '@mui/icons-material/FilterList'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ClearIcon from '@mui/icons-material/Clear'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
@@ -52,8 +48,6 @@ export default function ReportesAsociacionPage() {
     setClubSeleccionado,
     vistaDetalle,
     setVistaDetalle,
-    showFilters,
-    setShowFilters,
     clearFilters,
     resumenesPorClub,
     pagosConDetalles,
@@ -110,7 +104,7 @@ export default function ReportesAsociacionPage() {
           4: { cellWidth: 30, halign: 'right' }
         },
         didDrawPage: (data) => {
-          const str = `${doc.internal.getNumberOfPages()}`
+          const str = `${doc.getNumberOfPages()}`
           doc.setFontSize(10)
           const pageSize = doc.internal.pageSize
           const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight()
@@ -124,8 +118,16 @@ export default function ReportesAsociacionPage() {
         ? 'Todos los clubes' 
         : clubes.find(c => c.id === clubSeleccionado)?.nombre_club || ''
       
+      const totalCobradoJudokas = resumenesPorJudoka.reduce((sum, r) => sum + r.totalCobrado, 0)
+      const totalPendienteJudokas = resumenesPorJudoka.reduce((sum, r) => sum + r.totalPendiente, 0)
+      const totalVencidoJudokas = resumenesPorJudoka.reduce((sum, r) => sum + r.totalVencido, 0)
+      const totalPagosJudokas = resumenesPorJudoka.reduce((sum, r) => sum + r.cantidadPagos, 0)
+
       doc.setFontSize(10)
       doc.text(`Club: ${clubFiltro}`, 14, 42)
+      doc.text(`Total Cobrado: Bs. ${totalCobradoJudokas.toFixed(2)}`, 14, 48)
+      doc.text(`Total Pendiente: Bs. ${totalPendienteJudokas.toFixed(2)}`, 80, 48)
+      doc.text(`Total Vencido: Bs. ${totalVencidoJudokas.toFixed(2)}`, 146, 48)
       
       // Tabla de judokas
       const tableData = resumenesPorJudoka.map(r => {
@@ -144,9 +146,20 @@ export default function ReportesAsociacionPage() {
       autoTable(doc, {
         head: [['Judoka', 'Club', 'CI', 'Pagos', 'Cobrado', 'Pendiente', 'Vencido']],
         body: tableData,
-        startY: 48,
+        foot: [[
+          'TOTAL',
+          '',
+          '',
+          totalPagosJudokas.toString(),
+          `Bs. ${totalCobradoJudokas.toFixed(2)}`,
+          `Bs. ${totalPendienteJudokas.toFixed(2)}`,
+          `Bs. ${totalVencidoJudokas.toFixed(2)}`
+        ]],
+        showFoot: 'lastPage',
+        startY: 54,
         styles: { fontSize: 8, cellPadding: 2 },
         headStyles: { fillColor: [66, 139, 202], textColor: 255 },
+        footStyles: { fillColor: [66, 139, 202], textColor: 255, fontStyle: 'bold' },
         alternateRowStyles: { fillColor: [245, 245, 245] },
         columnStyles: {
           0: { cellWidth: 45 },
@@ -158,7 +171,7 @@ export default function ReportesAsociacionPage() {
           6: { cellWidth: 23, halign: 'right' }
         },
         didDrawPage: (data) => {
-          const str = `${doc.internal.getNumberOfPages()}`
+          const str = `${doc.getNumberOfPages()}`
           doc.setFontSize(10)
           const pageSize = doc.internal.pageSize
           const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight()
@@ -171,9 +184,20 @@ export default function ReportesAsociacionPage() {
       const clubFiltro = clubSeleccionado === 'todos' 
         ? 'Todos los clubes' 
         : clubes.find(c => c.id === clubSeleccionado)?.nombre_club || ''
+
+      const totalMontoFinalPagos = pagosConDetalles.reduce((sum, p) => sum + p.monto_final, 0)
+      const totalCobradoPagos = pagosConDetalles
+        .filter(p => p.estado === ESTADO_PAGO.PAGADO)
+        .reduce((sum, p) => sum + p.monto_final, 0)
+      const totalPendientePagos = pagosConDetalles
+        .filter(p => p.estado !== ESTADO_PAGO.PAGADO)
+        .reduce((sum, p) => sum + p.monto_final, 0)
       
       doc.setFontSize(10)
       doc.text(`Club: ${clubFiltro}`, 14, 42)
+      doc.text(`Total Cobrado: Bs. ${totalCobradoPagos.toFixed(2)}`, 14, 48)
+      doc.text(`Total Pendiente: Bs. ${totalPendientePagos.toFixed(2)}`, 80, 48)
+      doc.text(`Total General: Bs. ${totalMontoFinalPagos.toFixed(2)}`, 146, 48)
       
       // Tabla de pagos
       const tableData = pagosConDetalles.map(p => [
@@ -183,27 +207,43 @@ export default function ReportesAsociacionPage() {
         p.concepto,
         getTipoLabel(p.tipo_pago),
         `Bs. ${p.monto_final.toFixed(2)}`,
-        p.estado
+        p.estado,
+        p.estado === ESTADO_PAGO.PAGADO && p.fecha_pago
+          ? formatters.formatDateTime(p.fecha_pago)
+          : formatters.formatDate(p.fecha_vencimiento)
       ])
 
       autoTable(doc, {
-        head: [['Fecha', 'Judoka', 'Club', 'Concepto', 'Tipo', 'Monto', 'Estado']],
+        head: [['Fecha', 'Judoka', 'Club', 'Concepto', 'Tipo', 'Monto', 'Estado', 'Fecha Pago / Venc.']],
         body: tableData,
-        startY: 48,
+        foot: [[
+          '',
+          '',
+          '',
+          '',
+          'TOTAL',
+          `Bs. ${totalMontoFinalPagos.toFixed(2)}`,
+          '',
+          ''
+        ]],
+        showFoot: 'lastPage',
+        startY: 54,
         styles: { fontSize: 7, cellPadding: 2 },
         headStyles: { fillColor: [66, 139, 202], textColor: 255 },
+        footStyles: { fillColor: [66, 139, 202], textColor: 255, fontStyle: 'bold' },
         alternateRowStyles: { fillColor: [245, 245, 245] },
         columnStyles: {
-          0: { cellWidth: 22 },
-          1: { cellWidth: 35 },
-          2: { cellWidth: 30 },
-          3: { cellWidth: 35 },
-          4: { cellWidth: 25 },
-          5: { cellWidth: 22, halign: 'right' },
-          6: { cellWidth: 20, halign: 'center' }
+          0: { cellWidth: 20 },
+          1: { cellWidth: 30 },
+          2: { cellWidth: 25 },
+          3: { cellWidth: 30 },
+          4: { cellWidth: 22 },
+          5: { cellWidth: 20, halign: 'right' },
+          6: { cellWidth: 18, halign: 'center' },
+          7: { cellWidth: 24 }
         },
         didDrawPage: (data) => {
-          const str = `${doc.internal.getNumberOfPages()}`
+          const str = `${doc.getNumberOfPages()}`
           doc.setFontSize(10)
           const pageSize = doc.internal.pageSize
           const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight()
@@ -340,6 +380,7 @@ export default function ReportesAsociacionPage() {
                 startIcon={<DownloadIcon />}
                 onClick={exportarPDF}
                 disabled={resumenesPorClub.length === 0}
+                sx={{ minHeight: '44px', textTransform: 'none' }}
               >
                 Exportar a PDF
               </Button>
@@ -349,6 +390,7 @@ export default function ReportesAsociacionPage() {
                 startIcon={<DownloadIcon />}
                 onClick={exportarExcel}
                 disabled={resumenesPorClub.length === 0}
+                sx={{ minHeight: '44px', textTransform: 'none' }}
               >
                 Exportar a Excel
               </Button>
@@ -356,95 +398,95 @@ export default function ReportesAsociacionPage() {
           </Box>
 
           {/* Filtros */}
-          <Paper sx={{ p: 3, mb: 3, backgroundColor: '#f8f9fa' }} variant="outlined">
-            <Stack spacing={2}>
-              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
-                <Box sx={{ display: 'flex', gap: 2, flexGrow: 1, flexWrap: 'wrap' }}>
-                  <DatePicker
-                    label="Fecha Inicio"
-                    value={fechaInicio ? dayjs(fechaInicio) : null}
-                    onChange={(newValue) => {
-                      setFechaInicio(newValue ? newValue.format('YYYY-MM-DD') : '')
-                    }}
-                    slotProps={{ textField: { size: 'small', sx: { minWidth: 150, backgroundColor: 'white' } } }}
-                    format="DD/MM/YYYY"
-                  />
-                  <DatePicker
-                    label="Fecha Fin"
-                    value={fechaFin ? dayjs(fechaFin) : null}
-                    onChange={(newValue) => {
-                      setFechaFin(newValue ? newValue.format('YYYY-MM-DD') : '')
-                    }}
-                    slotProps={{ textField: { size: 'small', sx: { minWidth: 150, backgroundColor: 'white' } } }}
-                    format="DD/MM/YYYY"
-                  />
-                </Box>
-
-                <Stack direction="row" spacing={1}>
+          <Paper sx={{ p: 2.5, mb: 3, backgroundColor: '#f8f9fa', borderRadius: 2 }} variant="outlined">
+            <Stack spacing={1.5}>
+              <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(auto-fit, minmax(155px, 1fr))' },
+                gap: 1.5,
+                alignItems: 'center'
+              }}>
+                <DatePicker
+                  label="Desde"
+                  value={fechaInicio ? dayjs(fechaInicio) : null}
+                  onChange={(newValue) => {
+                    setFechaInicio(newValue ? newValue.format('YYYY-MM-DD') : '')
+                  }}
+                  slotProps={{ textField: { size: 'small', fullWidth: true, sx: { backgroundColor: 'white' } } }}
+                  format="DD/MM/YYYY"
+                />
+                <DatePicker
+                  label="Hasta"
+                  value={fechaFin ? dayjs(fechaFin) : null}
+                  onChange={(newValue) => {
+                    setFechaFin(newValue ? newValue.format('YYYY-MM-DD') : '')
+                  }}
+                  slotProps={{ textField: { size: 'small', fullWidth: true, sx: { backgroundColor: 'white' } } }}
+                  format="DD/MM/YYYY"
+                />
+                <FormControl size="small" fullWidth sx={{ backgroundColor: 'white' }}>
+                  <InputLabel>Club</InputLabel>
+                  <Select
+                    value={clubSeleccionado}
+                    label="Club"
+                    onChange={(e) => setClubSeleccionado(e.target.value)}
+                  >
+                    <MenuItem value="todos">Todos los clubes</MenuItem>
+                    {[...clubes].sort((a, b) => a.nombre_club.localeCompare(b.nombre_club)).map(club => (
+                      <MenuItem key={club.id} value={club.id}>
+                        {club.nombre_club}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl size="small" fullWidth sx={{ backgroundColor: 'white' }}>
+                  <InputLabel>Vista</InputLabel>
+                  <Select
+                    value={vistaDetalle}
+                    label="Vista"
+                    onChange={(e) => setVistaDetalle(e.target.value as 'club' | 'pagos' | 'judokas')}
+                  >
+                    <MenuItem value="club">Por Club</MenuItem>
+                    <MenuItem value="judokas">Por Judokas</MenuItem>
+                    <MenuItem value="pagos">Detalle de Pagos</MenuItem>
+                  </Select>
+                </FormControl>
+                {(clubSeleccionado !== 'todos' || vistaDetalle !== 'club') && (
                   <Button
                     variant="outlined"
                     size="small"
-                    startIcon={<FilterListIcon />}
-                    endIcon={showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                    onClick={() => setShowFilters(!showFilters)}
-                    color={showFilters ? 'primary' : 'inherit'}
-                    sx={{ 
-                      backgroundColor: 'white',
-                      height: '40px',
-                      textTransform: 'none',
-                      borderColor: showFilters ? 'primary.main' : 'rgba(0, 0, 0, 0.23)'
-                    }}
+                    startIcon={<ClearIcon />}
+                    onClick={clearFilters}
+                    color="warning"
+                    fullWidth
+                    sx={{ backgroundColor: 'white', height: '40px', textTransform: 'none' }}
                   >
-                    Filtros
+                    Limpiar
                   </Button>
-
-                  {(clubSeleccionado !== 'todos' || vistaDetalle !== 'club') && (
-                    <Tooltip title="Limpiar filtros">
-                      <IconButton onClick={clearFilters} color="warning" size="small">
-                        <ClearIcon />
-                      </IconButton>
-                    </Tooltip>
+                )}
+              </Box>
+              {(clubSeleccionado !== 'todos' || vistaDetalle !== 'club') && (
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  {clubSeleccionado !== 'todos' && (
+                    <Chip
+                      label={`Club: ${clubes.find(c => c.id === clubSeleccionado)?.nombre_club ?? clubSeleccionado}`}
+                      onDelete={() => setClubSeleccionado('todos')}
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                    />
+                  )}
+                  {vistaDetalle !== 'club' && (
+                    <Chip
+                      label={`Vista: ${vistaDetalle === 'judokas' ? 'Por Judokas' : 'Detalle de Pagos'}`}
+                      onDelete={() => setVistaDetalle('club')}
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                    />
                   )}
                 </Stack>
-              </Stack>
-
-              <Collapse in={showFilters}>
-                <Stack 
-                  direction={{ xs: 'column', md: 'row' }} 
-                  spacing={2} 
-                  alignItems="center"
-                  sx={{ pt: 1 }}
-                >
-                  <FormControl size="small" sx={{ minWidth: 250, backgroundColor: 'white' }}>
-                    <InputLabel>Club</InputLabel>
-                    <Select
-                      value={clubSeleccionado}
-                      label="Club"
-                      onChange={(e) => setClubSeleccionado(e.target.value)}
-                    >
-                      <MenuItem value="todos">Todos los clubes</MenuItem>
-                      {[...clubes].sort((a, b) => a.nombre_club.localeCompare(b.nombre_club)).map(club => (
-                        <MenuItem key={club.id} value={club.id}>
-                          {club.nombre_club}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-
-                  <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white' }}>
-                    <InputLabel>Vista</InputLabel>
-                    <Select
-                      value={vistaDetalle}
-                      label="Vista"
-                      onChange={(e) => setVistaDetalle(e.target.value as 'club' | 'pagos' | 'judokas')}
-                    >
-                      <MenuItem value="club">Por Club</MenuItem>
-                      <MenuItem value="judokas">Por Judokas</MenuItem>
-                      <MenuItem value="pagos">Detalle de Pagos</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Stack>
-              </Collapse>
+              )}
             </Stack>
           </Paper>
 
@@ -668,7 +710,7 @@ export default function ReportesAsociacionPage() {
                     <TableCell>Tipo</TableCell>
                     <TableCell align="right">Monto</TableCell>
                     <TableCell align="center">Estado</TableCell>
-                    <TableCell>Vencimiento</TableCell>
+                    <TableCell>Fecha Pago / Vencimiento</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -723,7 +765,10 @@ export default function ReportesAsociacionPage() {
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2">
-                          {formatters.formatDate(pago.fecha_vencimiento)}
+                          {pago.estado === ESTADO_PAGO.PAGADO && pago.fecha_pago
+                            ? <Typography variant="body2" color="success.dark">{formatters.formatDateTime(pago.fecha_pago)}</Typography>
+                            : formatters.formatDate(pago.fecha_vencimiento)
+                          }
                         </Typography>
                       </TableCell>
                     </TableRow>
