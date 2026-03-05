@@ -27,6 +27,7 @@ export default function SenseisPage() {
 
   // Si es encargado o sensei, filtrar por su club
   const clubId = (user?.rol === ROL.ENCARGADO || user?.rol === ROL.SENSEI) ? user.club_id : undefined
+  const isReadOnly = user?.rol === ROL.SENSEI
 
   const handleCreateSuccess = () => {
     createDialog.close()
@@ -71,12 +72,13 @@ export default function SenseisPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO]}>
+    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.SENSEI]}>
       <Layout>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4" component="h1">
             Gestión de Senseis
           </Typography>
+          {!isReadOnly && (
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -84,15 +86,17 @@ export default function SenseisPage() {
           >
             Nuevo Sensei
           </Button>
+          )}
         </Box>
 
         <SenseiList
-          onEdit={handleEdit}
-          onDelete={handleDelete}
+          onEdit={isReadOnly ? undefined : handleEdit}
+          onDelete={isReadOnly ? undefined : handleDelete}
           onCertificacion={handleCertificacion}
           refreshTrigger={refreshTrigger}
           clubId={clubId || undefined}
-          showUnassigned={user?.rol === ROL.ENCARGADO}
+          showUnassigned={user?.rol === ROL.ENCARGADO || user?.rol === ROL.ADMIN || user?.rol === ROL.ASOCIACION}
+          readOnly={isReadOnly}
         />
 
         {/* Diálogo de Creación */}

@@ -25,8 +25,10 @@ export default function JudokasPage() {
 
   // Determinar filtros según el rol
   const isJudoka = user?.rol === ROL.JUDOKA
-  const clubId = (user?.rol === ROL.ENCARGADO || isJudoka) ? user?.club_id : undefined
-  const entrenadorId = user?.rol === ROL.SENSEI ? user.sensei_id : undefined
+  const isSensei = user?.rol === ROL.SENSEI
+  const clubId = (user?.rol === ROL.ENCARGADO || isJudoka || isSensei) ? user?.club_id : undefined
+  const entrenadorId = undefined
+  const senseiId = isSensei ? user?.sensei_id : undefined
 
   const handleRefresh = () => {
     setRefreshTrigger(prev => prev + 1)
@@ -77,7 +79,7 @@ export default function JudokasPage() {
           <Typography variant="h4" component="h1">
             Gestión de Judokas
           </Typography>
-          {!isJudoka && (
+          {!isJudoka && !isSensei && (
             <Button
               variant="contained"
               startIcon={<AddIcon />}
@@ -92,10 +94,11 @@ export default function JudokasPage() {
         <JudokaList
           clubId={clubId}
           entrenadorId={entrenadorId}
+          senseiId={senseiId}
           refreshTrigger={refreshTrigger}
           onEdit={isJudoka ? undefined : handleEdit}
           onDelete={isJudoka ? undefined : handleDelete}
-          showUnassigned={user?.rol === ROL.ENCARGADO || user?.rol === ROL.SENSEI}
+          showUnassigned={user?.rol === ROL.ENCARGADO || isSensei || user?.rol === ROL.ADMIN || user?.rol === ROL.ASOCIACION}
           readOnly={isJudoka}
         />
 

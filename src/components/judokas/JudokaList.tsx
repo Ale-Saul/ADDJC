@@ -55,6 +55,7 @@ interface JudokaListProps {
   refreshTrigger?: number
   clubId?: string | null
   entrenadorId?: string
+  senseiId?: string
   searchTerm?: string
   itemsPerPage?: number
   showUnassigned?: boolean
@@ -68,7 +69,8 @@ export default function JudokaList({
   onDelete, 
   refreshTrigger, 
   clubId, 
-  entrenadorId, 
+  entrenadorId,
+  senseiId,
   searchTerm: externalSearchTerm = '', 
   itemsPerPage: initialItemsPerPage = 10,
   showUnassigned = false,
@@ -268,7 +270,16 @@ export default function JudokaList({
   const filteredData = useMemo(() => {
     const filtered = judokas.filter(j => {
       let matchesClub: boolean
-      if (readOnly && !clubId) {
+      if (senseiId && clubId) {
+        // Vista SENSEI: sus propios judokas + los del club sin sensei + sin club
+        if (!j.club_id) {
+          matchesClub = showUnassigned
+        } else if (j.club_id === clubId) {
+          matchesClub = !j.entrenador_id || j.entrenador_id === senseiId
+        } else {
+          matchesClub = false
+        }
+      } else if (readOnly && !clubId) {
         // Judoka sin club: mostrar solo los que tampoco tienen club
         matchesClub = !j.club_id
       } else {
@@ -296,12 +307,10 @@ export default function JudokaList({
     })
 
     return [...filtered].sort((a, b) => {
-      // Judokas sin club van al final
-      if (showUnassigned) {
-        const aNoClub = !a.club_id ? 1 : 0
-        const bNoClub = !b.club_id ? 1 : 0
-        if (aNoClub !== bNoClub) return aNoClub - bNoClub
-      }
+      // Judokas sin club van siempre al final
+      const aNoClub = !a.club_id ? 1 : 0
+      const bNoClub = !b.club_id ? 1 : 0
+      if (aNoClub !== bNoClub) return aNoClub - bNoClub
 
       const isAModified = modifiedIds.has(a.id)
       const isBModified = modifiedIds.has(b.id)
@@ -311,7 +320,7 @@ export default function JudokaList({
       if (effectiveAActive === effectiveBActive) return 0
       return effectiveAActive ? -1 : 1
     })
-  }, [judokas, cinturonFilter, categoriaFilter, estadoFilter, globalFilter, modifiedIds])
+  }, [judokas, cinturonFilter, categoriaFilter, estadoFilter, globalFilter, modifiedIds, senseiId, clubId, showUnassigned, entrenadorId, readOnly])
 
   const table = useReactTable({
     data: filteredData,

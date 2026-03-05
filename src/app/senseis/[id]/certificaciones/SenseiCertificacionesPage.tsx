@@ -15,6 +15,7 @@ import { senseiController } from '@/controllers/senseiController'
 import { certificacionController } from '@/controllers/certificacionController'
 import { useRouter } from 'next/navigation'
 import { ROL } from '@/constants/roles'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface SenseiCertificacionesPageProps {
   params: Promise<{ id: string }>
@@ -22,7 +23,9 @@ interface SenseiCertificacionesPageProps {
 
 export default function SenseiCertificacionesPage({ params }: SenseiCertificacionesPageProps) {
   const router = useRouter()
+  const { user } = useAuth()
   const { id } = use(params)
+  const isReadOnly = user?.rol === ROL.SENSEI
   const [sensei, setSensei] = useState<Sensei | null>(null)
   const [loadingSensei, setLoadingSensei] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -85,7 +88,7 @@ export default function SenseiCertificacionesPage({ params }: SenseiCertificacio
   }
 
   return (
-    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO]}>
+    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.SENSEI]}>
       <Layout>
         {loadingSensei ? (
           <Box display="flex" justifyContent="center" alignItems="center" minHeight={300}>
@@ -104,6 +107,7 @@ export default function SenseiCertificacionesPage({ params }: SenseiCertificacio
                   Certificaciones de {sensei?.nombres} {sensei?.apellidos}
                 </Typography>
               </Box>
+              {!isReadOnly && (
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
@@ -111,15 +115,17 @@ export default function SenseiCertificacionesPage({ params }: SenseiCertificacio
               >
                 Agregar Certificación
               </Button>
+              )}
             </Box>
 
             {sensei && (
               <CertificacionList
                 usuarioId={sensei.usuario_id}
                 tipoAfiliado="sensei"
-                onEdit={(cert) => setCertEditando(cert)}
-                onDelete={(cert) => setCertToDelete(cert)}
+                onEdit={isReadOnly ? undefined : (cert) => setCertEditando(cert)}
+                onDelete={isReadOnly ? undefined : (cert) => setCertToDelete(cert)}
                 refreshTrigger={refreshTrigger}
+                readOnly={isReadOnly}
               />
             )}
 

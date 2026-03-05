@@ -16,7 +16,7 @@ import { ROL } from '@/constants/roles'
 
 export default function ClubesPage() {
   const { user } = useAuth()
-  const isJudoka = user?.rol === ROL.JUDOKA
+  const isReadOnly = user?.rol === ROL.JUDOKA || user?.rol === ROL.SENSEI || user?.rol === ROL.ENCARGADO || user?.rol === ROL.ARBITRO
   const createDialog = useDialog()
   const editDialog = useDialog()
   const deleteDialog = useDialog()
@@ -63,13 +63,13 @@ export default function ClubesPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.JUDOKA]}>
+    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.JUDOKA, ROL.SENSEI, ROL.ENCARGADO, ROL.ARBITRO]}>
       <Layout>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4" component="h1">
             Gestión de Clubes
           </Typography>
-          {!isJudoka && (
+          {!isReadOnly && (
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -81,10 +81,10 @@ export default function ClubesPage() {
         </Box>
 
         <ClubList
-          onEdit={isJudoka ? undefined : handleEdit}
-          onDelete={isJudoka ? undefined : handleDelete}
+          onEdit={isReadOnly ? undefined : handleEdit}
+          onDelete={isReadOnly ? undefined : handleDelete}
           refreshTrigger={refreshTrigger}
-          readOnly={isJudoka}
+          readOnly={isReadOnly}
         />
 
         {/* Diálogo de Creación */}

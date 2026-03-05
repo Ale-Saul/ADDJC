@@ -36,7 +36,7 @@ export default function ArbitroCertificacionesPage({ params }: ArbitroCertificac
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  const isReadOnly = user?.rol === ROL.SENSEI || user?.rol === ROL.ENCARGADO
+  const isReadOnly = user?.rol === ROL.SENSEI || user?.rol === ROL.ENCARGADO || user?.rol === ROL.ARBITRO
 
   const loadArbitro = useCallback(async () => {
     setLoadingArbitro(true)

@@ -137,7 +137,7 @@ export default function Sidebar() {
       label: 'Clubes',
       path: '/clubes',
       icon: <BusinessIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.JUDOKA] // Admin, asociación y judokas (solo lectura)
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.JUDOKA, ROL.SENSEI, ROL.ENCARGADO, ROL.ARBITRO] // Admin, asociación, judokas, senseis, encargados y árbitros (solo lectura)
     },
     {
       label: 'Árbitros',
@@ -149,7 +149,7 @@ export default function Sidebar() {
       label: 'Senseis',
       path: '/senseis',
       icon: <SchoolIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO] // Admin, asociación y encargados
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.SENSEI] // Admin, asociación, encargados y senseis (solo lectura)
     },
     {
       label: 'Judokas',
@@ -343,7 +343,7 @@ export default function Sidebar() {
                     sx={{ height: 18, fontSize: '0.65rem', cursor: 'pointer', alignSelf: 'flex-start' }}
                     color={user.rol === ROL.ADMIN || user.rol === ROL.ASOCIACION ? 'primary' : 'default'}
                   />
-                  {user.club_nombre && (user.rol === ROL.SENSEI || user.rol === ROL.ENCARGADO) && (
+                  {user.club_nombre && (user.rol === ROL.SENSEI || user.rol === ROL.ENCARGADO || user.rol === ROL.JUDOKA) && (
                     <Typography 
                       variant="caption" 
                       sx={{ 

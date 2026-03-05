@@ -83,6 +83,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
   })
 
   const watchClubId = watch('club_id')
+  const watchEntrenadorId = watch('entrenador_id')
 
   const fieldError = (name: keyof typeof errors) => {
     return {
@@ -197,9 +198,11 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
 
   // Lógica para encargado editando judokas
   const isEncargado = user?.rol === ROL.ENCARGADO
+  const isSensei = user?.rol === ROL.SENSEI
   const isEditing = !!judoka
   const judokaHasNoClub = isEditing && !watchClubId
   const judokaInMyClub = isEditing && watchClubId === user?.club_id
+  const judokaIsMyStudent = judokaInMyClub && watchEntrenadorId === user?.sensei_id
 
   const onSubmit = async (data: z.infer<typeof judokaSchema>) => {
     setLoading(true)
@@ -376,6 +379,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
           </Paper>
         )}
 
+        {/* Panels para SENSEI */}
         <Controller
           name="entrenador_id"
           control={control}
@@ -410,11 +414,140 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
             />
           )}
         />
-        {user?.rol === ROL.SENSEI ? (
+        {isSensei && isEditing && judokaHasNoClub && user?.club_id && (
+          <Paper
+            variant="outlined"
+            sx={{
+              mt: -1,
+              mb: 1,
+              px: 2,
+              py: 1.2,
+              borderRadius: 2,
+              borderColor: 'primary.light',
+              bgcolor: 'primary.50',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              Este judoka no pertenece a ningún club
+            </Typography>
+            <Button
+              size="small"
+              variant="contained"
+              color="primary"
+              startIcon={<PersonAddAlt1Icon fontSize="small" />}
+              onClick={() => {
+                reset(prev => ({ ...prev, club_id: user.club_id!, entrenador_id: user.sensei_id || '' }))
+              }}
+              sx={{ textTransform: 'none', borderRadius: 2, whiteSpace: 'nowrap', ml: 2 }}
+            >
+              Inscribir en {user.club_nombre || 'mi club'}
+            </Button>
+          </Paper>
+        )}
+        {isSensei && isEditing && judokaInMyClub && !watchEntrenadorId && (
+          <Paper
+            variant="outlined"
+            sx={{
+              mt: -1,
+              mb: 1,
+              px: 2,
+              py: 1.2,
+              borderRadius: 2,
+              borderColor: 'success.light',
+              bgcolor: 'success.50',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Chip
+                label={user?.club_nombre || 'Mi club'}
+                color="primary"
+                size="small"
+                sx={{ fontWeight: 500 }}
+              />
+              <Typography variant="body2" color="text.secondary">
+                sin entrenador asignado
+              </Typography>
+            </Box>
+            <Button
+              size="small"
+              variant="contained"
+              color="success"
+              startIcon={<PersonAddAlt1Icon fontSize="small" />}
+              onClick={() => {
+                reset(prev => ({ ...prev, entrenador_id: user.sensei_id || '' }))
+              }}
+              sx={{ textTransform: 'none', borderRadius: 2, whiteSpace: 'nowrap', ml: 2 }}
+            >
+              Tomar a mi cargo
+            </Button>
+          </Paper>
+        )}
+        {isSensei && judokaIsMyStudent && (
+          <Paper
+            variant="outlined"
+            sx={{
+              mt: -1,
+              mb: 1,
+              px: 2,
+              py: 1.2,
+              borderRadius: 2,
+              borderColor: 'error.light',
+              bgcolor: 'error.50',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Chip
+                label={user?.club_nombre || 'Mi club'}
+                color="primary"
+                size="small"
+                sx={{ fontWeight: 500 }}
+              />
+              <Typography variant="body2" color="text.secondary">
+                a tu cargo
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
+              <Button
+                size="small"
+                variant="outlined"
+                color="warning"
+                startIcon={<PersonRemoveAlt1Icon fontSize="small" />}
+                onClick={() => {
+                  reset(prev => ({ ...prev, entrenador_id: '' }))
+                }}
+                sx={{ textTransform: 'none', borderRadius: 2, whiteSpace: 'nowrap' }}
+              >
+                Quitar de mi cargo
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                color="error"
+                startIcon={<PersonRemoveAlt1Icon fontSize="small" />}
+                onClick={() => {
+                  reset(prev => ({ ...prev, club_id: '', entrenador_id: '' }))
+                }}
+                sx={{ textTransform: 'none', borderRadius: 2, whiteSpace: 'nowrap' }}
+              >
+                Desinscribir del club
+              </Button>
+            </Box>
+          </Paper>
+        )}
+        {user?.rol === ROL.SENSEI && !judokaIsMyStudent ? (
           <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5, mb: 1, ml: 1 }}>
             Serás asignado automáticamente como entrenador
           </Typography>
-        ) : !watchClubId && (
+        ) : !isSensei && !watchClubId && (
           <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5, mb: 1, ml: 1 }}>
             Selecciona un club primero para ver los entrenadores disponibles
           </Typography>

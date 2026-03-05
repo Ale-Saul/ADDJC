@@ -172,30 +172,30 @@ export default function SenseiList({
           )
         },
       }),
-      columnHelper.display({
-        id: 'acciones',
-        header: () => <Box textAlign="right">Acciones</Box>,
-        cell: (info) => (
-          <Box textAlign="right">
-            {onCertificacion && (
-              <IconButton size="small" color="success" onClick={() => onCertificacion(info.row.original)} title="Certificación" aria-label="Gestionar certificación">
-                <ArticleIcon fontSize="small" />
-              </IconButton>
-            )}
-            {onEdit && (
-              <IconButton size="small" color="primary" onClick={() => handleEdit(info.row.original)} title="Editar" aria-label="Editar sensei">
-                <EditIcon fontSize="small" />
-              </IconButton>
-            )}
-            {onDelete && (
-              <IconButton size="small" color="error" onClick={() => handleDelete(info.row.original)} title="Eliminar" aria-label="Eliminar sensei">
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            )}
-          </Box>
-        ),
-      }),
     ] : []),
+    columnHelper.display({
+      id: 'acciones',
+      header: () => <Box textAlign="right">Acciones</Box>,
+      cell: (info) => (
+        <Box textAlign="right">
+          {onCertificacion && (
+            <IconButton size="small" color="success" onClick={() => onCertificacion(info.row.original)} title="Certificaciones" aria-label="Ver certificaciones">
+              <ArticleIcon fontSize="small" />
+            </IconButton>
+          )}
+          {onEdit && (
+            <IconButton size="small" color="primary" onClick={() => handleEdit(info.row.original)} title="Editar" aria-label="Editar sensei">
+              <EditIcon fontSize="small" />
+            </IconButton>
+          )}
+          {onDelete && (
+            <IconButton size="small" color="error" onClick={() => handleDelete(info.row.original)} title="Eliminar" aria-label="Eliminar sensei">
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          )}
+        </Box>
+      ),
+    }),
   ], [onEdit, onDelete, onCertificacion, toggleStatus, readOnly, showUnassigned])
 
   // Filtrado local por club + unassigned (encima del filteredData del hook)
@@ -207,11 +207,10 @@ export default function SenseiList({
       return true
     })
     return [...data].sort((a, b) => {
-      if (showUnassigned) {
-        const aNoClub = !a.club_id ? 1 : 0
-        const bNoClub = !b.club_id ? 1 : 0
-        if (aNoClub !== bNoClub) return aNoClub - bNoClub
-      }
+      // Senseis sin club van siempre al final
+      const aNoClub = !a.club_id ? 1 : 0
+      const bNoClub = !b.club_id ? 1 : 0
+      if (aNoClub !== bNoClub) return aNoClub - bNoClub
       return 0
     })
   }, [filteredData, clubId, showUnassigned])

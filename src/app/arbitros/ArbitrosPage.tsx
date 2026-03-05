@@ -25,7 +25,7 @@ export default function ArbitrosPage() {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
-  const isReadOnly = user?.rol === ROL.SENSEI || user?.rol === ROL.ENCARGADO
+  const isReadOnly = user?.rol === ROL.SENSEI || user?.rol === ROL.ENCARGADO || user?.rol === ROL.ARBITRO
 
   const handleCreateSuccess = () => {
     createDialog.close()
