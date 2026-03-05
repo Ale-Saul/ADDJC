@@ -83,7 +83,7 @@ export default function JudokaList({
     deleteLocalJudoka,
     modifiedIds
   } = useJudokaList({
-    clubId,
+    clubId: clubId || undefined,
     entrenadorId,
     refreshTrigger,
     judokasProp
@@ -140,6 +140,16 @@ export default function JudokaList({
     }),
     columnHelper.accessor('nombres', {
       header: 'Nombres',
+      cell: (info) => (
+        <Box>
+          <Box>{info.getValue()}</Box>
+          {showUnassigned && !info.row.original.club_id && (
+            <Box sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.25 }}>
+              Sin club
+            </Box>
+          )}
+        </Box>
+      ),
     }),
     columnHelper.accessor('apellidos', {
       header: 'Apellidos',
@@ -286,6 +296,13 @@ export default function JudokaList({
     })
 
     return [...filtered].sort((a, b) => {
+      // Judokas sin club van al final
+      if (showUnassigned) {
+        const aNoClub = !a.club_id ? 1 : 0
+        const bNoClub = !b.club_id ? 1 : 0
+        if (aNoClub !== bNoClub) return aNoClub - bNoClub
+      }
+
       const isAModified = modifiedIds.has(a.id)
       const isBModified = modifiedIds.has(b.id)
       const effectiveAActive = isAModified ? !a.activo : a.activo
