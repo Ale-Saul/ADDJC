@@ -55,6 +55,7 @@ interface ArbitroListProps {
   refreshTrigger?: number
   searchTerm?: string
   itemsPerPage?: number
+  readOnly?: boolean
 }
 
 export default function ArbitroList({ 
@@ -63,7 +64,8 @@ export default function ArbitroList({
   onCertificacion,
   refreshTrigger, 
   searchTerm: externalSearchTerm = '', 
-  itemsPerPage: initialItemsPerPage = 10 
+  itemsPerPage: initialItemsPerPage = 10,
+  readOnly = false,
 }: ArbitroListProps) {
   const { state, dispatch, loadArbitros, toggleStatus, updateLocalArbitro, deleteLocalArbitro, filteredData } = useArbitroList(externalSearchTerm)
   const { loading, error, globalFilter, nivelFilter, estadoFilter, showFilters, modifiedIds } = state
@@ -128,35 +130,37 @@ export default function ArbitroList({
       header: 'Nivel',
       cell: (info) => info.getValue() || '-',
     }),
-    columnHelper.accessor('activo', {
-      header: 'Estado',
-      cell: (info) => {
-        const isActive = info.getValue()
-        const id = info.row.original.id
-        return (
-          <Tooltip title={isActive ? 'Desactivar' : 'Activar'}>
-            <Switch 
-              checked={!!isActive} 
-              onChange={() => toggleStatus(id, !!isActive)}
-              size="medium"
-              sx={{
-                '& .MuiSwitch-switchBase.Mui-checked': { color: '#4caf50' },
-                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#4caf50' },
-                '& .MuiSwitch-switchBase': { color: '#f44336' },
-                '& .MuiSwitch-switchBase + .MuiSwitch-track': { backgroundColor: '#f44336' },
-              }}
-            />
-          </Tooltip>
-        )
-      },
-    }),
+    ...(!readOnly ? [
+      columnHelper.accessor('activo', {
+        header: 'Estado',
+        cell: (info) => {
+          const isActive = info.getValue()
+          const id = info.row.original.id
+          return (
+            <Tooltip title={isActive ? 'Desactivar' : 'Activar'}>
+              <Switch 
+                checked={!!isActive} 
+                onChange={() => toggleStatus(id, !!isActive)}
+                size="medium"
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': { color: '#4caf50' },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#4caf50' },
+                  '& .MuiSwitch-switchBase': { color: '#f44336' },
+                  '& .MuiSwitch-switchBase + .MuiSwitch-track': { backgroundColor: '#f44336' },
+                }}
+              />
+            </Tooltip>
+          )
+        },
+      }),
+    ] : []),
     columnHelper.display({
       id: 'acciones',
       header: () => <Box textAlign="right">Acciones</Box>,
       cell: (info) => (
         <Box textAlign="right">
           {onCertificacion && (
-            <IconButton size="small" color="success" onClick={() => onCertificacion(info.row.original)} title="Certificación" aria-label="Gestionar certificación">
+            <IconButton size="small" color="success" onClick={() => onCertificacion(info.row.original)} title="Certificaciones" aria-label="Ver certificaciones">
               <ArticleIcon fontSize="small" />
             </IconButton>
           )}
@@ -173,7 +177,7 @@ export default function ArbitroList({
         </Box>
       ),
     }),
-  ], [onEdit, onDelete, onCertificacion, toggleStatus])
+  ], [onEdit, onDelete, onCertificacion, toggleStatus, readOnly])
 
   const table = useReactTable({
     data: filteredData,
@@ -260,14 +264,16 @@ export default function ArbitroList({
                 </Select>
               </FormControl>
 
-              <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white' }}>
-                <InputLabel>Estado</InputLabel>
-                <Select value={estadoFilter} label="Estado" onChange={(e) => dispatch({ type: 'SET_ESTADO_FILTER', payload: e.target.value })}>
-                  <MenuItem value="all">Todos los estados</MenuItem>
-                  <MenuItem value="activo">Activos</MenuItem>
-                  <MenuItem value="inactivo">Inactivos</MenuItem>
-                </Select>
-              </FormControl>
+              {!readOnly && (
+                <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white' }}>
+                  <InputLabel>Estado</InputLabel>
+                  <Select value={estadoFilter} label="Estado" onChange={(e) => dispatch({ type: 'SET_ESTADO_FILTER', payload: e.target.value })}>
+                    <MenuItem value="all">Todos los estados</MenuItem>
+                    <MenuItem value="activo">Activos</MenuItem>
+                    <MenuItem value="inactivo">Inactivos</MenuItem>
+                  </Select>
+                </FormControl>
+              )}
             </Stack>
           </Collapse>
         </Stack>

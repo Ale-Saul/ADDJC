@@ -46,6 +46,7 @@ interface CertificacionListProps {
   onDelete?: (certificacion: Certificacion) => void
   onAdd?: () => void
   refreshTrigger?: number
+  readOnly?: boolean
 }
 
 export default function CertificacionList({
@@ -54,7 +55,8 @@ export default function CertificacionList({
   onEdit,
   onDelete,
   onAdd,
-  refreshTrigger
+  refreshTrigger,
+  readOnly = false,
 }: CertificacionListProps) {
   const [certificaciones, setCertificaciones] = useState<Certificacion[]>([])
   const [loading, setLoading] = useState(true)
@@ -162,7 +164,7 @@ export default function CertificacionList({
         )
       },
     }),
-    columnHelper.accessor('activo', {
+    ...(!readOnly ? [columnHelper.accessor('activo', {
       header: 'Estado',
       cell: (info) => {
         const isActive = info.getValue()
@@ -257,8 +259,8 @@ export default function CertificacionList({
           )}
         </Box>
       ),
-    }),
-  ], [onEdit, onDelete])
+    })] : []),
+  ], [onEdit, onDelete, readOnly])
 
   const table = useReactTable({
     data: filteredData,

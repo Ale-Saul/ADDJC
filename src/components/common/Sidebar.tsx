@@ -143,7 +143,7 @@ export default function Sidebar() {
       label: 'Árbitros',
       path: '/arbitros',
       icon: <GavelIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ARBITRO] // Admin, asociación y árbitros
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ARBITRO, ROL.SENSEI, ROL.ENCARGADO]
     },
     {
       label: 'Senseis',

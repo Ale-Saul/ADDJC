@@ -14,6 +14,7 @@ import { Certificacion } from '@/models/certificacion'
 import { arbitroController } from '@/controllers/arbitroController'
 import { certificacionController } from '@/controllers/certificacionController'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 import { ROL } from '@/constants/roles'
 
 interface ArbitroCertificacionesPageProps {
@@ -22,6 +23,7 @@ interface ArbitroCertificacionesPageProps {
 
 export default function ArbitroCertificacionesPage({ params }: ArbitroCertificacionesPageProps) {
   const router = useRouter()
+  const { user } = useAuth()
   const { id } = use(params)
   const [arbitro, setArbitro] = useState<Arbitro | null>(null)
   const [loadingArbitro, setLoadingArbitro] = useState(true)
@@ -33,6 +35,8 @@ export default function ArbitroCertificacionesPage({ params }: ArbitroCertificac
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+  const isReadOnly = user?.rol === ROL.SENSEI || user?.rol === ROL.ENCARGADO
 
   const loadArbitro = useCallback(async () => {
     setLoadingArbitro(true)
@@ -85,7 +89,7 @@ export default function ArbitroCertificacionesPage({ params }: ArbitroCertificac
   }
 
   return (
-    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.ARBITRO]}>
+    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.ARBITRO, ROL.SENSEI, ROL.ENCARGADO]}>
       <Layout>
         {loadingArbitro ? (
           <Box display="flex" justifyContent="center" alignItems="center" minHeight={300}>
@@ -104,22 +108,25 @@ export default function ArbitroCertificacionesPage({ params }: ArbitroCertificac
                   Certificaciones de {arbitro?.nombres} {arbitro?.apellidos}
                 </Typography>
               </Box>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setOpenCreateDialog(true)}
-              >
-                Agregar Certificación
-              </Button>
+              {!isReadOnly && (
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => setOpenCreateDialog(true)}
+                >
+                  Agregar Certificación
+                </Button>
+              )}
             </Box>
 
             {arbitro && (
               <CertificacionList
                 usuarioId={arbitro.usuario_id}
                 tipoAfiliado="arbitro"
-                onEdit={(cert) => setCertEditando(cert)}
-                onDelete={(cert) => setCertToDelete(cert)}
+                onEdit={isReadOnly ? undefined : (cert) => setCertEditando(cert)}
+                onDelete={isReadOnly ? undefined : (cert) => setCertToDelete(cert)}
                 refreshTrigger={refreshTrigger}
+                readOnly={isReadOnly}
               />
             )}
 

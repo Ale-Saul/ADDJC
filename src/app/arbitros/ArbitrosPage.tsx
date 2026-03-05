@@ -12,16 +12,20 @@ import ArbitroForm from '@/components/arbitros/ArbitroForm'
 import { Arbitro } from '@/models/arbitro'
 import { arbitroController } from '@/controllers/arbitroController'
 import { useDialog } from '@/hooks/useDialog'
+import { useAuth } from '@/contexts/AuthContext'
 import { ROL } from '@/constants/roles'
 
 export default function ArbitrosPage() {
   const router = useRouter()
+  const { user } = useAuth()
   const createDialog = useDialog()
   const editDialog = useDialog()
   const deleteDialog = useDialog()
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  const isReadOnly = user?.rol === ROL.SENSEI || user?.rol === ROL.ENCARGADO
 
   const handleCreateSuccess = () => {
     createDialog.close()
@@ -66,26 +70,29 @@ export default function ArbitrosPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.ARBITRO]}>
+    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.ARBITRO, ROL.SENSEI, ROL.ENCARGADO]}>
       <Layout>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4" component="h1">
             Gestión de Árbitros
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => createDialog.open()}
-          >
-            Nuevo Árbitro
-          </Button>
+          {!isReadOnly && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => createDialog.open()}
+            >
+              Nuevo Árbitro
+            </Button>
+          )}
         </Box>
 
         <ArbitroList
-          onEdit={handleEdit}
-          onDelete={handleDelete}
+          onEdit={isReadOnly ? undefined : handleEdit}
+          onDelete={isReadOnly ? undefined : handleDelete}
           onCertificacion={handleCertificacion}
           refreshTrigger={refreshTrigger}
+          readOnly={isReadOnly}
         />
 
         {/* Diálogo de Creación */}
