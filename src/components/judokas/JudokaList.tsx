@@ -53,11 +53,12 @@ interface JudokaListProps {
   onEdit?: (judoka: Judoka) => void
   onDelete?: (judoka: Judoka) => void
   refreshTrigger?: number
-  clubId?: string
+  clubId?: string | null
   entrenadorId?: string
   searchTerm?: string
   itemsPerPage?: number
   showUnassigned?: boolean
+  readOnly?: boolean
 }
 
 export default function JudokaList({ 
@@ -70,7 +71,8 @@ export default function JudokaList({
   entrenadorId, 
   searchTerm: externalSearchTerm = '', 
   itemsPerPage: initialItemsPerPage = 10,
-  showUnassigned = false
+  showUnassigned = false,
+  readOnly = false
 }: JudokaListProps) {
   const { 
     judokas, 
@@ -179,7 +181,8 @@ export default function JudokaList({
         )
       },
     }),
-    columnHelper.accessor('activo', {
+    // Estado y Acciones solo para roles con permisos de gestión
+    ...(!readOnly ? [columnHelper.accessor('activo', {
       header: 'Estado',
       cell: (info) => {
         const isActive = info.getValue()
@@ -248,14 +251,20 @@ export default function JudokaList({
           )}
         </Box>
       ),
-    }),
-  ], [onEdit, onDelete, toggleStatus])
+    })] : []),
+  ], [onEdit, onDelete, toggleStatus, readOnly])
 
   // Filtrado y ordenamiento personalizado
   const filteredData = useMemo(() => {
     const filtered = judokas.filter(j => {
-      // Si showUnassigned es true, mostramos los del clubId O los que no tienen club
-      const matchesClub = clubId ? (j.club_id === clubId || (showUnassigned && !j.club_id)) : true
+      let matchesClub: boolean
+      if (readOnly && !clubId) {
+        // Judoka sin club: mostrar solo los que tampoco tienen club
+        matchesClub = !j.club_id
+      } else {
+        // Si showUnassigned es true, mostramos los del clubId O los que no tienen club
+        matchesClub = clubId ? (j.club_id === clubId || (showUnassigned && !j.club_id)) : true
+      }
       const matchesEntrenador = entrenadorId ? j.entrenador_id === entrenadorId : true
       
       if (!matchesClub || !matchesEntrenador) return false
@@ -402,6 +411,7 @@ export default function JudokaList({
                 </Select>
               </FormControl>
 
+              {!readOnly && (
               <FormControl size="small" sx={{ minWidth: 130, backgroundColor: 'white' }}>
                 <InputLabel>Estado</InputLabel>
                 <Select
@@ -414,6 +424,7 @@ export default function JudokaList({
                   <MenuItem value="inactivo">Inactivos</MenuItem>
                 </Select>
               </FormControl>
+              )}
             </Stack>
           </Collapse>
         </Stack>

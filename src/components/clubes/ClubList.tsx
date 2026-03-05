@@ -53,6 +53,7 @@ interface ClubListProps {
   refreshTrigger?: number
   searchTerm?: string
   itemsPerPage?: number
+  readOnly?: boolean
 }
 
 export default function ClubList({ 
@@ -60,7 +61,8 @@ export default function ClubList({
   onDelete, 
   refreshTrigger, 
   searchTerm: externalSearchTerm = '', 
-  itemsPerPage: initialItemsPerPage = 10 
+  itemsPerPage: initialItemsPerPage = 10,
+  readOnly = false
 }: ClubListProps) {
   const { state, dispatch, loadClubes, toggleStatus, updateLocalClub, deleteLocalClub, filteredData } = useClubList(externalSearchTerm)
   const { loading, error, globalFilter, municipioFilter, estadoFilter, showFilters, modifiedIds } = state
@@ -113,6 +115,16 @@ export default function ClubList({
     }),
     columnHelper.accessor('nombre_club', {
       header: 'Nombre del Club',
+      cell: (info) => (
+        <Box>
+          <Box>{info.getValue()}</Box>
+          {info.row.original.direccion && (
+            <Box sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.25 }}>
+              {info.row.original.direccion}
+            </Box>
+          )}
+        </Box>
+      ),
     }),
     columnHelper.accessor('provincia', {
       header: 'Municipio',
@@ -122,6 +134,8 @@ export default function ClubList({
       header: 'Teléfono',
       cell: (info) => info.getValue() || '-',
     }),
+    // Estado y Acciones solo para roles con permisos de gestión
+    ...(!readOnly ? [
     columnHelper.accessor('activo', {
       header: 'Estado',
       cell: (info) => {
@@ -161,8 +175,8 @@ export default function ClubList({
           )}
         </Box>
       ),
-    }),
-  ], [onEdit, onDelete, toggleStatus])
+    })] : []),
+  ], [onEdit, onDelete, toggleStatus, readOnly])
 
   const table = useReactTable({
     data: filteredData,
@@ -241,6 +255,7 @@ export default function ClubList({
                 </Select>
               </FormControl>
 
+              {!readOnly && (
               <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white' }}>
                 <InputLabel>Estado</InputLabel>
                 <Select value={estadoFilter} label="Estado" onChange={(e) => dispatch({ type: 'SET_ESTADO_FILTER', payload: e.target.value })}>
@@ -249,6 +264,7 @@ export default function ClubList({
                   <MenuItem value="inactivo">Inactivos</MenuItem>
                 </Select>
               </FormControl>
+              )}
             </Stack>
           </Collapse>
         </Stack>

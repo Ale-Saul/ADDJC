@@ -137,7 +137,7 @@ export default function Sidebar() {
       label: 'Clubes',
       path: '/clubes',
       icon: <BusinessIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION] // Admin y asociación
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.JUDOKA] // Admin, asociación y judokas (solo lectura)
     },
     {
       label: 'Árbitros',

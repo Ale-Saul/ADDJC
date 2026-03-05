@@ -11,9 +11,12 @@ import ClubForm from '@/components/clubes/ClubForm'
 import { Club } from '@/models/club'
 import { clubController } from '@/controllers/clubController'
 import { useDialog } from '@/hooks/useDialog'
+import { useAuth } from '@/contexts/AuthContext'
 import { ROL } from '@/constants/roles'
 
 export default function ClubesPage() {
+  const { user } = useAuth()
+  const isJudoka = user?.rol === ROL.JUDOKA
   const createDialog = useDialog()
   const editDialog = useDialog()
   const deleteDialog = useDialog()
@@ -60,12 +63,13 @@ export default function ClubesPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION]}>
+    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.JUDOKA]}>
       <Layout>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4" component="h1">
             Gestión de Clubes
           </Typography>
+          {!isJudoka && (
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -73,12 +77,14 @@ export default function ClubesPage() {
           >
             Nuevo Club
           </Button>
+          )}
         </Box>
 
         <ClubList
-          onEdit={handleEdit}
-          onDelete={handleDelete}
+          onEdit={isJudoka ? undefined : handleEdit}
+          onDelete={isJudoka ? undefined : handleDelete}
           refreshTrigger={refreshTrigger}
+          readOnly={isJudoka}
         />
 
         {/* Diálogo de Creación */}

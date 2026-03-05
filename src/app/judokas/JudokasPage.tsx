@@ -24,7 +24,8 @@ export default function JudokasPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
   // Determinar filtros según el rol
-  const clubId = user?.rol === ROL.ENCARGADO ? user.club_id : undefined
+  const isJudoka = user?.rol === ROL.JUDOKA
+  const clubId = (user?.rol === ROL.ENCARGADO || isJudoka) ? user?.club_id : undefined
   const entrenadorId = user?.rol === ROL.SENSEI ? user.sensei_id : undefined
 
   const handleRefresh = () => {
@@ -76,23 +77,26 @@ export default function JudokasPage() {
           <Typography variant="h4" component="h1">
             Gestión de Judokas
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => createDialog.open()}
-            sx={{ height: 48 }}
-          >
-            Nuevo Judoka
-          </Button>
+          {!isJudoka && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => createDialog.open()}
+              sx={{ height: 48 }}
+            >
+              Nuevo Judoka
+            </Button>
+          )}
         </Box>
 
         <JudokaList
           clubId={clubId}
           entrenadorId={entrenadorId}
           refreshTrigger={refreshTrigger}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
+          onEdit={isJudoka ? undefined : handleEdit}
+          onDelete={isJudoka ? undefined : handleDelete}
           showUnassigned={user?.rol === ROL.ENCARGADO || user?.rol === ROL.SENSEI}
+          readOnly={isJudoka}
         />
 
         {/* Diálogo de Creación */}
