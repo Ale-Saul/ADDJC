@@ -25,7 +25,9 @@ import {
   DialogContent,
   Button,
   TextField,
-  InputAdornment
+  InputAdornment,
+  Checkbox,
+  Chip
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import VisibilityIcon from '@mui/icons-material/Visibility'
@@ -68,6 +70,32 @@ export default function PagosPage() {
   const historialDialog = useDialog()
   const masivoDialog = useDialog()
 
+  // Selección de judokas para Pago Masivo
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  const isAllSelected = judokas.length > 0 && judokas.every(j => selectedIds.has(j.id))
+  const isIndeterminate = judokas.some(j => selectedIds.has(j.id)) && !isAllSelected
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(judokas.map(j => j.id)))
+    }
+  }
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const judokasParaMasivo = selectedIds.size > 0
+    ? judokas.filter(j => selectedIds.has(j.id))
+    : judokas
+
   const handleNuevoPago = (judoka: Judoka) => {
     pagoDialog.open(judoka)
   }
@@ -79,6 +107,7 @@ export default function PagosPage() {
 
   const handlePagoMasivoSuccess = () => {
     masivoDialog.close()
+    setSelectedIds(new Set())
     refreshAll()
   }
 
@@ -218,9 +247,21 @@ export default function PagosPage() {
             ) : (
               <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
                 <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee' }}>
-                  <Typography variant="h6" fontWeight="bold">
-                    Lista de Judokas
-                  </Typography>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Typography variant="h6" fontWeight="bold">
+                      Lista de Judokas
+                    </Typography>
+                    {selectedIds.size > 0 && (
+                      <Chip
+                        label={`${selectedIds.size} seleccionado${selectedIds.size !== 1 ? 's' : ''}`}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                        onDelete={() => setSelectedIds(new Set())}
+                        aria-label={`Limpiar selección de ${selectedIds.size} judokas`}
+                      />
+                    )}
+                  </Stack>
                   <Button
                     variant="contained"
                     color="primary"
@@ -229,16 +270,27 @@ export default function PagosPage() {
                     sx={{ 
                       textTransform: 'none',
                       fontWeight: 'bold',
-                      height: '40px',
-                      px: 3
+                      height: '44px',
+                      px: 3,
+                      minWidth: '160px'
                     }}
                   >
-                    Pago Masivo
+                    {selectedIds.size > 0 ? `Pago Masivo (${selectedIds.size})` : 'Pago Masivo'}
                   </Button>
                 </Box>
                 <Table size="small">
                   <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                     <TableRow>
+                      <TableCell padding="checkbox" sx={{ width: '52px' }}>
+                        <Checkbox
+                          size="small"
+                          checked={isAllSelected}
+                          indeterminate={isIndeterminate}
+                          onChange={toggleSelectAll}
+                          inputProps={{ 'aria-label': 'Seleccionar todos los judokas' }}
+                          sx={{ '&:hover': { cursor: 'pointer' } }}
+                        />
+                      </TableCell>
                       <TableCell sx={{ fontWeight: 'bold', py: 1.5 }}>N°</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Judoka</TableCell>
                       {isAdmin && <TableCell sx={{ fontWeight: 'bold' }}>Club</TableCell>}
@@ -249,7 +301,22 @@ export default function PagosPage() {
                   </TableHead>
                   <TableBody>
                     {judokas.map((judoka, index) => (
-                      <TableRow key={judoka.id} hover>
+                      <TableRow
+                        key={judoka.id}
+                        hover
+                        selected={selectedIds.has(judoka.id)}
+                        sx={{ cursor: 'pointer' }}
+                        onClick={() => toggleSelectOne(judoka.id)}
+                      >
+                        <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
+                          <Checkbox
+                            size="small"
+                            checked={selectedIds.has(judoka.id)}
+                            onChange={() => toggleSelectOne(judoka.id)}
+                            inputProps={{ 'aria-label': `Seleccionar ${judoka.nombres} ${judoka.apellidos}` }}
+                            sx={{ '&:hover': { cursor: 'pointer' } }}
+                          />
+                        </TableCell>
                         <TableCell sx={{ py: 1.5 }}>{index + 1}</TableCell>
                         <TableCell>
                           <Typography variant="body2" fontWeight="500">
@@ -353,7 +420,7 @@ export default function PagosPage() {
           <DialogTitle fontWeight="bold">Crear Pago Masivo</DialogTitle>
           <DialogContent dividers>
             <PagoMasivoForm
-              judokas={judokas}
+              judokas={judokasParaMasivo}
               onSuccess={handlePagoMasivoSuccess}
               onCancel={masivoDialog.close}
             />
