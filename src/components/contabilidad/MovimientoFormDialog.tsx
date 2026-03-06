@@ -6,10 +6,7 @@ import {
   DialogActions,
   Button,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
+  Autocomplete,
   Grid,
   Alert,
   CircularProgress,
@@ -17,7 +14,7 @@ import {
   Typography,
   Chip,
 } from '@mui/material'
-import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
 import dayjs from 'dayjs'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
@@ -51,6 +48,12 @@ export default function MovimientoFormDialog({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [uploadingFile, setUploadingFile] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  const setFieldError = (field: string, msg: string) =>
+    setFieldErrors(prev => ({ ...prev, [field]: msg }))
+  const clearFieldError = (field: string) =>
+    setFieldErrors(prev => { const next = { ...prev }; delete next[field]; return next })
 
   // Campos del formulario
   const [tipo, setTipo] = useState<TipoMovimiento>('ingreso')
@@ -58,7 +61,7 @@ export default function MovimientoFormDialog({
   const [monto, setMonto] = useState('')
   const [concepto, setConcepto] = useState('')
   const [descripcion, setDescripcion] = useState('')
-  const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0])
+  const [fecha, setFecha] = useState(new Date().toISOString())
   const [origenClubId, setOrigenClubId] = useState('')
   const [origenEntidad, setOrigenEntidad] = useState('')
   const [comprobanteFile, setComprobanteFile] = useState<File | null>(null)
@@ -75,7 +78,7 @@ export default function MovimientoFormDialog({
         setMonto(movimiento.monto.toString())
         setConcepto(movimiento.concepto)
         setDescripcion(movimiento.descripcion || '')
-        setFecha(movimiento.fecha.split('T')[0])
+        setFecha(movimiento.created_at)
         setOrigenClubId(movimiento.origen_club_id || '')
         setOrigenEntidad(movimiento.origen_entidad || '')
         setComprobanteUrl(movimiento.comprobante_url || '')
@@ -94,12 +97,13 @@ export default function MovimientoFormDialog({
     setMonto('')
     setConcepto('')
     setDescripcion('')
-    setFecha(new Date().toISOString().split('T')[0])
+    setFecha(new Date().toISOString())
     setOrigenClubId('')
     setOrigenEntidad('')
     setComprobanteFile(null)
     setComprobanteUrl('')
     setComprobanteNombre('')
+    setFieldErrors({})
   }
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,25 +148,15 @@ export default function MovimientoFormDialog({
   }
 
   const handleSubmit = async () => {
-    // Validaciones básicas
-    if (!concepto.trim()) {
-      setError('El concepto es requerido')
-      return
-    }
+    // Validar todos los campos requeridos
+    const newErrors: Record<string, string> = {}
+    if (!concepto.trim()) newErrors.concepto = 'El concepto es requerido'
+    if (!monto || parseFloat(monto) <= 0) newErrors.monto = 'El monto debe ser mayor a 0'
+    if (requiereClub && !origenClubId) newErrors.origenClubId = 'Debe seleccionar un club de origen'
+    if (requiereEntidad && !origenEntidad.trim()) newErrors.origenEntidad = 'Debe especificar la entidad de origen'
 
-    if (!monto || parseFloat(monto) <= 0) {
-      setError('El monto debe ser mayor a 0')
-      return
-    }
-
-    // Validar campos específicos según categoría
-    if ((categoria === 'donacion_club' || categoria === 'pago_club') && !origenClubId) {
-      setError('Debe seleccionar un club de origen')
-      return
-    }
-
-    if (categoria === 'aporte_estado' && !origenEntidad.trim()) {
-      setError('Debe especificar la entidad de origen')
+    if (Object.keys(newErrors).length > 0) {
+      setFieldErrors(prev => ({ ...prev, ...newErrors }))
       return
     }
 
@@ -176,9 +170,9 @@ export default function MovimientoFormDialog({
         monto: parseFloat(monto),
         concepto: concepto.trim(),
         descripcion: descripcion.trim() || undefined,
-        fecha,
-        origen_club_id: origenClubId || undefined,
-        origen_entidad: origenEntidad.trim() || undefined,
+        fecha: movimiento ? fecha : new Date().toISOString(),
+        origen_club_id: requiereClub ? (origenClubId || undefined) : undefined,
+        origen_entidad: requiereEntidad ? (origenEntidad.trim() || undefined) : undefined,
         comprobante_url: comprobanteUrl || undefined,
         comprobante_nombre: comprobanteNombre || undefined,
       }
@@ -211,7 +205,7 @@ export default function MovimientoFormDialog({
   const categoriasDisponibles = movimientoFinancieroController.getCategoriasPorTipo(tipo)
 
   const requiereClub = categoria === 'donacion_club' || categoria === 'pago_club'
-  const requiereEntidad = categoria === 'aporte_estado'
+  const requiereEntidad = categoria === 'aporte_estado' || categoria === 'sponsor'
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -227,36 +221,49 @@ export default function MovimientoFormDialog({
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
           {/* Tipo */}
-          <FormControl fullWidth required>
-            <InputLabel>Tipo</InputLabel>
-            <Select
-              value={tipo}
-              label="Tipo"
-              onChange={(e) => {
-                setTipo(e.target.value as TipoMovimiento)
+          <Autocomplete
+            fullWidth
+            options={[
+              { value: 'ingreso' as TipoMovimiento, label: 'Ingreso' },
+              { value: 'egreso' as TipoMovimiento, label: 'Egreso' },
+            ]}
+            getOptionLabel={(opt) => opt.label}
+            value={[
+              { value: 'ingreso' as TipoMovimiento, label: 'Ingreso' },
+              { value: 'egreso' as TipoMovimiento, label: 'Egreso' },
+            ].find(o => o.value === tipo)!}
+            onChange={(_, newVal) => {
+              if (newVal) {
+                setTipo(newVal.value)
                 setCategoria('otro')
-              }}
-            >
-              <MenuItem value="ingreso">Ingreso</MenuItem>
-              <MenuItem value="egreso">Egreso</MenuItem>
-            </Select>
-          </FormControl>
+              }
+            }}
+            disableClearable
+            renderInput={(params) => (
+              <TextField {...params} label="Tipo" required />
+            )}
+          />
 
           {/* Categoría */}
-          <FormControl fullWidth required>
-            <InputLabel>Categoría</InputLabel>
-            <Select
-              value={categoria}
-              label="Categoría"
-              onChange={(e) => setCategoria(e.target.value as CategoriaMovimiento)}
-            >
-              {categoriasDisponibles.map((cat) => (
-                <MenuItem key={cat} value={cat}>
-                  {movimientoFinancieroController.getCategoriaLabel(cat)}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Autocomplete
+            fullWidth
+            options={categoriasDisponibles.map(cat => ({
+              value: cat as CategoriaMovimiento,
+              label: movimientoFinancieroController.getCategoriaLabel(cat),
+            }))}
+            getOptionLabel={(opt) => opt.label}
+            value={categoriasDisponibles.map(cat => ({
+              value: cat as CategoriaMovimiento,
+              label: movimientoFinancieroController.getCategoriaLabel(cat),
+            })).find(o => o.value === categoria)!}
+            onChange={(_, newVal) => {
+              if (newVal) setCategoria(newVal.value)
+            }}
+            disableClearable
+            renderInput={(params) => (
+              <TextField {...params} label="Categoría" required />
+            )}
+          />
 
           {/* Concepto */}
           <TextField
@@ -264,7 +271,10 @@ export default function MovimientoFormDialog({
             fullWidth
             required
             value={concepto}
-            onChange={(e) => setConcepto(e.target.value)}
+            onChange={(e) => { setConcepto(e.target.value); clearFieldError('concepto') }}
+            onBlur={() => { if (!concepto.trim()) setFieldError('concepto', 'El concepto es requerido') }}
+            error={!!fieldErrors.concepto}
+            helperText={fieldErrors.concepto}
           />
 
           {/* Descripción */}
@@ -284,48 +294,54 @@ export default function MovimientoFormDialog({
             fullWidth
             required
             value={monto}
-            onChange={(e) => setMonto(e.target.value)}
+            onChange={(e) => { setMonto(e.target.value); clearFieldError('monto') }}
+            onBlur={() => {
+              if (!monto || parseFloat(monto) <= 0) setFieldError('monto', 'El monto debe ser mayor a 0')
+            }}
+            error={!!fieldErrors.monto}
+            helperText={fieldErrors.monto}
             InputProps={{
               startAdornment: <Typography sx={{ mr: 1 }}>Bs.</Typography>,
             }}
           />
 
           {/* Fecha */}
-          <DatePicker
+          <DateTimePicker
             label="Fecha"
             value={fecha ? dayjs(fecha) : null}
             onChange={(newValue) => {
-              setFecha(newValue ? newValue.format('YYYY-MM-DD') : '')
+              setFecha(newValue ? newValue.toISOString() : '')
             }}
-            disabled={loading}
+            disabled
             slotProps={{
               textField: {
                 fullWidth: true,
                 required: true,
+                helperText: 'Se registra automáticamente con la hora actual',
               },
             }}
-            format="DD/MM/YYYY"
+            format="DD/MM/YYYY HH:mm"
           />
 
           {/* Club de origen (solo si es necesario) */}
           {requiereClub && (
-            <FormControl fullWidth required>
-              <InputLabel>Club de Origen</InputLabel>
-              <Select
-                value={origenClubId}
-                label="Club de Origen"
-                onChange={(e) => setOrigenClubId(e.target.value)}
-              >
-                <MenuItem value="">
-                  <em>Seleccionar club</em>
-                </MenuItem>
-                {clubes.map((club) => (
-                  <MenuItem key={club.id} value={club.id}>
-                    {club.nombre_club}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Autocomplete
+              fullWidth
+              options={[...clubes].sort((a, b) => a.nombre_club.localeCompare(b.nombre_club))}
+              getOptionLabel={(club) => club.nombre_club}
+              value={clubes.find(c => c.id === origenClubId) ?? null}
+              onChange={(_, newVal) => { setOrigenClubId(newVal?.id ?? ''); clearFieldError('origenClubId') }}
+              onBlur={() => { if (!origenClubId) setFieldError('origenClubId', 'Debe seleccionar un club de origen') }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Club de Origen"
+                  required
+                  error={!!fieldErrors.origenClubId}
+                  helperText={fieldErrors.origenClubId}
+                />
+              )}
+            />
           )}
 
           {/* Entidad de origen (solo si es necesario) */}
@@ -335,7 +351,10 @@ export default function MovimientoFormDialog({
               fullWidth
               required
               value={origenEntidad}
-              onChange={(e) => setOrigenEntidad(e.target.value)}
+              onChange={(e) => { setOrigenEntidad(e.target.value); clearFieldError('origenEntidad') }}
+              onBlur={() => { if (!origenEntidad.trim()) setFieldError('origenEntidad', 'Debe especificar la entidad de origen') }}
+              error={!!fieldErrors.origenEntidad}
+              helperText={fieldErrors.origenEntidad}
             />
           )}
 

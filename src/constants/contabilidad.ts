@@ -17,7 +17,7 @@ export const CATEGORIA_MOVIMIENTO = {
 export const ESTADO_MOVIMIENTO = {
   REGISTRADO: 'registrado',
   APROBADO: 'aprobado',
-  CANCELADO: 'cancelado',
+  ANULADO: 'anulado',
 } as const
 
 // Labels para UI
@@ -40,7 +40,7 @@ export const CATEGORIA_MOVIMIENTO_LABELS = {
 export const ESTADO_MOVIMIENTO_LABELS = {
   [ESTADO_MOVIMIENTO.REGISTRADO]: 'Registrado',
   [ESTADO_MOVIMIENTO.APROBADO]: 'Aprobado',
-  [ESTADO_MOVIMIENTO.CANCELADO]: 'Cancelado',
+  [ESTADO_MOVIMIENTO.ANULADO]: 'Anulado',
 }
 
 // Categorías disponibles por tipo

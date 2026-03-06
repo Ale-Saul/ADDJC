@@ -18,7 +18,7 @@ export type CategoriaMovimiento =
 export type EstadoMovimiento = 
   | 'registrado'     // Movimiento registrado
   | 'aprobado'       // Aprobado (para futuro flujo de aprobación)
-  | 'cancelado';     // Anulado/cancelado
+  | 'anulado';       // Anulado (visible en página pero bloqueado para ediciones)
 
 export interface MovimientoFinanciero {
   id: string;
@@ -34,6 +34,7 @@ export interface MovimientoFinanciero {
   comprobante_url?: string;            // URL del comprobante (PDF/imagen en storage)
   comprobante_nombre?: string;         // Nombre original del archivo
   estado: EstadoMovimiento;
+  activo: boolean;                     // Si false, oculto de la página (soft delete)
   notas?: string;                      // Notas adicionales
   created_at: string;
   updated_at: string;
@@ -67,6 +68,7 @@ export interface MovimientoFinancieroUpdate {
   comprobante_url?: string;
   comprobante_nombre?: string;
   estado?: EstadoMovimiento;
+  activo?: boolean;
   notas?: string;
 }
 

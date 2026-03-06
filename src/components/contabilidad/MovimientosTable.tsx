@@ -14,7 +14,6 @@ import {
   Button,
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
-import DeleteIcon from '@mui/icons-material/Delete'
 import BlockIcon from '@mui/icons-material/Block'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
@@ -23,22 +22,22 @@ import AddIcon from '@mui/icons-material/Add'
 import { MovimientoFinanciero } from '@/models/movimientoFinanciero'
 import * as movimientoFinancieroController from '@/controllers/movimientoFinancieroController'
 import { formatters } from '@/utils/formatters'
+import { TIPO_MOVIMIENTO, ESTADO_MOVIMIENTO, ESTADO_MOVIMIENTO_LABELS } from '@/constants/contabilidad'
 
 interface MovimientosTableProps {
   movimientos: MovimientoFinanciero[]
-  onEditar: (movimiento: MovimientoFinanciero) => void
-  onEliminar: (id: string) => void
-  onAnular: (id: string) => void
+  onEditar?: (movimiento: MovimientoFinanciero) => void
+  onAnular?: (id: string) => void
   onAgregar?: () => void
 }
 
 export default function MovimientosTable({
   movimientos,
   onEditar,
-  onEliminar,
   onAnular,
   onAgregar,
 }: MovimientosTableProps) {
+  const soloLectura = !onEditar && !onAnular
   const formatCurrency = (amount: number) => {
     return `Bs. ${new Intl.NumberFormat('es-BO', {
       minimumFractionDigits: 2,
@@ -47,16 +46,16 @@ export default function MovimientosTable({
   }
 
   const getTipoColor = (tipo: string) => {
-    return tipo === 'ingreso' ? 'success' : 'error'
+    return tipo === TIPO_MOVIMIENTO.INGRESO ? 'success' : 'error'
   }
 
   const getEstadoColor = (estado: string) => {
     switch (estado) {
-      case 'registrado':
+      case ESTADO_MOVIMIENTO.REGISTRADO:
         return 'default'
-      case 'aprobado':
+      case ESTADO_MOVIMIENTO.APROBADO:
         return 'success'
-      case 'cancelado':
+      case ESTADO_MOVIMIENTO.ANULADO:
         return 'error'
       default:
         return 'default'
@@ -102,7 +101,7 @@ export default function MovimientosTable({
               textTransform: 'none',
               fontWeight: 'bold',
               whiteSpace: 'nowrap',
-              height: '40px'
+              minHeight: '44px'
             }}
           >
             Nuevo Movimiento
@@ -128,25 +127,31 @@ export default function MovimientosTable({
                 <TableCell>Origen</TableCell>
                 <TableCell align="right">Monto</TableCell>
                 <TableCell>Estado</TableCell>
-                <TableCell align="center">Acciones</TableCell>
+                {!soloLectura && <TableCell align="center">Acciones</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
-              {movimientos.map((movimiento) => (
-                <TableRow key={movimiento.id} hover>
+              {movimientos.map((movimiento) => {
+                const isAnulado = movimiento.estado === ESTADO_MOVIMIENTO.ANULADO
+                return (
+                <TableRow
+                  key={movimiento.id}
+                  hover={!isAnulado}
+                  sx={isAnulado ? { opacity: 0.55, bgcolor: 'action.hover' } : undefined}
+                >
                   <TableCell>
-                    {formatters.formatDate(movimiento.fecha)}
+                    {formatters.formatDateTime(movimiento.created_at)}
                   </TableCell>
                   <TableCell>
                     <Chip
                       icon={
-                        movimiento.tipo === 'ingreso' ? (
+                        movimiento.tipo === TIPO_MOVIMIENTO.INGRESO ? (
                           <TrendingUpIcon />
                         ) : (
                           <TrendingDownIcon />
                         )
                       }
-                      label={movimiento.tipo === 'ingreso' ? 'Ingreso' : 'Egreso'}
+                      label={movimiento.tipo === TIPO_MOVIMIENTO.INGRESO ? 'Ingreso' : 'Egreso'}
                       color={getTipoColor(movimiento.tipo)}
                       size="small"
                     />
@@ -167,7 +172,11 @@ export default function MovimientosTable({
                     )}
                   </TableCell>
                   <TableCell>
-                    {movimiento.origen_club_nombre || movimiento.origen_entidad || '-'}
+                    {(movimiento.categoria === 'donacion_club' || movimiento.categoria === 'pago_club')
+                      ? (movimiento.origen_club_nombre || '-')
+                      : (movimiento.categoria === 'aporte_estado' || movimiento.categoria === 'sponsor')
+                      ? (movimiento.origen_entidad || '-')
+                      : '-'}
                   </TableCell>
                   <TableCell align="right">
                     <Typography
@@ -175,68 +184,25 @@ export default function MovimientosTable({
                       sx={{
                         fontWeight: 'bold',
                         color:
-                          movimiento.tipo === 'ingreso'
+                          movimiento.tipo === TIPO_MOVIMIENTO.INGRESO
                             ? 'success.main'
                             : 'error.main',
                       }}
                     >
-                      {movimiento.tipo === 'ingreso' ? '+' : '-'}
+                      {movimiento.tipo === TIPO_MOVIMIENTO.INGRESO ? '+' : '-'}
                       {formatCurrency(movimiento.monto)}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={movimiento.estado}
+                      label={ESTADO_MOVIMIENTO_LABELS[movimiento.estado as keyof typeof ESTADO_MOVIMIENTO_LABELS] ?? movimiento.estado}
                       color={getEstadoColor(movimiento.estado)}
                       size="small"
                     />
                   </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                      {movimiento.comprobante_url && (
-                        <Tooltip title="Ver comprobante">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleVerComprobante(movimiento.comprobante_url!)}
-                          >
-                            <AttachFileIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {movimiento.estado !== 'cancelado' && (
-                        <>
-                          <Tooltip title="Editar">
-                            <IconButton
-                              size="small"
-                              onClick={() => onEditar(movimiento)}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Anular">
-                            <IconButton
-                              size="small"
-                              color="warning"
-                              onClick={() => onAnular(movimiento.id)}
-                            >
-                              <BlockIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Eliminar">
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => onEliminar(movimiento.id)}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </>
-                      )}
-                    </Box>
-                  </TableCell>
                 </TableRow>
-              ))}
+                )
+              })}
             </TableBody>
           </Table>
         </TableContainer>

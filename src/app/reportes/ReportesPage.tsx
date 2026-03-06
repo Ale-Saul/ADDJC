@@ -35,6 +35,7 @@ import autoTable from 'jspdf-autotable'
 import { formatters } from '@/utils/formatters'
 import { ESTADO_PAGO, TIPO_PAGO_LABELS, TIPO_DESCUENTO } from '@/constants/pagos'
 import { useReportes } from '@/hooks/useReportes'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function ReportesPage() {
   const {
@@ -61,6 +62,7 @@ export default function ReportesPage() {
     getJudokaNombre,
     getTipoLabel
   } = useReportes()
+  const { user } = useAuth()
 
   const exportarExcel = () => {
     // Crear CSV
@@ -119,6 +121,9 @@ export default function ReportesPage() {
     doc.setFontSize(11)
     doc.text(`Período: ${formatters.formatDate(fechaInicio)} - ${formatters.formatDate(fechaFin)}`, 14, 28)
     doc.text(`Fecha de generación: ${formatters.formatDateTime(new Date(), true)}`, 14, 34)
+    doc.setFontSize(9)
+    doc.text(`Generado por: ${user ? `${user.nombres} ${user.apellidos}` : 'Usuario desconocido'}`, 14, 40)
+    doc.setFontSize(11)
     
     // Totales
     const totalCobrado = pagosFiltrados
@@ -130,9 +135,9 @@ export default function ReportesPage() {
       .reduce((sum, p) => sum + p.monto_final, 0)
 
     doc.setFontSize(10)
-    doc.text(`Total Cobrado: Bs. ${totalCobrado.toFixed(2)}`, 14, 42)
-    doc.text(`Total Pendiente: Bs. ${totalPendiente.toFixed(2)}`, 80, 42)
-    doc.text(`Total General: Bs. ${(totalCobrado + totalPendiente).toFixed(2)}`, 146, 42)
+    doc.text(`Total Cobrado: Bs. ${totalCobrado.toFixed(2)}`, 14, 48)
+    doc.text(`Total Pendiente: Bs. ${totalPendiente.toFixed(2)}`, 80, 48)
+    doc.text(`Total General: Bs. ${(totalCobrado + totalPendiente).toFixed(2)}`, 146, 48)
     
     // Tabla de pagos
     const tableData = pagosFiltrados.map(p => [

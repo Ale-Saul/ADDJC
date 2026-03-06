@@ -128,7 +128,7 @@ export default function Sidebar() {
       label: 'Contabilidad',
       path: '/contabilidad',
       icon: <AccountBalanceIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION] // Admin y asociación
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO] // Admin, asociación y encargados
     }
   ]
 

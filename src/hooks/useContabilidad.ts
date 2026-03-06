@@ -3,7 +3,7 @@ import { MovimientoFinanciero } from '@/models/movimientoFinanciero'
 import { Club } from '@/models/club'
 import * as movimientoFinancieroController from '@/controllers/movimientoFinancieroController'
 import { clubController } from '@/controllers/clubController'
-import { ESTADO_MOVIMIENTO } from '@/constants/contabilidad'
+import { ESTADO_MOVIMIENTO, TIPO_MOVIMIENTO } from '@/constants/contabilidad'
 
 export function useContabilidad() {
   const [movimientos, setMovimientos] = useState<MovimientoFinanciero[]>([])
@@ -25,8 +25,6 @@ export function useContabilidad() {
   const [tipoFiltro, setTipoFiltro] = useState<string>('todos')
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>('todos')
   const [clubFiltro, setClubFiltro] = useState<string>('todos')
-  const [showFilters, setShowFilters] = useState(false)
-
   const clearFilters = () => {
     const fecha = new Date()
     fecha.setMonth(fecha.getMonth() - 1)
@@ -41,26 +39,22 @@ export function useContabilidad() {
     setLoading(true)
     setError(null)
     try {
-      // Cargar movimientos filtrados por fecha
-      const movimientosResponse = await movimientoFinancieroController.getMovimientosByDateRange(
-        fechaInicio,
-        fechaFin
-      )
-      
+      const [movimientosResponse, clubesResponse] = await Promise.all([
+        movimientoFinancieroController.getAllMovimientos(),
+        clubController.getAllClubes()
+      ])
+
       if (movimientosResponse.success && movimientosResponse.data) {
         setMovimientos(movimientosResponse.data)
       } else {
         setError(movimientosResponse.error || 'Error al cargar los movimientos')
       }
-
-      // Cargar clubes para el filtro
-      const clubesResponse = await clubController.getAllClubes()
       if (clubesResponse.success && clubesResponse.data) {
         setClubes(clubesResponse.data)
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error al cargar datos:', err)
-      setError(err.message || 'Error al cargar los datos')
+      setError(err instanceof Error ? err.message : 'Error al cargar los datos')
     } finally {
       setLoading(false)
     }
@@ -68,35 +62,46 @@ export function useContabilidad() {
 
   useEffect(() => {
     cargarDatos()
-  }, [fechaInicio, fechaFin])
+  }, [])
 
   // Filtrar movimientos
   const movimientosFiltrados = useMemo(() => {
-    return movimientos.filter(mov => {
-      // Filtro por tipo
-      if (tipoFiltro !== 'todos' && mov.tipo !== tipoFiltro) return false
-      
-      // Filtro por categoría
-      if (categoriaFiltro !== 'todos' && mov.categoria !== categoriaFiltro) return false
-      
-      // Filtro por club
-      if (clubFiltro !== 'todos' && mov.origen_club_id !== clubFiltro) return false
-      
-      // Excluir movimientos anulados por defecto
-      if (mov.estado === ESTADO_MOVIMIENTO.CANCELADO) return false
-      
-      return true
-    })
-  }, [movimientos, tipoFiltro, categoriaFiltro, clubFiltro])
+    return movimientos
+      .filter(mov => {
+        // Filtro por fecha
+        if (fechaInicio && mov.fecha < fechaInicio) return false
+        if (fechaFin && mov.fecha > fechaFin) return false
 
-  // Calcular balance
+        // Filtro por tipo
+        if (tipoFiltro !== 'todos' && mov.tipo !== tipoFiltro) return false
+        
+        // Filtro por categoría
+        if (categoriaFiltro !== 'todos' && mov.categoria !== categoriaFiltro) return false
+        
+        // Filtro por club
+        if (clubFiltro !== 'todos' && mov.origen_club_id !== clubFiltro) return false
+        
+        // Los movimientos anulados se muestran en la tabla (locked) pero no desaparecen
+        return true
+      })
+      .sort((a, b) => {
+        const aAnulado = a.estado === ESTADO_MOVIMIENTO.ANULADO ? 1 : 0
+        const bAnulado = b.estado === ESTADO_MOVIMIENTO.ANULADO ? 1 : 0
+        return aAnulado - bAnulado
+      })
+  }, [movimientos, fechaInicio, fechaFin, tipoFiltro, categoriaFiltro, clubFiltro])
+
+  // Calcular balance (excluye anulados, que no representan dinero real)
   const balance = useMemo(() => {
-    const ingresos = movimientosFiltrados
-      .filter(m => m.tipo === 'ingreso')
+    const movimientosActivos = movimientosFiltrados.filter(
+      m => m.estado !== ESTADO_MOVIMIENTO.ANULADO
+    )
+    const ingresos = movimientosActivos
+      .filter(m => m.tipo === TIPO_MOVIMIENTO.INGRESO)
       .reduce((sum, m) => sum + m.monto, 0)
     
-    const egresos = movimientosFiltrados
-      .filter(m => m.tipo === 'egreso')
+    const egresos = movimientosActivos
+      .filter(m => m.tipo === TIPO_MOVIMIENTO.EGRESO)
       .reduce((sum, m) => sum + m.monto, 0)
     
     return {
@@ -118,21 +123,6 @@ export function useContabilidad() {
     setOpenDialog(true)
   }
 
-  const handleEliminarMovimiento = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar este movimiento?')) return
-    
-    try {
-      const response = await movimientoFinancieroController.deleteMovimiento(id)
-      if (response.success) {
-        await cargarDatos()
-      } else {
-        alert(response.error || 'Error al eliminar movimiento')
-      }
-    } catch (err: any) {
-      alert(err.message || 'Error al eliminar movimiento')
-    }
-  }
-
   const handleAnularMovimiento = async (id: string) => {
     if (!confirm('¿Está seguro de anular este movimiento?')) return
     
@@ -143,8 +133,8 @@ export function useContabilidad() {
       } else {
         alert(response.error || 'Error al anular movimiento')
       }
-    } catch (err: any) {
-      alert(err.message || 'Error al anular movimiento')
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al anular movimiento')
     }
   }
 
@@ -171,15 +161,12 @@ export function useContabilidad() {
     setCategoriaFiltro,
     clubFiltro,
     setClubFiltro,
-    showFilters,
-    setShowFilters,
     clearFilters,
     cargarDatos,
     movimientosFiltrados,
     balance,
     handleAgregarMovimiento,
     handleEditarMovimiento,
-    handleEliminarMovimiento,
     handleAnularMovimiento,
     handleGuardarMovimiento
   }

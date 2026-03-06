@@ -34,6 +34,7 @@ import autoTable from 'jspdf-autotable'
 import { formatters } from '@/utils/formatters'
 import { ESTADO_PAGO } from '@/constants/pagos'
 import { useReportesAsociacion } from '@/hooks/useReportesAsociacion'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function ReportesAsociacionPage() {
   const {
@@ -55,6 +56,7 @@ export default function ReportesAsociacionPage() {
     totalesGenerales,
     getTipoLabel
   } = useReportesAsociacion()
+  const { user } = useAuth()
 
   const exportarPDF = () => {
     const doc = new jsPDF()
@@ -72,13 +74,16 @@ export default function ReportesAsociacionPage() {
     doc.setFontSize(11)
     doc.text(`Período: ${formatters.formatDate(fechaInicio)} - ${formatters.formatDate(fechaFin)}`, 14, 28)
     doc.text(`Fecha de generación: ${formatters.formatDateTime(new Date(), true)}`, 14, 34)
+    doc.setFontSize(9)
+    doc.text(`Generado por: ${user ? `${user.nombres} ${user.apellidos}` : 'Usuario desconocido'}`, 14, 40)
+    doc.setFontSize(11)
     
     if (vistaDetalle === 'club') {
       // Totales generales
       doc.setFontSize(10)
-      doc.text(`Total Cobrado: Bs. ${totalesGenerales.totalCobrado.toFixed(2)}`, 14, 42)
-      doc.text(`Total Pendiente: Bs. ${totalesGenerales.totalPendiente.toFixed(2)}`, 80, 42)
-      doc.text(`Clubes Activos: ${totalesGenerales.clubesActivos}/${totalesGenerales.cantidadClubes}`, 146, 42)
+      doc.text(`Total Cobrado: Bs. ${totalesGenerales.totalCobrado.toFixed(2)}`, 14, 48)
+      doc.text(`Total Pendiente: Bs. ${totalesGenerales.totalPendiente.toFixed(2)}`, 80, 48)
+      doc.text(`Clubes Activos: ${totalesGenerales.clubesActivos}/${totalesGenerales.cantidadClubes}`, 146, 48)
       
       // Tabla de clubes
       const tableData = resumenesPorClub.map(r => [
@@ -92,7 +97,7 @@ export default function ReportesAsociacionPage() {
       autoTable(doc, {
         head: [['Club', 'Judokas', 'Cobrado', 'Pendiente', 'Vencido']],
         body: tableData,
-        startY: 48,
+        startY: 54,
         styles: { fontSize: 9, cellPadding: 3 },
         headStyles: { fillColor: [66, 139, 202], textColor: 255 },
         alternateRowStyles: { fillColor: [245, 245, 245] },
@@ -124,10 +129,10 @@ export default function ReportesAsociacionPage() {
       const totalPagosJudokas = resumenesPorJudoka.reduce((sum, r) => sum + r.cantidadPagos, 0)
 
       doc.setFontSize(10)
-      doc.text(`Club: ${clubFiltro}`, 14, 42)
-      doc.text(`Total Cobrado: Bs. ${totalCobradoJudokas.toFixed(2)}`, 14, 48)
-      doc.text(`Total Pendiente: Bs. ${totalPendienteJudokas.toFixed(2)}`, 80, 48)
-      doc.text(`Total Vencido: Bs. ${totalVencidoJudokas.toFixed(2)}`, 146, 48)
+      doc.text(`Club: ${clubFiltro}`, 14, 48)
+      doc.text(`Total Cobrado: Bs. ${totalCobradoJudokas.toFixed(2)}`, 14, 54)
+      doc.text(`Total Pendiente: Bs. ${totalPendienteJudokas.toFixed(2)}`, 80, 54)
+      doc.text(`Total Vencido: Bs. ${totalVencidoJudokas.toFixed(2)}`, 146, 54)
       
       // Tabla de judokas
       const tableData = resumenesPorJudoka.map(r => {
@@ -156,7 +161,7 @@ export default function ReportesAsociacionPage() {
           `Bs. ${totalVencidoJudokas.toFixed(2)}`
         ]],
         showFoot: 'lastPage',
-        startY: 54,
+        startY: 60,
         styles: { fontSize: 8, cellPadding: 2 },
         headStyles: { fillColor: [66, 139, 202], textColor: 255 },
         footStyles: { fillColor: [66, 139, 202], textColor: 255, fontStyle: 'bold' },
@@ -194,10 +199,10 @@ export default function ReportesAsociacionPage() {
         .reduce((sum, p) => sum + p.monto_final, 0)
       
       doc.setFontSize(10)
-      doc.text(`Club: ${clubFiltro}`, 14, 42)
-      doc.text(`Total Cobrado: Bs. ${totalCobradoPagos.toFixed(2)}`, 14, 48)
-      doc.text(`Total Pendiente: Bs. ${totalPendientePagos.toFixed(2)}`, 80, 48)
-      doc.text(`Total General: Bs. ${totalMontoFinalPagos.toFixed(2)}`, 146, 48)
+      doc.text(`Club: ${clubFiltro}`, 14, 48)
+      doc.text(`Total Cobrado: Bs. ${totalCobradoPagos.toFixed(2)}`, 14, 54)
+      doc.text(`Total Pendiente: Bs. ${totalPendientePagos.toFixed(2)}`, 80, 54)
+      doc.text(`Total General: Bs. ${totalMontoFinalPagos.toFixed(2)}`, 146, 54)
       
       // Tabla de pagos
       const tableData = pagosConDetalles.map(p => [
@@ -227,7 +232,7 @@ export default function ReportesAsociacionPage() {
           ''
         ]],
         showFoot: 'lastPage',
-        startY: 54,
+        startY: 60,
         styles: { fontSize: 7, cellPadding: 2 },
         headStyles: { fillColor: [66, 139, 202], textColor: 255 },
         footStyles: { fillColor: [66, 139, 202], textColor: 255, fontStyle: 'bold' },

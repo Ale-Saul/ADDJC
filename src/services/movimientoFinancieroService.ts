@@ -30,6 +30,7 @@ interface MovimientoDB {
   comprobante_url?: string;
   comprobante_nombre?: string;
   estado: EstadoMovimiento;
+  activo: boolean;
   notas?: string;
   created_at: string;
   updated_at: string;
@@ -54,7 +55,8 @@ export async function getAllMovimientos(): Promise<MovimientoFinanciero[]> {
         correo
       )
     `)
-    .order('fecha', { ascending: false });
+    .eq('activo', true)
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error al obtener movimientos financieros:', error);
@@ -77,6 +79,7 @@ export async function getAllMovimientos(): Promise<MovimientoFinanciero[]> {
     comprobante_url: mov.comprobante_url,
     comprobante_nombre: mov.comprobante_nombre,
     estado: mov.estado,
+    activo: mov.activo,
     notas: mov.notas,
     created_at: mov.created_at,
     updated_at: mov.updated_at,
@@ -107,7 +110,8 @@ export async function getMovimientosByDateRange(
     `)
     .gte('fecha', fechaInicio)
     .lte('fecha', fechaFin)
-    .order('fecha', { ascending: false });
+    .eq('activo', true)
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error al obtener movimientos por rango de fechas:', error);
@@ -129,6 +133,7 @@ export async function getMovimientosByDateRange(
     comprobante_url: mov.comprobante_url,
     comprobante_nombre: mov.comprobante_nombre,
     estado: mov.estado,
+    activo: mov.activo,
     notas: mov.notas,
     created_at: mov.created_at,
     updated_at: mov.updated_at,
@@ -182,6 +187,7 @@ export async function getMovimientoById(id: string): Promise<MovimientoFinancier
     comprobante_url: mov.comprobante_url,
     comprobante_nombre: mov.comprobante_nombre,
     estado: mov.estado,
+    activo: mov.activo,
     notas: mov.notas,
     created_at: mov.created_at,
     updated_at: mov.updated_at,
@@ -236,6 +242,7 @@ export async function createMovimiento(
     comprobante_url: mov.comprobante_url,
     comprobante_nombre: mov.comprobante_nombre,
     estado: mov.estado,
+    activo: mov.activo,
     notas: mov.notas,
     created_at: mov.created_at,
     updated_at: mov.updated_at,
@@ -293,6 +300,7 @@ export async function updateMovimiento(
     comprobante_url: mov.comprobante_url,
     comprobante_nombre: mov.comprobante_nombre,
     estado: mov.estado,
+    activo: mov.activo,
     notas: mov.notas,
     created_at: mov.created_at,
     updated_at: mov.updated_at,
@@ -309,7 +317,7 @@ export async function deleteMovimiento(id: string): Promise<void> {
   const supabase = createClient()
   const { error } = await supabase
     .from('movimientos_financieros')
-    .delete()
+    .update({ activo: false })
     .eq('id', id);
 
   if (error) {
@@ -319,10 +327,10 @@ export async function deleteMovimiento(id: string): Promise<void> {
 }
 
 /**
- * Anular un movimiento financiero (cambiar estado a 'cancelado')
+ * Anular un movimiento financiero (cambiar estado a 'anulado')
  */
 export async function anularMovimiento(id: string): Promise<MovimientoFinanciero> {
-  return updateMovimiento(id, { estado: 'cancelado' });
+  return updateMovimiento(id, { estado: 'anulado' });
 }
 
 /**
@@ -338,7 +346,8 @@ export async function getBalance(
     .select('tipo, monto')
     .gte('fecha', fechaInicio)
     .lte('fecha', fechaFin)
-    .neq('estado', 'cancelado');
+    .eq('activo', true)
+    .neq('estado', 'anulado');
 
   if (error) {
     console.error('Error al calcular balance:', error);
@@ -375,7 +384,8 @@ export async function getResumenPorCategoria(
   let query = supabase
     .from('movimientos_financieros')
     .select('tipo, categoria, monto')
-    .neq('estado', 'cancelado');
+    .eq('activo', true)
+    .neq('estado', 'anulado');
 
   if (fechaInicio) {
     query = query.gte('fecha', fechaInicio);
@@ -423,7 +433,8 @@ export async function getMovimientosPorMes(
   let query = supabase
     .from('movimientos_financieros')
     .select('fecha, tipo, monto')
-    .neq('estado', 'cancelado') // Corregido de 'anulado' a 'cancelado'
+    .eq('activo', true)
+    .neq('estado', 'anulado')
     .order('fecha', { ascending: true });
 
   if (anio) {
