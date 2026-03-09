@@ -61,6 +61,7 @@ import ConfirmDialog from '@/components/common/ConfirmDialog'
 import { clubController } from '@/controllers/clubController'
 import { MUNICIPIOS } from '@/utils/constants'
 import { useClubList } from '@/hooks/useClubList'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface ClubListProps {
   onEdit?: (club: Club) => void
@@ -79,6 +80,11 @@ export default function ClubList({
   itemsPerPage: initialItemsPerPage = 10,
   readOnly = false
 }: ClubListProps) {
+  const { user } = useAuth()
+  const isAdminOrAsociacion = user?.rol === 'admin' || user?.rol === 'asociacion'
+  const isEncargado = user?.rol === 'encargado'
+  const isViewOnly = user?.rol === 'arbitro' || user?.rol === 'judoka' || user?.rol === 'sensei'
+
   const { state, dispatch, loadClubes, toggleStatus, updateLocalClub, deleteLocalClub, filteredData } = useClubList(externalSearchTerm)
   const { loading, error, globalFilter, municipioFilter, estadoFilter, showFilters, modifiedIds } = state
   const [pendingDelete, setPendingDelete] = useState<Club | null>(null)
@@ -171,34 +177,40 @@ export default function ClubList({
       header: 'Teléfono',
       cell: (info) => info.getValue() || '-',
     }),
-    columnHelper.display({
-      id: 'documentos',
-      header: 'Documentos',
-      cell: (info) => {
-        const docs = info.row.original.documentos || []
-        return (
-          <Tooltip title={docs.length > 0 ? `Ver ${docs.length} documento(s)` : 'Sin documentos'}>
-            <span>
-              <IconButton
-                size="small"
-                color={docs.length > 0 ? 'primary' : 'default'}
-                onClick={() => handleOpenDocs(info.row.original)}
-                disabled={docs.length === 0}
-              >
-                <Badge badgeContent={docs.length > 0 ? docs.length : undefined} color="primary">
-                  <FolderIcon fontSize="small" />
-                </Badge>
-              </IconButton>
-            </span>
-          </Tooltip>
-        )
-      },
-    }),
+    // Columna de documentos: oculta para arbitro, judoka y sensei
+    ...(!isViewOnly ? [
+      columnHelper.display({
+        id: 'documentos',
+        header: 'Documentos',
+        cell: (info) => {
+          const club = info.row.original
+          const docs = club.documentos || []
+          const canSeeDocs = isAdminOrAsociacion || (isEncargado && user?.club_id === club.id)
+          if (!canSeeDocs) return <Typography variant="body2" color="text.disabled">—</Typography>
+          return (
+            <Tooltip title={docs.length > 0 ? `Ver ${docs.length} documento(s)` : 'Sin documentos'}>
+              <span>
+                <IconButton
+                  size="small"
+                  color={docs.length > 0 ? 'primary' : 'default'}
+                  onClick={() => handleOpenDocs(club)}
+                  disabled={docs.length === 0}
+                >
+                  <Badge badgeContent={docs.length > 0 ? docs.length : undefined} color="primary">
+                    <FolderIcon fontSize="small" />
+                  </Badge>
+                </IconButton>
+              </span>
+            </Tooltip>
+          )
+        },
+      })
+    ] : []),
     // Estado solo para roles con permisos de gestión
     ...(!readOnly ? [
       columnHelper.accessor('activo', {
         header: 'Estado',
-        cell: (info: any) => {
+        cell: (info) => {
           const isActive = info.getValue()
           const id = info.row.original.id
           return (
@@ -219,32 +231,34 @@ export default function ClubList({
         },
       })
     ] : []),
-    // Acciones para todos los roles permitidos
-    columnHelper.display({
-      id: 'acciones',
-      header: () => <Box textAlign="right">Acciones</Box>,
-      cell: (info) => (
-        <Box textAlign="right">
-          {onEdit && (
-            <IconButton 
-              size="small" 
-              color="primary" 
-              onClick={() => handleEdit(info.row.original)} 
-              title={readOnly ? "Ver detalles" : "Editar"} 
-              aria-label={readOnly ? "Ver club" : "Editar club"}
-            >
-              {readOnly ? <SearchIcon fontSize="small" /> : <EditIcon fontSize="small" />}
-            </IconButton>
-          )}
-          {onDelete && !readOnly && (
-            <IconButton size="small" color="error" onClick={() => handleDelete(info.row.original)} title="Eliminar" aria-label="Eliminar club">
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          )}
-        </Box>
-      ),
-    }),
-  ], [onEdit, onDelete, toggleStatus, readOnly])
+    // Columna de acciones: oculta para arbitro, judoka y sensei
+    ...(!isViewOnly ? [
+      columnHelper.display({
+        id: 'acciones',
+        header: () => <Box textAlign="right">Acciones</Box>,
+        cell: (info) => (
+          <Box textAlign="right">
+            {onEdit && (
+              <IconButton 
+                size="small" 
+                color="primary" 
+                onClick={() => handleEdit(info.row.original)} 
+                title={readOnly ? "Ver detalles" : "Editar"} 
+                aria-label={readOnly ? "Ver club" : "Editar club"}
+              >
+                {readOnly ? <SearchIcon fontSize="small" /> : <EditIcon fontSize="small" />}
+              </IconButton>
+            )}
+            {onDelete && !readOnly && (
+              <IconButton size="small" color="error" onClick={() => handleDelete(info.row.original)} title="Eliminar" aria-label="Eliminar club">
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            )}
+          </Box>
+        ),
+      })
+    ] : []),
+  ], [onEdit, onDelete, toggleStatus, readOnly, isViewOnly, isAdminOrAsociacion, isEncargado, user?.club_id])
 
   const table = useReactTable({
     data: filteredData,
@@ -453,7 +467,7 @@ export default function ClubList({
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDocsDialog({ open: false, club: null })}>Cerrar</Button>
-          {onEdit && docsDialog.club && (
+          {isAdminOrAsociacion && onEdit && docsDialog.club && (
             <Button
               variant="contained"
               onClick={() => {

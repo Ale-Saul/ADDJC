@@ -423,10 +423,12 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
       )}
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-        {onCancel && <Button variant="outlined" onClick={onCancel} disabled={loading}>Cancelar</Button>}
-        <Button type="submit" variant="contained" disabled={loading} sx={{ height: '40px', minWidth: '120px' }}>
-          {loading ? <CircularProgress size={24} color="inherit" /> : (club ? 'Actualizar' : 'Crear')}
-        </Button>
+        {onCancel && <Button variant="outlined" onClick={onCancel} disabled={loading}>{isAdminOrAsociacion ? 'Cancelar' : 'Cerrar'}</Button>}
+        {isAdminOrAsociacion && (
+          <Button type="submit" variant="contained" disabled={loading} sx={{ height: '40px', minWidth: '120px' }}>
+            {loading ? <CircularProgress size={24} color="inherit" /> : (club ? 'Actualizar' : 'Crear')}
+          </Button>
+        )}
       </Box>
     </Box>
   )

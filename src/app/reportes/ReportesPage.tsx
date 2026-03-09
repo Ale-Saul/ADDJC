@@ -86,7 +86,11 @@ export default function ReportesPage() {
       .reduce((sum, p) => sum + p.monto_final, 0)
     
     const totalPendiente = pagosFiltrados
-      .filter(p => p.estado === ESTADO_PAGO.PENDIENTE || p.estado === ESTADO_PAGO.VENCIDO)
+      .filter(p => p.estado === ESTADO_PAGO.PENDIENTE)
+      .reduce((sum, p) => sum + p.monto_final, 0)
+
+    const totalVencidoExport = pagosFiltrados
+      .filter(p => p.estado === ESTADO_PAGO.VENCIDO)
       .reduce((sum, p) => sum + p.monto_final, 0)
 
     // Agregar líneas de totales
@@ -94,7 +98,8 @@ export default function ReportesPage() {
       ['', '', '', '', '', '', '', '', '', ''],
       ['', '', '', '', '', 'TOTAL COBRADO:', totalCobrado.toFixed(2), '', '', ''],
       ['', '', '', '', '', 'TOTAL PENDIENTE:', totalPendiente.toFixed(2), '', '', ''],
-      ['', '', '', '', '', 'TOTAL GENERAL:', (totalCobrado + totalPendiente).toFixed(2), '', '', '']
+      ['', '', '', '', '', 'TOTAL VENCIDO:', totalVencidoExport.toFixed(2), '', '', ''],
+      ['', '', '', '', '', 'TOTAL GENERAL:', (totalCobrado + totalPendiente + totalVencidoExport).toFixed(2), '', '', '']
     ]
 
     // Combinar todo
@@ -130,14 +135,18 @@ export default function ReportesPage() {
       .filter(p => p.estado === ESTADO_PAGO.PAGADO)
       .reduce((sum, p) => sum + p.monto_final, 0)
     
-    const totalPendiente = pagosFiltrados
-      .filter(p => p.estado === ESTADO_PAGO.PENDIENTE || p.estado === ESTADO_PAGO.VENCIDO)
+    const totalPendientePDF = pagosFiltrados
+      .filter(p => p.estado === ESTADO_PAGO.PENDIENTE)
+      .reduce((sum, p) => sum + p.monto_final, 0)
+
+    const totalVencidoPDF = pagosFiltrados
+      .filter(p => p.estado === ESTADO_PAGO.VENCIDO)
       .reduce((sum, p) => sum + p.monto_final, 0)
 
     doc.setFontSize(10)
     doc.text(`Total Cobrado: Bs. ${totalCobrado.toFixed(2)}`, 14, 48)
-    doc.text(`Total Pendiente: Bs. ${totalPendiente.toFixed(2)}`, 80, 48)
-    doc.text(`Total General: Bs. ${(totalCobrado + totalPendiente).toFixed(2)}`, 146, 48)
+    doc.text(`Total Pendiente: Bs. ${totalPendientePDF.toFixed(2)}`, 80, 48)
+    doc.text(`Total Vencido: Bs. ${totalVencidoPDF.toFixed(2)}`, 146, 48)
     
     // Tabla de pagos
     const tableData = pagosFiltrados.map(p => [
@@ -383,7 +392,7 @@ export default function ReportesPage() {
                   Bs. {estadisticas.totalPendiente.toFixed(2)}
                 </Typography>
                 <Typography variant="caption" color="#000">
-                  {pagosFiltrados.filter(p => p.estado === ESTADO_PAGO.PENDIENTE || p.estado === ESTADO_PAGO.VENCIDO).length} pagos pendientes
+                  {pagosFiltrados.filter(p => p.estado === ESTADO_PAGO.PENDIENTE).length} pagos pendientes
                 </Typography>
               </CardContent>
             </Card>

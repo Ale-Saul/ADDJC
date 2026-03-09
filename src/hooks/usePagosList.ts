@@ -55,14 +55,31 @@ export function usePagosList(judokaId: string, onPagoDeleted?: () => void) {
   })
   const [pagoToDelete, setPagoToDelete] = useState<Pago | null>(null)
 
+  // Calcula el estado real considerando fecha de vencimiento
+  const getEstadoReal = (pago: Pago): Pago => {
+    if (
+      pago.estado === ESTADO_PAGO.PENDIENTE &&
+      pago.fecha_vencimiento
+    ) {
+      const hoy = new Date()
+      hoy.setHours(0, 0, 0, 0)
+      const vencimiento = new Date(pago.fecha_vencimiento)
+      vencimiento.setHours(0, 0, 0, 0)
+      if (vencimiento < hoy) {
+        return { ...pago, estado: ESTADO_PAGO.VENCIDO }
+      }
+    }
+    return pago
+  }
+
   const fetchPagos = useCallback(async () => {
     dispatch({ type: 'FETCH_START' })
     try {
       const response = await pagoController.getPagosByJudoka(judokaId)
       if (response.success && response.data) {
-        const pagosPendientes = response.data.filter(
-          p => p.estado === ESTADO_PAGO.PENDIENTE || p.estado === ESTADO_PAGO.VENCIDO
-        )
+        const pagosPendientes = response.data
+          .map(getEstadoReal)
+          .filter(p => p.estado === ESTADO_PAGO.PENDIENTE || p.estado === ESTADO_PAGO.VENCIDO)
         dispatch({ type: 'FETCH_SUCCESS', payload: pagosPendientes })
       } else {
         dispatch({ type: 'FETCH_ERROR', payload: response.error || 'Error al cargar pagos' })

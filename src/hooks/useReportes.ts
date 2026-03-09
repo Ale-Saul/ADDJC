@@ -77,9 +77,32 @@ export function useReportes() {
     fetchData()
   }, [user?.club_id, isAdmin])
 
+  // Calcular el estado real de un pago considerando la fecha de vencimiento
+  const getEstadoReal = (pago: Pago): string => {
+    if (pago.estado === ESTADO_PAGO.PAGADO || 
+        pago.estado === ESTADO_PAGO.CANCELADO || 
+        pago.estado === ESTADO_PAGO.REEMBOLSADO) {
+      return pago.estado
+    }
+    // Si está pendiente pero ya venció la fecha, mostrarlo como vencido
+    if (pago.estado === ESTADO_PAGO.PENDIENTE && pago.fecha_vencimiento) {
+      const hoy = new Date()
+      hoy.setHours(0, 0, 0, 0)
+      const vencimiento = new Date(pago.fecha_vencimiento)
+      vencimiento.setHours(0, 0, 0, 0)
+      if (vencimiento < hoy) return ESTADO_PAGO.VENCIDO
+    }
+    return pago.estado
+  }
+
+  // Pagos con el estado real calculado en tiempo real
+  const pagosConEstadoReal = useMemo(() => {
+    return pagos.map(pago => ({ ...pago, estado: getEstadoReal(pago) }))
+  }, [pagos])
+
   // Filtrar pagos según criterios
   const pagosFiltrados = useMemo(() => {
-    return pagos.filter(pago => {
+    return pagosConEstadoReal.filter(pago => {
       // Filtro por fecha (usando fecha de creación)
       const fechaPago = new Date(pago.created_at)
       const inicio = new Date(fechaInicio)
@@ -88,7 +111,7 @@ export function useReportes() {
       
       if (fechaPago < inicio || fechaPago > fin) return false
 
-      // Filtro por estado
+      // Filtro por estado (usando el estado real)
       if (estadoFiltro !== 'todos' && pago.estado !== estadoFiltro) return false
 
       // Filtro por tipo
@@ -105,7 +128,7 @@ export function useReportes() {
 
       return true
     })
-  }, [pagos, fechaInicio, fechaFin, estadoFiltro, tipoFiltro, senseiFiltro, clubFiltro, judokas, isAdmin])
+  }, [pagosConEstadoReal, fechaInicio, fechaFin, estadoFiltro, tipoFiltro, senseiFiltro, clubFiltro, judokas, isAdmin])
 
   // Calcular estadísticas
   const estadisticas = useMemo(() => {
@@ -114,7 +137,7 @@ export function useReportes() {
       .reduce((sum, p) => sum + p.monto_final, 0)
 
     const totalPendiente = pagosFiltrados
-      .filter(p => p.estado === ESTADO_PAGO.PENDIENTE || p.estado === ESTADO_PAGO.VENCIDO)
+      .filter(p => p.estado === ESTADO_PAGO.PENDIENTE)
       .reduce((sum, p) => sum + p.monto_final, 0)
 
     const totalVencido = pagosFiltrados

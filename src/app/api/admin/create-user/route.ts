@@ -202,14 +202,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Enviar correo de bienvenida con credenciales
-    // Solo si tenemos el carnet (que se usa en la contraseña) y la contraseña
-    /* DESHABILITADO TEMPORALMENTE PARA PRUEBAS
     if (ciBody && password) {
       const emailHtml = getWelcomeEmailTemplate(nombresTrimmed, ciBody, password)
-      
-      // Ejecutar el envío de correo de forma asíncrona sin bloquear la respuesta
-      // En Vercel/Serverless esto podría no completarse si la función termina muy rápido,
-      // pero para este entorno debería funcionar bien.
       sendEmail({
         to: email,
         subject: 'Bienvenido a la Asociación de Judo - Credenciales de Acceso',
@@ -222,7 +216,6 @@ export async function POST(request: NextRequest) {
         console.error('Error inesperado al enviar correo:', err)
       })
     }
-    */
 
     return NextResponse.json({
       success: true,
