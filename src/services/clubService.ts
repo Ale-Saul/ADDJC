@@ -11,7 +11,18 @@ export const clubService = {
       const client = createClient()
       let query = client
         .from('clubes')
-        .select('id, nombre_club, provincia, direccion, telefono_contacto, director_tecnico_id, activo, created_at, updated_at')
+        .select(`
+          id, 
+          nombre_club, 
+          provincia, 
+          direccion, 
+          telefono_contacto, 
+          director_tecnico_id, 
+          activo, 
+          created_at, 
+          updated_at,
+          documentos:club_documentos(*)
+        `)
         .order('created_at', { ascending: false })
 
       if (!includeInactive) {
@@ -37,7 +48,18 @@ export const clubService = {
       const client = createClient()
       const { data, error } = await client
         .from('clubes')
-        .select('id, nombre_club, provincia, direccion, telefono_contacto, director_tecnico_id, activo, created_at, updated_at')
+        .select(`
+          id, 
+          nombre_club, 
+          provincia, 
+          direccion, 
+          telefono_contacto, 
+          director_tecnico_id, 
+          activo, 
+          created_at, 
+          updated_at,
+          documentos:club_documentos(*)
+        `)
         .eq('id', id)
         .single()
 
@@ -222,6 +244,49 @@ export const clubService = {
       if (error) throw error
 
       return { success: true, data }
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
+    }
+  },
+
+  /**
+   * Agregar un documento a un club
+   */
+  async addDocument(clubId: string, nombre: string, url: string, tipo: string, userId: string): Promise<ApiResponse<ClubDocumento>> {
+    try {
+      const client = createClient()
+      const { data, error } = await client
+        .from('club_documentos')
+        .insert({
+          club_id: clubId,
+          nombre_documento: nombre,
+          url_documento: url,
+          tipo_documento: tipo,
+          created_by: userId
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      return { success: true, data }
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
+    }
+  },
+
+  /**
+   * Eliminar un documento de un club
+   */
+  async deleteDocument(documentId: string): Promise<ApiResponse<void>> {
+    try {
+      const client = createClient()
+      const { error } = await client
+        .from('club_documentos')
+        .delete()
+        .eq('id', documentId)
+
+      if (error) throw error
+      return { success: true }
     } catch (error: unknown) {
       return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
     }

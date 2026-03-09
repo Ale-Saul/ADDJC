@@ -24,7 +24,17 @@ import {
   MenuItem,
   Stack,
   Tooltip,
-  Switch
+  Switch,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Chip,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Badge,
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -33,6 +43,11 @@ import ClearIcon from '@mui/icons-material/Clear'
 import FilterListIcon from '@mui/icons-material/FilterList'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import FolderIcon from '@mui/icons-material/Folder'
+import AttachFileIcon from '@mui/icons-material/AttachFile'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import { ClubDocumento } from '@/models/club'
+import { storageService } from '@/services/storageService'
 import {
   useReactTable,
   getCoreRowModel,
@@ -68,6 +83,28 @@ export default function ClubList({
   const { loading, error, globalFilter, municipioFilter, estadoFilter, showFilters, modifiedIds } = state
   const [pendingDelete, setPendingDelete] = useState<Club | null>(null)
   const [confirmLoading, setConfirmLoading] = useState(false)
+  const [docsDialog, setDocsDialog] = useState<{ open: boolean; club: Club | null }>({ open: false, club: null })
+  const [openingDoc, setOpeningDoc] = useState<string | null>(null)
+
+  const handleOpenDocs = (club: Club) => {
+    setDocsDialog({ open: true, club })
+  }
+
+  const handleViewDoc = async (doc: ClubDocumento) => {
+    setOpeningDoc(doc.id)
+    try {
+      if (doc.url_documento.startsWith('http')) {
+        window.open(doc.url_documento, '_blank')
+      } else {
+        const result = await storageService.getSignedUrl('club-documentos', doc.url_documento)
+        if (result.success && result.url) {
+          window.open(result.url, '_blank')
+        }
+      }
+    } finally {
+      setOpeningDoc(null)
+    }
+  }
 
   const handleEdit = (club: Club) => {
     if (onEdit) {
@@ -134,48 +171,79 @@ export default function ClubList({
       header: 'Teléfono',
       cell: (info) => info.getValue() || '-',
     }),
-    // Estado y Acciones solo para roles con permisos de gestión
-    ...(!readOnly ? [
-    columnHelper.accessor('activo', {
-      header: 'Estado',
+    columnHelper.display({
+      id: 'documentos',
+      header: 'Documentos',
       cell: (info) => {
-        const isActive = info.getValue()
-        const id = info.row.original.id
+        const docs = info.row.original.documentos || []
         return (
-          <Tooltip title={isActive ? 'Desactivar' : 'Activar'}>
-            <Switch 
-              checked={!!isActive} 
-              onChange={() => toggleStatus(id, !!isActive)}
-              size="medium"
-              sx={{
-                '& .MuiSwitch-switchBase.Mui-checked': { color: '#4caf50' },
-                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#4caf50' },
-                '& .MuiSwitch-switchBase': { color: '#f44336' },
-                '& .MuiSwitch-switchBase + .MuiSwitch-track': { backgroundColor: '#f44336' },
-              }}
-            />
+          <Tooltip title={docs.length > 0 ? `Ver ${docs.length} documento(s)` : 'Sin documentos'}>
+            <span>
+              <IconButton
+                size="small"
+                color={docs.length > 0 ? 'primary' : 'default'}
+                onClick={() => handleOpenDocs(info.row.original)}
+                disabled={docs.length === 0}
+              >
+                <Badge badgeContent={docs.length > 0 ? docs.length : undefined} color="primary">
+                  <FolderIcon fontSize="small" />
+                </Badge>
+              </IconButton>
+            </span>
           </Tooltip>
         )
       },
     }),
+    // Estado solo para roles con permisos de gestión
+    ...(!readOnly ? [
+      columnHelper.accessor('activo', {
+        header: 'Estado',
+        cell: (info: any) => {
+          const isActive = info.getValue()
+          const id = info.row.original.id
+          return (
+            <Tooltip title={isActive ? 'Desactivar' : 'Activar'}>
+              <Switch 
+                checked={!!isActive} 
+                onChange={() => toggleStatus(id, !!isActive)}
+                size="medium"
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': { color: '#4caf50' },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#4caf50' },
+                  '& .MuiSwitch-switchBase': { color: '#f44336' },
+                  '& .MuiSwitch-switchBase + .MuiSwitch-track': { backgroundColor: '#f44336' },
+                }}
+              />
+            </Tooltip>
+          )
+        },
+      })
+    ] : []),
+    // Acciones para todos los roles permitidos
     columnHelper.display({
       id: 'acciones',
       header: () => <Box textAlign="right">Acciones</Box>,
       cell: (info) => (
         <Box textAlign="right">
           {onEdit && (
-            <IconButton size="small" color="primary" onClick={() => handleEdit(info.row.original)} title="Editar" aria-label="Editar club">
-              <EditIcon fontSize="small" />
+            <IconButton 
+              size="small" 
+              color="primary" 
+              onClick={() => handleEdit(info.row.original)} 
+              title={readOnly ? "Ver detalles" : "Editar"} 
+              aria-label={readOnly ? "Ver club" : "Editar club"}
+            >
+              {readOnly ? <SearchIcon fontSize="small" /> : <EditIcon fontSize="small" />}
             </IconButton>
           )}
-          {onDelete && (
+          {onDelete && !readOnly && (
             <IconButton size="small" color="error" onClick={() => handleDelete(info.row.original)} title="Eliminar" aria-label="Eliminar club">
               <DeleteIcon fontSize="small" />
             </IconButton>
           )}
         </Box>
       ),
-    })] : []),
+    }),
   ], [onEdit, onDelete, toggleStatus, readOnly])
 
   const table = useReactTable({
@@ -325,6 +393,79 @@ export default function ClubList({
         confirmText="Eliminar"
         loading={confirmLoading}
       />
+
+      {/* Diálogo de documentos del club */}
+      <Dialog
+        open={docsDialog.open}
+        onClose={() => setDocsDialog({ open: false, club: null })}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FolderIcon color="primary" />
+            <Typography variant="h6">
+              Documentos — {docsDialog.club?.nombre_club}
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          {(docsDialog.club?.documentos || []).length === 0 ? (
+            <Typography color="text.secondary" textAlign="center" py={2}>
+              No hay documentos registrados para este club.
+            </Typography>
+          ) : (
+            <List disablePadding>
+              {(docsDialog.club?.documentos || []).map((doc) => (
+                <ListItem
+                  key={doc.id}
+                  divider
+                  sx={{ borderRadius: 1, mb: 0.5 }}
+                  secondaryAction={
+                    <Tooltip title="Abrir documento">
+                      <IconButton
+                        edge="end"
+                        color="primary"
+                        onClick={() => handleViewDoc(doc)}
+                        disabled={openingDoc === doc.id}
+                      >
+                        {openingDoc === doc.id
+                          ? <CircularProgress size={18} />
+                          : <OpenInNewIcon fontSize="small" />
+                        }
+                      </IconButton>
+                    </Tooltip>
+                  }
+                >
+                  <ListItemIcon sx={{ minWidth: 36 }}>
+                    <AttachFileIcon color="action" fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={doc.nombre_documento}
+                    secondary={doc.tipo_documento || 'Documento'}
+                    primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+                    secondaryTypographyProps={{ variant: 'caption' }}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDocsDialog({ open: false, club: null })}>Cerrar</Button>
+          {onEdit && docsDialog.club && (
+            <Button
+              variant="contained"
+              onClick={() => {
+                onEdit(docsDialog.club!)
+                setDocsDialog({ open: false, club: null })
+              }}
+            >
+              Gestionar Documentos
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

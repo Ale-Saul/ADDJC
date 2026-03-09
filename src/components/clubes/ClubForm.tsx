@@ -1,7 +1,6 @@
 'use client'
 
-import { z } from 'zod'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Controller } from 'react-hook-form'
 import {
   TextField,
@@ -11,15 +10,25 @@ import {
   CircularProgress,
   Typography,
   Autocomplete,
+  Divider,
+  Chip,
+  IconButton,
+  Tooltip,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import AttachFileIcon from '@mui/icons-material/AttachFile'
+import DeleteIcon from '@mui/icons-material/Delete'
 import { type FieldErrors } from 'react-hook-form'
-import { Club } from '@/models/club'
+import { Club, ClubDocumento } from '@/models/club'
 import { MUNICIPIOS } from '@/utils/constants'
 import { clubSchema } from '@/utils/zodSchemas'
 import { useClubForm } from '@/hooks/useClubForm'
 import { formatCIInput, formatNameInput } from '@/utils/inputMasks'
+import { storageService } from '@/services/storageService'
+import { clubController } from '@/controllers/clubController'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface ClubFormProps {
   club?: Club | null
@@ -28,6 +37,16 @@ interface ClubFormProps {
 }
 
 export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
+  const { user } = useAuth()
+  const isAdminOrAsociacion = user?.rol === 'admin' || user?.rol === 'asociacion'
+  const isEncargadoDeEsteClub = user?.rol === 'encargado' && user?.club_id === club?.id
+  
+  // Quién puede VER los documentos
+  const canViewDocs = isAdminOrAsociacion || isEncargadoDeEsteClub
+  
+  // Quién puede SUBIR/ELIMINAR documentos
+  const canManageDocs = isAdminOrAsociacion
+
   const {
     state,
     dispatch,
@@ -52,6 +71,96 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
   const [directorErrors, setDirectorErrors] = useState<{ ci: string; nombres: string; apellido_paterno: string; email: string }>({
     ci: '', nombres: '', apellido_paterno: '', email: ''
   })
+
+  // Estado para documentos
+  const [documentos, setDocumentos] = useState<ClubDocumento[]>(club?.documentos || [])
+  const [uploadingDoc, setUploadingDoc] = useState(false)
+  const [docError, setDocError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (club?.documentos) {
+      setDocumentos(club.documentos)
+    }
+  }, [club])
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !club || !user) return
+
+    setUploadingDoc(true)
+    setDocError(null)
+
+    try {
+      const timestamp = Date.now()
+      const fileName = `${timestamp}_${file.name}`
+      const path = `clubes/${club.id}/${fileName}`
+
+      const uploadResult = await storageService.uploadFile(
+        file,
+        'club-documentos',
+        path
+      )
+
+      if (uploadResult.success && uploadResult.url) {
+        const docResponse = await clubController.addDocument(
+          club.id,
+          file.name,
+          uploadResult.url,
+          'otros',
+          user.id
+        )
+
+        if (docResponse.success && docResponse.data) {
+          setDocumentos(prev => [...prev, docResponse.data!])
+        } else {
+          setDocError(docResponse.error || 'Error al registrar el documento')
+        }
+      } else {
+        setDocError(uploadResult.error || 'Error al subir el archivo')
+      }
+    } catch (err: any) {
+      setDocError(err.message || 'Error inesperado')
+    } finally {
+      setUploadingDoc(false)
+    }
+  }
+
+  const handleDeleteDocument = async (docId: string, url: string) => {
+    if (!window.confirm('¿Estás seguro de eliminar este documento?')) return
+
+    try {
+      const response = await clubController.deleteDocument(docId)
+      if (response.success) {
+        await storageService.deleteFile('club-documentos', url)
+        setDocumentos(prev => prev.filter(d => d.id !== docId))
+      } else {
+        setDocError(response.error || 'Error al eliminar el documento')
+      }
+    } catch (err: any) {
+      setDocError(err.message || 'Error inesperado')
+    }
+  }
+
+  const handleViewDocument = async (url: string) => {
+    // Si es una URL completa (empieza con http), abrir directamente
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      window.open(url, '_blank')
+      return
+    }
+
+    try {
+      const result = await storageService.getSignedUrl('club-documentos', url)
+      if (result.success && result.url) {
+        window.open(result.url, '_blank')
+      } else {
+        alert(result.error || 'Error al obtener el documento')
+      }
+    } catch (err) {
+      console.error('Error viewing document:', err)
+    }
+  }
+
+  const handleVerComprobante = handleViewDocument
 
   const nameRegex = /^[A-Za-zÁÉÍÓÚÜáéíóúüÑñ\s]+$/
 
@@ -260,6 +369,58 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
           )}
         </Box>
       </Box>
+
+      {/* Sección de Documentos (Solo en edición y para quienes tienen permiso de ver) */}
+      {club && canViewDocs && (
+        <Box sx={{ mt: 4 }}>
+          <Divider sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" color="text.secondary">DOCUMENTOS DEL CLUB</Typography>
+          </Divider>
+          
+          {docError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setDocError(null)}>{docError}</Alert>}
+          
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            {canManageDocs && (
+              <Button
+                variant="outlined"
+                component="label"
+                startIcon={uploadingDoc ? <CircularProgress size={20} /> : <CloudUploadIcon />}
+                disabled={loading || uploadingDoc}
+                fullWidth
+              >
+                {uploadingDoc ? 'Subiendo...' : 'Subir Documento (NIT, Registro, etc.)'}
+                <input
+                  type="file"
+                  hidden
+                  accept="application/pdf,image/*"
+                  onChange={handleFileUpload}
+                />
+              </Button>
+            )}
+
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {documentos.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ py: 1, width: '100%', textAlign: 'center' }}>
+                  No hay documentos registrados
+                </Typography>
+              ) : (
+                documentos.map((doc) => (
+                  <Chip
+                    key={doc.id}
+                    icon={<AttachFileIcon />}
+                    label={doc.nombre_documento}
+                    onClick={() => handleVerComprobante(doc.url_documento)}
+                    onDelete={canManageDocs ? () => handleDeleteDocument(doc.id, doc.url_documento) : undefined}
+                    color="primary"
+                    variant="outlined"
+                    sx={{ maxWidth: '200px' }}
+                  />
+                ))
+              )}
+            </Box>
+          </Box>
+        </Box>
+      )}
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
         {onCancel && <Button variant="outlined" onClick={onCancel} disabled={loading}>Cancelar</Button>}

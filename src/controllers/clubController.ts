@@ -88,6 +88,26 @@ export const clubController = {
     }
 
     return await clubService.restore(id)
+  },
+
+  /**
+   * Agregar un documento a un club
+   */
+  async addDocument(clubId: string, nombre: string, url: string, tipo: string, userId: string): Promise<ApiResponse<any>> {
+    if (!clubId || !nombre || !url) {
+      return { success: false, error: 'Datos incompletos para el documento' }
+    }
+    return await clubService.addDocument(clubId, nombre, url, tipo, userId)
+  },
+
+  /**
+   * Eliminar un documento de un club
+   */
+  async deleteDocument(documentId: string): Promise<ApiResponse<void>> {
+    if (!documentId) {
+      return { success: false, error: 'ID del documento es requerido' }
+    }
+    return await clubService.deleteDocument(documentId)
   }
 }
 

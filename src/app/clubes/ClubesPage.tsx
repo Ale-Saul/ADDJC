@@ -38,6 +38,10 @@ export default function ClubesPage() {
     editDialog.open(club)
   }
 
+  const handleView = (club: Club) => {
+    editDialog.open(club)
+  }
+
   const handleDelete = (club: Club) => {
     deleteDialog.open(club)
   }
@@ -81,7 +85,7 @@ export default function ClubesPage() {
         </Box>
 
         <ClubList
-          onEdit={isReadOnly ? undefined : handleEdit}
+          onEdit={isReadOnly ? (user?.rol === ROL.ENCARGADO ? handleView : undefined) : handleEdit}
           onDelete={isReadOnly ? undefined : handleDelete}
           refreshTrigger={refreshTrigger}
           readOnly={isReadOnly}

@@ -8,6 +8,16 @@ export interface Club {
   activo: boolean
   created_at: string
   updated_at: string
+  documentos?: ClubDocumento[]
+}
+
+export interface ClubDocumento {
+  id: string
+  club_id: string
+  nombre_documento: string
+  url_documento: string
+  tipo_documento: string | null
+  created_at: string
 }
 
 export interface ClubCreate {
