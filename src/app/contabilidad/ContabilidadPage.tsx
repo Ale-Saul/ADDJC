@@ -35,6 +35,11 @@ import * as movimientoFinancieroController from '@/controllers/movimientoFinanci
 export default function ContabilidadPage() {
   const { user } = useAuth()
   const isEncargado = user?.rol === 'encargado'
+  const isAdmin = user?.rol === 'admin'
+  const isAsociacion = user?.rol === 'asociacion'
+  
+  // Solo admin y asociacion pueden editar/anular/agregar
+  const canManage = isAdmin || isAsociacion
   const {
     movimientos,
     clubes,
@@ -346,9 +351,9 @@ export default function ContabilidadPage() {
               {/* Tabla de Movimientos */}
               <MovimientosTable
                 movimientos={movimientosFiltrados}
-                onEditar={isEncargado ? undefined : handleEditarMovimiento}
-                onAnular={isEncargado ? undefined : handleAnularMovimiento}
-                onAgregar={isEncargado ? undefined : handleAgregarMovimiento}
+                onEditar={canManage ? handleEditarMovimiento : undefined}
+                onAnular={canManage ? handleAnularMovimiento : undefined}
+                onAgregar={canManage ? handleAgregarMovimiento : undefined}
               />
             </>
           )}

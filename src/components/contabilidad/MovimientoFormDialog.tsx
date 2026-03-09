@@ -114,39 +114,6 @@ export default function MovimientoFormDialog({
     setError(null)
   }
 
-  const handleUploadFile = async () => {
-    if (!comprobanteFile || !user) return
-
-    setUploadingFile(true)
-    setError(null)
-
-    try {
-      const timestamp = Date.now()
-      const fileName = `${timestamp}_${comprobanteFile.name}`
-      const path = `comprobantes/${user.id}/${fileName}`
-
-      const result = await storageService.uploadFile(
-        comprobanteFile,
-        'comprobantes-financieros',
-        path
-      )
-
-      if (result.success && result.url) {
-        // Guardar el path en lugar de la URL completa
-        // Esto funciona tanto para buckets públicos como privados
-        setComprobanteUrl(result.url)
-        setComprobanteNombre(comprobanteFile.name)
-        setComprobanteFile(null)
-      } else {
-        setError(result.error || 'Error al subir el archivo')
-      }
-    } catch (err: any) {
-      setError(err.message || 'Error al subir el archivo')
-    } finally {
-      setUploadingFile(false)
-    }
-  }
-
   const handleSubmit = async () => {
     // Validar todos los campos requeridos
     const newErrors: Record<string, string> = {}
@@ -164,6 +131,31 @@ export default function MovimientoFormDialog({
     setError(null)
 
     try {
+      let finalComprobanteUrl = comprobanteUrl
+      let finalComprobanteNombre = comprobanteNombre
+
+      // Si hay un archivo seleccionado pero no se ha subido, subirlo ahora
+      if (comprobanteFile && user) {
+        setUploadingFile(true)
+        const timestamp = Date.now()
+        const fileName = `${timestamp}_${comprobanteFile.name}`
+        const path = `comprobantes/${user.id}/${fileName}`
+
+        const uploadResult = await storageService.uploadFile(
+          comprobanteFile,
+          'comprobantes-financieros',
+          path
+        )
+
+        if (uploadResult.success && uploadResult.url) {
+          finalComprobanteUrl = uploadResult.url
+          finalComprobanteNombre = comprobanteFile.name
+        } else {
+          throw new Error(uploadResult.error || 'Error al subir el comprobante')
+        }
+        setUploadingFile(false)
+      }
+
       const movimientoData: MovimientoFinancieroInput = {
         tipo,
         categoria,
@@ -173,8 +165,10 @@ export default function MovimientoFormDialog({
         fecha: movimiento ? fecha : new Date().toISOString(),
         origen_club_id: requiereClub ? (origenClubId || undefined) : undefined,
         origen_entidad: requiereEntidad ? (origenEntidad.trim() || undefined) : undefined,
-        comprobante_url: comprobanteUrl || undefined,
-        comprobante_nombre: comprobanteNombre || undefined,
+        comprobante_url: finalComprobanteUrl || undefined,
+        comprobante_nombre: finalComprobanteNombre || undefined,
+        // @ts-ignore - Forzar estado inicial para evitar error de constraint en DB
+        estado: 'registrado'
       }
 
       let response;
@@ -199,6 +193,7 @@ export default function MovimientoFormDialog({
       setError(err.message || 'Error al guardar el movimiento')
     } finally {
       setLoading(false)
+      setUploadingFile(false)
     }
   }
 
@@ -368,10 +363,10 @@ export default function MovimientoFormDialog({
                 variant="outlined"
                 component="label"
                 startIcon={<CloudUploadIcon />}
-                disabled={uploadingFile}
+                disabled={loading || uploadingFile}
                 fullWidth
               >
-                Seleccionar Archivo
+                {comprobanteFile ? 'Cambiar Archivo' : 'Seleccionar Archivo'}
                 <input
                   type="file"
                   hidden
@@ -380,21 +375,12 @@ export default function MovimientoFormDialog({
                 />
               </Button>
               {comprobanteFile && (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <Chip 
-                    label={comprobanteFile.name} 
-                    onDelete={() => setComprobanteFile(null)}
-                    sx={{ alignSelf: 'flex-start' }}
-                  />
-                  <Button
-                    variant="contained"
-                    onClick={handleUploadFile}
-                    disabled={uploadingFile}
-                    fullWidth
-                  >
-                    {uploadingFile ? 'Subiendo...' : 'Subir Archivo'}
-                  </Button>
-                </Box>
+                <Chip 
+                  label={comprobanteFile.name} 
+                  onDelete={() => setComprobanteFile(null)}
+                  color="primary"
+                  sx={{ alignSelf: 'flex-start' }}
+                />
               )}
               {comprobanteUrl && !comprobanteFile && (
                 <Chip
@@ -402,6 +388,10 @@ export default function MovimientoFormDialog({
                   label={comprobanteNombre || 'Comprobante adjunto'}
                   color="success"
                   variant="outlined"
+                  onDelete={() => {
+                    setComprobanteUrl('')
+                    setComprobanteNombre('')
+                  }}
                   sx={{ alignSelf: 'flex-start' }}
                 />
               )}

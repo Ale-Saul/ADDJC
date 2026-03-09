@@ -127,7 +127,7 @@ export default function MovimientosTable({
                 <TableCell>Origen</TableCell>
                 <TableCell align="right">Monto</TableCell>
                 <TableCell>Estado</TableCell>
-                {!soloLectura && <TableCell align="center">Acciones</TableCell>}
+                <TableCell align="center">Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -185,7 +185,7 @@ export default function MovimientosTable({
                         fontWeight: 'bold',
                         color:
                           movimiento.tipo === TIPO_MOVIMIENTO.INGRESO
-                            ? 'success.main'
+                           ? 'success.main'
                             : 'error.main',
                       }}
                     >
@@ -199,6 +199,43 @@ export default function MovimientosTable({
                       color={getEstadoColor(movimiento.estado)}
                       size="small"
                     />
+                  </TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
+                      {movimiento.comprobante_url && (
+                        <Tooltip title="Ver Comprobante">
+                          <IconButton
+                            size="small"
+                            color="info"
+                            onClick={() => handleVerComprobante(movimiento.comprobante_url!)}
+                          >
+                            <AttachFileIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {onEditar && !isAnulado && (
+                        <Tooltip title="Editar">
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => onEditar(movimiento)}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {onAnular && !isAnulado && (
+                        <Tooltip title="Anular">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => onAnular(movimiento.id)}
+                          >
+                            <BlockIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
                   </TableCell>
                 </TableRow>
                 )

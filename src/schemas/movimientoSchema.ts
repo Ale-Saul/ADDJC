@@ -34,6 +34,7 @@ export const createMovimientoSchema = z.object({
   origen_entidad: z.string().optional(),
   comprobante_url: z.string().optional(),
   comprobante_nombre: z.string().optional(),
+  estado: z.string().optional(),
   notas: z.string().optional(),
 }).superRefine((data, ctx) => {
   // Validaciones condicionales

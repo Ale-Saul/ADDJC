@@ -63,14 +63,20 @@ export default function ResetPasswordContent() {
         return
       }
 
+      // Si venimos de un enlace de recuperación, Supabase pone un hash en la URL
+      // o un código en los parámetros. El cliente de Supabase maneja el hash automáticamente.
       const sessionResponse = await authController.getSession()
-      if (sessionResponse.data) {
+      
+      if (sessionResponse.success && sessionResponse.data) {
         setStep('reset')
       } else {
+        // Si no hay sesión, intentamos ver si hay un código para intercambiar
         const code = searchParams.get('code')
         if (code) {
           const exchangeResponse = await authController.exchangeCodeForSession(code)
-          if (exchangeResponse.data) setStep('reset')
+          if (exchangeResponse.success && exchangeResponse.data) {
+            setStep('reset')
+          }
         }
       }
     } catch (err) {
@@ -87,9 +93,10 @@ export default function ResetPasswordContent() {
   const onResetRequest = async (data: { email: string }) => {
     setError(null)
     setLoading(true)
-    // Redirigir directamente al login después de usar el enlace, sin pasar por /auth/callback
-    // Esto evita que se cree una sesión automática en el servidor
-    const redirectUrl = `${window.location.host.includes('localhost') ? 'http' : 'https'}://${window.location.host}/login`
+    // Redirigir directamente a la página de restablecimiento después de usar el enlace
+    // Usamos la URL base del sitio y la ruta /reset-password
+    const baseUrl = window.location.origin
+    const redirectUrl = `${baseUrl}/reset-password`
 
     try {
       const response = await authController.resetPassword(data.email, redirectUrl)
