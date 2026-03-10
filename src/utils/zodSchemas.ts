@@ -59,6 +59,7 @@ export const resetPasswordSchema = z.object({
 // Regex para nombres y apellidos: solo letras (incluye acentos y Ñ) y espacios
 const nameRegex = /^[A-Za-zÁÉÍÓÚÜáéíóúüÑñ\s]+$/
 
+// Validación de año para fechas (no puede ser mayor al actual)
 const currentYear = new Date().getFullYear()
 const yearMsg = `El año no puede ser mayor al actual (${currentYear})`
 const notFutureYear = (val: string | null | undefined) => !val || new Date(val).getFullYear() <= currentYear
@@ -92,7 +93,7 @@ const validateApellidos = (data: { apellido_paterno?: string; apellido_materno?:
 
 const apellidosErrorConfig = {
   message: 'Al menos uno de los dos apellidos es requerido',
-  path: ['apellido_paterno'], // El error se asocia al apellido paterno por defecto
+  path: ['apellido_paterno'], 
 }
 
 export const baseUserSchema = baseUserObject.refine(validateApellidos, apellidosErrorConfig)

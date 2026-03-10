@@ -180,8 +180,8 @@ export const judokaService = {
           judoka.nombres,
           judoka.apellido_paterno,
           judoka.apellido_materno,
-          judoka.email, // email (opcional)
-          judoka.password, // password (opcional)
+          judoka.email, 
+          judoka.password, 
           undefined, // clubId
           judoka.fecha_nacimiento,
           judoka.numero_celular,
@@ -239,7 +239,6 @@ export const judokaService = {
       }
 
       if (error) {
-        // Mejorar el mensaje de error
         let errorMessage = error.message
         
         if (error.message.includes('foreign key') || error.message.includes('violates foreign key')) {
@@ -371,7 +370,6 @@ export const judokaService = {
     try {
       const client = createClient()
       
-      // Get user_id first
       const { data: judokaData, error: getError } = await client
         .from('judokas')
         .select('usuario_id')

@@ -25,16 +25,16 @@ export interface User {
   apellidos: string
   rol: UserRole
   club_id?: string | null
-  club_nombre?: string | null // Nombre del club al que pertenece
-  sensei_id?: string | null // ID en la tabla senseis (para senseis y encargados)
-  judoka_id?: string | null // ID en la tabla judokas (para judokas)
+  club_nombre?: string | null 
+  sensei_id?: string | null 
+  judoka_id?: string | null 
   avatar_url?: string | null
   fecha_nacimiento?: string | null
   numero_celular?: string | null
   ci?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   activo: boolean
-  debe_cambiar_password?: boolean // Indica si debe cambiar la contraseña (primer login)
+  debe_cambiar_password?: boolean 
   created_at?: string
   updated_at?: string
 }
