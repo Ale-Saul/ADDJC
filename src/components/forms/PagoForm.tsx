@@ -28,15 +28,16 @@ import { TIPO_PAGO_LABELS, TIPO_DESCUENTO, RAZON_DESCUENTO, TIPO_DESCUENTO_LABEL
 interface PagoFormProps {
   judokaId: string
   judokaNombre: string
+  clubId?: string
   onSuccess?: () => void
   onCancel?: () => void
 }
 
-export default function PagoForm({ judokaId, judokaNombre, onSuccess, onCancel }: PagoFormProps) {
+export default function PagoForm({ judokaId, judokaNombre, clubId, onSuccess, onCancel }: PagoFormProps) {
   const { user } = useAuth()
   const [formData, setFormData] = useState<PagoCreate>({
     judoka_id: judokaId,
-    club_id: user?.club_id || '',
+    club_id: clubId || user?.club_id || '',
     tipo_pago: TIPO_PAGO.MENSUALIDAD as TipoPago,
     concepto: '',
     descripcion: null,

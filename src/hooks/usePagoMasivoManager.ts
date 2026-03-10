@@ -80,7 +80,7 @@ export function usePagoMasivoManager({ judokas, onSuccess }: { judokas: Judoka[]
       for (const judoka of judokas) {
         const pagoData: PagoCreate = {
           judoka_id: judoka.id,
-          club_id: user?.club_id || '',
+          club_id: judoka.club_id || user?.club_id || '',
           tipo_pago: data.tipo_pago as TipoPago,
           concepto: data.concepto,
           descripcion: data.descripcion || null,

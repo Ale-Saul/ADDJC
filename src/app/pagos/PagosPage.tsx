@@ -305,16 +305,13 @@ export default function PagosPage() {
                         key={judoka.id}
                         hover
                         selected={selectedIds.has(judoka.id)}
-                        sx={{ cursor: 'pointer' }}
-                        onClick={() => toggleSelectOne(judoka.id)}
                       >
-                        <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
+                        <TableCell padding="checkbox">
                           <Checkbox
                             size="small"
                             checked={selectedIds.has(judoka.id)}
                             onChange={() => toggleSelectOne(judoka.id)}
                             inputProps={{ 'aria-label': `Seleccionar ${judoka.nombres} ${judoka.apellidos}` }}
-                            sx={{ '&:hover': { cursor: 'pointer' } }}
                           />
                         </TableCell>
                         <TableCell sx={{ py: 1.5 }}>{index + 1}</TableCell>
@@ -380,6 +377,7 @@ export default function PagosPage() {
               <PagoForm
                 judokaId={pagoDialog.data.id}
                 judokaNombre={`${pagoDialog.data.nombres} ${pagoDialog.data.apellidos}`}
+                clubId={pagoDialog.data.club_id || undefined}
                 onSuccess={handlePagoSuccess}
                 onCancel={pagoDialog.close}
               />
