@@ -25,7 +25,7 @@ export async function getAllMovimientos(): Promise<ApiResponse<MovimientoFinanci
   try {
     const data = await movimientoFinancieroService.getAllMovimientos();
     return { success: true, data };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error en controller al obtener movimientos:', error);
     return { success: false, error: 'No se pudieron obtener los movimientos financieros' };
   }
@@ -53,7 +53,7 @@ export async function getMovimientosByDateRange(
   try {
     const data = await movimientoFinancieroService.getMovimientosByDateRange(fechaInicio, fechaFin);
     return { success: true, data };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error en controller al obtener movimientos por fecha:', error);
     return { success: false, error: 'No se pudieron obtener los movimientos financieros' };
   }
@@ -73,7 +73,7 @@ export async function getMovimientoById(id: string): Promise<ApiResponse<Movimie
       return { success: false, error: 'Movimiento no encontrado' };
     }
     return { success: true, data };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error en controller al obtener movimiento:', error);
     return { success: false, error: 'No se pudo obtener el movimiento financiero' };
   }
@@ -101,7 +101,7 @@ export async function createMovimiento(
   try {
     const data = await movimientoFinancieroService.createMovimiento(movimiento, userId);
     return { success: true, data };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error en controller al crear movimiento:', error);
     return { success: false, error: 'No se pudo crear el movimiento financiero' };
   }
@@ -129,7 +129,7 @@ export async function updateMovimiento(
   try {
     const data = await movimientoFinancieroService.updateMovimiento(id, updates);
     return { success: true, data };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error en controller al actualizar movimiento:', error);
     return { success: false, error: 'No se pudo actualizar el movimiento financiero' };
   }
@@ -146,7 +146,7 @@ export async function deleteMovimiento(id: string): Promise<ApiResponse<void>> {
   try {
     await movimientoFinancieroService.deleteMovimiento(id);
     return { success: true };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error en controller al eliminar movimiento:', error);
     return { success: false, error: 'No se pudo eliminar el movimiento financiero' };
   }
@@ -163,7 +163,7 @@ export async function anularMovimiento(id: string): Promise<ApiResponse<Movimien
   try {
     const data = await movimientoFinancieroService.anularMovimiento(id);
     return { success: true, data };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error en controller al anular movimiento:', error);
     return { success: false, error: 'No se pudo anular el movimiento financiero' };
   }
@@ -191,7 +191,7 @@ export async function getBalance(
   try {
     const data = await movimientoFinancieroService.getBalance(fechaInicio, fechaFin);
     return { success: true, data };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error en controller al obtener balance:', error);
     return { success: false, error: 'No se pudo calcular el balance' };
   }
@@ -221,7 +221,7 @@ export async function getResumenPorCategoria(
   try {
     const data = await movimientoFinancieroService.getResumenPorCategoria(fechaInicio, fechaFin);
     return { success: true, data };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error en controller al obtener resumen por categoría:', error);
     return { success: false, error: 'No se pudo obtener el resumen por categoría' };
   }
@@ -241,7 +241,7 @@ export async function getMovimientosPorMes(anio?: number): Promise<ApiResponse<M
   try {
     const data = await movimientoFinancieroService.getMovimientosPorMes(anio);
     return { success: true, data };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error en controller al obtener movimientos por mes:', error);
     return { success: false, error: 'No se pudo obtener los movimientos por mes' };
   }
@@ -251,14 +251,12 @@ export async function getMovimientosPorMes(anio?: number): Promise<ApiResponse<M
  * Obtener categorías disponibles según el tipo de movimiento
  */
 export function getCategoriasPorTipo(tipo: TipoMovimiento): CategoriaMovimiento[] {
-  // @ts-ignore - Validado por constantes
-  return CATEGORIAS_POR_TIPO[tipo] || [];
+  return (CATEGORIAS_POR_TIPO as Record<string, CategoriaMovimiento[]>)[tipo] || [];
 }
 
 /**
  * Obtener labels amigables para categorías
  */
 export function getCategoriaLabel(categoria: CategoriaMovimiento): string {
-  // @ts-ignore - Validado por constantes
-  return CATEGORIA_MOVIMIENTO_LABELS[categoria] || categoria;
+  return (CATEGORIA_MOVIMIENTO_LABELS as Record<string, string>)[categoria] || categoria;
 }

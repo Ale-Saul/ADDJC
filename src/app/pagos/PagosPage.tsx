@@ -40,6 +40,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ClearIcon from '@mui/icons-material/Clear'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
+import { ROL } from '@/constants/roles'
 import { useAuth } from '@/contexts/AuthContext'
 import { Judoka } from '@/models/judoka'
 import PagoForm from '@/components/pagos/PagoForm'
@@ -112,7 +113,7 @@ export default function PagosPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={['admin', 'encargado']}>
+    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ENCARGADO]}>
       <Layout>
         <Box mb={4}>
           <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>

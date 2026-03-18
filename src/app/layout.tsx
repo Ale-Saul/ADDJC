@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Montserrat, Open_Sans } from "next/font/google";
 import ThemeRegistry from '@/components/common/ThemeRegistry';
+import ReactQueryProvider from '@/components/common/ReactQueryProvider';
 import { AuthProvider } from '@/contexts/AuthContext';
 import "./globals.css";
 
@@ -38,11 +39,13 @@ export default function RootLayout({
       <body
         className={`${montserrat.variable} ${openSans.variable} antialiased`}
       >
-        <ThemeRegistry>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
-        </ThemeRegistry>
+        <ReactQueryProvider>
+          <ThemeRegistry>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </ThemeRegistry>
+        </ReactQueryProvider>
       </body>
     </html>
   );

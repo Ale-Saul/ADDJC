@@ -33,7 +33,6 @@ export async function sendEmail({ to, subject, html }: EmailOptions) {
       html,
     })
 
-    console.log('Correo enviado:', info.messageId)
     return { success: true, data: info }
   } catch (error) {
     console.error('Error al enviar correo:', error)

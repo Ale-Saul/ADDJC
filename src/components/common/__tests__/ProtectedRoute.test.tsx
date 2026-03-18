@@ -2,6 +2,7 @@ import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import ProtectedRoute from '../ProtectedRoute'
+import { ROL } from '@/constants/roles'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 
@@ -226,7 +227,7 @@ describe('ProtectedRoute', () => {
       })
 
       render(
-        <ProtectedRoute allowedRoles={['asociacion', 'sensei', 'encargado']}>
+        <ProtectedRoute allowedRoles={[ROL.ASOCIACION, ROL.SENSEI, ROL.ENCARGADO]}>
           <div>Panel Administrativo</div>
         </ProtectedRoute>
       )
@@ -256,7 +257,7 @@ describe('ProtectedRoute', () => {
       })
 
       render(
-        <ProtectedRoute allowedRoles={['asociacion', 'sensei', 'encargado']}>
+        <ProtectedRoute allowedRoles={[ROL.ASOCIACION, ROL.SENSEI, ROL.ENCARGADO]}>
           <div>Panel Administrativo</div>
         </ProtectedRoute>
       )
@@ -286,7 +287,7 @@ describe('ProtectedRoute', () => {
       })
 
       const { rerender } = render(
-        <ProtectedRoute allowedRoles={['asociacion', 'sensei']}>
+        <ProtectedRoute allowedRoles={[ROL.ASOCIACION, ROL.SENSEI]}>
           <div>Panel Administrativo</div>
         </ProtectedRoute>
       )
@@ -329,7 +330,7 @@ describe('ProtectedRoute', () => {
         })
 
         const { unmount } = render(
-          <ProtectedRoute allowedRoles={['asociacion', 'sensei', 'arbitro']}>
+          <ProtectedRoute allowedRoles={[ROL.ASOCIACION, ROL.SENSEI, ROL.ARBITRO]}>
             <div>Contenido multi-rol</div>
           </ProtectedRoute>
         )

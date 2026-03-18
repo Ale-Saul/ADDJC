@@ -21,6 +21,7 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
 import ClearIcon from '@mui/icons-material/Clear'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
+import { ROL } from '@/constants/roles'
 import { useAuth } from '@/contexts/AuthContext'
 import BalanceCards from '@/components/contabilidad/BalanceCards'
 import MovimientosTable from '@/components/contabilidad/MovimientosTable'
@@ -183,7 +184,7 @@ export default function ContabilidadPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={['admin', 'asociacion', 'encargado']}>
+    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO]}>
       <Layout>
         <Box sx={{ p: 3 }}>
           {/* Header */}

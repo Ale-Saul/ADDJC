@@ -62,6 +62,16 @@ interface JudokaListProps {
   readOnly?: boolean
 }
 
+const BELT_COLOR_MAP: Record<string, string> = {
+  'Blanco': '#FFFFFF',
+  'Amarillo': '#FFEB3B',
+  'Naranja': '#FF9800',
+  'Verde': '#4CAF50',
+  'Azul': '#2196F3',
+  'Café': '#795548',
+  'Negro': '#212121',
+}
+
 export default function JudokaList({ 
   judokas: judokasProp, 
   isLoading: isLoadingProp, 
@@ -165,16 +175,6 @@ export default function JudokaList({
       cell: (info) => {
         const belt = info.getValue()
         if (!belt) return '-'
-        
-        const beltColorMap: Record<string, string> = {
-          'Blanco': '#FFFFFF',
-          'Amarillo': '#FFEB3B',
-          'Naranja': '#FF9800',
-          'Verde': '#4CAF50',
-          'Azul': '#2196F3',
-          'Café': '#795548',
-          'Negro': '#212121',
-        }
 
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -183,7 +183,7 @@ export default function JudokaList({
                 width: 12,
                 height: 12,
                 borderRadius: '50%',
-                backgroundColor: beltColorMap[belt] || '#ccc',
+                backgroundColor: BELT_COLOR_MAP[belt] || '#ccc',
                 border: belt === 'Blanco' ? '1px solid #ddd' : 'none',
                 boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
               }}

@@ -41,7 +41,7 @@ export default function PagoForm({ judokaId, judokaNombre, clubId, onSuccess, on
     tipo_pago: TIPO_PAGO.MENSUALIDAD as TipoPago,
     concepto: '',
     descripcion: null,
-    monto_base: '' as any,
+    monto_base: '' as unknown as number,
     tiene_descuento: false,
     tipo_descuento: TIPO_DESCUENTO.NINGUNO as TipoDescuento,
     descuento_porcentaje: null,

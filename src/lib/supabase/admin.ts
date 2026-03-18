@@ -17,17 +17,7 @@ if (!supabaseUrl) {
   console.warn('NEXT_PUBLIC_SUPABASE_URL no está configurada. Las operaciones admin no funcionarán.')
 }
 
-// Cliente admin con permisos completos (bypass RLS)
-export const supabaseAdmin: SupabaseClient = createSupabaseClient(
-  supabaseUrl || 'https://placeholder.supabase.co', 
-  supabaseServiceRoleKey || 'placeholder-key',
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
+
 
 // Función helper para crear cliente admin dinámicamente (útil si las env vars no están disponibles en tiempo de módulo)
 export function createAdminClient(): SupabaseClient {

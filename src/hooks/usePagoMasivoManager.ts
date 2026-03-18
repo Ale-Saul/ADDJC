@@ -36,7 +36,7 @@ export function usePagoMasivoManager({ judokas, onSuccess }: { judokas: Judoka[]
       tipo_pago: TIPO_PAGO.MENSUALIDAD as string,
       concepto: '',
       descripcion: '',
-      monto_base: '' as any,
+      monto_base: '' as unknown as number,
       fecha_vencimiento: '',
       tiene_descuento: false,
       tipo_descuento: TIPO_DESCUENTO.NINGUNO as string,

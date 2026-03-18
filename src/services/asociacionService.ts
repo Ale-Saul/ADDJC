@@ -16,7 +16,7 @@ export const asociacionService = {
       const client = createClient()
       let query = client
         .from('usuarios')
-        .select('*, asociacion(cargo, fecha_ingreso)')
+        .select('id, correo, nombre, apellido_paterno, apellido_materno, rol, avatar_url, fecha_nacimiento, numero_celular, ci, genero, activo, debe_cambiar_password, created_at, updated_at, asociacion(cargo, fecha_ingreso)')
         .eq('rol', 'asociacion')
         .order('created_at', { ascending: false })
 
@@ -69,7 +69,7 @@ export const asociacionService = {
       const client = createClient()
       const { data, error } = await client
         .from('usuarios')
-        .select('*, asociacion(cargo, fecha_ingreso)')
+        .select('id, correo, nombre, apellido_paterno, apellido_materno, rol, avatar_url, fecha_nacimiento, numero_celular, ci, genero, activo, debe_cambiar_password, created_at, updated_at, asociacion(cargo, fecha_ingreso)')
         .eq('id', id)
         .eq('rol', 'asociacion')
         .single()

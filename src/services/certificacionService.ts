@@ -86,7 +86,7 @@ export const certificacionService = {
       const { data, error } = await client
         .from('certificaciones')
         .insert(certificacion)
-        .select()
+        .select('id, usuario_id, tipo_afiliado, nombre_certificacion, descripcion, fecha_emision, fecha_vencimiento, archivo_url, activo, created_at, updated_at')
         .single()
 
       if (error) throw error
@@ -108,7 +108,7 @@ export const certificacionService = {
         .from('certificaciones')
         .update({ ...certificacion, updated_at: new Date().toISOString() })
         .eq('id', id)
-        .select()
+        .select('id, usuario_id, tipo_afiliado, nombre_certificacion, descripcion, fecha_emision, fecha_vencimiento, archivo_url, activo, created_at, updated_at')
         .single()
 
       if (error) throw error

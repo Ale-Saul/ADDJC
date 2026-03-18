@@ -13,6 +13,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
+import { ROL } from '@/constants/roles'
 import MiembroAsociacionForm from '@/components/asociacion/MiembroAsociacionForm'
 import { MiembroAsociacion } from '@/models/asociacion'
 import { asociacionController } from '@/controllers/asociacionController'
@@ -61,7 +62,7 @@ export default function AsociacionEditPage() {
 
   if (loading) {
     return (
-      <ProtectedRoute allowedRoles={['admin', 'asociacion']}>
+      <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION]}>
         <Layout>
           <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
             <CircularProgress />
@@ -73,7 +74,7 @@ export default function AsociacionEditPage() {
 
   if (error || !miembro) {
     return (
-      <ProtectedRoute allowedRoles={['admin', 'asociacion']}>
+      <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION]}>
         <Layout>
           <Alert severity="error" sx={{ mb: 2 }}>
             {error || 'Miembro no encontrado'}
@@ -91,7 +92,7 @@ export default function AsociacionEditPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={['admin', 'asociacion']}>
+    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION]}>
       <Layout>
         <Box mb={3}>
           <Button

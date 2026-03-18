@@ -70,6 +70,8 @@ function mapJudokaRow(row: JudokaDbRow): Judoka {
   }
 }
 
+const JUDOKA_COLUMNS = 'id, club_id, sensei_id, usuario_id, grado_cinturon, categoria_peso, peso_kg, fecha_afiliacion, estado_afiliacion, activo, created_at, updated_at'
+
 export const judokaService = {
   /**
    * Obtener todos los judokas
@@ -221,7 +223,7 @@ export const judokaService = {
       const { data, error } = await client
         .from('judokas')
         .insert(insertPayload)
-        .select()
+        .select(JUDOKA_COLUMNS)
         .single()
 
       // Si se proporcionó avatar_url, activo, numero_celular, ci o genero, actualizar el usuario

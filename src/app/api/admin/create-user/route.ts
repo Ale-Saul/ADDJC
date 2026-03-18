@@ -104,8 +104,6 @@ export async function POST(request: NextRequest) {
         debe_cambiar_password: true,
       }
       
-      console.log('Intentando crear usuario en Auth con metadata:', userMetadata)
-
       const result = await supabaseAdmin.auth.admin.createUser({
         email,
         password,

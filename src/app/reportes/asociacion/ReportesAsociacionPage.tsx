@@ -27,6 +27,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment'
 import ClearIcon from '@mui/icons-material/Clear'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
+import { ROL } from '@/constants/roles'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 import jsPDF from 'jspdf'
@@ -356,7 +357,7 @@ export default function ReportesAsociacionPage() {
 
   if (loading) {
     return (
-      <ProtectedRoute allowedRoles={['admin', 'asociacion']}>
+      <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION]}>
         <Layout>
           <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
             <CircularProgress />
@@ -367,7 +368,7 @@ export default function ReportesAsociacionPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={['admin', 'asociacion']}>
+    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION]}>
       <Layout>
         <Box>
           {/* Header */}

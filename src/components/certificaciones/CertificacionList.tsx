@@ -31,8 +31,11 @@ import {
   useReactTable,
   getCoreRowModel,
   getPaginationRowModel,
+  getFilteredRowModel,
+  getSortedRowModel,
   flexRender,
-  createColumnHelper
+  createColumnHelper,
+  SortingState
 } from '@tanstack/react-table'
 import { Certificacion } from '@/models/certificacion'
 import { certificacionController } from '@/controllers/certificacionController'
@@ -61,8 +64,8 @@ export default function CertificacionList({
   const [certificaciones, setCertificaciones] = useState<Certificacion[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [modifiedIds, setModifiedIds] = useState<Set<string>>(new Set())
+  const [globalFilter, setGlobalFilter] = useState('')
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'fecha_emision', desc: true }])
 
   const loadCertificaciones = useCallback(async () => {
     setLoading(true)
@@ -72,7 +75,6 @@ export default function CertificacionList({
 
     if (response.success && response.data) {
       setCertificaciones(response.data)
-      setModifiedIds(new Set())
     } else {
       setError(response.error || 'Error al cargar las certificaciones')
     }
@@ -94,37 +96,12 @@ export default function CertificacionList({
     return <ImageIcon fontSize="small" color="primary" />
   }
 
-  // Filtrado y ordenamiento de datos
-  const filteredData = useMemo(() => {
-    const search = searchTerm.toLowerCase()
-    const filtered = certificaciones.filter(c => 
-      c.nombre_certificacion.toLowerCase().includes(search) ||
-      (c.descripcion?.toLowerCase() || '').includes(search)
-    )
-
-    return [...filtered].sort((a, b) => {
-      const isAModified = modifiedIds.has(a.id)
-      const isBModified = modifiedIds.has(b.id)
-      
-      // Si fue modificado en esta sesión, usamos el estado inverso para el ordenamiento
-      // (así se mantiene en su posición actual hasta que se recargue la página)
-      const effectiveAActive = isAModified ? !a.activo : a.activo
-      const effectiveBActive = isBModified ? !b.activo : b.activo
-
-      if (effectiveAActive === effectiveBActive) {
-        // Ordenar por fecha de emisión si tienen el mismo estado
-        return new Date(b.fecha_emision).getTime() - new Date(a.fecha_emision).getTime()
-      }
-      return effectiveAActive ? -1 : 1
-    })
-  }, [certificaciones, searchTerm, modifiedIds])
-
   const columnHelper = createColumnHelper<Certificacion>()
 
   const columns = useMemo(() => [
     columnHelper.display({
       id: 'indice',
-      header: 'N°',
+      header: 'N',
       cell: (info) => info.row.index + 1,
     }),
     columnHelper.accessor('nombre_certificacion', {
@@ -171,30 +148,16 @@ export default function CertificacionList({
         const id = info.row.original.id
         
         const handleToggle = async () => {
-          // Optimistic update
-          setModifiedIds(prev => new Set(prev).add(id))
           setCertificaciones(prev => prev.map(c => c.id === id ? { ...c, activo: !isActive } : c))
 
           try {
             const response = await certificacionController.updateCertificacion(id, { activo: !isActive })
             if (!response.success) {
-              // Revert on error
               setCertificaciones(prev => prev.map(c => c.id === id ? { ...c, activo: isActive } : c))
-              setModifiedIds(prev => {
-                const next = new Set(prev)
-                next.delete(id)
-                return next
-              })
               alert('Error al cambiar el estado: ' + (response.error || 'Error desconocido'))
             }
           } catch (err) {
-            // Revert on error
             setCertificaciones(prev => prev.map(c => c.id === id ? { ...c, activo: isActive } : c))
-            setModifiedIds(prev => {
-              const next = new Set(prev)
-              next.delete(id)
-              return next
-            })
             console.error(err)
             alert('Error inesperado al cambiar el estado')
           }
@@ -263,9 +226,17 @@ export default function CertificacionList({
   ], [onEdit, onDelete, readOnly])
 
   const table = useReactTable({
-    data: filteredData,
+    data: certificaciones,
     columns,
+    state: {
+      globalFilter,
+      sorting,
+    },
+    onGlobalFilterChange: setGlobalFilter,
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
       pagination: {
@@ -292,22 +263,22 @@ export default function CertificacionList({
         <TextField
           size="small"
           placeholder="Buscar certificación..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          value={globalFilter}
+          onChange={(e) => setGlobalFilter(e.target.value)}
           sx={{ flexGrow: 1, backgroundColor: 'white' }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon fontSize="small" />
+                <SearchIcon color="action" fontSize="small" />
               </InputAdornment>
             ),
-            endAdornment: searchTerm && (
+            endAdornment: globalFilter ? (
               <InputAdornment position="end">
-                <IconButton size="small" onClick={() => setSearchTerm('')}>
+                <IconButton size="small" onClick={() => setGlobalFilter('')} edge="end">
                   <ClearIcon fontSize="small" />
                 </IconButton>
               </InputAdornment>
-            )
+            ) : null,
           }}
         />
         {onAdd && (
@@ -315,57 +286,73 @@ export default function CertificacionList({
             variant="contained"
             startIcon={<AddIcon />}
             onClick={onAdd}
-            sx={{ height: 40, textTransform: 'none' }}
+            sx={{ whiteSpace: 'nowrap' }}
           >
-            Agregar
+            Nueva
           </Button>
         )}
       </Stack>
 
-      {filteredData.length === 0 ? (
-        <Box textAlign="center" py={4} component={Paper} variant="outlined">
-          <Typography variant="body1" color="text.secondary">
-            No se encontraron certificaciones
-          </Typography>
-        </Box>
-      ) : (
-        <>
-          <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
-              <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-                {table.getHeaderGroups().map(headerGroup => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map(header => (
-                      <TableCell key={header.id} sx={{ fontWeight: 'bold', py: 1.5 }}>
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
+      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }}>
+        <Table size="small">
+          <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableCell
+                    key={header.id}
+                    sx={{ fontWeight: 'bold' }}
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </TableCell>
                 ))}
-              </TableHead>
-              <TableBody>
-                {table.getRowModel().rows.map(row => (
-                  <TableRow key={row.id} hover>
-                    {row.getVisibleCells().map(cell => (
-                      <TableCell key={cell.id} sx={{ py: 1 }}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
+              </TableRow>
+            ))}
+          </TableHead>
+          <TableBody>
+            {table.getRowModel().rows.map((row) => (
+              <TableRow
+                key={row.id}
+                sx={{
+                  '&:last-child td, &:last-child th': { border: 0 },
+                  '&:hover': { backgroundColor: '#f9f9f9' },
+                }}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
                 ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          
+              </TableRow>
+            ))}
+            {table.getRowModel().rows.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={columns.length} align="center" sx={{ py: 3 }}>
+                  <Typography variant="body2" color="textSecondary">
+                    No se encontraron certificaciones
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {table.getPageCount() > 1 && (
+        <Box mt={2} display="flex" justifyContent="flex-end">
           <Pagination
             currentPage={table.getState().pagination.pageIndex + 1}
             totalPages={table.getPageCount()}
-            totalItems={filteredData.length}
+            totalItems={table.getPrePaginationRowModel().rows.length}
             itemsPerPage={table.getState().pagination.pageSize}
             onPageChange={(page) => table.setPageIndex(page - 1)}
-            onItemsPerPageChange={(size) => table.setPageSize(size)}
           />
-        </>
+        </Box>
       )}
     </Box>
   )

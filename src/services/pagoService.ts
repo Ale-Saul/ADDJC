@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/client'
 import { Pago, PagoCreate, PagoUpdate } from '@/models/pago'
 import { ApiResponse } from '@/types'
 
+const PAGO_COLUMNS = 'id, judoka_id, club_id, tipo_pago, concepto, descripcion, monto_base, tiene_descuento, tipo_descuento, descuento_porcentaje, descuento_monto, razon_descuento, monto_final, estado, fecha_vencimiento, fecha_pago, metodo_pago, comprobante_url, notas, observaciones_pago, creador_id, pagador_id, activo, created_at, updated_at'
+
 export const pagoService = {
   /**
    * Obtener todos los pagos
@@ -11,7 +13,7 @@ export const pagoService = {
       const client = createClient()
       let query = client
         .from('pagos')
-        .select('id, judoka_id, club_id, tipo_pago, concepto, descripcion, monto_base, tiene_descuento, tipo_descuento, descuento_porcentaje, descuento_monto, razon_descuento, monto_final, estado, fecha_vencimiento, fecha_pago, metodo_pago, comprobante_url, notas, observaciones_pago, creador_id, pagador_id, activo, created_at, updated_at')
+        .select(PAGO_COLUMNS)
         .order('created_at', { ascending: false })
 
       if (!includeInactive) {
@@ -37,7 +39,7 @@ export const pagoService = {
       const client = createClient()
       const { data, error } = await client
         .from('pagos')
-        .select('id, judoka_id, club_id, tipo_pago, concepto, descripcion, monto_base, tiene_descuento, tipo_descuento, descuento_porcentaje, descuento_monto, razon_descuento, monto_final, estado, fecha_vencimiento, fecha_pago, metodo_pago, comprobante_url, notas, observaciones_pago, creador_id, pagador_id, activo, created_at, updated_at')
+        .select(PAGO_COLUMNS)
         .eq('judoka_id', judokaId)
         .eq('activo', true)
         .order('fecha_vencimiento', { ascending: false })
@@ -59,7 +61,7 @@ export const pagoService = {
       const client = createClient()
       const { data, error } = await client
         .from('pagos')
-        .select('id, judoka_id, club_id, tipo_pago, concepto, descripcion, monto_base, tiene_descuento, tipo_descuento, descuento_porcentaje, descuento_monto, razon_descuento, monto_final, estado, fecha_vencimiento, fecha_pago, metodo_pago, comprobante_url, notas, observaciones_pago, creador_id, pagador_id, activo, created_at, updated_at')
+        .select(PAGO_COLUMNS)
         .eq('club_id', clubId)
         .eq('activo', true)
         .order('fecha_vencimiento', { ascending: false })
@@ -81,7 +83,7 @@ export const pagoService = {
       const client = createClient()
       const { data, error } = await client
         .from('pagos')
-        .select('id, judoka_id, club_id, tipo_pago, concepto, descripcion, monto_base, tiene_descuento, tipo_descuento, descuento_porcentaje, descuento_monto, razon_descuento, monto_final, estado, fecha_vencimiento, fecha_pago, metodo_pago, comprobante_url, notas, observaciones_pago, creador_id, pagador_id, activo, created_at, updated_at')
+        .select(PAGO_COLUMNS)
         .eq('id', id)
         .single()
 
@@ -103,7 +105,7 @@ export const pagoService = {
       const { data, error } = await client
         .from('pagos')
         .insert(pago)
-        .select()
+        .select(PAGO_COLUMNS)
         .single()
 
       if (error) {
@@ -142,7 +144,7 @@ export const pagoService = {
         .from('pagos')
         .update(pago)
         .eq('id', id)
-        .select()
+        .select(PAGO_COLUMNS)
         .single()
 
       if (error) throw error
@@ -184,7 +186,7 @@ export const pagoService = {
         .from('pagos')
         .update({ activo: true })
         .eq('id', id)
-        .select()
+        .select(PAGO_COLUMNS)
         .single()
 
       if (error) throw error

@@ -2,13 +2,13 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { authController } from '@/controllers/authController'
-import { User, LoginCredentials } from '@/models/auth'
+import { User, LoginCredentials, AuthSession } from '@/models/auth'
 import { ApiResponse } from '@/types'
 
 interface AuthContextType {
   user: User | null
   loading: boolean
-  signIn: (credentials: LoginCredentials) => Promise<ApiResponse<any>>
+  signIn: (credentials: LoginCredentials) => Promise<ApiResponse<AuthSession>>
   signOut: () => Promise<void>
   refreshUser: () => Promise<void>
   isAuthenticated: boolean
@@ -45,8 +45,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (credentials: LoginCredentials) => {
     const response = await authController.signIn(credentials)
     if (response.success && response.data) {
-      // Reload full profile via getCurrentUser so club_id and other
-      // role-specific fields are always fetched from a fresh session.
       await loadUser()
     }
     return response

@@ -1,3 +1,4 @@
+import { loginSchema, emailSchema, passwordSchema } from '@/utils/zodSchemas'
 import { authService } from '@/services/authService'
 import { ApiResponse } from '@/types'
 import { LoginCredentials, SignUpData, User, AuthSession, UserRole } from '@/models/auth'
@@ -9,27 +10,11 @@ export const authController = {
    */
   async signIn(credentials: LoginCredentials): Promise<ApiResponse<AuthSession>> {
     // Validaciones
-    if (!credentials.email || !credentials.password) {
+    const validation = loginSchema.safeParse(credentials)
+    if (!validation.success) {
       return {
         success: false,
-        error: 'Email y contraseña son requeridos',
-      }
-    }
-
-    // Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(credentials.email)) {
-      return {
-        success: false,
-        error: 'El formato del email no es válido',
-      }
-    }
-
-    // Validar longitud de contraseña
-    if (credentials.password.length < 6) {
-      return {
-        success: false,
-        error: 'La contraseña debe tener al menos 6 caracteres',
+        error: validation.error.errors[0].message,
       }
     }
 
@@ -71,28 +56,20 @@ export const authController = {
     }
 
     // Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(signUpData.email)) {
+    const emailResult = emailSchema.safeParse(signUpData.email)
+    if (!emailResult.success) {
       return {
         success: false,
-        error: 'El formato del email no es válido',
+        error: emailResult.error.errors[0].message,
       }
     }
 
-    // Validar longitud de contraseña
-    if (signUpData.password.length < 8) {
+    // Validar contraseña
+    const pwdResult = passwordSchema.safeParse(signUpData.password)
+    if (!pwdResult.success) {
       return {
         success: false,
-        error: 'La contraseña debe tener al menos 8 caracteres',
-      }
-    }
-
-    // Validar que la contraseña tenga al menos una mayúscula, una minúscula y un número
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/
-    if (!passwordRegex.test(signUpData.password)) {
-      return {
-        success: false,
-        error: 'La contraseña debe contener al menos una mayúscula, una minúscula y un número',
+        error: pwdResult.error.errors[0].message,
       }
     }
 
@@ -142,11 +119,11 @@ export const authController = {
       }
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
+    const emailResult = emailSchema.safeParse(email)
+    if (!emailResult.success) {
       return {
         success: false,
-        error: 'El formato del email no es válido',
+        error: emailResult.error.errors[0].message,
       }
     }
 
@@ -164,18 +141,11 @@ export const authController = {
       }
     }
 
-    if (newPassword.length < 8) {
+    const pwdResult = passwordSchema.safeParse(newPassword)
+    if (!pwdResult.success) {
       return {
         success: false,
-        error: 'La contraseña debe tener al menos 8 caracteres',
-      }
-    }
-
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/
-    if (!passwordRegex.test(newPassword)) {
-      return {
-        success: false,
-        error: 'La contraseña debe contener al menos una mayúscula, una minúscula y un número',
+        error: pwdResult.error.errors[0].message,
       }
     }
 
@@ -193,18 +163,11 @@ export const authController = {
       }
     }
 
-    if (newPassword.length < 8) {
+    const pwdResult = passwordSchema.safeParse(newPassword)
+    if (!pwdResult.success) {
       return {
         success: false,
-        error: 'La contraseña debe tener al menos 8 caracteres',
-      }
-    }
-
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/
-    if (!passwordRegex.test(newPassword)) {
-      return {
-        success: false,
-        error: 'La contraseña debe contener al menos una mayúscula, una minúscula y un número',
+        error: pwdResult.error.errors[0].message,
       }
     }
 
@@ -285,4 +248,5 @@ export const authController = {
     return authService.exchangeCodeForSession(code)
   },
 }
+
 

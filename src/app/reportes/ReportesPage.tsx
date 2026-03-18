@@ -30,6 +30,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment'
 import ClearIcon from '@mui/icons-material/Clear'
 import Layout from '@/components/common/Layout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
+import { ROL } from '@/constants/roles'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { formatters } from '@/utils/formatters'
@@ -205,7 +206,7 @@ export default function ReportesPage() {
 
   if (loading) {
     return (
-      <ProtectedRoute allowedRoles={['admin', 'encargado']}>
+      <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ENCARGADO]}>
         <Layout>
           <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
             <CircularProgress />
@@ -216,7 +217,7 @@ export default function ReportesPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={['admin', 'encargado']}>
+    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ENCARGADO]}>
       <Layout>
         <Box>
           {/* Header */}

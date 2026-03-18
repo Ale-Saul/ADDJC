@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { SortingState } from '@tanstack/react-table'
 import {
   Box,
   Table,
@@ -35,6 +36,8 @@ import {
   useReactTable,
   getCoreRowModel,
   getPaginationRowModel,
+  getFilteredRowModel,
+  getSortedRowModel,
   flexRender,
   createColumnHelper
 } from '@tanstack/react-table'
@@ -59,20 +62,14 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
     pagoToDelete, fetchPagos, requestDelete, confirmDelete, cancelDelete, clearDeleteError,
   } = usePagosList(judokaId, onPagoDeleted)
 
-  const [searchTerm, setSearchTerm] = useState('')
+  const [globalFilter, setGlobalFilter] = useState('')
+  const [sorting, setSorting] = useState<SortingState>([])
   const [selectedPagos, setSelectedPagos] = useState<string[]>([])
   const [openRegistrarDialog, setOpenRegistrarDialog] = useState(false)
   const [openEditarDialog, setOpenEditarDialog] = useState(false)
   const [selectedPago, setSelectedPago] = useState<Pago | null>(null)
 
-  // Filtrado de datos
-  const filteredData = useMemo(() => {
-    const search = searchTerm.toLowerCase()
-    return pagos.filter(p =>
-      p.concepto.toLowerCase().includes(search) ||
-      (p.descripcion?.toLowerCase() || '').includes(search)
-    )
-  }, [pagos, searchTerm])
+
 
   const columnHelper = createColumnHelper<Pago>()
 
@@ -183,13 +180,19 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
   ], [deleting, requestDelete])
 
   const table = useReactTable({
-    data: filteredData,
+    data: pagos,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     state: {
+      globalFilter,
+      sorting,
       rowSelection: selectedPagos.reduce((acc, id) => ({ ...acc, [id]: true }), {}),
     },
+    onGlobalFilterChange: setGlobalFilter,
+    onSortingChange: setSorting,
     onRowSelectionChange: (updater) => {
       const newSelection = typeof updater === 'function' ? updater(table.getState().rowSelection) : updater
       const selectedIds = Object.keys(newSelection).filter(key => newSelection[key])
@@ -242,8 +245,8 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
         <TextField
           size="small"
           placeholder="Buscar por concepto o descripción..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          value={globalFilter}
+          onChange={(e) => setGlobalFilter(e.target.value)}
           sx={{ flexGrow: 1, backgroundColor: 'white' }}
           InputProps={{
             startAdornment: (
@@ -251,9 +254,9 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
                 <SearchIcon fontSize="small" />
               </InputAdornment>
             ),
-            endAdornment: searchTerm && (
+            endAdornment: globalFilter && (
               <InputAdornment position="end">
-                <IconButton size="small" onClick={() => setSearchTerm('')}>
+                <IconButton size="small" onClick={() => setGlobalFilter('')}>
                   <ClearIcon fontSize="small" />
                 </IconButton>
               </InputAdornment>
@@ -302,7 +305,7 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
       <Pagination
         currentPage={table.getState().pagination.pageIndex + 1}
         totalPages={table.getPageCount()}
-        totalItems={filteredData.length}
+        totalItems={table.getFilteredRowModel().rows.length}
         itemsPerPage={table.getState().pagination.pageSize}
         onPageChange={(page) => table.setPageIndex(page - 1)}
         onItemsPerPageChange={(size) => table.setPageSize(size)}

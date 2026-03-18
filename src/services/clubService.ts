@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/client'
 import { Club, ClubCreate, ClubUpdate } from '@/models/club'
 import { ApiResponse } from '@/types'
 
+const CLUB_COLUMNS = 'id, nombre_club, sigla, descripcion, fecha_fundacion, logo_url, director_tecnico_id, pautas_reglamentos_url, afiliado_asociacion, activo, created_at, updated_at'
+
 export const clubService = {
   /**
    * Obtener todos los clubes
@@ -82,7 +84,7 @@ export const clubService = {
       const { data, error } = await client
         .from('clubes')
         .insert(club)
-        .select()
+        .select(CLUB_COLUMNS)
         .single()
 
       if (error) throw error
@@ -196,7 +198,7 @@ export const clubService = {
         .from('clubes')
         .update(club)
         .eq('id', id)
-        .select()
+        .select(CLUB_COLUMNS)
         .single()
 
       if (error) throw error
@@ -238,7 +240,7 @@ export const clubService = {
         .from('clubes')
         .update({ activo: true })
         .eq('id', id)
-        .select()
+        .select(CLUB_COLUMNS)
         .single()
 
       if (error) throw error
@@ -264,7 +266,7 @@ export const clubService = {
           tipo_documento: tipo,
           created_by: userId
         })
-        .select()
+        .select(CLUB_COLUMNS)
         .single()
 
       if (error) throw error

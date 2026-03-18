@@ -25,6 +25,10 @@ function mapSenseiRow(row: any): Sensei {
   }
 }
 
+const SENSEI_COLUMNS = 'id, club_id, usuario_id, biografia, grado_cinturon, activo, created_at, updated_at'
+const SENSEI_WITH_USER_COLUMNS = 'id, club_id, usuario_id, biografia, grado_cinturon, activo, created_at, updated_at, usuarios(id, nombre, apellido_paterno, apellido_materno, avatar_url, correo), clubes(id, nombre_club)'
+const SENSEI_WITH_CERTIFICACIONES_COLUMNS = 'id, club_id, usuario_id, biografia, grado_cinturon, activo, created_at, updated_at, certificaciones(id, tipo_afiliado, nombre_certificacion, descripcion, fecha_emision, fecha_vencimiento, archivo_url)'
+
 export const senseiService = {
   /**
    * Obtener todos los senseis
@@ -34,7 +38,7 @@ export const senseiService = {
       const client = createClient()
       let query = client
         .from('senseis')
-        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, correo, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url)')
+        .select(SENSEI_WITH_USER_COLUMNS)
         .order('created_at', { ascending: false })
 
       if (!includeInactive) {
@@ -76,7 +80,7 @@ export const senseiService = {
       const client = createClient()
       const { data, error } = await client
         .from('senseis')
-        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, correo, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url)')
+        .select(SENSEI_WITH_USER_COLUMNS)
         .eq('club_id', clubId)
         .order('created_at', { ascending: false })
 
@@ -102,7 +106,7 @@ export const senseiService = {
       const client = createClient()
       const { data, error } = await client
         .from('senseis')
-        .select('*, certificacion:certificaciones(nombre_certificacion), usuarios:usuario_id(nombre, apellido_paterno, apellido_materno, correo, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url)')
+        .select(SENSEI_WITH_USER_COLUMNS)
         .eq('id', id)
         .single()
 
@@ -198,7 +202,7 @@ export const senseiService = {
       const { data, error } = await client
         .from('senseis')
         .insert(insertPayload)
-        .select('*, certificacion:certificaciones(nombre_certificacion)')
+        .select(SENSEI_WITH_CERTIFICACIONES_COLUMNS)
         .single()
 
       if (error) {
