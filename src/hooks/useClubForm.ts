@@ -1,8 +1,8 @@
-import { useReducer, useEffect, useCallback } from 'react'
+import { useReducer, useEffect, useCallback, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { clubSchema } from '@/utils/zodSchemas'
+import { clubSchema } from '@/schemas/globales'
 import { senseiController } from '@/controllers/senseiController'
 import { clubController } from '@/controllers/clubController'
 import { Club, ClubCreate } from '@/models/club'
@@ -16,6 +16,7 @@ type State = {
     apellidoMaterno: string
     email: string
     ci: string
+    ci_extension: string
   }
   loading: boolean
   loadingSenseis: boolean
@@ -26,8 +27,6 @@ type State = {
 
 type Action =
   | { type: 'SET_SENSEIS'; payload: Sensei[] }
-  | { type: 'SET_NEW_DIRECTOR_FIELD'; field: keyof State['newDirector']; value: string }
-  | { type: 'RESET_NEW_DIRECTOR' }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_LOADING_SENSEIS'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
@@ -39,10 +38,11 @@ const initialState: State = {
   newDirector: {
     nombres: '',
     apellidoPaterno: '',
-    apellido_materno: '', // Nota: en el estado original se usaba camelCase, pero en el form se usaban variables sueltas. Unificamos.
+    apellidoMaterno: '',
     email: '',
     ci: '',
-  } as any,
+    ci_extension: '',
+  },
   loading: false,
   loadingSenseis: true,
   error: null,
@@ -50,23 +50,9 @@ const initialState: State = {
   isCreatingNewDirector: false,
 }
 
-// Corrigiendo la inicialización del estado para que coincida con el uso
-const fixedInitialState: State = {
-  ...initialState,
-  newDirector: {
-    nombres: '',
-    apellidoPaterno: '',
-    apellidoMaterno: '',
-    email: '',
-    ci: '',
-  }
-}
-
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SET_SENSEIS': return { ...state, senseis: action.payload }
-    case 'SET_NEW_DIRECTOR_FIELD': return { ...state, newDirector: { ...state.newDirector, [action.field]: action.value } }
-    case 'RESET_NEW_DIRECTOR': return { ...state, newDirector: fixedInitialState.newDirector }
     case 'SET_LOADING': return { ...state, loading: action.payload }
     case 'SET_LOADING_SENSEIS': return { ...state, loadingSenseis: action.payload }
     case 'SET_ERROR': return { ...state, error: action.payload }
@@ -79,10 +65,11 @@ function reducer(state: State, action: Action): State {
 interface UseClubFormProps {
   club?: Club | null
   onSuccess?: () => void
+  filesCount?: number
 }
 
-export function useClubForm({ club, onSuccess }: UseClubFormProps) {
-  const [state, dispatch] = useReducer(reducer, fixedInitialState)
+export function useClubForm({ club, onSuccess, filesCount = 0 }: UseClubFormProps) {
+  const [state, dispatch] = useReducer(reducer, initialState)
 
   const {
     control,
@@ -90,10 +77,10 @@ export function useClubForm({ club, onSuccess }: UseClubFormProps) {
     reset,
     setFocus,
     trigger,
-    formState: { errors },
+    formState: { errors, isValid, isSubmitting },
   } = useForm({
     resolver: zodResolver(clubSchema),
-    mode: 'onBlur',
+    mode: 'onTouched',
     reValidateMode: 'onChange',
     defaultValues: {
       nombre_club: '',
@@ -101,9 +88,48 @@ export function useClubForm({ club, onSuccess }: UseClubFormProps) {
       direccion: '',
       telefono_contacto: '',
       director_tecnico_id: null as string | null,
-      activo: true
+      activo: true,
+      new_nombres: undefined,
+      new_apellido_paterno: undefined,
+      new_apellido_materno: undefined,
+      new_email: undefined,
+      new_ci: undefined,
+      new_ci_extension: undefined,
     },
   })
+
+  // Limpiar errores de nuevo director si se cancela la creación
+  useEffect(() => {
+    if (!state.isCreatingNewDirector) {
+      const currentValues = control._formValues;
+      reset({
+        ...currentValues,
+        new_nombres: undefined,
+        new_apellido_paterno: undefined,
+        new_apellido_materno: undefined,
+        new_email: undefined,
+        new_ci: undefined,
+        new_ci_extension: undefined,
+      }, { 
+        keepDefaultValues: true 
+      });
+    } else {
+      // Si se activa, inicializar con strings vacíos para que Zod empiece a validar al interactuar
+      const currentValues = control._formValues;
+      reset({
+        ...currentValues,
+        new_nombres: '',
+        new_apellido_paterno: '',
+        new_apellido_materno: '',
+        new_email: '',
+        new_ci: '',
+        new_ci_extension: '',
+      }, { 
+        keepDefaultValues: true 
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.isCreatingNewDirector]);
 
   useEffect(() => {
     let isMounted = true
@@ -111,17 +137,17 @@ export function useClubForm({ club, onSuccess }: UseClubFormProps) {
       try {
         const response = await senseiController.getAllSenseis(false)
         if (isMounted && response.success && response.data) {
+          let filteredSenseis = response.data
           if (club) {
-            dispatch({ 
-              type: 'SET_SENSEIS', 
-              payload: response.data.filter(s => s.club_id === club.id || s.club_id === null) 
-            })
+            filteredSenseis = response.data.filter(s => s.club_id === club.id || s.club_id === null)
           } else {
-            dispatch({ 
-              type: 'SET_SENSEIS', 
-              payload: response.data.filter(s => s.club_id === null) 
-            })
+            filteredSenseis = response.data.filter(s => s.club_id === null)
           }
+          
+          dispatch({ 
+            type: 'SET_SENSEIS', 
+            payload: filteredSenseis
+          })
         }
         if (isMounted) dispatch({ type: 'SET_LOADING_SENSEIS', payload: false })
       } catch (err) {
@@ -131,7 +157,7 @@ export function useClubForm({ club, onSuccess }: UseClubFormProps) {
     }
     loadSenseis()
     return () => { isMounted = false }
-  }, [club])
+  }, [club?.id])
 
   useEffect(() => {
     if (club) {
@@ -141,9 +167,14 @@ export function useClubForm({ club, onSuccess }: UseClubFormProps) {
         direccion: club.direccion || '',
         telefono_contacto: club.telefono_contacto || '',
         director_tecnico_id: club.director_tecnico_id || null,
-        activo: club.activo
+        activo: club.activo,
+        new_nombres: undefined,
+        new_apellido_paterno: undefined,
+        new_apellido_materno: undefined,
+        new_email: undefined,
+        new_ci: undefined,
+        new_ci_extension: undefined,
       })
-      dispatch({ type: 'RESET_NEW_DIRECTOR' })
     }
   }, [club, reset])
 
@@ -154,10 +185,32 @@ export function useClubForm({ club, onSuccess }: UseClubFormProps) {
 
     let directorTecnicoId = data.director_tecnico_id || null
 
-    // Validar datos del nuevo director antes del try/catch para el React Compiler
-    if (!club && !directorTecnicoId && state.newDirector.nombres.trim() !== '') {
-      if (!state.newDirector.email.trim() || !state.newDirector.ci.trim()) {
-        dispatch({ type: 'SET_ERROR', payload: 'Email y carnet de identidad son requeridos' })
+    if (!club && !directorTecnicoId && state.isCreatingNewDirector) {
+      const { new_nombres, new_email, new_ci, new_apellido_paterno, new_apellido_materno } = data;
+      
+      if (!new_nombres?.trim()) {
+        dispatch({ type: 'SET_ERROR', payload: 'El nombre del director es requerido' })
+        dispatch({ type: 'SET_LOADING', payload: false })
+        return
+      }
+      if (!new_ci?.trim()) {
+        dispatch({ type: 'SET_ERROR', payload: 'El CI del director es requerido' })
+        dispatch({ type: 'SET_LOADING', payload: false })
+        return
+      }
+      if (!new_email?.trim()) {
+        dispatch({ type: 'SET_ERROR', payload: 'El email del director es requerido' })
+        dispatch({ type: 'SET_LOADING', payload: false })
+        return
+      }
+      if (!new_apellido_paterno?.trim() && !new_apellido_materno?.trim()) {
+        dispatch({ type: 'SET_ERROR', payload: 'Al menos un apellido del director es requerido' })
+        dispatch({ type: 'SET_LOADING', payload: false })
+        return
+      }
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(new_email)) {
+        dispatch({ type: 'SET_ERROR', payload: 'El formato del email del director no es válido' })
         dispatch({ type: 'SET_LOADING', payload: false })
         return
       }
@@ -166,14 +219,15 @@ export function useClubForm({ club, onSuccess }: UseClubFormProps) {
     try {
       let createdSenseiId: string | null = null
 
-      if (!club && !directorTecnicoId && state.newDirector.nombres.trim() !== '') {
+      if (!club && !directorTecnicoId && state.isCreatingNewDirector) {
         const senseiToCreate: SenseiCreate = {
           usuario_id: 'temp-user-id',
-          nombres: state.newDirector.nombres.trim(),
-          apellido_paterno: state.newDirector.apellidoPaterno.trim(),
-          apellido_materno: state.newDirector.apellidoMaterno.trim(),
-          email: state.newDirector.email.trim(),
-          ci: state.newDirector.ci.trim(),
+          nombres: data.new_nombres?.trim().replace(/\s+/g, ' ') || '',
+          apellido_paterno: data.new_apellido_paterno?.trim().replace(/\s+/g, ' ') || '',
+          apellido_materno: data.new_apellido_materno?.trim().replace(/\s+/g, ' ') || '',
+          email: data.new_email?.trim() || '',
+          ci: data.new_ci?.trim() || '',
+          ci_extension: data.new_ci_extension?.trim() || null,
           isEncargado: true,
           activo: true
         }
@@ -187,7 +241,13 @@ export function useClubForm({ club, onSuccess }: UseClubFormProps) {
         directorTecnicoId = senseiResponse.data.id
       }
 
-      const clubPayload: ClubCreate = { ...data, director_tecnico_id: directorTecnicoId } as ClubCreate
+      const clubPayload: ClubCreate = { 
+        ...data, 
+        nombre_club: data.nombre_club.trim().replace(/\s+/g, ' '),
+        direccion: data.direccion?.trim().replace(/\s+/g, ' ') || null,
+        director_tecnico_id: directorTecnicoId 
+      } as ClubCreate
+      
       let response
       
       if (club) {
@@ -199,10 +259,18 @@ export function useClubForm({ club, onSuccess }: UseClubFormProps) {
         }
       }
 
-      if (response.success) {
+      // Si fue exitoso y hay datos, devolverlos para que el form pueda subir archivos
+      if (response.success && response.data) {
         dispatch({ type: 'SET_SUCCESS', payload: true })
-        if (onSuccess) setTimeout(() => onSuccess(), 1000)
-      } else {
+        dispatch({ type: 'SET_LOADING', payload: false })
+        
+        // Si no hay archivos o es actualización, llamar al éxito aquí
+        if (filesCount === 0 || club) {
+           if (onSuccess) onSuccess()
+        }
+        
+        return response.data
+      } else if (!response.success) {
         throw new Error(response.error || 'Error al guardar el club')
       }
       dispatch({ type: 'SET_LOADING', payload: false })
@@ -211,6 +279,11 @@ export function useClubForm({ club, onSuccess }: UseClubFormProps) {
       dispatch({ type: 'SET_LOADING', payload: false })
     }
   }
+
+  const senseiOptions = useMemo(() => state.senseis.map(s => ({
+    value: s.id,
+    label: `${s.nombres} ${s.apellidos}${s.grado_dan ? ` - ${s.grado_dan}` : ''}`
+  })), [state.senseis])
 
   return {
     state,
@@ -221,6 +294,9 @@ export function useClubForm({ club, onSuccess }: UseClubFormProps) {
     errors,
     reset,
     setFocus,
-    trigger
+    trigger, 
+    isValid, 
+    isSubmitting,
+    senseiOptions
   }
 }

@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { Pago, PagoCreate, PagoUpdate } from '@/models/pago'
-import { ApiResponse } from '@/types'
+import { ApiResponse } from '@/types/globales'
 
 const PAGO_COLUMNS = 'id, judoka_id, club_id, tipo_pago, concepto, descripcion, monto_base, tiene_descuento, tipo_descuento, descuento_porcentaje, descuento_monto, razon_descuento, monto_final, estado, fecha_vencimiento, fecha_pago, metodo_pago, comprobante_url, notas, observaciones_pago, creador_id, pagador_id, activo, created_at, updated_at'
 

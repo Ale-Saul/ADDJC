@@ -1,8 +1,8 @@
 import { judokaService } from '@/services/judokaService'
 import { Judoka, JudokaCreate, JudokaUpdate } from '@/models/judoka'
-import { ApiResponse } from '@/types'
+import { ApiResponse } from '@/types/globales'
 import { generarPasswordInicial } from '@/utils/passwordUtils'
-import { personNamesCreateSchema, personNamesUpdateSchema, pesoSchema } from '@/utils/zodSchemas'
+import { personNamesCreateSchema, personNamesUpdateSchema, pesoSchema } from '@/schemas/globales'
 
 export const judokaController = {
   /**
@@ -54,6 +54,17 @@ export const judokaController = {
       return { success: false, error: namesValidation.error.issues[0]?.message ?? 'Error de validación' }
     }
 
+    // Validar peso_competitivo
+    if (typeof judokaData.peso_competitivo === 'string' && judokaData.peso_competitivo.trim() !== '') {
+      const numPeso = parseFloat(judokaData.peso_competitivo)
+      if (isNaN(numPeso)) {
+        return { success: false, error: 'El peso debe ser un número válido' }
+      }
+      judokaData.peso_competitivo = numPeso
+    } else if (judokaData.peso_competitivo === '') {
+      judokaData.peso_competitivo = null
+    }
+
     const pesoValidation = pesoSchema.safeParse(judokaData.peso_competitivo)
     if (!pesoValidation.success) {
       return { success: false, error: pesoValidation.error.issues[0]?.message ?? 'Error de validación' }
@@ -93,6 +104,17 @@ export const judokaController = {
 
     if (judokaData.fecha_nacimiento !== undefined && judokaData.fecha_nacimiento !== null && judokaData.fecha_nacimiento.trim() === '') {
       return { success: false, error: 'La fecha de nacimiento no puede estar vacía' }
+    }
+
+    // Validar peso_competitivo
+    if (typeof judokaData.peso_competitivo === 'string' && judokaData.peso_competitivo.trim() !== '') {
+      const numPeso = parseFloat(judokaData.peso_competitivo)
+      if (isNaN(numPeso)) {
+        return { success: false, error: 'El peso debe ser un número válido' }
+      }
+      judokaData.peso_competitivo = numPeso
+    } else if (judokaData.peso_competitivo === '') {
+      judokaData.peso_competitivo = null
     }
 
     const pesoValidation = pesoSchema.safeParse(judokaData.peso_competitivo)

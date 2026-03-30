@@ -5,8 +5,10 @@ import { useJudokas } from '@/hooks/useJudokas'
 import { pagoController } from '@/controllers/pagoController'
 import { clubController } from '@/controllers/clubController'
 import { Club } from '@/models/club'
-import { CATEGORIES } from '@/utils/constants'
+import { CATEGORIES } from '@/constants/globales'
 import { ROL } from '@/constants/roles'
+import { ESTADO_PAGO } from '@/constants/pagos'
+import dayjs from 'dayjs'
 
 export function usePagosManager(user: any) {
   const isAdmin = user?.rol === ROL.ADMIN
@@ -34,6 +36,7 @@ export function usePagosManager(user: any) {
   const [senseiFilter, setSenseiFilter] = useState<string>('all')
   const [categoriaFilter, setCategoriaFilter] = useState<string>('all')
   const [clubFilter, setClubFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'vencido' | 'pendiente' | 'al_dia'>('all')
   const [clubes, setClubes] = useState<Club[]>([])
   
   // Hooks base
@@ -67,6 +70,39 @@ export function usePagosManager(user: any) {
     return Array.from(names).sort()
   }, [rawJudokas])
 
+  // Calcular el estado de pagos por judoka
+  const judokasStatus = useMemo(() => {
+    const statusMap: Record<string, 'vencido' | 'pendiente' | 'al_dia'> = {}
+    const today = dayjs()
+
+    // Inicializar todos como al día
+    rawJudokas.forEach(j => {
+      statusMap[j.id] = 'al_dia'
+    })
+
+    // Procesar pagos para determinar el estado más crítico
+    pagos.forEach(p => {
+      // Solo nos interesan los pagos que no están pagados ni cancelados
+      if (p.estado === ESTADO_PAGO.PAGADO || p.estado === ESTADO_PAGO.CANCELADO || p.estado === ESTADO_PAGO.REEMBOLSADO) {
+        return
+      }
+
+      const currentStatus = statusMap[p.judoka_id]
+      if (!currentStatus) return
+
+      // Determinar si está vencido dinámicamente
+      const isVencido = p.estado === ESTADO_PAGO.VENCIDO || dayjs(p.fecha_vencimiento).isBefore(today, 'day')
+
+      if (isVencido) {
+        statusMap[p.judoka_id] = 'vencido' // Vencido tiene prioridad máxima
+      } else if (currentStatus !== 'vencido') {
+        statusMap[p.judoka_id] = 'pendiente'
+      }
+    })
+
+    return statusMap
+  }, [rawJudokas, pagos])
+
   // Filtrado y ordenamiento de judokas
   const filteredJudokas = useMemo(() => {
     let filtered = [...rawJudokas]
@@ -81,6 +117,10 @@ export function usePagosManager(user: any) {
 
     if (isAdmin && clubFilter !== 'all') {
       filtered = filtered.filter(j => j.club_id === clubFilter)
+    }
+
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(j => judokasStatus[j.id] === statusFilter)
     }
 
     // Filtrar judokas que no tienen club (solo si no es admin y no se ha filtrado por club)
@@ -107,12 +147,13 @@ export function usePagosManager(user: any) {
 
       return (a.nombres || '').localeCompare(b.nombres || '')
     })
-  }, [rawJudokas, senseiFilter, categoriaFilter, clubFilter, isAdmin])
+  }, [rawJudokas, senseiFilter, categoriaFilter, clubFilter, statusFilter, isAdmin, judokasStatus, user?.club_id])
 
   const clearFilters = useCallback(() => {
     setSenseiFilter('all')
     setCategoriaFilter('all')
     setClubFilter('all')
+    setStatusFilter('all')
     setSearchTerm('')
   }, [setSearchTerm])
 
@@ -123,6 +164,7 @@ export function usePagosManager(user: any) {
   return {
     isAdmin,
     judokas: filteredJudokas,
+    judokasStatus,
     pagos,
     loading: loadingJudokas || loadingPagos,
     searchTerm,
@@ -136,6 +178,8 @@ export function usePagosManager(user: any) {
       setCategoriaFilter,
       clubFilter,
       setClubFilter,
+      statusFilter,
+      setStatusFilter,
       clubes,
       senseisList,
       clearFilters

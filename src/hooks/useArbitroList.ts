@@ -3,7 +3,7 @@ import { Arbitro } from '@/models/arbitro'
 import { arbitroController } from '@/controllers/arbitroController'
 import { useEntityList } from './useEntityList'
 
-export function useArbitroList(initialSearch: string = '') {
+export function useArbitroList(initialSearch: string = '', refreshTrigger: number = 0) {
   const filterFn = useCallback((a: Arbitro, filters: Record<string, string>, search: string) => {
     const matchNivel = filters.nivel === 'all' || a.nivel_arbitraje === filters.nivel
     const matchEstado = filters.estado === 'all' || (filters.estado === 'activo' ? a.activo : !a.activo)
@@ -18,7 +18,7 @@ export function useArbitroList(initialSearch: string = '') {
   }, [])
 
   const entityList = useEntityList<Arbitro>({
-    queryKey: ['arbitros'],
+    queryKey: ['arbitros', refreshTrigger.toString()],
     fetchItems: async () => await arbitroController.getAllArbitros(true),
     updateItemStatus: async (id, activo) => {
       const resp = await arbitroController.updateArbitro(id, { activo })
@@ -48,9 +48,7 @@ export function useArbitroList(initialSearch: string = '') {
     }
   }, [entityList])
 
-  const loadArbitros = useCallback(async () => {
-    await entityList.loadItems()
-  }, [entityList])
+  const loadArbitros = entityList.loadItems
 
   return {
     state,

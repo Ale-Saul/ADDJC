@@ -8,14 +8,14 @@ import {
   CircularProgress,
   Stack,
   Typography,
-  Autocomplete,
 } from '@mui/material'
 import { Pago } from '@/models/pago'
 import { useAuth } from '@/contexts/AuthContext'
-import { Controller } from 'react-hook-form'
+import { FormInput, FormAutocomplete } from '@/components/ui'
 import dayjs from 'dayjs'
 import { METODO_PAGO_LABELS } from '@/constants/pagos'
 import { useRegistrarPagoForm } from '@/hooks/useRegistrarPagoForm'
+import { formatNameWithNumbersInput } from '@/utils/formatters'
 
 const METODO_PAGO_OPTIONS = Object.entries(METODO_PAGO_LABELS)
   .map(([value, label]) => ({ value, label }))
@@ -23,12 +23,15 @@ const METODO_PAGO_OPTIONS = Object.entries(METODO_PAGO_LABELS)
 
 interface RegistrarPagoFormProps {
   pagos: Pago[]
+  judokaNombre: string
   onSuccess?: () => void
   onCancel?: () => void
 }
 
-export default function RegistrarPagoForm({ pagos, onSuccess, onCancel }: RegistrarPagoFormProps) {
+export default function RegistrarPagoForm({ pagos, judokaNombre, onSuccess, onCancel }: RegistrarPagoFormProps) {
   const { user } = useAuth()
+  const usuarioNombre = user ? `${user.nombres} ${user.apellidos}` : 'Sistema'
+  
   const {
     form,
     loading,
@@ -37,7 +40,7 @@ export default function RegistrarPagoForm({ pagos, onSuccess, onCancel }: Regist
     totalPagar,
     onSubmit,
     setError
-  } = useRegistrarPagoForm(pagos, user?.id, onSuccess)
+  } = useRegistrarPagoForm(pagos, user?.id, onSuccess, judokaNombre, usuarioNombre)
 
   return (
     <Box component="form" onSubmit={form.handleSubmit(onSubmit)} sx={{ mt: 2 }}>
@@ -82,45 +85,24 @@ export default function RegistrarPagoForm({ pagos, onSuccess, onCancel }: Regist
           helperText="Se registra automáticamente con la fecha y hora actual"
         />
 
-        <Controller
-          name="metodo_pago"
+        <FormAutocomplete
           control={form.control}
-          render={({ field }) => (
-            <Autocomplete
-              options={METODO_PAGO_OPTIONS}
-              getOptionLabel={(opt) => opt.label}
-              isOptionEqualToValue={(opt, val) => opt.value === val.value}
-              value={METODO_PAGO_OPTIONS.find(o => o.value === field.value) ?? null}
-              onChange={(_, v) => field.onChange(v?.value ?? '')}
-              disabled={loading}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Método de Pago"
-                  required
-                  error={!!form.formState.errors.metodo_pago}
-                  helperText={form.formState.errors.metodo_pago?.message}
-                  inputProps={{ ...params.inputProps, autoComplete: 'off' }}
-                />
-              )}
-            />
-          )}
+          name="metodo_pago"
+          label="Método de Pago"
+          options={METODO_PAGO_OPTIONS}
+          disabled={loading}
+          required
         />
 
-        <Controller
-          name="observaciones_pago"
+        <FormInput
           control={form.control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Observaciones (opcional)"
-              multiline
-              rows={3}
-              disabled={loading}
-              placeholder="Ej: Pago realizado por transferencia bancaria..."
-            />
-          )}
+          name="observaciones_pago"
+          label="Observaciones (opcional)"
+          multiline
+          rows={3}
+          disabled={loading}
+          placeholder="Ej: Pago realizado por transferencia bancaria..."
+          formatValue={formatNameWithNumbersInput}
         />
 
         <Box sx={{ mt: 2, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>

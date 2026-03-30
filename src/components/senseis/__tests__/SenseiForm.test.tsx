@@ -41,7 +41,7 @@ describe('SenseiForm', () => {
   const mockClub: Club = {
     id: 'club-1',
     nombre_club: 'Club Test',
-    municipio: 'Bogotá',
+    provincia: 'Bogotá',
     direccion: 'Calle 123',
     telefono_contacto: '1234567890',
     director_tecnico_id: null,
@@ -58,9 +58,10 @@ describe('SenseiForm', () => {
     apellidos: 'García',
     fecha_nacimiento: '1980-05-15',
     grado_dan: '5to Dan',
+    certificacion_id: 'cert-1',
     certificacion: 'Certificado Internacional',
     especialidad: 'Kata',
-    foto_perfil: null,
+    
     activo: true,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
@@ -78,7 +79,7 @@ describe('SenseiForm', () => {
 
   describe('Renderizado inicial', () => {
     it('debe renderizar todos los campos del formulario', async () => {
-      render(<SenseiForm />)
+      render(<SenseiForm onSuccess={() => {}} onCancel={() => {}} />)
 
       await waitFor(() => {
         expect(screen.getByRole('textbox', { name: /nombres/i })).toBeInTheDocument()
@@ -93,7 +94,7 @@ describe('SenseiForm', () => {
     })
 
     it('debe cargar y mostrar clubes en el select', async () => {
-      render(<SenseiForm />)
+      render(<SenseiForm onSuccess={() => {}} onCancel={() => {}} />)
 
       await waitFor(() => {
         expect(clubController.getAllClubes).toHaveBeenCalledWith(false)
@@ -113,7 +114,7 @@ describe('SenseiForm', () => {
     }, 10000)
 
     it('debe mostrar opciones de grado dan', async () => {
-      render(<SenseiForm />)
+      render(<SenseiForm onSuccess={() => {}} onCancel={() => {}} />)
 
       await waitFor(() => {
         expect(screen.getAllByText('Grado Dan')[0]).toBeInTheDocument()
@@ -143,7 +144,7 @@ describe('SenseiForm', () => {
         data: mockSensei
       })
 
-      render(<SenseiForm onSuccess={mockOnSuccess} />)
+      render(<SenseiForm onSuccess={mockOnSuccess} onCancel={() => {}} />)
 
       await waitFor(() => {
         expect(screen.getByRole('textbox', { name: /nombres/i })).toBeInTheDocument()
@@ -174,7 +175,7 @@ describe('SenseiForm', () => {
           fecha_nacimiento: null,
           grado_dan: '',
           especialidad: 'Kata',
-          foto_perfil: null,
+          
           activo: true,
           isEncargado: false
         })
@@ -196,7 +197,7 @@ describe('SenseiForm', () => {
         data: mockSensei
       })
 
-      render(<SenseiForm />)
+      render(<SenseiForm onSuccess={() => {}} onCancel={() => {}} />)
 
       await waitFor(() => {
         expect(screen.getAllByText('Club')[0]).toBeInTheDocument()
@@ -232,7 +233,7 @@ describe('SenseiForm', () => {
         data: mockSensei
       })
 
-      render(<SenseiForm />)
+      render(<SenseiForm onSuccess={() => {}} onCancel={() => {}} />)
 
       await waitFor(() => {
         expect(screen.getAllByText('Grado Dan')[0]).toBeInTheDocument()
@@ -268,7 +269,7 @@ describe('SenseiForm', () => {
         data: mockSensei
       })
 
-      render(<SenseiForm />)
+      render(<SenseiForm onSuccess={() => {}} onCancel={() => {}} />)
 
       await waitFor(() => {
         expect(screen.getByLabelText('Fecha de Nacimiento')).toBeInTheDocument()
@@ -306,7 +307,7 @@ describe('SenseiForm', () => {
         error: 'Error al crear sensei'
       })
 
-      render(<SenseiForm />)
+      render(<SenseiForm onSuccess={() => {}} onCancel={() => {}} />)
 
       await waitFor(() => {
         expect(screen.getByRole('textbox', { name: /nombres/i })).toBeInTheDocument()
@@ -327,7 +328,7 @@ describe('SenseiForm', () => {
 
   describe('Modo edición', () => {
     it('debe cargar datos del sensei en el formulario', async () => {
-      render(<SenseiForm sensei={mockSensei} />)
+      render(<SenseiForm sensei={mockSensei} onSuccess={() => {}} onCancel={() => {}} />)
 
       await waitFor(() => {
         expect(screen.getByDisplayValue('Carlos')).toBeInTheDocument()
@@ -348,7 +349,7 @@ describe('SenseiForm', () => {
         data: { ...mockSensei, nombres: 'Carlos Actualizado' }
       })
 
-      render(<SenseiForm sensei={mockSensei} onSuccess={mockOnSuccess} />)
+      render(<SenseiForm sensei={mockSensei} onSuccess={mockOnSuccess} onCancel={() => {}} />)
 
       await waitFor(() => {
         expect(screen.getByDisplayValue('Carlos')).toBeInTheDocument()
@@ -368,8 +369,9 @@ describe('SenseiForm', () => {
           apellidos: 'García',
           fecha_nacimiento: '1980-05-15',
           grado_dan: '5to Dan',
+    certificacion_id: 'cert-1',
           especialidad: 'Kata',
-          foto_perfil: null,
+          
           activo: true
         })
       })
@@ -390,7 +392,7 @@ describe('SenseiForm', () => {
       )
 
       const user = userEvent.setup()
-      render(<SenseiForm />)
+      render(<SenseiForm onSuccess={() => {}} onCancel={() => {}} />)
 
       await waitFor(() => {
         expect(screen.getByRole('textbox', { name: /nombres/i })).toBeInTheDocument()
@@ -427,7 +429,7 @@ describe('SenseiForm', () => {
         error: 'Error de prueba'
       })
 
-      render(<SenseiForm />)
+      render(<SenseiForm onSuccess={() => {}} onCancel={() => {}} />)
 
       await waitFor(() => {
         expect(screen.getByRole('textbox', { name: /nombres/i })).toBeInTheDocument()
@@ -459,7 +461,7 @@ describe('SenseiForm', () => {
         error: 'Error al cargar clubes'
       })
 
-      render(<SenseiForm />)
+      render(<SenseiForm onSuccess={() => {}} onCancel={() => {}} />)
 
       await waitFor(() => {
         expect(clubController.getAllClubes).toHaveBeenCalled()
@@ -475,7 +477,7 @@ describe('SenseiForm', () => {
       const user = userEvent.setup()
       const mockOnCancel = jest.fn()
 
-      render(<SenseiForm onCancel={mockOnCancel} />)
+      render(<SenseiForm onCancel={mockOnCancel} onSuccess={() => {}} />)
 
       await waitFor(() => {
         expect(screen.getByText('Cancelar')).toBeInTheDocument()
@@ -487,7 +489,7 @@ describe('SenseiForm', () => {
     })
 
     it('no debe mostrar botón Cancelar si no se proporciona onCancel', async () => {
-      render(<SenseiForm />)
+      render(<SenseiForm onSuccess={() => {}} onCancel={() => {}} />)
 
       await waitFor(() => {
         expect(screen.getByRole('textbox', { name: /nombres/i })).toBeInTheDocument()
@@ -504,7 +506,7 @@ describe('SenseiForm', () => {
         error: 'Error de prueba'
       })
 
-      render(<SenseiForm />)
+      render(<SenseiForm onSuccess={() => {}} onCancel={() => {}} />)
 
       await waitFor(() => {
         expect(screen.getByRole('textbox', { name: /nombres/i })).toBeInTheDocument()
@@ -531,4 +533,10 @@ describe('SenseiForm', () => {
     }, 15000)
   })
 })
+
+
+
+
+
+
 

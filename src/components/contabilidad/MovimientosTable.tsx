@@ -196,7 +196,7 @@ export default function MovimientosTable({
                   <TableCell>
                     <Chip
                       label={ESTADO_MOVIMIENTO_LABELS[movimiento.estado as keyof typeof ESTADO_MOVIMIENTO_LABELS] ?? movimiento.estado}
-                      color={getEstadoColor(movimiento.estado)}
+                      color={getEstadoColor(movimiento.estado ?? '')}
                       size="small"
                     />
                   </TableCell>

@@ -1,15 +1,11 @@
+import { perfilSchema } from '@/schemas/globales'
 import { useState, useEffect, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { authController } from '@/controllers/authController'
 import { User } from '@/models/auth'
-
-const perfilSchema = z.object({
-  nombres: z.string().min(1, 'Los nombres son requeridos'),
-  apellido_paterno: z.string().min(1, 'El apellido paterno es requerido'),
-  apellido_materno: z.string().optional().nullable(),
-})
+import { formatters } from '@/utils/formatters'
 
 export function usePerfilForm(user: User | null, refreshUser: () => Promise<void>) {
   const [loading, setLoading] = useState(false)
@@ -20,33 +16,21 @@ export function usePerfilForm(user: User | null, refreshUser: () => Promise<void
     resolver: zodResolver(perfilSchema),
     mode: 'onTouched',
     defaultValues: {
-      nombres: '',
-      apellido_paterno: '',
-      apellido_materno: '',
+      nombres: user?.nombres || '',
+      primer_apellido: user?.apellido_paterno || '',
+      segundo_apellido: user?.apellido_materno || '',
     },
   })
 
-  const { reset } = form
-
   useEffect(() => {
     if (user) {
-      // Intentar extraer apellidos si vienen en un solo campo
-      let paterno = user.apellido_paterno || ''
-      let materno = user.apellido_materno || ''
-      
-      if (!paterno && user.apellidos) {
-        const parts = user.apellidos.trim().split(/\s+/)
-        paterno = parts[0] || ''
-        materno = parts.slice(1).join(' ') || ''
-      }
-
-      reset({
+      form.reset({
         nombres: user.nombres || '',
-        apellido_paterno: paterno,
-        apellido_materno: materno,
+        primer_apellido: user.apellido_paterno || '',
+        segundo_apellido: user.apellido_materno || '',
       })
     }
-  }, [user, reset])
+  }, [user, form.reset])
 
   const onSubmit = useCallback(async (data: z.infer<typeof perfilSchema>) => {
     if (!user) return
@@ -56,10 +40,15 @@ export function usePerfilForm(user: User | null, refreshUser: () => Promise<void
     setSuccess(null)
 
     try {
+      // Como Zod ya limpió los espacios (trim, multiples espacios), actualizamos la UI para que se refleje:
+      form.setValue('nombres', data.nombres)
+      form.setValue('primer_apellido', data.primer_apellido)
+      form.setValue('segundo_apellido', data.segundo_apellido || '')
+
       const response = await authController.updateProfile(user.id, {
         nombres: data.nombres,
-        apellido_paterno: data.apellido_paterno,
-        apellido_materno: data.apellido_materno || null,
+        apellido_paterno: data.primer_apellido,
+        apellido_materno: data.segundo_apellido,
       })
 
       if (response.success) {
@@ -76,13 +65,5 @@ export function usePerfilForm(user: User | null, refreshUser: () => Promise<void
     }
   }, [user, refreshUser])
 
-  return {
-    form,
-    loading,
-    error,
-    success,
-    setError,
-    setSuccess,
-    onSubmit
-  }
+  return { form, loading, error, success, setError, setSuccess, onSubmit }
 }

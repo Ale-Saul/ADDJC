@@ -14,7 +14,7 @@ import {
   CategoriaMovimiento,
 } from '@/models/movimientoFinanciero';
 import * as movimientoFinancieroService from '@/services/movimientoFinancieroService';
-import { ApiResponse } from '@/types';
+import { ApiResponse } from '@/types/globales';
 import { createMovimientoSchema, updateMovimientoSchema } from '@/schemas/movimientoSchema';
 import { CATEGORIAS_POR_TIPO, CATEGORIA_MOVIMIENTO_LABELS } from '@/constants/contabilidad';
 

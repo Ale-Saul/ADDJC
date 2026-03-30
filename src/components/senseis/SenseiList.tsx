@@ -1,53 +1,22 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import {
-  Button,
-  Collapse,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-  IconButton,
-  Box,
-  CircularProgress,
-  Alert,
-  Typography,
-  TextField,
-  InputAdornment,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Stack,
-  Tooltip,
-  Switch
-} from '@mui/material'
+import { useState, useMemo } from 'react'
+import { Box, Typography, Switch, IconButton, Tooltip, Chip, Grid, Stack, Button, CircularProgress } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
-import ArticleIcon from '@mui/icons-material/Article'
-import SearchIcon from '@mui/icons-material/Search'
-import ClearIcon from '@mui/icons-material/Clear'
-import FilterListIcon from '@mui/icons-material/FilterList'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import ExpandLessIcon from '@mui/icons-material/ExpandLess'
-import {
-  useReactTable,
-  getCoreRowModel,
-  getPaginationRowModel,
-  flexRender,
-  createColumnHelper
-} from '@tanstack/react-table'
+import BadgeIcon from '@mui/icons-material/Badge'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import AddLinkIcon from '@mui/icons-material/AddLink'
+import LinkOffIcon from '@mui/icons-material/LinkOff'
 import { Sensei } from '@/models/sensei'
-import Pagination from '@/components/common/Pagination'
-import ConfirmDialog from '@/components/common/ConfirmDialog'
-import { senseiController } from '@/controllers/senseiController'
-import { ESPECIALIDADES_SENSEI } from '@/utils/constants'
 import { useSenseiList } from '@/hooks/useSenseiList'
+import Pagination from '@/components/common/Pagination'
+import { DataTable, Column, SearchBar, FilterSelect } from '@/components/ui'
+import ConfirmDialog from '@/components/common/ConfirmDialog'
+import { ESPECIALIDADES_SENSEI, GRADOS_DAN } from '@/constants/globales'
+import { senseiController } from '@/controllers/senseiController'
+import { useAuth } from '@/contexts/AuthContext'
+import { ROL } from '@/constants/roles'
 
 interface SenseiListProps {
   onEdit?: (sensei: Sensei) => void
@@ -55,313 +24,366 @@ interface SenseiListProps {
   onCertificacion?: (sensei: Sensei) => void
   refreshTrigger?: number
   clubId?: string
-  searchTerm?: string
-  itemsPerPage?: number
   showUnassigned?: boolean
   readOnly?: boolean
 }
 
-export default function SenseiList({ 
-  onEdit, 
+export default function SenseiList({
+  onEdit,
   onDelete,
   onCertificacion,
-  refreshTrigger, 
+  refreshTrigger = 0,
   clubId,
-  searchTerm: externalSearchTerm = '', 
-  itemsPerPage: initialItemsPerPage = 10,
   showUnassigned = false,
-  readOnly = false,
+  readOnly = false
 }: SenseiListProps) {
-  const { state, dispatch, loadSenseis, toggleStatus, updateLocalSensei, deleteLocalSensei, filteredData } = useSenseiList(externalSearchTerm)
-  const { loading, error, globalFilter, especialidadFilter, estadoFilter, showFilters, modifiedIds } = state
-  const [pendingDelete, setPendingDelete] = useState<Sensei | null>(null)
-  const [confirmLoading, setConfirmLoading] = useState(false)
+  const { user } = useAuth()
+  const isAdminOrAsoc = user?.rol === ROL.ADMIN || user?.rol === ROL.ASOCIACION
+  const isEncargado = user?.rol === ROL.ENCARGADO
 
-  const handleEdit = (sensei: Sensei) => {
-    if (onEdit) {
-      onEdit(sensei)
-    }
+  const isJudoka = user?.rol === ROL.JUDOKA
+
+  const { state, filteredData, toggleStatus, loadSenseis, dispatch, updateLocalSensei } = useSenseiList('', refreshTrigger, clubId)
+  const { loading, error } = state
+  const [page, setPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+
+  const handleToggleClick = (sensei: Sensei) => {
+    if (readOnly) return
+    toggleStatus(sensei.id, !!sensei.activo)
   }
 
-  const handleDelete = (sensei: Sensei) => {
-    if (onDelete) {
-      onDelete(sensei)
-    } else {
-      setPendingDelete(sensei)
-    }
-  }
-
-  const handleConfirmDelete = async () => {
-    if (!pendingDelete) return
-    setConfirmLoading(true)
+  const handleAfiliar = async (sensei: Sensei) => {
+    if (!clubId) return
+    setActionLoading(sensei.id)
     try {
-      const response = await senseiController.deleteSensei(pendingDelete.id)
-      if (response.success) {
-        deleteLocalSensei(pendingDelete.id)
+      const response = await senseiController.updateSensei(sensei.id, { club_id: clubId })
+      if (response.success && response.data) {
+        updateLocalSensei(sensei.id, response.data)
+      } else {
+        alert(response.error || 'Error al afiliar sensei')
       }
+    } catch (err) {
+      alert('Error inesperado al afiliar sensei')
     } finally {
-      setConfirmLoading(false)
-      setPendingDelete(null)
+      setActionLoading(null)
     }
   }
 
-  useEffect(() => {
-    loadSenseis(clubId)
-  }, [loadSenseis, refreshTrigger, clubId])
+  const handleDesafiliar = async (sensei: Sensei) => {
+    setActionLoading(sensei.id)
+    try {
+      const response = await senseiController.updateSensei(sensei.id, { club_id: null as any })
+      if (response.success && response.data) {
+        updateLocalSensei(sensei.id, response.data)
+      } else {
+        alert(response.error || 'Error al desafiliar sensei')
+      }
+    } catch (err) {
+      alert('Error inesperado al desafiliar sensei')
+    } finally {
+      setActionLoading(null)
+    }
+  }
 
-  useEffect(() => {
-    dispatch({ type: 'SET_GLOBAL_FILTER', payload: externalSearchTerm })
-  }, [externalSearchTerm, dispatch])
-
-  const columnHelper = createColumnHelper<Sensei>()
-  
-  const columns = useMemo(() => [
-    columnHelper.display({
-      id: 'indice',
-      header: 'N°',
-      cell: (info) => info.row.index + 1,
-    }),
-    columnHelper.accessor('ci', {
-      header: 'Carnet',
-      cell: (info) => info.getValue() || '-',
-    }),
-    columnHelper.accessor('nombres', {
-      header: 'Nombres',
-      cell: (info) => (
-        <Box>
-          <Typography variant="body2">{info.getValue()}</Typography>
-          {showUnassigned && !info.row.original.club_id && (
-            <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>
-              Sin club
-            </Typography>
-          )}
-        </Box>
-      ),
-    }),
-    columnHelper.accessor('apellidos', {
-      header: 'Apellidos',
-    }),
-    columnHelper.accessor('grado_dan', {
-      header: 'Grado Dan',
-      cell: (info) => info.getValue() || '-',
-    }),
-    columnHelper.accessor('especialidad', {
-      header: 'Especialidad',
-      cell: (info) => info.getValue() || '-',
-    }),
-    ...(!readOnly ? [
-      columnHelper.accessor('activo', {
-        header: 'Estado',
-        cell: (info) => {
-          const isActive = info.getValue()
-          const id = info.row.original.id
-          return (
-            <Tooltip title={isActive ? 'Desactivar' : 'Activar'}>
-              <Switch 
-                checked={!!isActive} 
-                onChange={() => toggleStatus(id, !!isActive)}
-                size="medium"
-                sx={{
-                  '& .MuiSwitch-switchBase.Mui-checked': { color: '#4caf50' },
-                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#4caf50' },
-                  '& .MuiSwitch-switchBase': { color: '#f44336' },
-                  '& .MuiSwitch-switchBase + .MuiSwitch-track': { backgroundColor: '#f44336' },
-                }}
-              />
-            </Tooltip>
-          )
-        },
-      }),
-    ] : []),
-    columnHelper.display({
-      id: 'acciones',
-      header: () => <Box textAlign="right">Acciones</Box>,
-      cell: (info) => (
-        <Box textAlign="right">
-          {onCertificacion && (
-            <IconButton size="small" color="success" onClick={() => onCertificacion(info.row.original)} title="Certificaciones" aria-label="Ver certificaciones">
-              <ArticleIcon fontSize="small" />
-            </IconButton>
-          )}
-          {onEdit && (
-            <IconButton size="small" color="primary" onClick={() => handleEdit(info.row.original)} title="Editar" aria-label="Editar sensei">
-              <EditIcon fontSize="small" />
-            </IconButton>
-          )}
-          {onDelete && (
-            <IconButton size="small" color="error" onClick={() => handleDelete(info.row.original)} title="Eliminar" aria-label="Eliminar sensei">
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          )}
-        </Box>
-      ),
-    }),
-  ], [onEdit, onDelete, onCertificacion, toggleStatus, readOnly, showUnassigned])
-
-  // Filtrado local por club + unassigned (encima del filteredData del hook)
   const localFilteredData = useMemo(() => {
-    const data = filteredData.filter(s => {
+    const filtered = filteredData.filter(s => {
       if (clubId) {
+        // Si hay clubId (Encargado/Sensei), mostrar los del club y los sin club
         return s.club_id === clubId || (showUnassigned && !s.club_id)
       }
       return true
     })
-    return [...data].sort((a, b) => {
-      // Senseis sin club van siempre al final
-      const aNoClub = !a.club_id ? 1 : 0
-      const bNoClub = !b.club_id ? 1 : 0
-      if (aNoClub !== bNoClub) return aNoClub - bNoClub
+
+    // Ordenar: primero los que tienen club, luego los que no
+    return [...filtered].sort((a, b) => {
+      if (a.club_id && !b.club_id) return -1
+      if (!a.club_id && b.club_id) return 1
       return 0
     })
   }, [filteredData, clubId, showUnassigned])
 
-  const table = useReactTable({
-    data: localFilteredData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: initialItemsPerPage,
-      },
+  const columns: Column<Sensei>[] = [
+    {
+      id: 'index',
+      label: 'N°',
+      align: 'center',
+      render: (_, index) => (
+        <Typography variant="body2" color="text.secondary">
+          {(page - 1) * itemsPerPage + (index ?? 0) + 1}
+        </Typography>
+      ),
     },
-  })
-
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
-        <CircularProgress />
-      </Box>
-    )
-  }
-
-  if (error) {
-    return <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
-  }
-
-  return (
-    <Box>
-      <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f8f9fa' }} variant="outlined">
-        <Stack spacing={2}>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
-            <TextField
-              size="small"
-              placeholder="Buscar por carnet, nombre, especialidad..."
-              value={globalFilter}
-              onChange={(e) => dispatch({ type: 'SET_GLOBAL_FILTER', payload: e.target.value })}
-              sx={{ flexGrow: 1, backgroundColor: 'white' }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
-            />
-            
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<FilterListIcon />}
-              endIcon={showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              onClick={() => dispatch({ type: 'TOGGLE_SHOW_FILTERS' })}
-              color={showFilters ? 'primary' : 'inherit'}
-              sx={{ backgroundColor: 'white', height: '40px', textTransform: 'none' }}
-            >
-              Filtros
-            </Button>
-
-            {(especialidadFilter !== 'all' || estadoFilter !== 'all' || globalFilter !== '') && (
-              <Tooltip title="Limpiar filtros">
-                <IconButton onClick={() => dispatch({ type: 'CLEAR_FILTERS', initialSearch: externalSearchTerm })} color="warning" size="small">
-                  <ClearIcon />
-                </IconButton>
-              </Tooltip>
+    {
+      id: 'nombres',
+      label: 'Sensei',
+      render: (s: Sensei) => (
+        <Box>
+          <Typography variant="body2" fontWeight="bold">
+            {s.nombres} {s.apellidos}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" display="block">
+            CI: {s.ci ? (s.ci_extension ? `${s.ci}-${s.ci_extension}` : s.ci) : '-'}
+          </Typography>
+            {showUnassigned && !s.club_id && (
+              <Typography variant="caption" color="error" sx={{ fontStyle: 'italic', fontWeight: 'medium', display: 'block' }}>
+                Sin club asignado
+              </Typography>
             )}
-          </Stack>
-
-          <Collapse in={showFilters}>
-            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center" sx={{ pt: 1 }}>
-              <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white' }}>
-                <InputLabel>Especialidad</InputLabel>
-                <Select value={especialidadFilter} label="Especialidad" onChange={(e) => dispatch({ type: 'SET_ESPECIALIDAD_FILTER', payload: e.target.value })}>
-                  <MenuItem value="all">Todas las especialidades</MenuItem>
-                  {ESPECIALIDADES_SENSEI.map(esp => (
-                    <MenuItem key={esp} value={esp}>{esp}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              {!readOnly && (
-                <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white' }}>
-                  <InputLabel>Estado</InputLabel>
-                  <Select value={estadoFilter} label="Estado" onChange={(e) => dispatch({ type: 'SET_ESTADO_FILTER', payload: e.target.value })}>
-                    <MenuItem value="all">Todos los estados</MenuItem>
-                    <MenuItem value="activo">Activos</MenuItem>
-                    <MenuItem value="inactivo">Inactivos</MenuItem>
-                  </Select>
-                </FormControl>
-              )}
-            </Stack>
-          </Collapse>
-        </Stack>
-      </Paper>
-
-      {localFilteredData.length === 0 ? (
-        <Box textAlign="center" py={4}>
-          <Typography variant="h6" color="text.secondary">
-            No se encontraron senseis con los filtros aplicados
+            {isEncargado && clubId && (
+              <Box mt={1}>
+                {s.club_id === clubId ? (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    startIcon={actionLoading === s.id ? <CircularProgress size={16} /> : <LinkOffIcon />}
+                    onClick={() => handleDesafiliar(s)}
+                    disabled={!!actionLoading}
+                    sx={{ fontSize: '0.7rem', py: 0 }}
+                  >
+                    Desafiliar del Club
+                  </Button>
+                ) : !s.club_id ? (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="primary"
+                    startIcon={actionLoading === s.id ? <CircularProgress size={16} /> : <AddLinkIcon />}
+                    onClick={() => handleAfiliar(s)}
+                    disabled={!!actionLoading}
+                    sx={{ fontSize: '0.7rem', py: 0 }}
+                  >
+                    Inscribir a mi Club
+                  </Button>
+                ) : null}
+              </Box>
+            )}
+          </Box>
+        )
+      },
+    {
+      id: 'contacto',
+      label: 'Contacto',
+      render: (s: Sensei) => (
+        <Box>
+          <Typography variant="body2">{s.email || '-'}</Typography>
+          <Typography variant="caption" color="text.secondary">
+            {s.numero_celular || 'Sin celular'}
           </Typography>
         </Box>
+      ),
+    },
+    {
+      id: 'grado_dan',
+      label: 'Grado Dan',
+      render: (s: Sensei) => <Typography variant="body2">{s.grado_dan}</Typography>
+    },
+    {
+      id: 'especialidad',
+      label: 'Especialidad',
+      render: (s: Sensei) => <Typography variant="body2">{s.especialidad || '-'}</Typography>
+    },
+    {
+      id: 'estado',
+      label: 'Estado',
+      align: 'center',
+      render: (s: Sensei) => (
+        <Tooltip title={isAdminOrAsoc ? (s.activo ? 'Desactivar' : 'Activar') : (s.activo ? 'Activo' : 'Inactivo')}>
+          <span>
+            <Switch
+              checked={!!s.activo}
+              onChange={() => isAdminOrAsoc && toggleStatus(s.id, !!s.activo)}
+              disabled={!isAdminOrAsoc}
+              size="medium"
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': {
+                    color: '#4caf50',
+                    '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.08)' },
+                  },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                    backgroundColor: '#4caf50',
+                  },
+                  '& .MuiSwitch-switchBase': {
+                    color: '#f44336',
+                    '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.08)' },
+                  },
+                  '& .MuiSwitch-switchBase + .MuiSwitch-track': {
+                    backgroundColor: '#f44336',
+                  },
+                  '& .MuiSwitch-switchBase.Mui-disabled': {
+                    color: (s.activo ? '#4caf50' : '#f44336') + ' !important',
+                    opacity: '1 !important'
+                  },
+                  '& .MuiSwitch-switchBase.Mui-disabled + .MuiSwitch-track': {
+                    backgroundColor: (s.activo ? '#4caf50' : '#f44336') + ' !important',
+                    opacity: '0.5 !important'
+                  }
+                }}
+            />
+          </span>
+        </Tooltip>
+      )
+    },
+    {
+      id: 'certificaciones',
+      label: 'Certificaciones',
+      align: 'center',
+      render: (s: Sensei) => (
+        <Chip 
+          label={s.total_certificaciones || 0} 
+          size="small" 
+          color={(s.total_certificaciones || 0) > 0 ? 'primary' : 'default'} 
+        />
+      )
+    }
+  ]
+
+  if (!readOnly || isEncargado || isJudoka) {
+    columns.push({
+      id: 'acciones',
+      label: 'Acciones',
+      align: 'right',
+      render: (s: Sensei) => (
+        <Stack direction="row" spacing={1} justifyContent="flex-end">
+          {onCertificacion && (
+            <Tooltip title="Certificaciones">
+              <IconButton size="small" onClick={() => onCertificacion(s)} color="info">
+                <BadgeIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {onEdit && !isJudoka && (
+            <Tooltip title="Editar">
+              <IconButton size="small" onClick={() => onEdit(s)} color="primary">
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {onDelete && !isEncargado && !isJudoka && (
+            <Tooltip title="Eliminar">
+              <IconButton size="small" onClick={() => onDelete(s)} color="error">
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Stack>
+      )
+    })
+  } else {
+    columns.push({
+      id: 'acciones',
+      label: 'Acciones',
+      align: 'right',
+      render: (s: Sensei) => (
+        <Stack direction="row" spacing={1} justifyContent="flex-end">
+          {onCertificacion && (
+            <Tooltip title="Certificaciones">
+              <IconButton size="small" onClick={() => onCertificacion(s)} color="info">
+                <BadgeIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {onEdit && (
+            <Tooltip title="Ver Detalles">
+              <IconButton size="small" onClick={() => onEdit(s)} color="info">
+                <BadgeIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Stack>
+      )
+    })
+  }
+
+  const paginatedData = localFilteredData.slice(
+    (page - 1) * itemsPerPage,
+    page * itemsPerPage
+  )
+  const totalPages = Math.ceil(localFilteredData.length / itemsPerPage)
+
+  return (
+    <>
+      {error ? (
+        <Typography color="error">{error}</Typography>
       ) : (
         <>
-          <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
-              <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-                {table.getHeaderGroups().map(headerGroup => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map(header => (
-                      <TableCell key={header.id} sx={{ fontWeight: 'bold', py: 1.5 }}>
-                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHead>
-              <TableBody>
-                {table.getRowModel().rows.map(row => (
-                  <TableRow key={row.id} hover>
-                    {row.getVisibleCells().map(cell => (
-                      <TableCell key={cell.id} sx={{ py: 1 }}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          {!readOnly && (
+            <SearchBar
+              value={state.globalFilter}
+              onChange={(val) => dispatch({ type: 'SET_GLOBAL_FILTER', payload: val })}
+              placeholder="Buscar por nombre, carnet, especialidad..."
+              onToggleFilters={() => dispatch({ type: 'TOGGLE_SHOW_FILTERS' })}
+              showFilters={state.showFilters}
+            >
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={4}>
+                  <FilterSelect
+                    label="Grado Dan"
+                    value={state.gradoDanFilter}
+                    onChange={(e) => dispatch({ type: 'SET_GRADO_DAN_FILTER', payload: e.target.value })}
+                    options={[
+                      { value: 'all', label: 'Todos los grados' },
+                      ...GRADOS_DAN.map(g => ({ value: g, label: g }))
+                    ]}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <FilterSelect
+                    label="Especialidad"
+                    value={state.especialidadFilter}
+                    onChange={(e) => dispatch({ type: 'SET_ESPECIALIDAD_FILTER', payload: e.target.value })}
+                    options={[
+                      { value: 'all', label: 'Todas las especialidades' },
+                      ...ESPECIALIDADES_SENSEI.map(e => ({ value: e, label: e }))
+                    ]}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <FilterSelect
+                    label="Estado"
+                    value={state.estadoFilter}
+                    onChange={(e) => dispatch({ type: 'SET_ESTADO_FILTER', payload: e.target.value })}
+                    options={[
+                      { value: 'all', label: 'Todos los estados' },
+                      { value: 'activo', label: 'Solo Activos' },
+                      { value: 'inactivo', label: 'Solo Inactivos' }
+                    ]}
+                  />
+                </Grid>
+              </Grid>
+            </SearchBar>
+          )}
 
-          <Pagination
-            currentPage={table.getState().pagination.pageIndex + 1}
-            totalPages={table.getPageCount()}
-            totalItems={filteredData.length}
-            itemsPerPage={table.getState().pagination.pageSize}
-            onPageChange={(page) => table.setPageIndex(page - 1)}
-            onItemsPerPageChange={(size) => table.setPageSize(size)}
+          <DataTable
+            data={paginatedData}
+            columns={columns}
+            isLoading={loading}
+            keyExtractor={(s) => s.id}
           />
         </>
       )}
 
-      <ConfirmDialog
-        open={!!pendingDelete}
-        title="Eliminar Sensei"
-        message={pendingDelete ? `¿Estás seguro de eliminar al sensei "${pendingDelete.nombres} ${pendingDelete.apellidos}"?` : ''}
-        onConfirm={handleConfirmDelete}
-        onClose={() => setPendingDelete(null)}
-        confirmText="Eliminar"
-        loading={confirmLoading}
-      />
-    </Box>
+      <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={filteredData.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
+      </Box>
+
+      
+    </>
   )
 }
+
+
+
+
+
+
+

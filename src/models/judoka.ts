@@ -11,6 +11,7 @@ export interface Judoka {
   fecha_nacimiento?: string | null
   numero_celular?: string | null
   ci?: string | null
+  ci_extension?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   avatar_url?: string | null
   activo: boolean
@@ -35,6 +36,7 @@ export interface JudokaCreate {
   fecha_nacimiento?: string | null
   numero_celular?: string | null
   ci?: string | null
+  ci_extension?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   categoria?: string | null
   peso_competitivo?: number | null
@@ -52,6 +54,7 @@ export interface JudokaUpdate {
   fecha_nacimiento?: string | null
   numero_celular?: string | null
   ci?: string | null
+  ci_extension?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   categoria?: string | null
   peso_competitivo?: number | null

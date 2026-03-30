@@ -339,6 +339,7 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
         <DialogContent dividers>
           <RegistrarPagoForm
             pagos={pagos.filter(p => selectedPagos.includes(p.id))}
+            judokaNombre={judokaNombre}
             onSuccess={handleRegistrarSuccess}
             onCancel={() => setOpenRegistrarDialog(false)}
           />

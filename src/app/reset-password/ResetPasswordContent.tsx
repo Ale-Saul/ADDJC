@@ -7,7 +7,6 @@ import {
   Box,
   Container,
   Paper,
-  TextField,
   Button,
   Typography,
   Alert,
@@ -19,12 +18,15 @@ import {
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import { authController } from '@/controllers/authController'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { requestResetSchema, resetPasswordSchema } from '@/utils/zodSchemas'
+import { requestResetSchema, resetPasswordSchema } from '@/schemas/globales'
+import { FormInput } from '@/components/ui'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function ResetPasswordContent() {
   const router = useRouter()
+  const { signOut } = useAuth()
   const searchParams = useSearchParams()
   const [step, setStep] = useState<'request' | 'reset'>('request')
   const [error, setError] = useState<string | null>(null)
@@ -38,7 +40,6 @@ export default function ResetPasswordContent() {
   const {
     control: controlRequest,
     handleSubmit: handleSubmitRequest,
-    formState: { errors: errorsRequest },
     reset: resetRequest,
   } = useForm({
     resolver: zodResolver(requestResetSchema),
@@ -49,7 +50,6 @@ export default function ResetPasswordContent() {
   const {
     control: controlReset,
     handleSubmit: handleSubmitReset,
-    formState: { errors: errorsReset },
   } = useForm({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: { password: '', confirmPassword: '' },
@@ -66,7 +66,7 @@ export default function ResetPasswordContent() {
       // Si venimos de un enlace de recuperación, Supabase pone un hash en la URL
       // o un código en los parámetros. El cliente de Supabase maneja el hash automáticamente.
       const sessionResponse = await authController.getSession()
-      
+
       if (sessionResponse.success && sessionResponse.data) {
         setStep('reset')
       } else {
@@ -120,7 +120,7 @@ export default function ResetPasswordContent() {
       const response = await authController.updatePassword(data.password)
       if (response.success) {
         setSuccess(true)
-        await authController.signOut()
+        await signOut()
         setTimeout(() => { router.push('/login') }, 2000)
       } else {
         setError(response.error || 'Error al actualizar')
@@ -133,7 +133,7 @@ export default function ResetPasswordContent() {
   }
 
   const handleBackToLogin = async () => {
-    await authController.signOut()
+    await signOut()
     router.push('/login')
   }
 
@@ -151,72 +151,75 @@ export default function ResetPasswordContent() {
         <Typography variant="h4" gutterBottom>
           {step === 'request' ? 'Recuperar Contraseña' : 'Restablecer Contraseña'}
         </Typography>
-        
+
         {success && (
           <Alert severity="success" sx={{ width: '100%', mb: 2 }}>
-            {step === 'request' 
-              ? 'Email enviado. Revisa tu bandeja de entrada.' 
+            {step === 'request'
+              ? 'Email enviado. Revisa tu bandeja de entrada.'
               : 'Contraseña actualizada. Redirigiendo...'}
           </Alert>
         )}
 
         {error && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{error}</Alert>}
 
-        <Box component="form" 
-          onSubmit={step === 'request' ? handleSubmitRequest(onResetRequest) : handleSubmitReset(onResetPassword)} 
+        <Box component="form"
+          onSubmit={step === 'request' ? handleSubmitRequest(onResetRequest) : handleSubmitReset(onResetPassword)}
           sx={{ width: '100%', mt: 1 }}
         >
           {step === 'request' ? (
-            <Controller
-              name="email"
+            <FormInput
               control={controlRequest}
-              render={({ field }) => (
-                <TextField {...field} margin="normal" fullWidth label="Email" disabled={loading || success} error={!!errorsRequest.email} helperText={errorsRequest.email?.message} />
-              )}
+              name="email"
+              label="Email"
+              margin="normal"
+              fullWidth
+              disabled={loading || success}
             />
           ) : (
             <>
-              <Controller
+              <FormInput
+                control={controlReset}
                 name="password"
-                control={controlReset}
-                render={({ field }) => (
-                  <TextField {...field} margin="normal" fullWidth label="Nueva Contraseña" type={showPassword ? 'text' : 'password'} disabled={loading || success} error={!!errorsReset.password} helperText={errorsReset.password?.message}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
-                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                )}
+                label="Nueva Contraseña"
+                type={showPassword ? 'text' : 'password'}
+                margin="normal"
+                fullWidth
+                disabled={loading || success}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
-              <Controller
-                name="confirmPassword"
+              <FormInput
                 control={controlReset}
-                render={({ field }) => (
-                  <TextField {...field} margin="normal" fullWidth label="Confirmar Contraseña" type={showConfirmPassword ? 'text' : 'password'} disabled={loading || success} error={!!errorsReset.confirmPassword} helperText={errorsReset.confirmPassword?.message}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)} edge="end">
-                            {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                )}
+                name="confirmPassword"
+                label="Confirmar Contraseña"
+                type={showConfirmPassword ? 'text' : 'password'}
+                margin="normal"
+                fullWidth
+                disabled={loading || success}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)} edge="end">
+                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
             </>
           )}
-          
+
           <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2, height: '48px' }} disabled={loading || success}>
             {loading ? <CircularProgress size={24} color="inherit" /> : (step === 'request' ? 'Enviar Email' : 'Cambiar Contraseña')}
           </Button>
-          
+
           <Box sx={{ textAlign: 'center', mt: 2 }}>
             <Link component="button" type="button" variant="body2" onClick={handleBackToLogin}>
               Volver al inicio de sesión

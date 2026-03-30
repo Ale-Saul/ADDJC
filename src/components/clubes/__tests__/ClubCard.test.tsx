@@ -6,7 +6,7 @@ import { Club } from '@/models/club'
 const mockClub: Club = {
   id: '1',
   nombre_club: 'Club de Judo A',
-  municipio: 'Ciudad Capital',
+  provincia: 'Ciudad Capital',
   telefono_contacto: '123-456-7890',
   activo: true,
   director_tecnico_id: 'dt-1',
@@ -62,7 +62,7 @@ describe('ClubCard', () => {
   it('debe renderizar correctamente cuando los campos opcionales son nulos', () => {
     const partialClub: Club = {
       ...mockClub,
-      municipio: null,
+      provincia: null,
       telefono_contacto: null
     }
     render(<ClubCard club={partialClub} />)
@@ -71,3 +71,4 @@ describe('ClubCard', () => {
     expect(screen.queryByText(/📞/)).not.toBeInTheDocument()
   })
 })
+

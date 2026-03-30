@@ -20,7 +20,7 @@ const CategoriaMovimientoEnum = z.enum([
 const EstadoMovimientoEnum = z.enum([
   ESTADO_MOVIMIENTO.REGISTRADO,
   ESTADO_MOVIMIENTO.APROBADO,
-  ESTADO_MOVIMIENTO.CANCELADO
+  ESTADO_MOVIMIENTO.ANULADO
 ])
 
 export const createMovimientoSchema = z.object({
@@ -32,8 +32,8 @@ export const createMovimientoSchema = z.object({
   fecha: z.string().refine((val) => !isNaN(Date.parse(val)), 'La fecha no es válida'),
   origen_club_id: z.string().optional(),
   origen_entidad: z.string().optional(),
-  comprobante_url: z.string().optional(),
-  comprobante_nombre: z.string().optional(),
+  comprobante_url: z.string().optional().nullable(),
+  comprobante_nombre: z.string().optional().nullable(),
   estado: z.string().optional(),
   notas: z.string().optional(),
 }).superRefine((data, ctx) => {
@@ -64,8 +64,8 @@ export const updateMovimientoSchema = z.object({
   fecha: z.string().refine((val) => !isNaN(Date.parse(val)), 'La fecha no es válida').optional(),
   origen_club_id: z.string().optional(),
   origen_entidad: z.string().optional(),
-  comprobante_url: z.string().optional(),
-  comprobante_nombre: z.string().optional(),
+  comprobante_url: z.string().optional().nullable(),
+  comprobante_nombre: z.string().optional().nullable(),
   estado: EstadoMovimientoEnum.optional(),
   notas: z.string().optional(),
 })

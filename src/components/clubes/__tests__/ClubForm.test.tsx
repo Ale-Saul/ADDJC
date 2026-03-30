@@ -22,10 +22,10 @@ const mockSenseis: Sensei[] = [
     apellidos: 'Uno',
     club_id: null, // Sin club asignado
     fecha_nacimiento: '1950-01-01',
-    grado_dan: '5to Dan',
+    grado_dan: '5to Dan', certificacion_id: null,
     certificacion: 'Nacional',
     especialidad: 'Kata',
-    foto_perfil: null,
+    
     activo: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -37,10 +37,10 @@ const mockSenseis: Sensei[] = [
     apellidos: 'Dos',
     club_id: null, // Sin club asignado
     fecha_nacimiento: '1955-01-01',
-    grado_dan: '3er Dan',
+    grado_dan: '3er Dan', certificacion_id: null,
     certificacion: 'Regional',
     especialidad: 'Kumite',
-    foto_perfil: null,
+    
     activo: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -50,7 +50,7 @@ const mockSenseis: Sensei[] = [
 const mockClub: Club = {
   id: 'c1',
   nombre_club: 'Club Test',
-  municipio: 'Testville',
+  provincia: 'Testville',
   direccion: '123 Test St',
   telefono_contacto: '555-1234',
   director_tecnico_id: 'user-s1',
@@ -66,7 +66,7 @@ describe('ClubForm', () => {
   })
 
   it('debe renderizar los campos para crear un club', async () => {
-    render(<ClubForm />)
+    render(<ClubForm onSuccess={() => {}} onCancel={() => {}} />)
 
     // Check for the static fields first
     expect(screen.getByLabelText(/Nombre del Club/i)).toBeInTheDocument()
@@ -88,7 +88,7 @@ describe('ClubForm', () => {
   })
 
   it('debe rellenar el formulario para editar un club', async () => {
-    render(<ClubForm club={mockClub} />);
+    render(<ClubForm club={mockClub} onSuccess={() => {}} onCancel={() => {}} />);
     
     expect(await screen.findByDisplayValue('Club Test')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Testville')).toBeInTheDocument();
@@ -103,7 +103,7 @@ describe('ClubForm', () => {
   it('debe llamar a createClub al enviar el formulario', async () => {
     mockedClubController.createClub.mockResolvedValue({ success: true, data: mockClub })
     const onSuccess = jest.fn()
-    render(<ClubForm onSuccess={onSuccess} />)
+    render(<ClubForm onSuccess={onSuccess} onCancel={() => {}} />)
 
     await userEvent.type(screen.getByLabelText(/Nombre del Club/i), 'Nuevo Club')
     const submitButton = screen.getByRole('button', { name: /^Crear$/i })
@@ -122,7 +122,7 @@ describe('ClubForm', () => {
   it('debe llamar a updateClub al enviar el formulario de edición', async () => {
     mockedClubController.updateClub.mockResolvedValue({ success: true })
     const onSuccess = jest.fn()
-    render(<ClubForm club={mockClub} onSuccess={onSuccess} />)
+    render(<ClubForm club={mockClub} onSuccess={onSuccess} onCancel={() => {}} />)
 
     await userEvent.clear(screen.getByLabelText(/Nombre del Club/i))
     await userEvent.type(screen.getByLabelText(/Nombre del Club/i), 'Club Modificado')
@@ -140,12 +140,12 @@ describe('ClubForm', () => {
   })
 
   it('debe crear un nuevo sensei si se proporcionan los campos y no se selecciona uno existente', async () => {
-    const newSensei = { ...mockSenseis[0], id: 's2', usuario_id: 'user-s2', nombres: 'Nuevo', apellidos: 'Sensei' }
+    const newSensei = { ...mockSenseis[0], id: 's2', usuario_id: 'user-s2', nombres: 'Nuevo', apellido_paterno: 'Sensei' }
     mockedSenseiController.createSensei.mockResolvedValue({ success: true, data: newSensei })
     mockedClubController.createClub.mockResolvedValue({ success: true, data: { ...mockClub, id: 'c2' } })
     mockedSenseiController.updateSensei.mockResolvedValue({ success: true })
 
-    render(<ClubForm />)
+    render(<ClubForm onSuccess={() => {}} onCancel={() => {}} />)
     
     await userEvent.type(screen.getByLabelText(/Nombre del Club/i), 'Club con Nuevo Sensei')
     
@@ -154,9 +154,9 @@ describe('ClubForm', () => {
     await userEvent.click(createNewDirectorBtn)
     
     await userEvent.type(screen.getByLabelText(/Nombre del Director Técnico/i), 'Nuevo')
-    await userEvent.type(screen.getByLabelText(/Apellidos del Director Técnico/i), 'Sensei')
+    await userEvent.type(screen.getByLabelText(/Primer Apellido del Director Técnico/i), 'Sensei'); await userEvent.type(screen.getByLabelText(/CI del Director Técnico/i), '1234567')
     await userEvent.type(screen.getByLabelText(/Email del Director Técnico/i), 'nuevo.sensei@test.com')
-    await userEvent.type(screen.getByLabelText(/Contraseña del Director Técnico/i), 'password123')
+    
 
     const submitButton = screen.getByRole('button', { name: /^Crear$/i })
     fireEvent.click(submitButton)
@@ -165,9 +165,9 @@ describe('ClubForm', () => {
       expect(mockedSenseiController.createSensei).toHaveBeenCalledWith(
         expect.objectContaining({ 
           nombres: 'Nuevo', 
-          apellidos: 'Sensei',
+          apellido_paterno: 'Sensei',
           email: 'nuevo.sensei@test.com',
-          password: 'password123'
+          ci: '1234567'
         })
       )
       expect(mockedClubController.createClub).toHaveBeenCalledWith(
@@ -182,7 +182,7 @@ describe('ClubForm', () => {
 
   it('debe mostrar un error si la creación del club falla', async () => {
     mockedClubController.createClub.mockResolvedValue({ success: false, error: 'Error de base de datos' })
-    render(<ClubForm />)
+    render(<ClubForm onSuccess={() => {}} onCancel={() => {}} />)
     
     await userEvent.type(screen.getByLabelText(/Nombre del Club/i), 'Club Fallido')
     const submitButton = screen.getByRole('button', { name: /^Crear$/i })
@@ -193,3 +193,9 @@ describe('ClubForm', () => {
     }, { timeout: 2000 })
   })
 })
+
+
+
+
+
+

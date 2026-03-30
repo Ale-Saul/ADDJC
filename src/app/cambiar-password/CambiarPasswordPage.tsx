@@ -6,7 +6,6 @@ import {
   Box,
   Container,
   Paper,
-  TextField,
   Button,
   Typography,
   Alert,
@@ -17,11 +16,12 @@ import {
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import LockIcon from '@mui/icons-material/Lock'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '@/contexts/AuthContext'
 import { authController } from '@/controllers/authController'
+import { FormInput } from '@/components/ui'
 
 const cambiarPasswordSchema = z.object({
   currentPassword: z.string().min(1, 'La contraseña actual es requerida'),
@@ -38,7 +38,7 @@ type CambiarPasswordFormData = z.infer<typeof cambiarPasswordSchema>
 
 export default function CambiarPasswordPage() {
   const router = useRouter()
-  const { user, isAuthenticated, loading: authLoading, refreshUser } = useAuth()
+  const { user, isAuthenticated, loading: authLoading, signOut } = useAuth()
 
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
@@ -48,7 +48,7 @@ export default function CambiarPasswordPage() {
   const [success, setSuccess] = useState(false)
   const [mounted, setMounted] = useState(false)
 
-  const { control, handleSubmit, formState: { errors } } = useForm<CambiarPasswordFormData>({
+  const { control, handleSubmit } = useForm<CambiarPasswordFormData>({
     resolver: zodResolver(cambiarPasswordSchema),
     mode: 'onTouched',
     defaultValues: {
@@ -87,9 +87,9 @@ export default function CambiarPasswordPage() {
       const response = await authController.completePasswordChange(data.newPassword, user.id)
       if (response.success) {
         setSuccess(true)
-        await refreshUser()
+        await signOut()
         setTimeout(() => {
-          router.push('/')
+          router.push('/login')
         }, 2000)
       } else {
         setError(response.error || 'Error al cambiar la contraseña')
@@ -146,92 +146,73 @@ export default function CambiarPasswordPage() {
           )}
 
           <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ width: '100%', mt: 1 }}>
-            <Controller
+            <FormInput
+              control={control}
               name="currentPassword"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  margin="normal"
-                  fullWidth
-                  label="Contraseña Actual"
-                  type={showCurrentPassword ? 'text' : 'password'}
-                  disabled={loading || success}
-                  error={!!errors.currentPassword}
-                  helperText={errors.currentPassword?.message || 'La contraseña que recibiste por correo (Judo.[Carnet])'}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                          onMouseDown={(e) => e.preventDefault()}
-                          edge="end"
-                        >
-                          {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              )}
+              label="Contraseña Actual"
+              type={showCurrentPassword ? 'text' : 'password'}
+              margin="normal"
+              fullWidth
+              disabled={loading || success}
+              helperText='La contraseña que recibiste por correo (Judo.[Carnet])'
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      edge="end"
+                    >
+                      {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
-            <Controller
+            <FormInput
+              control={control}
               name="newPassword"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  margin="normal"
-                  fullWidth
-                  label="Nueva Contraseña"
-                  type={showNewPassword ? 'text' : 'password'}
-                  disabled={loading || success}
-                  error={!!errors.newPassword}
-                  helperText={errors.newPassword?.message || 'Mínimo 8 caracteres, debe incluir mayúscula, minúscula y número'}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => setShowNewPassword(!showNewPassword)}
-                          onMouseDown={(e) => e.preventDefault()}
-                          edge="end"
-                        >
-                          {showNewPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              )}
+              label="Nueva Contraseña"
+              type={showNewPassword ? 'text' : 'password'}
+              margin="normal"
+              fullWidth
+              disabled={loading || success}
+              helperText='Mínimo 8 caracteres, debe incluir mayúscula, minúscula y número'
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      edge="end"
+                    >
+                      {showNewPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
-            <Controller
-              name="confirmPassword"
+            <FormInput
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  margin="normal"
-                  fullWidth
-                  label="Confirmar Nueva Contraseña"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  disabled={loading || success}
-                  error={!!errors.confirmPassword}
-                  helperText={errors.confirmPassword?.message}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          onMouseDown={(e) => e.preventDefault()}
-                          edge="end"
-                        >
-                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              )}
+              name="confirmPassword"
+              label="Confirmar Nueva Contraseña"
+              type={showConfirmPassword ? 'text' : 'password'}
+              margin="normal"
+              fullWidth
+              disabled={loading || success}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      edge="end"
+                    >
+                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
             <Button
               type="submit"

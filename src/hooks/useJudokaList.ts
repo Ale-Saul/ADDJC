@@ -3,102 +3,118 @@ import { Judoka } from '@/models/judoka'
 import { judokaController } from '@/controllers/judokaController'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
+import { useEntityList } from './useEntityList'
+
 export function useJudokaList(options: {
   clubId?: string
   entrenadorId?: string
   refreshTrigger?: number
   judokasProp?: Judoka[]
+  initialSearch?: string
 }) {
-  const queryClient = useQueryClient()
+  const filterFn = useCallback((j: Judoka, filters: Record<string, string>, search: string) => {
+    const normalizedSearch = search.toLowerCase()
+    
+    const matchCategoria = filters.categoria === 'all' || j.categoria === filters.categoria
+    const matchCinturon = filters.cinturon === 'all' || j.cinturon_actual === filters.cinturon
+    const matchEstado = filters.estado === 'all' || (filters.estado === 'activo' ? j.activo : !j.activo)
+    
+    const matchSearch = Boolean(!normalizedSearch || 
+      j.nombres?.toLowerCase().includes(normalizedSearch) ||
+      j.apellidos?.toLowerCase().includes(normalizedSearch) ||
+      j.ci?.toLowerCase().includes(normalizedSearch))
 
-  // 1. Fetching con React Query
-  const { 
-    data: judokas = [], 
-    isLoading: loading, 
-    error: queryError 
-  } = useQuery({
-    queryKey: ['judokas', options.refreshTrigger],
-    queryFn: async () => {
-      // Si recibimos datos duros (como en páginas de perfil), no hacemos fetch al controlador.
-      // Ojo: Si judokasProp existe, esto se manejará con el initialData del query, o un bypass.
-      if (options.judokasProp) return options.judokasProp
+    return matchCategoria && matchCinturon && matchEstado && matchSearch
+  }, [])
 
-      const response = await judokaController.getAllJudokas(true)
-      if (!response.success) throw new Error(response.error || 'Error al cargar los judokas')
-      return response.data || []
-    },
-    // Si proveemos judokasProp, inicializamos el cache con esos datos y no hacemos fetch
-    initialData: options.judokasProp,
-    staleTime: 5 * 60 * 1000, 
-  })
-
-  // Para compatibilidad con el error local que la vista pueda leer:
-  const error = queryError instanceof Error ? queryError.message : (queryError ? String(queryError) : null)
-
-  // 2. Mutations para modificar estado
-  const toggleStatusMutation = useMutation({
-    mutationFn: async ({ id, currentStatus }: { id: string, currentStatus: boolean }) => {
-      const response = await judokaController.updateJudoka(id, { activo: !currentStatus })
-      if (!response.success) throw new Error(response.error || 'Error desconocido')
-      return { id, isActive: !currentStatus }
-    },
-    // Optimistic Update
-    onMutate: async ({ id, currentStatus }) => {
-      await queryClient.cancelQueries({ queryKey: ['judokas'] })
-      const previousJudokas = queryClient.getQueryData<Judoka[]>(['judokas']) || []
+  const entityList = useEntityList<Judoka>({
+    queryKey: ['judokas', options.refreshTrigger?.toString() || '0', options.clubId || 'all', options.entrenadorId || 'all'],
+    fetchItems: async () => {
+      if (options.judokasProp) return { success: true, data: options.judokasProp }
       
-      queryClient.setQueryData<Judoka[]>(['judokas'], old => {
-        if (!old) return old
-        return old.map(j => j.id === id ? { ...j, activo: !currentStatus } : j)
-      })
+      // Si hay entrenadorId (Sensei), traer:
+      // 1. Judokas a su mando
+      // 2. Judokas del club sin entrenador
+      // 3. Judokas sin club
+      // Si hay entrenadorId (Sensei), traer:
+      // 1. Judokas a su mando
+      // 2. Judokas del club sin entrenador
+      // 3. Judokas sin club
+      if (options.entrenadorId && options.clubId) {
+        const [mandoResp, clubResp, unassignedResp] = await Promise.all([
+          judokaController.getJudokasByEntrenador(options.entrenadorId),
+          judokaController.getJudokasByClub(options.clubId),
+          judokaController.getAllJudokas(true)
+        ])
 
-      return { previousJudokas }
-    },
-    onError: (err, { id, currentStatus }, context) => {
-      if (context?.previousJudokas) {
-        queryClient.setQueryData(['judokas'], context.previousJudokas)
+        const misJudokas = mandoResp.success ? (mandoResp.data || []) : []
+        const clubSinMando = clubResp.success ? (clubResp.data || []).filter(j => !j.entrenador_id) : []
+        const sinClub = unassignedResp.success ? (unassignedResp.data || []).filter(j => !j.club_id) : []
+
+        const combined = [...misJudokas, ...clubSinMando, ...sinClub];
+
+        return {
+          success: true,
+          data: combined
+        }
       }
-      alert('Error al cambiar el estado: ' + err.message)
+
+      // Si hay clubId (Encargado), traer judokas del club y judokas sin club
+      if (options.clubId) {
+        const [clubResp, unassignedResp] = await Promise.all([
+          judokaController.getJudokasByClub(options.clubId),
+          judokaController.getAllJudokas(true) // Traer todos para filtrar los sin club
+        ])
+
+        if (clubResp.success && unassignedResp.success) {
+          const clubJudokas = clubResp.data || []
+          const unassignedJudokas = (unassignedResp.data || []).filter(j => !j.club_id)
+          
+          // Combinar ambos (club primero, luego sin club)
+          return {
+            success: true,
+            data: [...clubJudokas, ...unassignedJudokas]
+          }
+        }
+        return clubResp.success ? clubResp : unassignedResp
+      }
+
+      if (options.entrenadorId) return await judokaController.getJudokasByEntrenador(options.entrenadorId)
+      return await judokaController.getAllJudokas(true)
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['judokas'] })
-    }
+    updateItemStatus: async (id, activo) => {
+      const resp = await judokaController.updateJudoka(id, { activo })
+      return { success: resp.success, error: resp.error }
+    },
+    filterFn,
+    initialFilters: { categoria: 'all', cinturon: 'all', estado: 'all' },
+    initialSearch: options.initialSearch || ''
   })
-
-  const toggleStatus = useCallback((id: string, currentStatus: boolean) => {
-    return toggleStatusMutation.mutateAsync({ id, currentStatus })
-  }, [toggleStatusMutation])
-
-  const updateLocalJudoka = useCallback((id: string, data: Partial<Judoka>) => {
-    queryClient.setQueryData<Judoka[]>(['judokas'], old => {
-      if (!old) return old
-      return old.map(j => j.id === id ? { ...j, ...data } : j)
-    })
-  }, [queryClient])
-
-  const deleteLocalJudoka = useCallback((id: string) => {
-    queryClient.setQueryData<Judoka[]>(['judokas'], old => {
-      if (!old) return old
-      return old.filter(j => j.id !== id)
-    })
-  }, [queryClient])
-
-  // Fake modifiedIds array set just for backward compat since we do optimistic UI.
-  const modifiedIds = new Set<string>()
-
-  // loadJudokas dummy para compatibilidad si alguien lo llama manualmente
-  const loadJudokas = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: ['judokas'] })
-  }, [queryClient])
 
   return {
-    judokas,
-    loading,
-    error,
-    modifiedIds,
-    loadJudokas,
-    toggleStatus,
-    updateLocalJudoka,
-    deleteLocalJudoka
+    judokas: entityList.items,
+    loading: entityList.state.loading,
+    error: entityList.state.error,
+    modifiedIds: entityList.state.modifiedIds,
+    loadJudokas: entityList.loadItems,
+    toggleStatus: entityList.toggleStatus,
+    updateLocalJudoka: entityList.updateLocalItem,
+    deleteLocalJudoka: entityList.deleteLocalItem,
+    filteredData: entityList.filteredData,
+    state: {
+      ...entityList.state,
+      categoriaFilter: entityList.state.filters.categoria || 'all',
+      cinturonFilter: entityList.state.filters.cinturon || 'all',
+      estadoFilter: entityList.state.filters.estado || 'all',
+    },
+    setGlobalFilter: entityList.setGlobalFilter,
+    setFilter: entityList.setFilter,
+    toggleShowFilters: entityList.toggleShowFilters
   }
 }
+
+
+
+
+
+

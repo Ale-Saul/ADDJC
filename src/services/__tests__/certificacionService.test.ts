@@ -1,17 +1,18 @@
 import { certificacionService } from '../certificacionService'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { Certificacion, CertificacionCreate, CertificacionUpdate } from '@/models/certificacion'
 
 // Mock de Supabase
-jest.mock('@/lib/supabase', () => ({
-  supabase: {
-    from: jest.fn()
-  }
+const mockSupabaseInstance = {
+  from: jest.fn()
+}
+
+jest.mock('@/lib/supabase/client', () => ({
+  createClient: jest.fn(() => mockSupabaseInstance)
 }))
 
 describe('certificacionService', () => {
-  const mockSupabase = supabase as jest.Mocked<typeof supabase>
-
+  const mockSupabase = mockSupabaseInstance as unknown as any
   const mockCertificacion: Certificacion = {
     id: 'cert-123',
     usuario_id: 'user-456',
@@ -384,3 +385,4 @@ describe('certificacionService', () => {
     })
   })
 })
+

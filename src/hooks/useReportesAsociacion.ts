@@ -6,6 +6,7 @@ import { Pago } from '@/models/pago'
 import { Club } from '@/models/club'
 import { Judoka } from '@/models/judoka'
 import { ESTADO_PAGO, TIPO_PAGO_LABELS } from '@/constants/pagos'
+import dayjs from 'dayjs'
 
 export interface ResumenClub {
   club: Club
@@ -85,7 +86,18 @@ export function useReportesAsociacion() {
 
   // Filtrar pagos por fecha
   const pagosFiltrados = useMemo(() => {
-    return pagos.filter(pago => {
+    const today = dayjs().startOf('day')
+    
+    return pagos.map(pago => {
+      // Determinar si está vencido dinámicamente si está pendiente
+      if (pago.estado === ESTADO_PAGO.PENDIENTE && pago.fecha_vencimiento) {
+        const vencimiento = dayjs(pago.fecha_vencimiento).startOf('day')
+        if (vencimiento.isBefore(today)) {
+          return { ...pago, estado: ESTADO_PAGO.VENCIDO }
+        }
+      }
+      return pago
+    }).filter(pago => {
       const fechaPago = new Date(pago.created_at)
       const inicio = new Date(fechaInicio)
       const fin = new Date(fechaFin)

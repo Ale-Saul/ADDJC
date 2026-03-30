@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { authController } from '@/controllers/authController'
 import { User, LoginCredentials, SignUpData } from '@/models/auth'
-import { ROUTES } from '@/utils/constants'
+import { ROUTES } from '@/constants/globales'
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
@@ -38,8 +38,7 @@ export function useAuth() {
     const response = await authController.signIn(credentials)
 
     if (response.success && response.data) {
-      setUser(response.data.user)
-      router.push(ROUTES.HOME)
+      router.push('/login?registered=true')
       return { success: true }
     } else {
       setError(response.error || 'Error al iniciar sesión')
@@ -66,8 +65,7 @@ export function useAuth() {
     const response = await authController.signUp(data)
 
     if (response.success && response.data) {
-      setUser(response.data.user)
-      router.push(ROUTES.HOME)
+      router.push('/login?registered=true')
       return { success: true }
     } else {
       setError(response.error || 'Error al crear cuenta')
@@ -79,7 +77,7 @@ export function useAuth() {
     if (!user) return { success: false, error: 'No hay usuario autenticado' }
 
     setIsLoading(true)
-    const response = await authController.updateUser(user.id, updates)
+    const response = await authController.updateProfile(user.id, updates)
 
     if (response.success && response.data) {
       setUser(response.data)
@@ -101,3 +99,6 @@ export function useAuth() {
     checkAuth,
   }
 }
+
+
+

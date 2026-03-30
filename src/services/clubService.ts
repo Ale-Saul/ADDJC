@@ -1,8 +1,31 @@
 import { createClient } from '@/lib/supabase/client'
-import { Club, ClubCreate, ClubUpdate } from '@/models/club'
-import { ApiResponse } from '@/types'
+import { Club, ClubCreate, ClubUpdate, ClubDocumento } from '@/models/club'
+import { ApiResponse } from '@/types/globales'
 
-const CLUB_COLUMNS = 'id, nombre_club, sigla, descripcion, fecha_fundacion, logo_url, director_tecnico_id, pautas_reglamentos_url, afiliado_asociacion, activo, created_at, updated_at'
+const CLUB_WITH_DIRECTOR_COLUMNS = `
+  id, 
+  nombre_club, 
+  provincia, 
+  direccion, 
+  telefono_contacto, 
+  director_tecnico_id, 
+  activo, 
+  created_at, 
+  updated_at,
+  documentos:club_documentos(*),
+  director_tecnico:director_tecnico_id(
+    id,
+    usuario_id,
+    usuarios:usuario_id(
+      id,
+      nombre,
+      apellido_paterno,
+      apellido_materno,
+      ci,
+      ci_extension
+    )
+  )
+`
 
 export const clubService = {
   /**
@@ -13,18 +36,7 @@ export const clubService = {
       const client = createClient()
       let query = client
         .from('clubes')
-        .select(`
-          id, 
-          nombre_club, 
-          provincia, 
-          direccion, 
-          telefono_contacto, 
-          director_tecnico_id, 
-          activo, 
-          created_at, 
-          updated_at,
-          documentos:club_documentos(*)
-        `)
+        .select(CLUB_WITH_DIRECTOR_COLUMNS)
         .order('created_at', { ascending: false })
 
       if (!includeInactive) {
@@ -35,7 +47,22 @@ export const clubService = {
 
       if (error) throw error
 
-      return { success: true, data: data || [] }
+      const mappedData = (data || []).map(club => {
+        const dt = club.director_tecnico
+        const u = dt?.usuarios
+        return {
+          ...club,
+          director_tecnico: dt ? {
+            id: dt.id,
+            nombres: u?.nombre || '',
+            apellidos: [u?.apellido_paterno, u?.apellido_materno].filter(Boolean).join(' '),
+            ci: u?.ci,
+            ci_extension: u?.ci_extension
+          } : null
+        }
+      })
+
+      return { success: true, data: mappedData }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
@@ -50,24 +77,26 @@ export const clubService = {
       const client = createClient()
       const { data, error } = await client
         .from('clubes')
-        .select(`
-          id, 
-          nombre_club, 
-          provincia, 
-          direccion, 
-          telefono_contacto, 
-          director_tecnico_id, 
-          activo, 
-          created_at, 
-          updated_at,
-          documentos:club_documentos(*)
-        `)
+        .select(CLUB_WITH_DIRECTOR_COLUMNS)
         .eq('id', id)
         .single()
 
       if (error) throw error
 
-      return { success: true, data }
+      const dt = data.director_tecnico
+      const u = dt?.usuarios
+      const mapped = {
+        ...data,
+        director_tecnico: dt ? {
+          id: dt.id,
+          nombres: u?.nombre || '',
+          apellidos: [u?.apellido_paterno, u?.apellido_materno].filter(Boolean).join(' '),
+          ci: u?.ci,
+          ci_extension: u?.ci_extension
+        } : null
+      }
+
+      return { success: true, data: mapped }
     } catch (error: unknown) {
       return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
     }
@@ -80,11 +109,23 @@ export const clubService = {
     try {
       const client = createClient()
       
-      // Crear el club
+      // 1. Limpiar el objeto club de campos que no pertenecen a la tabla 'clubes'
+      // (como los campos 'new_' del formulario)
+      const { 
+        new_nombres, 
+        new_apellido_paterno, 
+        new_apellido_materno, 
+        new_email, 
+        new_ci, 
+        new_ci_extension,
+        ...validClubData 
+      } = club as any;
+
+      // 2. Crear el club
       const { data, error } = await client
         .from('clubes')
-        .insert(club)
-        .select(CLUB_COLUMNS)
+        .insert(validClubData)
+        .select()
         .single()
 
       if (error) throw error
@@ -117,7 +158,7 @@ export const clubService = {
         }
       }
 
-      return { success: true, data }
+      return await this.getById(data.id)
     } catch (error: unknown) {
       return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
     }
@@ -130,8 +171,20 @@ export const clubService = {
     try {
       const client = createClient()
       
-      // Si se está actualizando el director técnico, manejar cambios de rol
-      if (club.director_tecnico_id !== undefined) {
+      // 1. Limpiar el objeto club de campos que no pertenecen a la tabla 'clubes'
+      const { 
+        new_nombres, 
+        new_apellido_paterno, 
+        new_apellido_materno, 
+        new_email, 
+        new_ci, 
+        new_ci_extension,
+        director_tecnico, // Campo que viene del join y no debe enviarse en el update
+        ...validClubData 
+      } = club as any;
+
+      // 2. Si se está actualizando el director técnico, manejar cambios de rol
+      if (validClubData.director_tecnico_id !== undefined) {
         // Obtener el director técnico anterior
         const { data: clubAnterior } = await client
           .from('clubes')
@@ -196,14 +249,14 @@ export const clubService = {
       // Actualizar el club
       const { data, error } = await client
         .from('clubes')
-        .update(club)
+        .update(validClubData)
         .eq('id', id)
-        .select(CLUB_COLUMNS)
+        .select()
         .single()
 
       if (error) throw error
 
-      return { success: true, data }
+      return await this.getById(id)
     } catch (error: unknown) {
       return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
     }
@@ -240,7 +293,7 @@ export const clubService = {
         .from('clubes')
         .update({ activo: true })
         .eq('id', id)
-        .select(CLUB_COLUMNS)
+        .select()
         .single()
 
       if (error) throw error
@@ -266,7 +319,7 @@ export const clubService = {
           tipo_documento: tipo,
           created_by: userId
         })
-        .select(CLUB_COLUMNS)
+        .select()
         .single()
 
       if (error) throw error
@@ -294,4 +347,8 @@ export const clubService = {
     }
   }
 }
+
+
+
+
 

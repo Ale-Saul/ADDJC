@@ -18,7 +18,6 @@ const mockArbitros: Arbitro[] = [
     usuario_id: 'user-1',
     fecha_nacimiento: '1985-10-20',
     certificacion: null,
-    foto_perfil: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   },
@@ -31,7 +30,6 @@ const mockArbitros: Arbitro[] = [
     usuario_id: 'user-2',
     fecha_nacimiento: '1990-05-15',
     certificacion: null,
-    foto_perfil: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   }
@@ -122,3 +120,4 @@ describe('ArbitroList', () => {
     expect(mockedArbitroController.getAllArbitros).toHaveBeenCalledTimes(2)
   })
 })
+

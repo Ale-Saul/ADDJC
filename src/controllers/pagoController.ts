@@ -1,6 +1,6 @@
 import { pagoService } from '@/services/pagoService'
 import { Pago, PagoCreate, PagoUpdate } from '@/models/pago'
-import { ApiResponse } from '@/types'
+import { ApiResponse } from '@/types/globales'
 import { TIPO_DESCUENTO } from '@/constants/pagos'
 import { createPagoSchema, updatePagoSchema } from '@/schemas/pagoSchema'
 

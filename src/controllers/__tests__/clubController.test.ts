@@ -9,7 +9,7 @@ describe('clubController', () => {
   const mockClub: Club = {
     id: '1',
     nombre_club: 'Club de Prueba',
-    municipio: 'Bogotá',
+    provincia: 'Bogotá',
     direccion: 'Calle 123',
     telefono_contacto: '1234567890',
     director_tecnico_id: null,
@@ -75,7 +75,7 @@ describe('clubController', () => {
     it('debe crear un club válido', async () => {
       const newClub: ClubCreate = {
         nombre_club: 'Nuevo Club',
-        municipio: 'Medellín',
+        provincia: 'Medellín',
         activo: true,
       }
 
@@ -157,4 +157,5 @@ describe('clubController', () => {
     })
   })
 })
+
 

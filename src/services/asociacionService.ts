@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { MiembroAsociacion, MiembroAsociacionCreate, MiembroAsociacionUpdate } from '@/models/asociacion'
-import { ApiResponse } from '@/types'
+import { ApiResponse } from '@/types/globales'
 import { userService } from './userService'
 
 // Función helper para crear usuarios usando Admin API
@@ -16,7 +16,7 @@ export const asociacionService = {
       const client = createClient()
       let query = client
         .from('usuarios')
-        .select('id, correo, nombre, apellido_paterno, apellido_materno, rol, avatar_url, fecha_nacimiento, numero_celular, ci, genero, activo, debe_cambiar_password, created_at, updated_at, asociacion(cargo, fecha_ingreso)')
+        .select('id, correo, nombre, apellido_paterno, apellido_materno, rol, avatar_url, fecha_nacimiento, numero_celular, ci, ci_extension, genero, activo, debe_cambiar_password, created_at, updated_at, asociacion(cargo, fecha_ingreso)')
         .eq('rol', 'asociacion')
         .order('created_at', { ascending: false })
 
@@ -28,7 +28,7 @@ export const asociacionService = {
 
       if (error) throw error
 
-      type UsuarioRow = { id: string; correo?: string; nombre?: string; apellido_paterno?: string; apellido_materno?: string; fecha_nacimiento?: string; numero_celular?: string; ci?: string; genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir'; club_id?: string | null; activo?: boolean; created_at: string; updated_at: string; asociacion?: { cargo?: string, fecha_ingreso?: string }[] | { cargo?: string, fecha_ingreso?: string } }
+      type UsuarioRow = { id: string; correo?: string; nombre?: string; apellido_paterno?: string; apellido_materno?: string; fecha_nacimiento?: string; numero_celular?: string; ci?: string; ci_extension?: string; genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir'; club_id?: string | null; activo?: boolean; created_at: string; updated_at: string; asociacion?: { cargo?: string, fecha_ingreso?: string }[] | { cargo?: string, fecha_ingreso?: string } }
       const miembros: MiembroAsociacion[] = (data || []).map((u: UsuarioRow) => {
         const asoc = Array.isArray(u.asociacion) ? u.asociacion[0] : u.asociacion
         const cargo = asoc?.cargo
@@ -43,6 +43,7 @@ export const asociacionService = {
           fecha_nacimiento: u.fecha_nacimiento || null,
           numero_celular: u.numero_celular || null,
           ci: u.ci || null,
+          ci_extension: u.ci_extension || null,
           genero: u.genero || null,
           rol: 'asociacion' as const,
           club_id: u.club_id || null,
@@ -69,7 +70,7 @@ export const asociacionService = {
       const client = createClient()
       const { data, error } = await client
         .from('usuarios')
-        .select('id, correo, nombre, apellido_paterno, apellido_materno, rol, avatar_url, fecha_nacimiento, numero_celular, ci, genero, activo, debe_cambiar_password, created_at, updated_at, asociacion(cargo, fecha_ingreso)')
+        .select('id, correo, nombre, apellido_paterno, apellido_materno, rol, avatar_url, fecha_nacimiento, numero_celular, ci, ci_extension, genero, activo, debe_cambiar_password, created_at, updated_at, asociacion(cargo, fecha_ingreso)')
         .eq('id', id)
         .eq('rol', 'asociacion')
         .single()
@@ -89,9 +90,10 @@ export const asociacionService = {
         fecha_nacimiento: data.fecha_nacimiento || null,
         numero_celular: data.numero_celular || null,
         ci: data.ci || null,
+        ci_extension: data.ci_extension || null,
         genero: data.genero || null,
         rol: 'asociacion' as const,
-        club_id: data.club_id || null,
+        club_id: null,
         activo: data.activo ?? true,
         created_at: data.created_at,
         updated_at: data.updated_at,
@@ -120,7 +122,8 @@ export const asociacionService = {
         miembro.fecha_nacimiento,
         miembro.numero_celular,
         miembro.genero,
-        miembro.ci
+        miembro.ci,
+        miembro.ci_extension
       )
 
       if (!userResult.success || !userResult.data) {
@@ -130,7 +133,7 @@ export const asociacionService = {
         }
       }
 
-      const usuarioId = userResult.data.usuarioId
+      const usuarioId = userResult.data.usuarioId as string
 
       // Insertar en tabla asociacion con cargo
       const client = createClient()
@@ -158,7 +161,7 @@ export const asociacionService = {
   async update(id: string, miembro: MiembroAsociacionUpdate): Promise<ApiResponse<MiembroAsociacion>> {
     try {
       const client = createClient()
-      const updateData: { nombre?: string; apellido_paterno?: string; apellido_materno?: string; correo?: string; activo?: boolean; fecha_nacimiento?: string | null; numero_celular?: string | null; ci?: string | null; genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null } = {}
+      const updateData: { nombre?: string; apellido_paterno?: string; apellido_materno?: string; correo?: string; activo?: boolean; fecha_nacimiento?: string | null; numero_celular?: string | null; ci?: string | null; ci_extension?: string | null; genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null } = {}
       if (miembro.nombres !== undefined) updateData.nombre = miembro.nombres
       if (miembro.apellido_paterno !== undefined) updateData.apellido_paterno = miembro.apellido_paterno
       if (miembro.apellido_materno !== undefined) updateData.apellido_materno = miembro.apellido_materno
@@ -167,6 +170,7 @@ export const asociacionService = {
       if (miembro.fecha_nacimiento !== undefined) updateData.fecha_nacimiento = miembro.fecha_nacimiento
       if (miembro.numero_celular !== undefined) updateData.numero_celular = miembro.numero_celular
       if (miembro.ci !== undefined) updateData.ci = miembro.ci
+      if (miembro.ci_extension !== undefined) updateData.ci_extension = miembro.ci_extension
       if (miembro.genero !== undefined) updateData.genero = miembro.genero
 
       if (Object.keys(updateData).length > 0) {
@@ -175,7 +179,12 @@ export const asociacionService = {
           .update(updateData)
           .eq('id', id)
           .eq('rol', 'asociacion')
-        if (error) throw error
+        if (error) {
+          if (error.message?.includes('usuarios_ci_ci_extension_key') || error.code === '23505') {
+            return { success: false, error: 'Ya existe un usuario registrado con este Carnet de Identidad y extensión' }
+          }
+          throw error
+        }
       }
 
       if (miembro.cargo !== undefined || miembro.fecha_ingreso !== undefined) {
@@ -250,4 +259,7 @@ export const asociacionService = {
     }
   }
 }
+
+
+
 

@@ -103,18 +103,18 @@ describe('JudokaForm', () => {
   })
 
   it('should render form fields correctly', async () => {
-    render(<JudokaForm />)
+    render(<JudokaForm onSuccess={() => {}} onCancel={() => {}} />)
 
     await waitFor(() => {
       expect(screen.getByLabelText(/Nombres/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/Apellido paterno/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/Apellido materno/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/Primer Apellido/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/Segundo Apellido/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/Fecha de Nacimiento/i)).toBeInTheDocument()
     })
   })
 
   it('should load clubs on mount', async () => {
-    render(<JudokaForm />)
+    render(<JudokaForm onSuccess={() => {}} onCancel={() => {}} />)
 
     await waitFor(() => {
       expect(clubController.getAllClubes).toHaveBeenCalledWith(false)
@@ -122,7 +122,7 @@ describe('JudokaForm', () => {
   })
 
   it('should load senseis when club is selected', async () => {
-    render(<JudokaForm />)
+    render(<JudokaForm onSuccess={() => {}} onCancel={() => {}} />)
 
     // Wait for clubs to load
     await waitFor(() => expect(clubController.getAllClubes).toHaveBeenCalled())
@@ -147,12 +147,12 @@ describe('JudokaForm', () => {
     (judokaController.createJudoka as jest.Mock).mockResolvedValue({ success: true, data: mockJudoka })
     const onSuccess = jest.fn()
 
-    render(<JudokaForm onSuccess={onSuccess} />)
+    render(<JudokaForm onSuccess={onSuccess} onCancel={() => {}} />)
 
     // Fill text fields
     fireEvent.change(screen.getByLabelText(/Nombres/i), { target: { value: 'Nuevo' } })
-    fireEvent.change(screen.getByLabelText(/Apellido paterno/i), { target: { value: 'Judoka' } })
-    fireEvent.change(screen.getByLabelText(/Apellido materno/i), { target: { value: 'Test' } })
+    fireEvent.change(screen.getByLabelText(/Primer Apellido/i), { target: { value: 'Judoka' } })
+    fireEvent.change(screen.getByLabelText(/Segundo Apellido/i), { target: { value: 'Test' } })
     fireEvent.change(screen.getByLabelText(/Fecha de Nacimiento/i), { target: { value: '2000-01-01' } })
 
     // Submit
@@ -175,7 +175,7 @@ describe('JudokaForm', () => {
 
   it('should populate form with existing judoka data', async () => {
     const judokaWithApellidos = { ...mockJudoka, apellido_paterno: 'Perez', apellido_materno: 'Garcia' }
-    render(<JudokaForm judoka={judokaWithApellidos} />)
+    render(<JudokaForm judoka={judokaWithApellidos} onSuccess={() => {}} onCancel={() => {}} />)
 
     // Esperar a que los clubes y senseis se carguen primero
     await waitFor(() => {
@@ -195,7 +195,7 @@ describe('JudokaForm', () => {
     (judokaController.updateJudoka as jest.Mock).mockResolvedValue({ success: true, data: mockJudoka })
     const onSuccess = jest.fn()
 
-    render(<JudokaForm judoka={mockJudoka} onSuccess={onSuccess} />)
+    render(<JudokaForm judoka={mockJudoka} onSuccess={onSuccess} onCancel={() => {}} />)
 
     // Wait for form to be populated
     await waitFor(() => {
@@ -223,12 +223,12 @@ describe('JudokaForm', () => {
   it('should show error message on failure', async () => {
     (judokaController.createJudoka as jest.Mock).mockResolvedValue({ success: false, error: 'Error creating' })
     
-    render(<JudokaForm />)
+    render(<JudokaForm onSuccess={() => {}} onCancel={() => {}} />)
 
     // Fill required fields
     fireEvent.change(screen.getByLabelText(/Nombres/i), { target: { value: 'Test' } })
-    fireEvent.change(screen.getByLabelText(/Apellido paterno/i), { target: { value: 'Test' } })
-    fireEvent.change(screen.getByLabelText(/Apellido materno/i), { target: { value: 'User' } })
+    fireEvent.change(screen.getByLabelText(/Primer Apellido/i), { target: { value: 'Test' } })
+    fireEvent.change(screen.getByLabelText(/Segundo Apellido/i), { target: { value: 'User' } })
     fireEvent.change(screen.getByLabelText(/Fecha de Nacimiento/i), { target: { value: '2000-01-01' } })
 
     fireEvent.click(screen.getByRole('button', { name: /Crear/i }))
@@ -240,10 +240,12 @@ describe('JudokaForm', () => {
 
   it('should call onCancel when cancel button is clicked', async () => {
     const onCancel = jest.fn()
-    render(<JudokaForm onCancel={onCancel} />)
+    render(<JudokaForm onCancel={onCancel} onSuccess={() => {}} />)
 
     fireEvent.click(screen.getByRole('button', { name: /Cancelar/i }))
 
     expect(onCancel).toHaveBeenCalled()
   })
 })
+
+

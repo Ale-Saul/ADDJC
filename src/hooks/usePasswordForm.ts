@@ -1,21 +1,12 @@
+import { changePasswordSchema } from '@/schemas/globales'
 import { useState, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { authController } from '@/controllers/authController'
-import { resetPasswordSchema } from '@/utils/zodSchemas'
+import { resetPasswordSchema } from '@/schemas/globales'
 
 // Extendemos el esquema para incluir la contraseña actual
-const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, 'La contraseña actual es requerida'),
-  password: z.string().min(8, 'La nueva contraseña debe tener al menos 8 caracteres')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Debe contener mayúscula, minúscula y número'),
-  confirmPassword: z.string().min(1, 'Debes confirmar la contraseña'),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'Las contraseñas no coinciden',
-  path: ['confirmPassword'],
-})
-
 export function usePasswordForm(userEmail: string) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

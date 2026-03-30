@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import { ApiResponse } from '@/types'
+import { ApiResponse } from '@/types/globales'
 import { LoginCredentials, SignUpData, User, AuthSession } from '@/models/auth'
 
 export const authService = {
@@ -113,6 +113,8 @@ export const authService = {
         email: profileData.correo || '',
         nombres: nombreSolo,
         apellidos: `${apellidoPaterno} ${apellidoMaterno}`.trim(),
+        apellido_paterno: apellidoPaterno,
+        apellido_materno: apellidoMaterno,
         rol: userRole,
         club_id: clubInfo.club_id || null,
         club_nombre: clubInfo.club_nombre || null,
@@ -335,6 +337,8 @@ export const authService = {
         email: data.correo || '',
         nombres: nombreSolo,
         apellidos: `${apellidoPaterno} ${apellidoMaterno}`.trim(),
+        apellido_paterno: apellidoPaterno,
+        apellido_materno: apellidoMaterno,
         rol: userRole,
         club_id: clubInfo.club_id || null,
         club_nombre: clubInfo.club_nombre || null,
@@ -482,6 +486,12 @@ export const authService = {
       if (data.nombres !== undefined) updates.nombre = data.nombres
       if (data.apellido_paterno !== undefined) updates.apellido_paterno = data.apellido_paterno
       if (data.apellido_materno !== undefined) updates.apellido_materno = data.apellido_materno
+      // Retrocompatibilidad temporal si envían "apellidos" unidos y no paterno
+      if (data.apellidos !== undefined && data.apellido_paterno === undefined) { 
+        const parts = data.apellidos.trim().split(/\s+/); 
+        updates.apellido_paterno = parts[0] || ''; 
+        updates.apellido_materno = parts.slice(1).join(' ') || '' 
+      }
       
       // Nota: Email (correo), rol y club_id no se actualizan aquí por seguridad
       
@@ -566,6 +576,8 @@ export const authService = {
           email: updatedData.correo || '',
           nombres: nombreSolo,
           apellidos: `${apellidoPaterno} ${apellidoMaterno}`.trim(),
+          apellido_paterno: apellidoPaterno,
+          apellido_materno: apellidoMaterno,
           rol: userRole,
           club_id: clubInfo.club_id || null,
           club_nombre: clubInfo.club_nombre || null,
@@ -709,6 +721,9 @@ export const authService = {
     }
   },
 }
+
+
+
 
 
 

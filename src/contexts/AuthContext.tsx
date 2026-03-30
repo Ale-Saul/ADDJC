@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { authController } from '@/controllers/authController'
 import { User, LoginCredentials, AuthSession } from '@/models/auth'
-import { ApiResponse } from '@/types'
+import { ApiResponse } from '@/types/globales'
 
 interface AuthContextType {
   user: User | null

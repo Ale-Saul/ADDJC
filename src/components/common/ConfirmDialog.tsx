@@ -19,6 +19,7 @@ interface ConfirmDialogProps {
   confirmText?: string
   cancelText?: string
   loading?: boolean
+  confirmColor?: 'inherit' | 'primary' | 'secondary' | 'success' | 'error' | 'info' | 'warning'
 }
 
 export default function ConfirmDialog({
@@ -30,6 +31,7 @@ export default function ConfirmDialog({
   confirmText = 'Confirmar',
   cancelText = 'Cancelar',
   loading = false,
+  confirmColor = 'error',
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onClose={loading ? undefined : onClose} maxWidth="xs" fullWidth>
@@ -43,7 +45,7 @@ export default function ConfirmDialog({
         </Button>
         <Button
           onClick={onConfirm}
-          color="error"
+          color={confirmColor || "error"}
           variant="contained"
           disabled={loading}
           startIcon={loading ? <CircularProgress size={16} color="inherit" /> : undefined}

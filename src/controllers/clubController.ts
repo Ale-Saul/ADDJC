@@ -1,7 +1,7 @@
 import { clubService } from '@/services/clubService'
 import { Club, ClubCreate, ClubUpdate } from '@/models/club'
-import { ApiResponse } from '@/types'
-import { clubControllerCreateSchema, clubControllerUpdateSchema } from '@/utils/zodSchemas'
+import { ApiResponse } from '@/types/globales'
+import { clubControllerCreateSchema, clubControllerUpdateSchema } from '@/schemas/globales'
 
 export const clubController = {
   /**

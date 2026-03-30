@@ -32,7 +32,7 @@ export interface MovimientoFinanciero {
   origen_club_nombre?: string;         // Nombre del club (join)
   origen_entidad?: string;             // Nombre de la entidad externa (estado, sponsor, etc)
   comprobante_url?: string;            // URL del comprobante (PDF/imagen en storage)
-  comprobante_nombre?: string;         // Nombre original del archivo
+  comprobante_nombre?: string;
   estado: EstadoMovimiento;
   activo: boolean;                     // Si false, oculto de la página (soft delete)
   notas?: string;                      // Notas adicionales
@@ -51,8 +51,9 @@ export interface MovimientoFinancieroInput {
   fecha: string;
   origen_club_id?: string;
   origen_entidad?: string;
-  comprobante_url?: string;
-  comprobante_nombre?: string;
+  comprobante_url?: string | null;
+  comprobante_nombre?: string | null;
+  estado?: EstadoMovimiento;
   notas?: string;
 }
 
@@ -93,3 +94,5 @@ export interface MovimientosPorMes {
   egresos: number;
   balance: number;
 }
+
+

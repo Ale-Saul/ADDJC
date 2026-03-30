@@ -1,4 +1,4 @@
-import { ApiResponse } from '@/types'
+import { ApiResponse } from '@/types/globales'
 
 /**
  * Crear usuario usando Admin API (auto-confirmado)
@@ -14,7 +14,8 @@ async function createUserWithAdminAPI(
   fechaNacimiento?: string | null,
   numeroCelular?: string | null,
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null,
-  ci?: string | null
+  ci?: string | null,
+  ci_extension?: string | null
 ): Promise<ApiResponse<{ userId: string; usuarioId?: string }>> {
   try {
     const body: Record<string, unknown> = {
@@ -26,6 +27,7 @@ async function createUserWithAdminAPI(
       rol,
       genero,
       ci,
+      ci_extension,
     }
     if (fechaNacimiento != null && fechaNacimiento !== '') {
       body.fecha_nacimiento = fechaNacimiento
@@ -44,11 +46,24 @@ async function createUserWithAdminAPI(
     const result = await response.json()
 
     if (!result.success) {
+      // Traducir errores comunes de Supabase Auth
+      let errorMessage = result.error || 'Error al crear usuario'
+      
+      if (errorMessage.includes('A user with this email address has already been registered')) {
+        errorMessage = 'Ya existe un usuario registrado con este correo electrónico'
+      } else if (errorMessage.includes('User already exists')) {
+        errorMessage = 'El usuario ya existe'
+      } else if (errorMessage.includes('Password should be at least 6 characters')) {
+        errorMessage = 'La contraseña debe tener al menos 6 caracteres'
+      } else if (errorMessage.includes('usuarios_ci_ci_extension_key') || errorMessage.includes('Carnet de Identidad')) {
+        errorMessage = errorMessage.includes('Carnet de Identidad') ? errorMessage : 'Ya existe un usuario registrado con este Carnet de Identidad y extensión'
+      }
+
       // Si hay detalles del error en el JSON, los mostramos
-      const detailedError = result.details ? `${result.error} (${result.details})` : result.error
+      const detailedError = result.details ? `${errorMessage} (${result.details})` : errorMessage
       return {
         success: false,
-        error: detailedError || 'Error al crear usuario',
+        error: detailedError,
       }
     }
 
@@ -78,18 +93,30 @@ export const userService = {
     apellido_paterno: string,
     apellido_materno: string,
     email: string,
-    password: string,
+    password?: string,
     fecha_nacimiento?: string | null,
     numero_celular?: string | null,
     genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null,
-    ci?: string | null
-  ): Promise<ApiResponse<{ userId: string; usuarioId: string }>> {
+    ci?: string | null,
+    ci_extension?: string | null
+  ): Promise<ApiResponse<{ userId: string; usuarioId?: string }>> {
     try {
-      // Validar email y password
-      if (!email || !password) {
+      // Validar email
+      if (!email) {
         return {
           success: false,
-          error: 'Email y contraseña son requeridos'
+          error: 'El email es requerido'
+        }
+      }
+
+      // Generar contraseña si no se proporciona
+      let finalPassword = password
+      if (!finalPassword && ci) {
+        finalPassword = `Judo.${ci}${ci_extension ? `-${ci_extension}` : ''}`
+      } else if (!finalPassword) {
+        return {
+          success: false,
+          error: 'La contraseña es requerida si no hay CI para generarla'
         }
       }
 
@@ -103,19 +130,19 @@ export const userService = {
       }
 
       // Validar longitud de contraseña
-      if (password.length < 8) {
+      if (finalPassword.length < 6) {
         return {
           success: false,
-          error: 'La contraseña debe tener al menos 8 caracteres'
+          error: 'La contraseña debe tener al menos 6 caracteres'
         }
       }
 
       // Crear en auth.users; el trigger crea la fila en tabla usuarios (nombre, apellidos, correo, fecha_nacimiento, rol).
       // usuarioId es el id de la fila en usuarios; se usa en arbitros.usuario_id (FK a usuarios.id).
-      const result = await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'arbitro', fecha_nacimiento, numero_celular, genero, ci)
+      const result = await createUserWithAdminAPI(email, finalPassword, nombres, apellido_paterno, apellido_materno, 'arbitro', fecha_nacimiento, numero_celular, genero, ci, ci_extension)
       if (!result.success) return result
       const usuarioId = result.data?.usuarioId ?? result.data?.userId
-      return { success: true, data: { userId: result.data!.userId, usuarioId } }
+      return { success: true, data: { userId: result.data!.userId, usuarioId: usuarioId as string } }
     } catch (error) {
       console.error('Error al crear usuario de árbitro:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear usuario'
@@ -131,27 +158,40 @@ export const userService = {
     apellido_paterno: string,
     apellido_materno: string,
     email: string,
-    password: string,
+    password?: string,
     fecha_nacimiento?: string | null,
     numero_celular?: string | null,
     genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null,
-    ci?: string | null
-  ): Promise<ApiResponse<{ userId: string; usuarioId: string }>> {
+    ci?: string | null,
+    ci_extension?: string | null
+  ): Promise<ApiResponse<{ userId: string; usuarioId?: string }>> {
     try {
-      if (!email || !password) {
-        return { success: false, error: 'Email y contraseña son requeridos' }
+      if (!email) {
+        return { success: false, error: 'El email es requerido' }
       }
+
+      // Generar contraseña si no se proporciona
+      let finalPassword = password
+      if (!finalPassword && ci) {
+        finalPassword = `Judo.${ci}${ci_extension ? `-${ci_extension}` : ''}`
+      } else if (!finalPassword) {
+        return {
+          success: false,
+          error: 'La contraseña es requerida si no hay CI para generarla'
+        }
+      }
+
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(email)) {
         return { success: false, error: 'El formato del email no es válido' }
       }
-      if (password.length < 8) {
-        return { success: false, error: 'La contraseña debe tener al menos 8 caracteres' }
+      if (finalPassword.length < 6) {
+        return { success: false, error: 'La contraseña debe tener al menos 6 caracteres' }
       }
-      const result = await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'sensei', fecha_nacimiento, numero_celular, genero, ci)
+      const result = await createUserWithAdminAPI(email, finalPassword, nombres, apellido_paterno, apellido_materno, 'sensei', fecha_nacimiento, numero_celular, genero, ci, ci_extension)
       if (!result.success) return result
       const usuarioId = result.data?.usuarioId ?? result.data?.userId
-      return { success: true, data: { userId: result.data!.userId, usuarioId } }
+      return { success: true, data: { userId: result.data!.userId, usuarioId: usuarioId as string } }
     } catch (error) {
       console.error('Error al crear usuario de sensei:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear usuario'
@@ -167,32 +207,45 @@ export const userService = {
     apellido_paterno: string,
     apellido_materno: string,
     email: string,
-    password: string,
+    password?: string,
     clubId?: string,
     fecha_nacimiento?: string | null,
     numero_celular?: string | null,
     genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null,
-    ci?: string | null
-  ): Promise<ApiResponse<{ userId: string; usuarioId: string }>> {
+    ci?: string | null,
+    ci_extension?: string | null
+  ): Promise<ApiResponse<{ userId: string; usuarioId?: string }>> {
     try {
-      if (!email || !password) {
-        return { success: false, error: 'Email y contraseña son requeridos' }
+      if (!email) {
+        return { success: false, error: 'El email es requerido' }
       }
+
+      // Generar contraseña si no se proporciona
+      let finalPassword = password
+      if (!finalPassword && ci) {
+        finalPassword = `Judo.${ci}${ci_extension ? `-${ci_extension}` : ''}`
+      } else if (!finalPassword) {
+        return {
+          success: false,
+          error: 'La contraseña es requerida si no hay CI para generarla'
+        }
+      }
+
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(email)) {
         return { success: false, error: 'El formato del email no es válido' }
       }
-      if (password.length < 8) {
+      if (finalPassword.length < 6) {
         return {
           success: false,
-          error: 'La contraseña debe tener al menos 8 caracteres'
+          error: 'La contraseña debe tener al menos 6 caracteres'
         }
       }
 
-      const result = await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'encargado', fecha_nacimiento, numero_celular, genero, ci)
+      const result = await createUserWithAdminAPI(email, finalPassword, nombres, apellido_paterno, apellido_materno, 'encargado', fecha_nacimiento, numero_celular, genero, ci, ci_extension)
       if (!result.success) return result
       const usuarioId = result.data?.usuarioId ?? result.data?.userId
-      return { success: true, data: { userId: result.data!.userId, usuarioId } }
+      return { success: true, data: { userId: result.data!.userId, usuarioId: usuarioId as string } }
     } catch (error) {
       console.error('Error al crear usuario de encargado:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear usuario'
@@ -213,8 +266,9 @@ export const userService = {
     fecha_nacimiento?: string | null,
     numero_celular?: string | null,
     genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null,
-    ci?: string | null
-  ): Promise<ApiResponse<{ userId: string; usuarioId: string }>> {
+    ci?: string | null,
+    ci_extension?: string | null
+  ): Promise<ApiResponse<{ userId: string; usuarioId?: string }>> {
     try {
       let finalEmail = email
       let finalPassword = password
@@ -224,17 +278,22 @@ export const userService = {
         const timestamp = Date.now()
         finalEmail = `${nombreLimpio}.${apellidoLimpio}.${timestamp}@judoka.local`
       }
-      if (!finalPassword) {
+      
+      // Generar contraseña si no se proporciona
+      if (!finalPassword && ci) {
+        finalPassword = `Judo.${ci}${ci_extension ? `-${ci_extension}` : ''}`
+      } else if (!finalPassword) {
         finalPassword = `Judoka${Date.now()}!`
       }
+
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(finalEmail)) {
         return { success: false, error: 'El formato del email no es válido' }
       }
-      const result = await createUserWithAdminAPI(finalEmail, finalPassword, nombres, apellido_paterno, apellido_materno, 'judoka', fecha_nacimiento, numero_celular, genero, ci)
+      const result = await createUserWithAdminAPI(finalEmail, finalPassword, nombres, apellido_paterno, apellido_materno, 'judoka', fecha_nacimiento, numero_celular, genero, ci, ci_extension)
       if (!result.success) return result
       const usuarioId = result.data?.usuarioId ?? result.data?.userId
-      return { success: true, data: { userId: result.data!.userId, usuarioId } }
+      return { success: true, data: { userId: result.data!.userId, usuarioId: usuarioId as string } }
     } catch (error) {
       console.error('Error al crear usuario de judoka:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear usuario'
@@ -250,27 +309,40 @@ export const userService = {
     apellido_paterno: string,
     apellido_materno: string,
     email: string,
-    password: string,
+    password?: string,
     fecha_nacimiento?: string | null,
     numero_celular?: string | null,
     genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null,
-    ci?: string | null
-  ): Promise<ApiResponse<{ userId: string; usuarioId: string }>> {
+    ci?: string | null,
+    ci_extension?: string | null
+  ): Promise<ApiResponse<{ userId: string; usuarioId?: string }>> {
     try {
-      if (!email || !password) {
-        return { success: false, error: 'Email y contraseña son requeridos' }
+      if (!email) {
+        return { success: false, error: 'El email es requerido' }
       }
+
+      // Generar contraseña si no se proporciona
+      let finalPassword = password
+      if (!finalPassword && ci) {
+        finalPassword = `Judo.${ci}${ci_extension ? `-${ci_extension}` : ''}`
+      } else if (!finalPassword) {
+        return {
+          success: false,
+          error: 'La contraseña es requerida si no hay CI para generarla'
+        }
+      }
+
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(email)) {
         return { success: false, error: 'El formato del email no es válido' }
       }
-      if (password.length < 8) {
-        return { success: false, error: 'La contraseña debe tener al menos 8 caracteres' }
+      if (finalPassword.length < 6) {
+        return { success: false, error: 'La contraseña debe tener al menos 6 caracteres' }
       }
-      const result = await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'asociacion', fecha_nacimiento, numero_celular, genero, ci)
+      const result = await createUserWithAdminAPI(email, finalPassword, nombres, apellido_paterno, apellido_materno, 'asociacion', fecha_nacimiento, numero_celular, genero, ci, ci_extension)
       if (!result.success) return result
       const usuarioId = result.data?.usuarioId ?? result.data?.userId
-      return { success: true, data: { userId: result.data!.userId, usuarioId } }
+      return { success: true, data: { userId: result.data!.userId, usuarioId: usuarioId as string } }
     } catch (error) {
       console.error('Error al crear usuario de asociación:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear usuario'
@@ -278,4 +350,6 @@ export const userService = {
     }
   }
 }
+
+
 

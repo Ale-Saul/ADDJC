@@ -11,6 +11,7 @@ export interface MiembroAsociacion extends User {
   fecha_nacimiento?: string | null
   numero_celular?: string | null
   ci?: string | null
+  ci_extension?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   fecha_ingreso?: string | null
   cargo?: string | null
@@ -25,6 +26,7 @@ export interface MiembroAsociacionCreate {
   fecha_nacimiento?: string | null
   numero_celular?: string | null
   ci?: string | null
+  ci_extension?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   fecha_ingreso?: string | null
   cargo?: string | null
@@ -38,6 +40,7 @@ export interface MiembroAsociacionUpdate {
   fecha_nacimiento?: string | null
   numero_celular?: string | null
   ci?: string | null
+  ci_extension?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   email?: string
   fecha_ingreso?: string | null

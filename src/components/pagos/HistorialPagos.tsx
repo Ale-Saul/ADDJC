@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   Box,
   Table,
@@ -14,7 +14,7 @@ import {
   CircularProgress,
   Typography
 } from '@mui/material'
-import { Pago } from '@/models/pago'
+import { Pago, EstadoPago } from '@/models/pago'
 import { pagoController } from '@/controllers/pagoController'
 import { formatters } from '@/utils/formatters'
 
@@ -24,48 +24,46 @@ interface HistorialPagosProps {
 }
 
 export default function HistorialPagos({ judokaId, judokaNombre }: HistorialPagosProps) {
-  const [pagos, setPagos] = useState<Pago[]>([])
-  const [loading, setLoading] = useState(true)
-
-  const fetchPagos = async () => {
-    try {
+  const { data, isLoading } = useQuery({
+    queryKey: ['pagos', 'historial', judokaId],
+    queryFn: async () => {
       const response = await pagoController.getPagosByJudoka(judokaId)
-      if (response.success && response.data) {
-        // Filtrar solo pagos pagados, parciales o cancelados
-        const pagosPagados = response.data.filter(
-          p => p.estado === 'pagado' || p.estado === 'parcial' || p.estado === 'cancelado'
-        )
-        setPagos(pagosPagados)
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Error al cargar historial')
       }
-    } catch (error) {
-      console.error('Error al cargar historial de pagos:', error)
-    } finally {
-      setLoading(false)
+      return response.data.filter(
+        p => p.estado === 'pagado' || p.estado === 'cancelado'
+      )
     }
-  }
+  })
 
-  useEffect(() => {
-    fetchPagos()
-  }, [judokaId])
+  // Renombramos por compatibilidad local
+  const loading = isLoading
+  const pagos = data || []
 
   const getEstadoChip = (estado: string) => {
-    const colores: Record<string, 'success' | 'warning' | 'error' | 'default' | 'info'> = {
+    const estadoPago = estado as EstadoPago
+    const colores: Record<EstadoPago, 'success' | 'warning' | 'error' | 'default' | 'info'> = {
       pagado: 'success',
-      parcial: 'info',
-      cancelado: 'default'
+      cancelado: 'default',
+      pendiente: 'warning',
+      vencido: 'error',
+      reembolsado: 'default'
     }
 
     const labels: Record<string, string> = {
       pagado: 'Pagado',
-      parcial: 'Parcial',
-      cancelado: 'Cancelado'
+      cancelado: 'Cancelado',
+      pendiente: 'Pendiente',
+      vencido: 'Vencido',
+      reembolsado: 'Reembolsado'
     }
 
     return (
-      <Chip 
-        label={labels[estado] || estado} 
-        color={colores[estado] || 'default'} 
-        size="small" 
+      <Chip
+        label={labels[estado] || estado}
+        color={colores[estadoPago] || 'default'}
+        size="small"
       />
     )
   }
@@ -116,7 +114,7 @@ export default function HistorialPagos({ judokaId, judokaNombre }: HistorialPago
                   )}
                   {pago.observaciones_pago && (
                     <Typography variant="caption" color="success.main" sx={{ display: 'block', mt: 0.5 }}>
-                      📝 {pago.observaciones_pago}
+                       {pago.observaciones_pago}
                     </Typography>
                   )}
                 </Box>
@@ -131,7 +129,7 @@ export default function HistorialPagos({ judokaId, judokaNombre }: HistorialPago
                   <Typography variant="body2" fontWeight="bold">
                     Bs. {pago.monto_final.toFixed(2)}
                   </Typography>
-                  {pago.tiene_descuento && (
+                  {pago.tiene_descuento && typeof pago.monto_base === 'number' && (
                     <Typography variant="caption" color="text.secondary">
                       (Base: Bs. {pago.monto_base.toFixed(2)})
                     </Typography>
@@ -154,3 +152,4 @@ export default function HistorialPagos({ judokaId, judokaNombre }: HistorialPago
     </TableContainer>
   )
 }
+

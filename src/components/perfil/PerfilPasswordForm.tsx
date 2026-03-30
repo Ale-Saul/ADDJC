@@ -4,7 +4,6 @@ import { useState } from 'react'
 import {
   Box,
   Typography,
-  TextField,
   Button,
   CircularProgress,
   Alert,
@@ -16,7 +15,7 @@ import {
 import LockIcon from '@mui/icons-material/Lock'
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
-import { Controller } from 'react-hook-form'
+import { FormInput } from '@/components/ui'
 import { usePasswordForm } from '@/hooks/usePasswordForm'
 
 interface PerfilPasswordFormProps {
@@ -39,83 +38,67 @@ export default function PerfilPasswordForm({ password }: PerfilPasswordFormProps
       {password.error && <Alert severity="error" sx={{ mb: 3 }} onClose={() => password.setError(null)}>{password.error}</Alert>}
 
       <Stack spacing={3} component="form" onSubmit={password.form.handleSubmit(password.onSubmit)}>
-        <Controller
+        <FormInput
+          fullWidth
           name="currentPassword"
           control={password.form.control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              label="Contraseña Actual"
-              type={showCurrentPassword ? 'text' : 'password'}
+          label="Contraseña Actual"
+          type={showCurrentPassword ? 'text' : 'password'}
+          required
+          disabled={password.loading}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton onClick={() => setShowCurrentPassword(!showCurrentPassword)} edge="end">
+                  {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
+        />
+
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, width: '100%' }}>
+          <Box sx={{ flex: 1 }}>
+            <FormInput
               fullWidth
+              name="password"
+              control={password.form.control}
+              label="Nueva Contraseña"
+              type={showNewPassword ? 'text' : 'password'}
               required
               disabled={password.loading}
-              error={!!password.form.formState.errors.currentPassword}
-              helperText={password.form.formState.errors.currentPassword?.message}
+              helperText="Mínimo 8 caracteres, incluye Mayúscula, Minúscula y Número"
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton onClick={() => setShowCurrentPassword(!showCurrentPassword)} edge="end">
-                      {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
+                    <IconButton onClick={() => setShowNewPassword(!showNewPassword)} edge="end">
+                      {showNewPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
                 ),
               }}
             />
-          )}
-        />
-
-        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
-          <Controller
-            name="password"
-            control={password.form.control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Nueva Contraseña"
-                type={showNewPassword ? 'text' : 'password'}
-                fullWidth
-                required
-                disabled={password.loading}
-                error={!!password.form.formState.errors.password}
-                helperText={password.form.formState.errors.password?.message || "Mínimo 8 caracteres, incluye Mayúscula, Minúscula y Número"}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton onClick={() => setShowNewPassword(!showNewPassword)} edge="end">
-                        {showNewPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            )}
-          />
-          <Controller
-            name="confirmPassword"
-            control={password.form.control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Confirmar Nueva Contraseña"
-                type={showConfirmPassword ? 'text' : 'password'}
-                fullWidth
-                required
-                disabled={password.loading}
-                error={!!password.form.formState.errors.confirmPassword}
-                helperText={password.form.formState.errors.confirmPassword?.message}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)} edge="end">
-                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            )}
-          />
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <FormInput
+              fullWidth
+              name="confirmPassword"
+              control={password.form.control}
+              label="Confirmar Nueva Contraseña"
+              type={showConfirmPassword ? 'text' : 'password'}
+              required
+              disabled={password.loading}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)} edge="end">
+                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Box>
         </Box>
 
         <Box display="flex" justifyContent="flex-end">

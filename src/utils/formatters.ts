@@ -195,3 +195,52 @@ export const formatters = {
     return belts[belt.toLowerCase()] || belt
   },
 }
+
+export function formatCIInput(value: string): string {
+  if (!value) return '';
+  return value.replace(/[^0-9]/g, '').slice(0, 7);
+}
+
+export function formatCIExtensionInput(value: string): string {
+  if (!value) return '';
+  // Formato: 1 número seguido de 1 letra (ej: 1A)
+  const cleaned = value.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+  
+  if (cleaned.length === 0) return '';
+  
+  const firstChar = cleaned[0].replace(/[^0-9]/g, '');
+  const secondChar = cleaned.length > 1 ? cleaned[1].replace(/[^A-Z]/g, '') : '';
+  
+  return firstChar + secondChar;
+}
+
+export function formatNameInput(value: string): string {
+  if (!value) return '';
+  // Eliminar números y caracteres especiales, permitir letras, acentos, Ñ y espacios
+  const cleaned = value.replace(/[0-9]/g, '').replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]/g, '');
+  // Reducir múltiples espacios a uno solo
+  const singleSpace = cleaned.replace(/\s+/g, ' ');
+  // Capitalizar solo la primera letra de la cadena
+  if (singleSpace.length > 0) {
+    return singleSpace.charAt(0).toUpperCase() + singleSpace.slice(1);
+  }
+  return singleSpace;
+}
+
+export function formatCelularInput(value: string): string {
+  if (!value) return '';
+  return value.replace(/[^0-9]/g, '').slice(0, 8);
+}
+
+export function formatNameWithNumbersInput(value: string): string {
+  if (!value) return '';
+  // Permitir letras, acentos, Ñ, números y espacios. Eliminar otros caracteres especiales.
+  const cleaned = value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s]/g, '');
+  // Reducir múltiples espacios a uno solo
+  const singleSpace = cleaned.replace(/\s+/g, ' ');
+  // Capitalizar solo la primera letra de la cadena
+  if (singleSpace.length > 0) {
+    return singleSpace.charAt(0).toUpperCase() + singleSpace.slice(1);
+  }
+  return singleSpace;
+}

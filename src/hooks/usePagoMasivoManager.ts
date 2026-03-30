@@ -1,25 +1,13 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { pagoMasivoSchema } from '@/schemas/pagoSchema'
+import { useState, useEffect, useCallback } from 'react'
+import { useForm, useWatch } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { PagoCreate, TipoPago, TipoDescuento, RazonDescuento } from '@/models/pago'
 import { TIPO_PAGO, ESTADO_PAGO, TIPO_DESCUENTO, RAZON_DESCUENTO } from '@/constants/pagos'
 import { pagoController } from '@/controllers/pagoController'
 import { useAuth } from '@/contexts/AuthContext'
 import { Judoka } from '@/models/judoka'
-
-const pagoMasivoSchema = z.object({
-  tipo_pago: z.string().min(1, 'El tipo de pago es requerido'),
-  concepto: z.string().min(1, 'El concepto es requerido'),
-  descripcion: z.string().optional().nullable(),
-  monto_base: z.number().min(0, 'El monto debe ser mayor o igual a 0'),
-  fecha_vencimiento: z.string().min(1, 'La fecha de vencimiento es requerida'),
-  tiene_descuento: z.boolean().default(false),
-  tipo_descuento: z.string().optional().nullable(),
-  descuento_porcentaje: z.number().min(0).max(100).optional().nullable(),
-  descuento_monto: z.number().min(0).optional().nullable(),
-  razon_descuento: z.string().optional().nullable(),
-})
 
 export function usePagoMasivoManager({ judokas, onSuccess }: { judokas: Judoka[], onSuccess?: () => void }) {
   const { user } = useAuth()
@@ -46,21 +34,28 @@ export function usePagoMasivoManager({ judokas, onSuccess }: { judokas: Judoka[]
     },
   })
 
-  const watchMontoBase = form.watch('monto_base')
-  const watchTieneDescuento = form.watch('tiene_descuento')
-  const watchTipoDescuento = form.watch('tipo_descuento')
-  const watchDescuentoPorcentaje = form.watch('descuento_porcentaje')
-  const watchDescuentoMonto = form.watch('descuento_monto')
+  const watchMontoBase = useWatch({ control: form.control, name: 'monto_base' })
+  const watchTieneDescuento = useWatch({ control: form.control, name: 'tiene_descuento' })
+  const watchTipoDescuento = useWatch({ control: form.control, name: 'tipo_descuento' })
+  const watchDescuentoPorcentaje = useWatch({ control: form.control, name: 'descuento_porcentaje' })
+  const watchDescuentoMonto = useWatch({ control: form.control, name: 'descuento_monto' })
 
   // Calcular monto final
   useEffect(() => {
-    let final = watchMontoBase || 0
+    const base = typeof watchMontoBase === 'string' ? parseFloat(watchMontoBase.replace(',', '.')) : (watchMontoBase || 0)
+    let final = isNaN(base) ? 0 : base
 
     if (watchTieneDescuento) {
       if (watchTipoDescuento === TIPO_DESCUENTO.PORCENTAJE && watchDescuentoPorcentaje !== null) {
-        final = final - (final * (watchDescuentoPorcentaje || 0) / 100)
+        const pct = typeof watchDescuentoPorcentaje === 'string' ? parseFloat(watchDescuentoPorcentaje) : watchDescuentoPorcentaje
+        if (!isNaN(pct)) {
+          final = final - (final * pct / 100)
+        }
       } else if (watchTipoDescuento === TIPO_DESCUENTO.MONTO_FIJO && watchDescuentoMonto !== null) {
-        final = final - (watchDescuentoMonto || 0)
+        const descMonto = typeof watchDescuentoMonto === 'string' ? parseFloat(watchDescuentoMonto.replace(',', '.')) : watchDescuentoMonto
+        if (!isNaN(descMonto)) {
+          final = final - descMonto
+        }
       }
     }
 

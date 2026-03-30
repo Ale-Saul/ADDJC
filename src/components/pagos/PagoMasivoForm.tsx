@@ -13,18 +13,26 @@ import {
   InputAdornment,
   Stack,
   Divider,
-  Autocomplete
 } from '@mui/material'
 import { Judoka } from '@/models/judoka'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
-import { Controller } from 'react-hook-form'
+import { Controller, useWatch } from 'react-hook-form'
+import { FormInput, FormSelect, FormDatePicker, FormAutocomplete } from '@/components/ui'
+import { formatNameWithNumbersInput } from '@/utils/formatters'
 import { TIPO_DESCUENTO, TIPO_PAGO_LABELS, TIPO_DESCUENTO_LABELS, RAZON_DESCUENTO_LABELS } from '@/constants/pagos'
 import { usePagoMasivoManager } from '@/hooks/usePagoMasivoManager'
 
 const TIPO_PAGO_OPTIONS = Object.entries(TIPO_PAGO_LABELS)
   .map(([value, label]) => ({ value, label }))
   .sort((a, b) => a.label.localeCompare(b.label, 'es'))
+
+const TIPO_DESCUENTO_OPTIONS = Object.entries(TIPO_DESCUENTO_LABELS)
+  .filter(([value]) => value !== 'ninguno')
+  .map(([value, label]) => ({ value, label }))
+
+const RAZON_DESCUENTO_OPTIONS = Object.entries(RAZON_DESCUENTO_LABELS)
+  .map(([value, label]) => ({ value, label }))
 
 interface PagoMasivoFormProps {
   judokas: Judoka[]
@@ -42,9 +50,10 @@ export default function PagoMasivoForm({ judokas, onSuccess, onCancel }: PagoMas
     createdCount,
     onSubmit,
     setError,
-    watchTieneDescuento,
-    watchTipoDescuento,
   } = usePagoMasivoManager({ judokas, onSuccess })
+
+  const watchTieneDescuento = useWatch({ control: form.control, name: 'tiene_descuento' })
+  const watchTipoDescuento = useWatch({ control: form.control, name: 'tipo_descuento' })
 
   return (
     <Box component="form" onSubmit={form.handleSubmit(onSubmit)} sx={{ mt: 2 }}>
@@ -71,111 +80,52 @@ export default function PagoMasivoForm({ judokas, onSuccess, onCancel }: PagoMas
       )}
 
       <Stack spacing={3}>
-        <Controller
+        <FormAutocomplete
+          control={form.control}
           name="tipo_pago"
-          control={form.control}
-          render={({ field }) => (
-            <Autocomplete
-              options={TIPO_PAGO_OPTIONS}
-              getOptionLabel={(opt) => opt.label}
-              isOptionEqualToValue={(opt, val) => opt.value === val.value}
-              value={TIPO_PAGO_OPTIONS.find(o => o.value === field.value) ?? null}
-              onChange={(_, v) => field.onChange(v?.value ?? '')}
-              disabled={loading}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Tipo de Pago"
-                  required
-                  error={!!form.formState.errors.tipo_pago}
-                  helperText={form.formState.errors.tipo_pago?.message}
-                  inputProps={{ ...params.inputProps, autoComplete: 'off' }}
-                />
-              )}
-            />
-          )}
+          label="Tipo de Pago"
+          options={TIPO_PAGO_OPTIONS}
+          disabled={loading}
+          required
         />
 
-        <Controller
+        <FormInput
+          control={form.control}
           name="concepto"
-          control={form.control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Concepto"
-              required
-              disabled={loading}
-              error={!!form.formState.errors.concepto}
-              helperText={form.formState.errors.concepto?.message}
-              placeholder="Ej: Mensualidad Marzo 2024"
-            />
-          )}
+          label="Concepto"
+          disabled={loading}
+          required
+          formatValue={formatNameWithNumbersInput}
         />
 
-        <Controller
-          name="descripcion"
+        <FormInput
           control={form.control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Descripción (opcional)"
-              multiline
-              rows={2}
-              disabled={loading}
-            />
-          )}
+          name="descripcion"
+          label="Descripción (opcional)"
+          multiline
+          rows={2}
+          disabled={loading}
+          formatValue={formatNameWithNumbersInput}
         />
 
         <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
-          <Controller
-            name="monto_base"
+          <FormInput
             control={form.control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                fullWidth
-                label="Monto Base"
-                type="text"
-                required
-                disabled={loading}
-                value={field.value === 0 ? '' : field.value}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9.]/g, '')
-                  field.onChange(val === '' ? 0 : parseFloat(val))
-                }}
-                error={!!form.formState.errors.monto_base}
-                helperText={form.formState.errors.monto_base?.message}
-                InputProps={{
-                  startAdornment: <InputAdornment position="start">Bs.</InputAdornment>,
-                }}
-              />
-            )}
+            name="monto_base"
+            label="Monto Base"
+            type="number"
+            disabled={loading}
+            required
+            InputProps={{
+              startAdornment: <InputAdornment position="start">Bs.</InputAdornment>,
+            }}
           />
 
-          <Controller
-            name="fecha_vencimiento"
+          <FormDatePicker
             control={form.control}
-            render={({ field }) => (
-              <DatePicker
-                label="Fecha de Vencimiento"
-                value={field.value ? dayjs(field.value) : null}
-                onChange={(newValue) => {
-                  field.onChange(newValue ? newValue.format('YYYY-MM-DD') : '')
-                }}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    required: true,
-                    error: !!form.formState.errors.fecha_vencimiento,
-                    helperText: form.formState.errors.fecha_vencimiento?.message
-                  },
-                }}
-                format="DD/MM/YYYY"
-                disabled={loading}
-              />
-            )}
+            name="fecha_vencimiento"
+            label="Fecha de Vencimiento"
+            disabled={loading}
           />
         </Box>
 
@@ -211,101 +161,58 @@ export default function PagoMasivoForm({ judokas, onSuccess, onCancel }: PagoMas
 
         {watchTieneDescuento && (
           <Stack spacing={3} sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
-            <Controller
-              name="tipo_descuento"
+            <FormAutocomplete
               control={form.control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  select
-                  fullWidth
-                  label="Tipo de Descuento"
-                  required
-                  disabled={loading}
-                  onChange={(e) => {
-                    field.onChange(e.target.value);
-                    // Limpiar los valores de descuento al cambiar el tipo
-                    if (e.target.value === TIPO_DESCUENTO.PORCENTAJE) {
-                      form.setValue('descuento_monto', null);
-                    } else if (e.target.value === TIPO_DESCUENTO.MONTO_FIJO) {
-                      form.setValue('descuento_porcentaje', null);
-                    }
-                  }}
-                >
-                  {Object.entries(TIPO_DESCUENTO_LABELS)
-                    .filter(([value]) => value !== 'ninguno')
-                    .map(([value, label]) => (
-                      <MenuItem key={value} value={value}>{label}</MenuItem>
-                    ))}
-                </TextField>
-              )}
+              name="tipo_descuento"
+              label="Tipo de Descuento"
+              options={TIPO_DESCUENTO_OPTIONS}
+              disabled={loading}
+              required
+              onChange={(e, newValue) => {
+                const value = newValue?.value as string;
+                form.setValue('tipo_descuento', value);
+                if (value === TIPO_DESCUENTO.PORCENTAJE) {
+                  form.setValue('descuento_monto', null);
+                } else if (value === TIPO_DESCUENTO.MONTO_FIJO) {
+                  form.setValue('descuento_porcentaje', null);
+                }
+              }}
             />
 
             <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
               {(watchTipoDescuento === TIPO_DESCUENTO.PORCENTAJE || !watchTipoDescuento || watchTipoDescuento === 'ninguno') && (
-                <Controller
-                  name="descuento_porcentaje"
+                <FormInput
                   control={form.control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label="Descuento (%)"
-                      type="number"
-                      required
-                      disabled={loading}
-                      value={field.value ?? ''}
-                      onChange={(e) => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))}
-                      error={!!form.formState.errors.descuento_porcentaje}
-                      helperText={form.formState.errors.descuento_porcentaje?.message}
-                      InputProps={{
-                        endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                      }}
-                    />
-                  )}
+                  name="descuento_porcentaje"
+                  label="Descuento (%)"
+                  type="number"
+                  disabled={loading}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                  }}
                 />
               )}
 
               {watchTipoDescuento === TIPO_DESCUENTO.MONTO_FIJO && (
-                <Controller
-                  name="descuento_monto"
+                <FormInput
                   control={form.control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label="Descuento (Monto)"
-                      type="number"
-                      required
-                      disabled={loading}
-                      value={field.value ?? ''}
-                      onChange={(e) => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))}
-                      error={!!form.formState.errors.descuento_monto}
-                      helperText={form.formState.errors.descuento_monto?.message}
-                      InputProps={{
-                        startAdornment: <InputAdornment position="start">Bs.</InputAdornment>,
-                      }}
-                    />
-                  )}
+                  name="descuento_monto"
+                  label="Descuento (Monto)"
+                  type="number"
+                  disabled={loading}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">Bs.</InputAdornment>,
+                  }}
                 />
               )}
 
-              <Controller
-                name="razon_descuento"
+              <FormAutocomplete
                 control={form.control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    select
-                    fullWidth
-                    label="Razón del Descuento"
-                    disabled={loading}
-                  >
-                    {Object.entries(RAZON_DESCUENTO_LABELS).map(([value, label]) => (
-                      <MenuItem key={value} value={value}>{label}</MenuItem>
-                    ))}
-                  </TextField>
-                )}
+                name="razon_descuento"
+                label="Razón del Descuento"
+                options={RAZON_DESCUENTO_OPTIONS}
+                disabled={loading}
+                required
               />
             </Box>
           </Stack>

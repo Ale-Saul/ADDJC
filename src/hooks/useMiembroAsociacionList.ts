@@ -3,7 +3,7 @@ import { MiembroAsociacion } from '@/models/asociacion'
 import { asociacionController } from '@/controllers/asociacionController'
 import { useEntityList } from './useEntityList'
 
-export function useMiembroAsociacionList(initialSearch: string = '') {
+export function useMiembroAsociacionList(initialSearch: string = '', refreshTrigger: number = 0) {
   const filterFn = useCallback((m: MiembroAsociacion, filters: Record<string, string>, search: string) => {
     const matchCargo = filters.cargo === 'all' || m.cargo === filters.cargo
     const matchEstado = filters.estado === 'all' || (filters.estado === 'activo' ? m.activo : !m.activo)
@@ -12,13 +12,14 @@ export function useMiembroAsociacionList(initialSearch: string = '') {
       m.nombres?.toLowerCase().includes(normalizedSearch) ||
       m.apellidos?.toLowerCase().includes(normalizedSearch) ||
       m.ci?.toLowerCase().includes(normalizedSearch) ||
+      m.ci_extension?.toLowerCase().includes(normalizedSearch) ||
       m.cargo?.toLowerCase().includes(normalizedSearch))
 
     return Boolean(matchCargo && matchEstado && matchSearch)
   }, [])
 
   const entityList = useEntityList<MiembroAsociacion>({
-    queryKey: ['miembros-asociacion'],
+    queryKey: ['miembros-asociacion', refreshTrigger.toString()],
     fetchItems: async () => await asociacionController.getAllMiembros(true),
     updateItemStatus: async (id, activo) => {
       const resp = await asociacionController.updateMiembro(id, { activo } as any)
@@ -48,9 +49,7 @@ export function useMiembroAsociacionList(initialSearch: string = '') {
     }
   }, [entityList])
 
-  const loadMiembros = useCallback(async () => {
-    await entityList.loadItems()
-  }, [entityList])
+  const loadMiembros = entityList.loadItems
 
   return {
     state,

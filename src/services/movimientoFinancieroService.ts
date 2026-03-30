@@ -47,7 +47,7 @@ export async function getAllMovimientos(): Promise<MovimientoFinanciero[]> {
   const { data, error } = await supabase
     .from('movimientos_financieros')
     .select(`
-      *,
+      id, tipo, categoria, monto, concepto, descripcion, fecha, origen_club_id, origen_entidad, comprobante_url, comprobante_nombre, estado, activo, notas, created_at, updated_at, created_by,
       clubes:origen_club_id (
         nombre_club
       ),
@@ -100,7 +100,7 @@ export async function getMovimientosByDateRange(
   const { data, error } = await supabase
     .from('movimientos_financieros')
     .select(`
-      *,
+      id, tipo, categoria, monto, concepto, descripcion, fecha, origen_club_id, origen_entidad, comprobante_url, comprobante_nombre, estado, activo, notas, created_at, updated_at, created_by,
       clubes:origen_club_id (
         nombre_club
       ),
@@ -151,7 +151,7 @@ export async function getMovimientoById(id: string): Promise<MovimientoFinancier
   const { data, error } = await supabase
     .from('movimientos_financieros')
     .select(`
-      *,
+      id, tipo, categoria, monto, concepto, descripcion, fecha, origen_club_id, origen_entidad, comprobante_url, comprobante_nombre, estado, activo, notas, created_at, updated_at, created_by,
       clubes:origen_club_id (
         nombre_club
       ),
@@ -212,7 +212,7 @@ export async function createMovimiento(
       created_by: userId,
     })
     .select(`
-      *,
+      id, tipo, categoria, monto, concepto, descripcion, fecha, origen_club_id, origen_entidad, comprobante_url, comprobante_nombre, estado, activo, notas, created_at, updated_at, created_by,
       clubes:origen_club_id (
         nombre_club
       ),
@@ -265,7 +265,7 @@ export async function updateMovimiento(
     .update(updates)
     .eq('id', id)
     .select(`
-      *,
+      id, tipo, categoria, monto, concepto, descripcion, fecha, origen_club_id, origen_entidad, comprobante_url, comprobante_nombre, estado, activo, notas, created_at, updated_at, created_by,
       clubes:origen_club_id (
         nombre_club
       ),

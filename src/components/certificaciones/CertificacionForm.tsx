@@ -10,16 +10,27 @@ import {
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
+import { FormInput, FormDatePicker } from '@/components/ui'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Certificacion, CertificacionCreate, CertificacionUpdate } from '@/models/certificacion'
 import { certificacionController } from '@/controllers/certificacionController'
 import { storageService } from '@/services/storageService'
 
+import {
+  formatNameInput,
+  formatNameWithNumbersInput
+} from '@/utils/formatters'
+
 const certificacionSchema = z.object({
-  nombre_certificacion: z.string().min(1, 'El nombre es requerido'),
-  descripcion: z.string().nullable().optional(),
+  nombre_certificacion: z.string()
+    .min(1, 'El nombre es requerido')
+    .transform(val => val.trim().replace(/\s+/g, ' ')),
+  descripcion: z.string()
+    .nullable()
+    .optional()
+    .transform(val => val ? val.trim().replace(/\s+/g, ' ') : val),
   fecha_emision: z.string().min(1, 'La fecha de emisión es requerida'),
   fecha_vencimiento: z.string().min(1, 'La fecha de vencimiento es requerida'),
   activo: z.boolean().default(true),
@@ -167,72 +178,37 @@ export default function CertificacionForm({
       {success && <Alert severity="success" sx={{ mb: 2 }}>{certificacion ? 'Actualizada' : 'Creada'} exitosamente</Alert>}
 
       <Stack spacing={2}>
-        <Controller
-          name="nombre_certificacion"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              onChange={(e) => {
-                field.onChange(e)
-                if (errors.nombre_certificacion) trigger('nombre_certificacion')
-              }}
-              onBlur={() => {
-                field.onBlur()
-                trigger('nombre_certificacion')
-              }}
-              fullWidth
-              label="Nombre de la Certificación"
-              required
-              disabled={loading || uploading}
-              error={!!errors.nombre_certificacion}
-              helperText={errors.nombre_certificacion?.message}
-            />
-          )}
+          <FormInput
+            name="nombre_certificacion"
+            control={control}
+            label="Nombre de la Certificación"
+            required
+            disabled={loading || uploading}
+            formatValue={formatNameWithNumbersInput}
+          />
+
+          <FormInput
+            name="descripcion"
+            control={control}
+            label="Descripción"
+            multiline
+            rows={3}
+            disabled={loading || uploading}
+            formatValue={(val) => val.replace(/\s+/g, ' ')}
         />
 
-        <Controller
-          name="descripcion"
-          control={control}
-          render={({ field }) => (
-            <TextField {...field} fullWidth label="Descripción" multiline rows={3} disabled={loading || uploading} />
-          )}
+<FormDatePicker
+            name="fecha_emision"
+            control={control}
+            label="Fecha de Emisión"
+            disabled={loading || uploading}
         />
 
-        <Controller
-          name="fecha_emision"
-          control={control}
-          render={({ field }) => (
-            <DatePicker
-              label="Fecha de Emisión"
-              value={field.value ? dayjs(field.value) : null}
-              onChange={(v) => {
-                field.onChange(v ? v.format('YYYY-MM-DD') : '')
-                if (errors.fecha_emision) trigger('fecha_emision')
-              }}
-              disabled={loading || uploading}
-              slotProps={{ textField: { fullWidth: true, required: true, error: !!errors.fecha_emision, helperText: errors.fecha_emision?.message } }}
-              format="DD/MM/YYYY"
-            />
-          )}
-        />
-
-        <Controller
-          name="fecha_vencimiento"
-          control={control}
-          render={({ field }) => (
-            <DatePicker
-              label="Fecha de Vencimiento"
-              value={field.value ? dayjs(field.value) : null}
-              onChange={(v) => {
-                field.onChange(v ? v.format('YYYY-MM-DD') : '')
-                if (errors.fecha_vencimiento) trigger('fecha_vencimiento')
-              }}
-              disabled={loading || uploading}
-              slotProps={{ textField: { fullWidth: true, required: true, error: !!errors.fecha_vencimiento, helperText: errors.fecha_vencimiento?.message } }}
-              format="DD/MM/YYYY"
-            />
-          )}
+<FormDatePicker
+            name="fecha_vencimiento"
+            control={control}
+            label="Fecha de Vencimiento"
+            disabled={loading || uploading}
         />
 
         <Box>

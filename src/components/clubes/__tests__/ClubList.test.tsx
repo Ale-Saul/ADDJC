@@ -11,7 +11,7 @@ const mockClubs: Club[] = [
   {
     id: '1',
     nombre_club: 'Club Uno',
-    municipio: 'Municipio Uno',
+    provincia: 'Municipio Uno',
     direccion: 'Direccion Uno',
     telefono_contacto: '123456789',
     director_tecnico_id: 'user-s1',
@@ -22,7 +22,7 @@ const mockClubs: Club[] = [
   {
     id: '2',
     nombre_club: 'Club Dos',
-    municipio: 'Municipio Dos',
+    provincia: 'Municipio Dos',
     direccion: 'Direccion Dos',
     telefono_contacto: '987654321',
     director_tecnico_id: null,
@@ -100,3 +100,4 @@ describe('ClubList', () => {
     expect(onDelete).toHaveBeenCalledWith(mockClubs[0])
   })
 })
+

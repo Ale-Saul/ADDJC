@@ -70,6 +70,7 @@ export interface PagoUpdate {
   descuento_porcentaje?: number | null
   descuento_monto?: number | null
   razon_descuento?: RazonDescuento | null
+  monto_final?: number
   estado?: EstadoPago
   fecha_vencimiento?: string
   fecha_pago?: string | null

@@ -1,13 +1,15 @@
 import { storageService } from '../storageService'
-import { supabase } from '@/lib/supabase'
+
+// Instancia mock de Supabase
+const mockSupabaseInstance = {
+  storage: {
+    from: jest.fn(),
+  },
+}
 
 // Mock de Supabase
-jest.mock('@/lib/supabase', () => ({
-  supabase: {
-    storage: {
-      from: jest.fn(),
-    },
-  },
+jest.mock('@/lib/supabase/client', () => ({
+  createClient: jest.fn(() => mockSupabaseInstance)
 }))
 
 describe('storageService', () => {
@@ -25,7 +27,7 @@ describe('storageService', () => {
       getPublicUrl: jest.fn(),
     }
 
-    ;(supabase.storage.from as jest.Mock).mockReturnValue(mockStorage)
+    ;(mockSupabaseInstance.storage.from as jest.Mock).mockReturnValue(mockStorage)
   })
 
   describe('uploadFile', () => {
@@ -193,7 +195,7 @@ describe('storageService', () => {
       const url = storageService.getPublicUrl('certificaciones', 'file.pdf')
 
       expect(url).toBe(mockUrl)
-      expect(supabase.storage.from).toHaveBeenCalledWith('certificaciones')
+      expect(mockSupabaseInstance.storage.from).toHaveBeenCalledWith('certificaciones')
       expect(mockStorage.getPublicUrl).toHaveBeenCalledWith('file.pdf')
     })
 
@@ -209,7 +211,7 @@ describe('storageService', () => {
         const result = storageService.getPublicUrl(bucket, path)
         
         expect(result).toBe(url)
-        expect(supabase.storage.from).toHaveBeenCalledWith(bucket)
+        expect(mockSupabaseInstance.storage.from).toHaveBeenCalledWith(bucket)
         expect(mockStorage.getPublicUrl).toHaveBeenCalledWith(path)
       })
     })

@@ -1,8 +1,8 @@
 import { senseiService } from '@/services/senseiService'
 import { Sensei, SenseiCreate, SenseiUpdate } from '@/models/sensei'
-import { ApiResponse } from '@/types'
+import { ApiResponse } from '@/types/globales'
 import { generarPasswordInicial } from '@/utils/passwordUtils'
-import { personNamesCreateSchema, personNamesUpdateSchema } from '@/utils/zodSchemas'
+import { personNamesCreateSchema, personNamesUpdateSchema } from '@/schemas/globales'
 
 export const senseiController = {
   /**

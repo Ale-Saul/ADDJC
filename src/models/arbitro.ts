@@ -9,6 +9,7 @@ export interface Arbitro {
   fecha_nacimiento: string | null
   numero_celular?: string | null
   ci?: string | null
+  ci_extension?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   nivel_arbitraje: string | null
   /** ID de la certificación principal (FK a certificaciones) */
@@ -17,6 +18,7 @@ export interface Arbitro {
   certificacion?: string | null
   avatar_url?: string | null
   activo: boolean
+  total_certificaciones?: number
   created_at: string
   updated_at: string
 }
@@ -31,6 +33,7 @@ export interface ArbitroCreate {
   fecha_nacimiento?: string | null
   numero_celular?: string | null
   ci?: string | null
+  ci_extension?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   nivel_arbitraje?: string | null
   certificacion_id?: string | null
@@ -46,6 +49,7 @@ export interface ArbitroUpdate {
   fecha_nacimiento?: string | null
   numero_celular?: string | null
   ci?: string | null
+  ci_extension?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   nivel_arbitraje?: string | null
   certificacion_id?: string | null

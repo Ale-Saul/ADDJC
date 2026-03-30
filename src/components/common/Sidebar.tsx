@@ -149,7 +149,7 @@ export default function Sidebar() {
       label: 'Senseis',
       path: '/senseis',
       icon: <SchoolIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.SENSEI] // Admin, asociación, encargados y senseis (solo lectura)
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.SENSEI, ROL.JUDOKA] // Admin, asociación, encargados, senseis y judokas (solo lectura)
     },
     {
       label: 'Judokas',

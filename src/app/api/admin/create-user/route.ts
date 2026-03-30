@@ -86,6 +86,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Verificar unicidad de CI + extensión antes de crear el usuario
+    if (ciBody) {
+      const ciExtension = body.ci_extension?.trim() || null
+
+      let query = supabaseAdmin
+        .from('usuarios')
+        .select('id')
+        .eq('ci', ciBody)
+      
+      if (ciExtension) {
+        query = query.eq('ci_extension', ciExtension)
+      } else {
+        query = query.or('ci_extension.is.null,ci_extension.eq.')
+      }
+
+      const { data: existingUsers } = await query.limit(1)
+
+      if (existingUsers && existingUsers.length > 0) {
+        const extLabel = ciExtension ? `-${ciExtension}` : ''
+        return NextResponse.json(
+          { success: false, error: `Ya existe un usuario registrado con el Carnet de Identidad ${ciBody}${extLabel}` },
+          { status: 400 }
+        )
+      }
+    }
+
     // Crear usuario usando Admin API (auto-confirmado)
     // El trigger handle_new_user crea la fila en usuarios usando estos metadata
     let authData, authError
@@ -97,9 +123,10 @@ export async function POST(request: NextRequest) {
         apellido_materno: apellidoMaterno,
         fecha_nacimiento: fechaNacimiento,
         genero,
-        numero_celular: numeroCelularBody,
-        ci: ciBody,
-        user_type: rol === 'encargado' ? 'sensei' : rol === 'admin' ? 'admin' : rol || 'judoka',
+      numero_celular: numeroCelularBody,
+      ci: ciBody,
+      ci_extension: body.ci_extension,
+      user_type: rol === 'encargado' ? 'sensei' : rol === 'admin' ? 'admin' : rol || 'judoka',
         rol: rol || 'judoka',
         debe_cambiar_password: true,
       }
@@ -129,9 +156,9 @@ export async function POST(request: NextRequest) {
       // Mensaje de error más descriptivo
       let errorMessage = authError.message || 'Error desconocido'
       
-      // Si el error viene de la base de datos (trigger o tabla usuarios)
-      if (authError.message?.includes('Database error')) {
-        // Intentar extraer el mensaje de error de Postgres si está disponible
+      if (authError.message?.includes('usuarios_ci_ci_extension_key') || authError.message?.includes('duplicate key')) {
+        errorMessage = `Ya existe un usuario registrado con este Carnet de Identidad y extensión`
+      } else if (authError.message?.includes('Database error')) {
         errorMessage = `Error de base de datos al crear el perfil: ${authError.message}. Esto suele ser causado por el trigger 'handle_new_user' fallando. Revisa los logs de Supabase -> Database -> Error Logs.`
       }
       
@@ -141,7 +168,7 @@ export async function POST(request: NextRequest) {
           success: false, 
           error: errorMessage,
           details: authError.message,
-          code: (authError as any).code
+          code: (authError as {code?: string}).code
         },
         { status: 400 }
       )
@@ -172,9 +199,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Actualizar campos adicionales en usuarios que podrían no haber sido mapeados por el trigger
-    const updateData: any = {}
+    const updateData: Record<string, unknown> = {}
     if (numeroCelularBody) updateData.numero_celular = numeroCelularBody
     if (ciBody) updateData.ci = ciBody
+    if (body.ci_extension) updateData.ci_extension = body.ci_extension
 
     if (Object.keys(updateData).length > 0) {
       await supabaseAdmin
@@ -201,7 +229,8 @@ export async function POST(request: NextRequest) {
 
     // Enviar correo de bienvenida con credenciales
     if (ciBody && password) {
-      const emailHtml = getWelcomeEmailTemplate(nombresTrimmed, ciBody, password)
+      const ciConExtension = body.ci_extension ? `${ciBody}-${body.ci_extension}` : ciBody
+      const emailHtml = getWelcomeEmailTemplate(nombresTrimmed, ciConExtension, password)
       sendEmail({
         to: email,
         subject: 'Bienvenido a la Asociación de Judo - Credenciales de Acceso',

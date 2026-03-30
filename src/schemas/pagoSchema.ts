@@ -120,3 +120,56 @@ export const updatePagoSchema = z.object({
   activo: z.boolean().optional(),
   monto_final: z.number().optional()
 })
+
+export const pagoMasivoSchema = z.object({
+  tipo_pago: z.string().min(1, 'El tipo de pago es requerido'),
+  concepto: z.string().min(1, 'El concepto es requerido'),
+  descripcion: z.string().optional().nullable(),
+  monto_base: z.union([z.number(), z.string()])
+    .refine(val => val !== '' && val !== undefined && val !== null, 'El monto base es requerido')
+    .transform(val => typeof val === 'string' ? parseFloat(val.replace(',', '.')) : val)
+    .pipe(z.number().positive('El monto base debe ser mayor a 0')),
+  fecha_vencimiento: z.string().min(1, 'La fecha de vencimiento es requerida'),
+  tiene_descuento: z.boolean().default(false),
+  tipo_descuento: z.string().optional().nullable(),
+  descuento_porcentaje: z.union([z.number(), z.string()])
+    .nullable()
+    .optional()
+    .transform(val => (val === '' || val === undefined || val === null) ? null : typeof val === 'string' ? parseFloat(val.replace(',', '.')) : val)
+    .pipe(z.number().min(0).max(100).nullable()),
+  descuento_monto: z.union([z.number(), z.string()])
+    .nullable()
+    .optional()
+    .transform(val => (val === '' || val === undefined || val === null) ? null : typeof val === 'string' ? parseFloat(val.replace(',', '.')) : val)
+    .pipe(z.number().min(0).nullable()),
+  razon_descuento: z.string().optional().nullable(),
+})
+
+export const editarPagoSchema = z.object({
+  tipo_pago: z.string().min(1, 'El tipo de pago es requerido'),
+  concepto: z.string().min(1, 'El concepto es requerido'),
+  descripcion: z.string().optional().nullable(),
+  monto_base: z.union([z.number(), z.string()])
+    .refine(val => val !== '' && val !== undefined && val !== null, 'El monto base es requerido')
+    .transform(val => typeof val === 'string' ? parseFloat(val.replace(',', '.')) : val)
+    .pipe(z.number().min(0, 'El monto debe ser mayor o igual a 0')),
+  fecha_vencimiento: z.string().min(1, 'La fecha de vencimiento es requerida'), 
+  tiene_descuento: z.boolean().default(false),
+  tipo_descuento: z.string().optional().nullable(),
+  descuento_porcentaje: z.union([z.number(), z.string()])
+    .nullable()
+    .optional()
+    .transform(val => (val === '' || val === undefined || val === null) ? null : typeof val === 'string' ? parseFloat(val.replace(',', '.')) : val)
+    .pipe(z.number().min(0, 'El descuento debe ser mayor o igual a 0').max(100, 'El porcentaje no puede ser mayor a 100').nullable()),       
+  descuento_monto: z.union([z.number(), z.string()])
+    .nullable()
+    .optional()
+    .transform(val => (val === '' || val === undefined || val === null) ? null : typeof val === 'string' ? parseFloat(val.replace(',', '.')) : val)
+    .pipe(z.number().min(0, 'El descuento debe ser mayor o igual a 0').nullable()),
+  razon_descuento: z.string().optional().nullable(),
+})
+
+export const registrarPagoSchema = z.object({
+  metodo_pago: z.string().min(1, 'El método de pago es requerido'),
+  observaciones_pago: z.string().optional().nullable(),
+})

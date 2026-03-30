@@ -1,6 +1,7 @@
-import { loginSchema, emailSchema, passwordSchema } from '@/utils/zodSchemas'
+import { z } from 'zod'
+import { loginSchema, emailSchema, passwordSchema, perfilSchema } from '@/schemas/globales'
 import { authService } from '@/services/authService'
-import { ApiResponse } from '@/types'
+import { ApiResponse } from '@/types/globales'
 import { LoginCredentials, SignUpData, User, AuthSession, UserRole } from '@/models/auth'
 import { ROL } from '@/constants/roles'
 
@@ -14,7 +15,7 @@ export const authController = {
     if (!validation.success) {
       return {
         success: false,
-        error: validation.error.errors[0].message,
+        error: validation.error.issues[0].message,
       }
     }
 
@@ -60,7 +61,7 @@ export const authController = {
     if (!emailResult.success) {
       return {
         success: false,
-        error: emailResult.error.errors[0].message,
+        error: emailResult.error.issues[0].message,
       }
     }
 
@@ -69,7 +70,7 @@ export const authController = {
     if (!pwdResult.success) {
       return {
         success: false,
-        error: pwdResult.error.errors[0].message,
+        error: pwdResult.error.issues[0].message,
       }
     }
 
@@ -123,7 +124,7 @@ export const authController = {
     if (!emailResult.success) {
       return {
         success: false,
-        error: emailResult.error.errors[0].message,
+        error: emailResult.error.issues[0].message,
       }
     }
 
@@ -145,7 +146,7 @@ export const authController = {
     if (!pwdResult.success) {
       return {
         success: false,
-        error: pwdResult.error.errors[0].message,
+        error: pwdResult.error.issues[0].message,
       }
     }
 
@@ -167,7 +168,7 @@ export const authController = {
     if (!pwdResult.success) {
       return {
         success: false,
-        error: pwdResult.error.errors[0].message,
+        error: pwdResult.error.issues[0].message,
       }
     }
 
@@ -192,18 +193,17 @@ export const authController = {
       }
     }
 
-    // Validaciones básicas
-    if (data.nombres && data.nombres.trim().length < 2) {
+    // Validaciones de negocio - Solo validamos lo que mandan (Partial)
+    const validation = z.object({
+      nombres: z.string().optional(),
+      apellido_paterno: z.string().optional(),
+      apellido_materno: z.string().optional(),
+      apellidos: z.string().optional()
+    }).safeParse(data)
+    if (!validation.success) {
       return {
         success: false,
-        error: 'El nombre debe tener al menos 2 caracteres',
-      }
-    }
-
-    if (data.apellidos && data.apellidos.trim().length < 2) {
-      return {
-        success: false,
-        error: 'Los apellidos deben tener al menos 2 caracteres',
+        error: validation.error.issues[0]?.message ?? 'Error de validación de perfil',
       }
     }
 
@@ -248,5 +248,6 @@ export const authController = {
     return authService.exchangeCodeForSession(code)
   },
 }
+
 
 

@@ -27,7 +27,8 @@ function stateReducer(state: State, action: Action): State {
     case 'CLEAR_FILTERS': return {
       ...state,
       filters: action.initialFilters,
-      globalFilter: action.initialSearch
+      globalFilter: action.initialSearch,
+      showFilters: false
     }
     default: return state
   }
@@ -52,6 +53,10 @@ export function useEntityList<T extends BaseEntity>({
 }: UseEntityListOptions<T>) {
   const queryClient = useQueryClient()
   
+  // Create a stable reference for the query key to avoid unnecessary hook recreations
+  const stableKeyString = useMemo(() => JSON.stringify(queryKey), [queryKey])
+  const stableQueryKey = useMemo(() => JSON.parse(stableKeyString), [stableKeyString])
+
   const [state, dispatch] = useReducer(stateReducer, {
     globalFilter: initialSearch,
     filters: initialFilters,
@@ -59,13 +64,20 @@ export function useEntityList<T extends BaseEntity>({
   })
 
   const { data: items = [], isLoading: loading, error: queryError } = useQuery({
-    queryKey,
+    queryKey: stableQueryKey,
     queryFn: async () => {
       const response = await fetchItems()
       if (!response.success) throw new Error(response.error || 'Error al cargar los datos')
-      return (response.data || []) as T[]
+      const data = (response.data || []) as T[]
+      // Sort initially: activos first, inactivos last
+      return [...data].sort((a, b) => {
+        const aActive = a.activo ?? true
+        const bActive = b.activo ?? true
+        if (aActive === bActive) return 0
+        return aActive ? -1 : 1
+      })
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0, // Desactivar caché para ver cambios inmediatos en desarrollo
   })
 
   const error = queryError ? (queryError instanceof Error ? queryError.message : String(queryError)) : null
@@ -78,24 +90,20 @@ export function useEntityList<T extends BaseEntity>({
       return { id, isActive }
     },
     onMutate: async ({ id, isActive }) => {
-      await queryClient.cancelQueries({ queryKey })
-      const previousItems = queryClient.getQueryData<T[]>(queryKey) || []
-      
-      queryClient.setQueryData<T[]>(queryKey, old => {
+      await queryClient.cancelQueries({ queryKey: stableQueryKey })
+      const previousItems = queryClient.getQueryData<T[]>(stableQueryKey) || []
+      queryClient.setQueryData<T[]>(stableQueryKey, old => {
         if (!old) return old
         return old.map(item => item.id === id ? { ...item, activo: isActive } : item)
       })
 
-      return { previousItems }
+      return { previousItems, stableQueryKey }
     },
     onError: (err, { id }, context) => {
-      if (context?.previousItems) {
-        queryClient.setQueryData(queryKey, context.previousItems)
+      if (context?.previousItems && context?.stableQueryKey) {
+        queryClient.setQueryData(context.stableQueryKey, context.previousItems)
       }
       alert('Error al cambiar el estado: ' + err.message)
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey })
     }
   })
 
@@ -123,31 +131,25 @@ export function useEntityList<T extends BaseEntity>({
   }, [initialSearch, initialFilters])
 
   const updateLocalItem = useCallback((id: string, data: Partial<T>) => {
-    queryClient.setQueryData<T[]>(queryKey, old => {
+    queryClient.setQueryData<T[]>(stableQueryKey, old => {
       if (!old) return old
       return old.map(item => item.id === id ? { ...item, ...data } : item)
     })
-  }, [queryClient, queryKey])
+  }, [queryClient, stableQueryKey])
 
   const deleteLocalItem = useCallback((id: string) => {
-    queryClient.setQueryData<T[]>(queryKey, old => {
+    queryClient.setQueryData<T[]>(stableQueryKey, old => {
       if (!old) return old
       return old.filter(item => item.id !== id)
     })
-  }, [queryClient, queryKey])
+  }, [queryClient, stableQueryKey])
 
   const loadItems = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey })
-  }, [queryClient, queryKey])
+    await queryClient.invalidateQueries({ queryKey: stableQueryKey })
+  }, [queryClient, stableQueryKey])
 
   const filteredData = useMemo(() => {
-    const filtered = items.filter(item => filterFn(item, state.filters, state.globalFilter.toLowerCase()))
-    return [...filtered].sort((a, b) => {
-      const aActive = a.activo ?? true
-      const bActive = b.activo ?? true
-      if (aActive === bActive) return 0
-      return aActive ? -1 : 1
-    })
+    return items.filter(item => filterFn(item, state.filters, state.globalFilter.toLowerCase()))
   }, [items, state.filters, state.globalFilter, filterFn])
 
   return {
@@ -159,7 +161,7 @@ export function useEntityList<T extends BaseEntity>({
       modifiedIds
     },
     items,
-    setItems: (newItems: T[]) => queryClient.setQueryData(queryKey, newItems),
+    setItems: (newItems: T[]) => queryClient.setQueryData(stableQueryKey, newItems),
     loadItems,
     toggleStatus,
     updateLocalItem,
@@ -171,3 +173,7 @@ export function useEntityList<T extends BaseEntity>({
     clearFilters,
   }
 }
+
+
+
+

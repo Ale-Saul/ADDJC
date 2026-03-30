@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { Certificacion, CertificacionCreate, CertificacionUpdate } from '@/models/certificacion'
-import { ApiResponse } from '@/types'
+import { ApiResponse } from '@/types/globales'
 
 export const certificacionService = {
   /**

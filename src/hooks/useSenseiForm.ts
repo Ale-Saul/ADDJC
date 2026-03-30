@@ -7,7 +7,8 @@ import { senseiController } from '@/controllers/senseiController'
 import { clubController } from '@/controllers/clubController'
 import { Club } from '@/models/club'
 import { User } from '@/models/auth'
-import { senseiSchema } from '@/utils/zodSchemas'
+import { senseiSchema } from '@/schemas/globales'
+import { formatters } from '@/utils/formatters'
 
 export function useSenseiForm(sensei?: Sensei | null, user?: User, onSuccess?: () => void) {
   const [clubes, setClubes] = useState<Club[]>([])
@@ -18,7 +19,7 @@ export function useSenseiForm(sensei?: Sensei | null, user?: User, onSuccess?: (
 
   const form = useForm({
     resolver: zodResolver(senseiSchema),
-    mode: 'onBlur',
+    mode: 'onTouched',
     reValidateMode: 'onChange',
     defaultValues: {
       club_id: sensei?.club_id || (user?.rol === 'encargado' && !sensei ? user?.club_id || '' : ''),
@@ -29,6 +30,7 @@ export function useSenseiForm(sensei?: Sensei | null, user?: User, onSuccess?: (
       fecha_nacimiento: null as string | null,
       numero_celular: '',
       ci: '',
+      ci_extension: '',
       genero: '',
       grado_dan: '',
       especialidad: '',
@@ -52,16 +54,16 @@ export function useSenseiForm(sensei?: Sensei | null, user?: User, onSuccess?: (
   useEffect(() => {
     if (sensei) {
       const s = sensei as Sensei
-      const apParts = s.apellidos?.trim().split(/\s+/) ?? []
       reset({
         club_id: s.club_id || '',
         nombres: s.nombres,
-        apellido_paterno: s.apellido_paterno ?? apParts[0] ?? '',
-        apellido_materno: s.apellido_materno ?? apParts.slice(1).join(' ') ?? '',
+        apellido_paterno: s.apellido_paterno || '',
+        apellido_materno: s.apellido_materno || '',
         email: s.email || '',
         fecha_nacimiento: s.fecha_nacimiento || null,
         numero_celular: s.numero_celular || '',
         ci: s.ci || '',
+        ci_extension: s.ci_extension || '',
         genero: s.genero || '',
         grado_dan: s.grado_dan || '',
         especialidad: s.especialidad || '',

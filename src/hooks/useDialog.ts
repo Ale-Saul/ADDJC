@@ -1,14 +1,10 @@
-/**
- * Hook para manejo de diálogos y modales
- */
-
 import { useState } from 'react'
 
-export function useDialog() {
+export function useDialog<T = any>() {
   const [isOpen, setIsOpen] = useState(false)
-  const [data, setData] = useState<any>(null)
+  const [data, setData] = useState<T | null>(null)
 
-  const open = (dialogData?: any) => {
+  const open = (dialogData?: T) => {
     if (dialogData !== undefined) {
       setData(dialogData)
     }

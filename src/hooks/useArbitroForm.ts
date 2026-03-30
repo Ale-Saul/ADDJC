@@ -4,7 +4,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Arbitro, ArbitroCreate, ArbitroUpdate } from '@/models/arbitro'
 import { arbitroController } from '@/controllers/arbitroController'
-import { arbitroSchema } from '@/utils/zodSchemas'
+import { arbitroSchema } from '@/schemas/globales'
+import { formatters } from '@/utils/formatters'
 
 export function useArbitroForm(arbitro?: Arbitro | null, onSuccess?: () => void) {
   const [loading, setLoading] = useState(false)
@@ -13,7 +14,7 @@ export function useArbitroForm(arbitro?: Arbitro | null, onSuccess?: () => void)
 
   const form = useForm({
     resolver: zodResolver(arbitroSchema),
-    mode: 'onChange',
+    mode: 'onTouched',
     reValidateMode: 'onChange',
     defaultValues: {
       nombres: '',
@@ -23,6 +24,7 @@ export function useArbitroForm(arbitro?: Arbitro | null, onSuccess?: () => void)
       fecha_nacimiento: null as string | null,
       numero_celular: '',
       ci: '',
+      ci_extension: '',
       genero: '',
       nivel_arbitraje: '',
       activo: true,
@@ -33,16 +35,16 @@ export function useArbitroForm(arbitro?: Arbitro | null, onSuccess?: () => void)
 
   useEffect(() => {
     if (arbitro) {
-      const ap = arbitro.apellidos?.trim().split(/\s+/) ?? []
       const a = arbitro as Arbitro
       reset({
         nombres: a.nombres,
-        apellido_paterno: a.apellido_paterno ?? ap[0] ?? '',
-        apellido_materno: a.apellido_materno ?? ap.slice(1).join(' ') ?? '',
+        apellido_paterno: a.apellido_paterno || '',
+        apellido_materno: a.apellido_materno || '',
         email: a.email || '',
         fecha_nacimiento: a.fecha_nacimiento || null,
         numero_celular: a.numero_celular || '',
         ci: a.ci || '',
+        ci_extension: a.ci_extension || '',
         genero: a.genero || '',
         nivel_arbitraje: a.nivel_arbitraje || '',
         activo: a.activo,

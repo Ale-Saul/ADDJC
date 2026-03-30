@@ -1,69 +1,46 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { z } from 'zod'
-import { useForm, Controller, type FieldErrors } from 'react-hook-form'
+import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import {
-  TextField,
-  Button,
-  Box,
-  Alert,
-  CircularProgress,
-  Typography,
-  Autocomplete,
-  Stack,
-  InputAdornment,
-  Chip,
-  Paper,
-} from '@mui/material'
-import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1'
-import PersonRemoveAlt1Icon from '@mui/icons-material/PersonRemoveAlt1'
-import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { z } from 'zod'
+import { Box, Button, Grid, Alert, CircularProgress } from '@mui/material'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
 
-dayjs.locale('es')
 import { Judoka, JudokaCreate, JudokaUpdate } from '@/models/judoka'
 import { judokaController } from '@/controllers/judokaController'
 import { clubController } from '@/controllers/clubController'
 import { senseiController } from '@/controllers/senseiController'
-import { Club } from '@/models/club'
-import { Sensei } from '@/models/sensei'
+import { judokaSchema } from '@/schemas/globales'
 import { useAuth } from '@/contexts/AuthContext'
-import { judokaSchema } from '@/utils/zodSchemas'
 import { ROL } from '@/constants/roles'
-import { formatCIInput, formatCelularInput, formatNameInput } from '@/utils/inputMasks'
-import { CATEGORIES, BELT_COLORS } from '@/utils/constants'
+import {
+  formatCIInput,
+  formatCIExtensionInput,
+  formatCelularInput,
+  formatNameInput
+} from '@/utils/formatters'
+import { CATEGORIES, BELT_COLORS, GENDERS_LIST } from '@/constants/globales'
+import { FormInput, FormAutocomplete, FormDatePicker } from '@/components/ui'
+
+dayjs.locale('es')
 
 interface JudokaFormProps {
   judoka?: Judoka | null
-  onSuccess?: () => void
-  onCancel?: () => void
+  onSuccess: () => void
+  onCancel: () => void
 }
 
 export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormProps) {
   const { user } = useAuth()
-  const [clubes, setClubes] = useState<Club[]>([])
-  const [senseis, setSenseis] = useState<Sensei[]>([])
   const [loading, setLoading] = useState(false)
-  const [loadingClubes, setLoadingClubes] = useState(true)
-  const [loadingSenseis, setLoadingSenseis] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-
-  // Configuración de React Hook Form con Zod
-  const {
-    control,
-    handleSubmit,
-    reset,
-    watch,
-    setFocus,
-    trigger,
-    formState: { errors },
-  } = useForm({
+  
+  const { control, handleSubmit, reset, watch, trigger } = useForm<z.infer<typeof judokaSchema>>({
     resolver: zodResolver(judokaSchema),
-    mode: 'onBlur',
+    mode: 'onTouched',
     reValidateMode: 'onChange',
     defaultValues: {
       club_id: '',
@@ -75,6 +52,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
       fecha_nacimiento: null as string | null,
       numero_celular: '',
       ci: '',
+      ci_extension: '',
       genero: '',
       categoria: '',
       cinturon_actual: '',
@@ -83,135 +61,27 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
   })
 
   const watchClubId = watch('club_id')
-  const watchEntrenadorId = watch('entrenador_id')
 
-  const fieldError = (name: keyof typeof errors) => {
-    return {
-      error: !!errors[name],
-      helperText: (errors[name] as { message?: string } | undefined)?.message,
-    }
-  }
-
-  const onError = useCallback((formErrors: FieldErrors<z.infer<typeof judokaSchema>>) => {
-    const errorKeys = Object.keys(formErrors) as (keyof z.infer<typeof judokaSchema>)[]
-    if (errorKeys.length > 0) {
-      const firstField = errorKeys[0]
-      setFocus(firstField, { shouldSelect: true })
-      setTimeout(() => {
-        const element = document.getElementsByName(firstField)[0]
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }
-      }, 100)
-    }
-  }, [setFocus])
-
-  // Opciones ordenadas
-  const sortedClubes = [...clubes].sort((a, b) => a.nombre_club.localeCompare(b.nombre_club))
-  const sortedSenseis = [...senseis].sort((a, b) => {
-    const nameA = (a.nombres + ' ' + (a.apellidos || '')).trim()
-    const nameB = (b.nombres + ' ' + (b.apellidos || '')).trim()
-    return nameA.localeCompare(nameB)
+  const { data: clubesResponse, isLoading: loadingClubes } = useQuery({
+    queryKey: ['clubes', 'all'],
+    queryFn: () => clubController.getAllClubes(false),
   })
-  const generos = ["Masculino", "Femenino", "Prefiero no decir"]
-  const categorias = [...CATEGORIES]
-  const cinturones = [...BELT_COLORS]
+  const clubes = clubesResponse?.success && clubesResponse?.data ? clubesResponse.data : []
 
-  // Mapa de colores para los cinturones
-  const beltColorMap: Record<string, string> = {
-    'Blanco': '#FFFFFF',
-    'Amarillo': '#FFEB3B',
-    'Naranja': '#FF9800',
-    'Verde': '#4CAF50',
-    'Azul': '#2196F3',
-    'Café': '#795548',
-    'Negro': '#212121',
-  }
+  const { data: senseisResponse, isLoading: loadingSenseis } = useQuery({
+    queryKey: ['senseis', 'byClub', watchClubId],
+    queryFn: () => senseiController.getSenseisByClub(watchClubId as string),
+    enabled: !!watchClubId,
+  })
+  const senseis = senseisResponse?.success && senseisResponse?.data ? senseisResponse.data : []
 
-  useEffect(() => {
-    const loadClubes = async () => {
-      const response = await clubController.getAllClubes(false)
-      if (response.success && response.data) {
-        setClubes(response.data)
-      }
-      setLoadingClubes(false)
-    }
-    loadClubes()
-  }, [])
-
-  // Cargar senseis cuando se selecciona un club
-  useEffect(() => {
-    const loadSenseis = async () => {
-      if (watchClubId) {
-        setLoadingSenseis(true)
-        const response = await senseiController.getSenseisByClub(watchClubId)
-        if (response.success && response.data) {
-          setSenseis(response.data)
-        } else {
-          setSenseis([])
-        }
-        setLoadingSenseis(false)
-      } else {
-        setSenseis([])
-      }
-    }
-    loadSenseis()
-  }, [watchClubId])
-
-  useEffect(() => {
-    if (judoka) {
-      reset({
-        club_id: judoka.club_id || '',
-        entrenador_id: judoka.entrenador_id || '',
-        nombres: judoka.nombres || '',
-        apellido_paterno: judoka.apellido_paterno ?? judoka.apellidos?.trim().split(/\s+/)[0] ?? '',
-        apellido_materno: judoka.apellido_materno ?? judoka.apellidos?.trim().split(/\s+/).slice(1).join(' ') ?? '',
-        email: judoka.email || '',
-        fecha_nacimiento: judoka.fecha_nacimiento || null,
-        numero_celular: judoka.numero_celular || '',
-        ci: judoka.ci || '',
-        genero: judoka.genero || '',
-        categoria: judoka.categoria || '',
-        cinturon_actual: judoka.cinturon_actual || '',
-        activo: judoka.activo,
-      })
-    }
-  }, [judoka, reset])
-
-  // Pre-completar club si es sensei o encargado (solo en creación)
-  useEffect(() => {
-    if (!judoka && user && user.club_id) {
-      if (user.rol === ROL.SENSEI) {
-        reset(prev => ({
-          ...prev,
-          club_id: user.club_id!,
-          entrenador_id: user.sensei_id || ''
-        }))
-      } else if (user.rol === ROL.ENCARGADO) {
-        reset(prev => ({
-          ...prev,
-          club_id: user.club_id!
-        }))
-      }
-    }
-  }, [judoka, user, reset])
-
-  // Lógica para encargado editando judokas
-  const isEncargado = user?.rol === ROL.ENCARGADO
+  const isClubManager = user?.rol === ROL.ENCARGADO
   const isSensei = user?.rol === ROL.SENSEI
-  const isEditing = !!judoka
-  const judokaHasNoClub = isEditing && !watchClubId
-  const judokaInMyClub = isEditing && watchClubId === user?.club_id
-  const judokaIsMyStudent = judokaInMyClub && watchEntrenadorId === user?.sensei_id
 
   const onSubmit = async (data: z.infer<typeof judokaSchema>) => {
     setLoading(true)
     setError(null)
-    setSuccess(false)
-
     try {
-      let response
-      
       const payload = {
         ...data,
         club_id: data.club_id || null,
@@ -225,594 +95,215 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         cinturon_actual: data.cinturon_actual || null,
       }
 
+      let response
       if (judoka) {
         response = await judokaController.updateJudoka(judoka.id, payload as JudokaUpdate)
       } else {
-        // En creación el usuario_id será manejado por el controlador/servicio
         response = await judokaController.createJudoka(payload as JudokaCreate)
       }
 
       if (response.success) {
-        setSuccess(true)
-        if (onSuccess) {
-          setTimeout(() => {
-            onSuccess()
-          }, 500)
-        }
+        onSuccess()
       } else {
         setError(response.error || 'Error al guardar el judoka')
       }
     } catch (err: any) {
-      setError(err instanceof Error ? err.message : 'Error inesperado')
+      setError(err.message || 'Error inesperado al guardar')
     } finally {
       setLoading(false)
     }
   }
 
+  useEffect(() => {
+    if (judoka) {
+      reset({
+        club_id: judoka.club_id || '',
+        entrenador_id: judoka.entrenador_id || '',
+        nombres: judoka.nombres || '',
+        apellido_paterno: judoka.apellido_paterno || '',
+        apellido_materno: judoka.apellido_materno || '',
+        email: judoka.email || '',
+        fecha_nacimiento: judoka.fecha_nacimiento || null,
+        numero_celular: judoka.numero_celular || '',
+        ci: judoka.ci || '',
+        ci_extension: judoka.ci_extension || '',
+        genero: judoka.genero || '',
+        categoria: judoka.categoria || '',
+        cinturon_actual: judoka.cinturon_actual || '',
+        activo: judoka.activo ?? true,
+      })
+    } else if (isSensei) {
+      // Pre-seleccionar club y sensei solo para el rol SENSEI
+      reset({
+        club_id: user?.club_id || '',
+        entrenador_id: user?.sensei_id || '',
+        nombres: '',
+        apellido_paterno: '',
+        apellido_materno: '',
+        email: '',
+        fecha_nacimiento: null,
+        numero_celular: '',
+        ci: '',
+        ci_extension: '',
+        genero: '',
+        categoria: '',
+        cinturon_actual: '',
+        activo: true,
+      })
+    }
+  }, [judoka, reset, isSensei, user?.club_id, user?.sensei_id])
+
   return (
-    <Box component="form" onSubmit={handleSubmit(onSubmit, onError)} noValidate sx={{ mt: 2 }}>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
+    <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 1 }}>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {judoka ? 'Judoka actualizado exitosamente' : 'Judoka creado exitosamente'}
-        </Alert>
-      )}
-
-      <Stack spacing={2}>
-        <Controller
-          name="club_id"
-          control={control}
-          render={({ field }) => (
-            <Autocomplete
-              {...field}
-              options={sortedClubes}
-              getOptionLabel={(option) => 
-                typeof option === 'string' 
-                  ? sortedClubes.find(c => c.id === option)?.nombre_club || ''
-                  : option.nombre_club
-              }
-              isOptionEqualToValue={(option, value) => 
-                typeof value === 'string' ? option.id === value : option.id === value?.id
-              }
-              value={sortedClubes.find(c => c.id === field.value) || null}
-              onChange={(_, newValue) => {
-                field.onChange(newValue ? newValue.id : '')
-              }}
-              disabled={loading || loadingClubes || user?.rol === ROL.SENSEI || isEncargado}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Club"
-                  error={fieldError('club_id').error}
-                  helperText={fieldError('club_id').helperText}
-                  placeholder="Escribe para buscar club..."
-                />
-              )}
-              noOptionsText="No se encontraron clubes"
-              loadingText="Cargando clubes..."
-            />
-          )}
-        />
-        {(user?.rol === ROL.SENSEI || (isEncargado && !isEditing)) && (
-          <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5, mb: 1, ml: 1 }}>
-            Los judokas se crearán automáticamente en tu club
-          </Typography>
-        )}
-        {isEncargado && isEditing && judokaHasNoClub && user?.club_id && (
-          <Paper
-            variant="outlined"
-            sx={{
-              mt: -1,
-              mb: 1,
-              mx: 0,
-              px: 2,
-              py: 1.2,
-              borderRadius: 2,
-              borderColor: 'primary.light',
-              bgcolor: 'primary.50',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <Typography variant="body2" color="text.secondary">
-              Este judoka no pertenece a ningún club
-            </Typography>
-            <Button
-              size="small"
-              variant="contained"
-              color="primary"
-              startIcon={<PersonAddAlt1Icon fontSize="small" />}
-              onClick={() => {
-                reset(prev => ({ ...prev, club_id: user.club_id! }))
-              }}
-              sx={{ textTransform: 'none', borderRadius: 2, whiteSpace: 'nowrap', ml: 2 }}
-            >
-              Inscribir en {user.club_nombre || 'mi club'}
-            </Button>
-          </Paper>
-        )}
-        {isEncargado && judokaInMyClub && (
-          <Paper
-            variant="outlined"
-            sx={{
-              mt: -1,
-              mb: 1,
-              px: 2,
-              py: 1.2,
-              borderRadius: 2,
-              borderColor: 'error.light',
-              bgcolor: 'error.50',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Chip
-                label={user?.club_nombre || 'Mi club'}
-                color="primary"
-                size="small"
-                sx={{ fontWeight: 500 }}
-              />
-              <Typography variant="body2" color="text.secondary">
-                inscrito en tu club
-              </Typography>
-            </Box>
-            <Button
-              size="small"
-              variant="outlined"
-              color="error"
-              startIcon={<PersonRemoveAlt1Icon fontSize="small" />}
-              onClick={() => {
-                reset(prev => ({ ...prev, club_id: '', entrenador_id: '' }))
-              }}
-              sx={{ textTransform: 'none', borderRadius: 2, whiteSpace: 'nowrap', ml: 2 }}
-            >
-              Quitar del club
-            </Button>
-          </Paper>
-        )}
-
-        {/* Panels para SENSEI */}
-        <Controller
-          name="entrenador_id"
-          control={control}
-          render={({ field }) => (
-            <Autocomplete
-              {...field}
-              options={sortedSenseis}
-              getOptionLabel={(option) => 
-                typeof option === 'string' 
-                  ? (sortedSenseis.find(s => s.id === option)?.nombres + ' ' + (sortedSenseis.find(s => s.id === option)?.apellidos || '')).trim()
-                  : (option.nombres + ' ' + (option.apellidos || '')).trim()
-              }
-              isOptionEqualToValue={(option, value) => 
-                typeof value === 'string' ? option.id === value : option.id === value?.id
-              }
-              value={sortedSenseis.find(s => s.id === field.value) || null}
-              onChange={(_, newValue) => {
-                field.onChange(newValue ? newValue.id : '')
-              }}
-              disabled={loading || loadingSenseis || !watchClubId || user?.rol === ROL.SENSEI}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Entrenador"
-                  error={fieldError('entrenador_id').error}
-                  helperText={fieldError('entrenador_id').helperText}
-                  placeholder={!watchClubId ? "Selecciona un club primero" : "Escribe para buscar entrenador..."}
-                />
-              )}
-              noOptionsText="No se encontraron entrenadores"
-              loadingText="Cargando entrenadores..."
-            />
-          )}
-        />
-        {isSensei && isEditing && judokaHasNoClub && user?.club_id && (
-          <Paper
-            variant="outlined"
-            sx={{
-              mt: -1,
-              mb: 1,
-              px: 2,
-              py: 1.2,
-              borderRadius: 2,
-              borderColor: 'primary.light',
-              bgcolor: 'primary.50',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <Typography variant="body2" color="text.secondary">
-              Este judoka no pertenece a ningún club
-            </Typography>
-            <Button
-              size="small"
-              variant="contained"
-              color="primary"
-              startIcon={<PersonAddAlt1Icon fontSize="small" />}
-              onClick={() => {
-                reset(prev => ({ ...prev, club_id: user.club_id!, entrenador_id: user.sensei_id || '' }))
-              }}
-              sx={{ textTransform: 'none', borderRadius: 2, whiteSpace: 'nowrap', ml: 2 }}
-            >
-              Inscribir en {user.club_nombre || 'mi club'}
-            </Button>
-          </Paper>
-        )}
-        {isSensei && isEditing && judokaInMyClub && !watchEntrenadorId && (
-          <Paper
-            variant="outlined"
-            sx={{
-              mt: -1,
-              mb: 1,
-              px: 2,
-              py: 1.2,
-              borderRadius: 2,
-              borderColor: 'success.light',
-              bgcolor: 'success.50',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Chip
-                label={user?.club_nombre || 'Mi club'}
-                color="primary"
-                size="small"
-                sx={{ fontWeight: 500 }}
-              />
-              <Typography variant="body2" color="text.secondary">
-                sin entrenador asignado
-              </Typography>
-            </Box>
-            <Button
-              size="small"
-              variant="contained"
-              color="success"
-              startIcon={<PersonAddAlt1Icon fontSize="small" />}
-              onClick={() => {
-                reset(prev => ({ ...prev, entrenador_id: user.sensei_id || '' }))
-              }}
-              sx={{ textTransform: 'none', borderRadius: 2, whiteSpace: 'nowrap', ml: 2 }}
-            >
-              Tomar a mi cargo
-            </Button>
-          </Paper>
-        )}
-        {isSensei && judokaIsMyStudent && (
-          <Paper
-            variant="outlined"
-            sx={{
-              mt: -1,
-              mb: 1,
-              px: 2,
-              py: 1.2,
-              borderRadius: 2,
-              borderColor: 'error.light',
-              bgcolor: 'error.50',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Chip
-                label={user?.club_nombre || 'Mi club'}
-                color="primary"
-                size="small"
-                sx={{ fontWeight: 500 }}
-              />
-              <Typography variant="body2" color="text.secondary">
-                a tu cargo
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
-              <Button
-                size="small"
-                variant="outlined"
-                color="warning"
-                startIcon={<PersonRemoveAlt1Icon fontSize="small" />}
-                onClick={() => {
-                  reset(prev => ({ ...prev, entrenador_id: '' }))
-                }}
-                sx={{ textTransform: 'none', borderRadius: 2, whiteSpace: 'nowrap' }}
-              >
-                Quitar de mi cargo
-              </Button>
-              <Button
-                size="small"
-                variant="outlined"
-                color="error"
-                startIcon={<PersonRemoveAlt1Icon fontSize="small" />}
-                onClick={() => {
-                  reset(prev => ({ ...prev, club_id: '', entrenador_id: '' }))
-                }}
-                sx={{ textTransform: 'none', borderRadius: 2, whiteSpace: 'nowrap' }}
-              >
-                Desinscribir del club
-              </Button>
-            </Box>
-          </Paper>
-        )}
-        {user?.rol === ROL.SENSEI && !judokaIsMyStudent ? (
-          <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5, mb: 1, ml: 1 }}>
-            Serás asignado automáticamente como entrenador
-          </Typography>
-        ) : !isSensei && !watchClubId && (
-          <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5, mb: 1, ml: 1 }}>
-            Selecciona un club primero para ver los entrenadores disponibles
-          </Typography>
-        )}
-
-        <Controller
-          name="ci"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Carnet de Identidad"
-              required
-              disabled={loading}
-              {...fieldError('ci')}
-              onChange={(e) => { field.onChange(formatCIInput(e.target.value)); if (errors.ci) trigger('ci') }}
-            />
-          )}
-        />
-
-        <Controller
-          name="nombres"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Nombres"
-              required
-              disabled={loading}
-              {...fieldError('nombres')}
-              onChange={(e) => { field.onChange(formatNameInput(e.target.value)); if (errors.nombres) trigger('nombres') }}
-            />
-          )}
-        />
-
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Controller
-            name="apellido_paterno"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                fullWidth
-                label="Apellido Paterno"
-                disabled={loading}
-                {...fieldError('apellido_paterno')}
-                onChange={(e) => { field.onChange(formatNameInput(e.target.value)); if (errors.apellido_paterno) trigger('apellido_paterno'); if (errors.apellido_materno) trigger('apellido_materno') }}
-              />
-            )}
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 8 }}>
+          <FormInput 
+            name="ci" 
+            label="Carnet de Identidad" 
+            control={control} 
+            formatValue={formatCIInput} 
+            disabled={loading} 
+            inputProps={{ maxLength: 7 }} 
+            required
           />
-
-          <Controller
-            name="apellido_materno"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                fullWidth
-                label="Apellido Materno"
-                disabled={loading}
-                {...fieldError('apellido_materno')}
-                onChange={(e) => { field.onChange(formatNameInput(e.target.value)); if (errors.apellido_paterno) trigger('apellido_paterno'); if (errors.apellido_materno) trigger('apellido_materno') }}
-              />
-            )}
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <FormInput 
+            name="ci_extension" 
+            label="Extensión" 
+            control={control} 
+            formatValue={formatCIExtensionInput}
+            disabled={loading} 
+            inputProps={{ maxLength: 2 }}
           />
-        </Box>
-
-        <Controller
-          name="email"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Email"
-              type="email"
-              required={!judoka}
-              disabled={loading}
-              {...fieldError('email')}
-              autoComplete="email"
-              onChange={(e) => { field.onChange(e.target.value); if (errors.email) trigger('email') }}
-            />
-          )}
-        />
-
-        <Controller
-          name="fecha_nacimiento"
-          control={control}
-          render={({ field }) => (
-            <DatePicker
-              label="Fecha de Nacimiento"
-              value={field.value ? dayjs(field.value) : null}
-              onChange={(newValue) => {
-                const clamped = newValue?.isValid() && newValue.year() > dayjs().year() ? newValue.year(dayjs().year()) : newValue
-                field.onChange(clamped?.isValid() ? clamped.format('YYYY-MM-DD') : null)
-                if (errors.fecha_nacimiento) trigger('fecha_nacimiento')
-              }}
-              disabled={loading}
-              maxDate={dayjs().endOf('year')}
-              slotProps={{
-                textField: {
-                  fullWidth: true,
-                  ...fieldError('fecha_nacimiento'),
-                  onBlur: () => trigger('fecha_nacimiento'),
-                },
-              }}
-              format="DD/MM/YYYY"
-            />
-          )}
-        />
-
-        <Controller
-          name="numero_celular"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Número de Celular"
-              disabled={loading}
-              {...fieldError('numero_celular')}
-              inputProps={{ maxLength: 8 }}
-              autoComplete="tel"
-              onChange={(e) => { field.onChange(formatCelularInput(e.target.value)); if (errors.numero_celular) trigger('numero_celular') }}
-            />
-          )}
-        />
-
-        <Controller
-          name="genero"
-          control={control}
-          render={({ field }) => (
-            <Autocomplete
-              {...field}
-              options={generos}
-              value={field.value || null}
-              onChange={(_, newValue) => {
-                field.onChange(newValue || '')
-              }}
-              disabled={loading}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Género"
-                  error={fieldError('genero').error}
-                  helperText={fieldError('genero').helperText}
-                />
-              )}
-              noOptionsText="No se encontraron opciones"
-            />
-          )}
-        />
-
-        <Controller
-          name="categoria"
-          control={control}
-          render={({ field }) => (
-            <Autocomplete
-              {...field}
-              options={categorias}
-              value={field.value || null}
-              onChange={(_, newValue) => {
-                field.onChange(newValue || '')
-              }}
-              disabled={loading}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Categoría"
-                  error={fieldError('categoria').error}
-                  helperText={fieldError('categoria').helperText}
-                />
-              )}
-              noOptionsText="No se encontraron categorías"
-            />
-          )}
-        />
-
-        <Controller
-          name="cinturon_actual"
-          control={control}
-          render={({ field }) => (
-            <Autocomplete
-              {...field}
-              options={cinturones}
-              value={field.value || null}
-              onChange={(_, newValue) => {
-                field.onChange(newValue || '')
-              }}
-              disabled={loading}
-              renderOption={(props, option) => {
-                const { key, ...optionProps } = props as any;
-                return (
-                  <Box 
-                    component="li" 
-                    key={key} 
-                    {...optionProps} 
-                    sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}
-                  >
-                    <Box
-                      sx={{
-                        width: 16,
-                        height: 16,
-                        borderRadius: '50%',
-                        backgroundColor: beltColorMap[option] || '#ccc',
-                        border: option === 'Blanco' ? '1px solid #ddd' : 'none',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                      }}
-                    />
-                    {option}
-                  </Box>
-                );
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Cinturón Actual"
-                  error={fieldError('cinturon_actual').error}
-                  helperText={fieldError('cinturon_actual').helperText}
-                  InputProps={{
-                    ...params.InputProps,
-                    startAdornment: field.value ? (
-                      <InputAdornment position="start" sx={{ ml: 1 }}>
-                        <Box
-                          sx={{
-                            width: 14,
-                            height: 14,
-                            borderRadius: '50%',
-                            backgroundColor: beltColorMap[field.value] || '#ccc',
-                            border: field.value === 'Blanco' ? '1px solid #ddd' : 'none',
-                          }}
-                        />
-                      </InputAdornment>
-                    ) : null,
-                  }}
-                />
-              )}
-              noOptionsText="No se encontraron cinturones"
-            />
-          )}
-        />
-
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <FormInput 
+            name="nombres" 
+            label="Nombres" 
+            control={control} 
+            formatValue={formatNameInput} 
+            disabled={loading} 
+            required
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormInput 
+            name="apellido_paterno" 
+            label="Primer Apellido" 
+            control={control} 
+            formatValue={formatNameInput} 
+            disabled={loading} 
+            required
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormInput 
+            name="apellido_materno" 
+            label="Segundo Apellido" 
+            control={control} 
+            formatValue={formatNameInput} 
+            disabled={loading} 
+          />
+        </Grid>
         {!judoka && (
-          <Alert severity="info" sx={{ mt: 1 }}>
-            La contraseña se generará automáticamente y se enviará por correo al usuario.
-          </Alert>
+          <Grid size={{ xs: 12 }}>
+            <FormInput 
+              name="email" 
+              label="Correo Electrónico" 
+              control={control} 
+              disabled={loading} 
+              required 
+              inputProps={{ type: 'email' }}
+            />
+          </Grid>
         )}
-      </Stack>
+        <Grid size={{ xs: 12 }}>
+          <FormInput 
+            name="numero_celular" 
+            label="Teléfono Celular" 
+            control={control} 
+            formatValue={formatCelularInput} 
+            disabled={loading} 
+            inputProps={{ 
+              maxLength: 8, 
+              autoComplete: 'tel',
+              name: 'tel_celular',
+              id: 'tel_celular'
+            }} 
+            onChange={(e) => {
+              if (e.target.value.length === 8) trigger('numero_celular');
+            }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <FormDatePicker 
+            name="fecha_nacimiento" 
+            label="Fecha de Nacimiento" 
+            control={control} 
+            disabled={loading} 
+            maxDate={dayjs()} 
+          />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <FormAutocomplete 
+            name="genero" 
+            label="Género" 
+            control={control} 
+            options={GENDERS_LIST.map(g => ({ value: g, label: g }))} 
+            disabled={loading} 
+          />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <FormAutocomplete
+            name="club_id"
+            label="Club"
+            control={control}
+            options={clubes.map(c => ({ value: c.id, label: c.nombre_club }))}
+            disabled={loading || loadingClubes || isClubManager || isSensei}
+          />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <FormAutocomplete
+            name="entrenador_id"
+            label="Sensei / Entrenador"
+            control={control}
+            options={senseis.map(s => ({ value: s.id, label: s.nombres + ' ' + (s.apellidos || '') }))}
+            disabled={loading || loadingSenseis || !watchClubId || isSensei}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormAutocomplete
+            name="categoria"
+            label="Categoría"
+            control={control}
+            options={CATEGORIES.map(c => ({ value: c, label: c }))}
+            disabled={loading}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormAutocomplete
+            name="cinturon_actual"
+            label="Cinturón Actual"
+            control={control}
+            options={BELT_COLORS.map(c => ({ value: c, label: c }))}
+            disabled={loading}
+          />
+        </Grid>
+      </Grid>
 
-      <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-        {onCancel && (
-          <Button variant="outlined" onClick={onCancel} disabled={loading} sx={{ height: 48 }}>
-            Cancelar
-          </Button>
-        )}
-        <Button
-          type="submit"
-          variant="contained"
+      <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+        <Button onClick={onCancel} disabled={loading}>
+          Cancelar
+        </Button>
+        <Button 
+          type="submit" 
+          variant="contained" 
           disabled={loading}
-          startIcon={loading ? <CircularProgress size={20} /> : null}
-          sx={{ height: 48, minWidth: 120 }}
         >
-          {loading ? 'Guardando...' : judoka ? 'Actualizar' : 'Crear'}
+          {loading ? <CircularProgress size={20} /> : judoka ? 'Actualizar Judoka' : 'Registrar Judoka'}
         </Button>
       </Box>
     </Box>

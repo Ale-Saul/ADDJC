@@ -1,26 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { z } from 'zod'
-import { useForm, Controller, type FieldErrors } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import {
-  TextField,
-  Button,
-  Box,
-  Alert,
-  CircularProgress,
-  Autocomplete,
-} from '@mui/material'
-import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { Box, Button, Grid, Alert, CircularProgress } from '@mui/material'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
+import { Arbitro } from '@/models/arbitro'
+import { useArbitroForm } from '@/hooks/useArbitroForm'
+import { formatCIInput, formatCIExtensionInput, formatNameInput, formatCelularInput } from '@/utils/formatters'
+import { FormInput, FormAutocomplete, FormDatePicker } from '@/components/ui'
+import { GENDERS_LIST, NIVELES_ARBITRAJE } from '@/constants/globales'
 
 dayjs.locale('es')
-import { Arbitro, ArbitroCreate, ArbitroUpdate } from '@/models/arbitro'
-import { arbitroController } from '@/controllers/arbitroController'
-import { arbitroSchema } from '@/utils/zodSchemas'
-import { formatCIInput, formatCelularInput, formatNameInput } from '@/utils/inputMasks'
 
 interface ArbitroFormProps {
   arbitro?: Arbitro | null
@@ -29,160 +18,133 @@ interface ArbitroFormProps {
 }
 
 export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFormProps) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-
-  const {
-    control,
-    handleSubmit,
-    reset,
-    setFocus,
-    trigger,
-    formState: { errors },
-  } = useForm({
-    resolver: zodResolver(arbitroSchema),
-    mode: 'onBlur',
-    reValidateMode: 'onChange',
-    defaultValues: {
-      nombres: '',
-      apellido_paterno: '',
-      apellido_materno: '',
-      email: '',
-      fecha_nacimiento: null as string | null,
-      numero_celular: '',
-      ci: '',
-      genero: '',
-      nivel_arbitraje: '',
-      activo: true,
-    },
-  })
-
-  const fieldError = (name: keyof typeof errors) => ({
-    error: !!errors[name],
-    helperText: (errors[name] as { message?: string } | undefined)?.message,
-  })
-
-  useEffect(() => {
-    if (arbitro) {
-      const ap = arbitro.apellidos?.trim().split(/\s+/) ?? []
-      reset({
-        nombres: arbitro.nombres,
-        apellido_paterno: arbitro.apellido_paterno ?? ap[0] ?? '',
-        apellido_materno: arbitro.apellido_materno ?? ap.slice(1).join(' ') ?? '',
-        email: arbitro.email || '',
-        fecha_nacimiento: arbitro.fecha_nacimiento || null,
-        numero_celular: arbitro.numero_celular || '',
-        ci: arbitro.ci || '',
-        genero: arbitro.genero || '',
-        nivel_arbitraje: arbitro.nivel_arbitraje || '',
-        activo: arbitro.activo,
-      })
-    }
-  }, [arbitro, reset])
-
-  const onSubmit = async (data: z.infer<typeof arbitroSchema>) => {
-    setLoading(true)
-    setError(null)
-    setSuccess(false)
-
-    const payload = {
-      ...data,
-      apellido_paterno: data.apellido_paterno?.trim() || null,
-      apellido_materno: data.apellido_materno?.trim() || null,
-      fecha_nacimiento: data.fecha_nacimiento || null,
-      numero_celular: data.numero_celular || null,
-      ci: data.ci || null,
-      genero: data.genero || null,
-      nivel_arbitraje: data.nivel_arbitraje || null,
-    }
-
-    try {
-      let response
-      if (arbitro) {
-        response = await arbitroController.updateArbitro(arbitro.id, payload as ArbitroUpdate)
-      } else {
-        const createData: ArbitroCreate = {
-          ...(payload as ArbitroCreate),
-          usuario_id: 'temp-user-id',
-        }
-        response = await arbitroController.createArbitro(createData)
-      }
-
-      if (response.success) {
-        setSuccess(true)
-        if (onSuccess) setTimeout(() => onSuccess(), 1000)
-      } else {
-        setError(response.error || 'Error al guardar')
-      }
-      setLoading(false)
-    } catch (error) {
-      console.error('Error al guardar árbitro:', error)
-      setError('Error inesperado')
-      setLoading(false)
-    }
-  }
-
-  const onError = (formErrors: FieldErrors<z.infer<typeof arbitroSchema>>) => {
-    const errorKeys = Object.keys(formErrors) as (keyof z.infer<typeof arbitroSchema>)[]
-    if (errorKeys.length > 0) {
-      const firstField = errorKeys[0]
-      setFocus(firstField, { shouldSelect: true })
-    }
-  }
+  const { form, loading, error, onSubmit } = useArbitroForm(arbitro, onSuccess)
+  const { control, handleSubmit, trigger } = form
 
   return (
-    <Box component="form" onSubmit={handleSubmit(onSubmit, onError)} sx={{ mt: 2 }}>
-      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
-      {success && <Alert severity="success" sx={{ mb: 2 }}>{arbitro ? 'Actualizado' : 'Creado'} exitosamente</Alert>}
+    <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 1 }}>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Controller name="ci" control={control} render={({ field }) => (
-          <TextField {...field} fullWidth label="Carnet de Identidad" required disabled={loading} {...fieldError('ci')} onChange={(e) => { field.onChange(formatCIInput(e.target.value)); if (errors.ci) trigger('ci') }} autoComplete="off" />
-        )} />
-        <Controller name="nombres" control={control} render={({ field }) => (
-          <TextField {...field} fullWidth label="Nombres" required disabled={loading} {...fieldError('nombres')} onChange={(e) => { field.onChange(formatNameInput(e.target.value)); if (errors.nombres) trigger('nombres') }} autoComplete="name" />
-        )} />
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Controller name="apellido_paterno" control={control} render={({ field }) => (
-            <TextField {...field} fullWidth label="Apellido Paterno" disabled={loading} {...fieldError('apellido_paterno')} onChange={(e) => { field.onChange(formatNameInput(e.target.value)); if (errors.apellido_paterno) trigger('apellido_paterno'); if (errors.apellido_materno) trigger('apellido_materno') }} autoComplete="off" />
-          )} />
-          <Controller name="apellido_materno" control={control} render={({ field }) => (
-            <TextField {...field} fullWidth label="Apellido Materno" disabled={loading} {...fieldError('apellido_materno')} onChange={(e) => { field.onChange(formatNameInput(e.target.value)); if (errors.apellido_paterno) trigger('apellido_paterno'); if (errors.apellido_materno) trigger('apellido_materno') }} autoComplete="off" />
-          )} />
-        </Box>
-        <Controller name="email" control={control} render={({ field }) => (
-          <TextField {...field} fullWidth label="Email" type="email" required disabled={loading} {...fieldError('email')} onChange={(e) => { field.onChange(e.target.value); if (errors.email) trigger('email') }} autoComplete="email" />
-        )} />
-        <Controller name="fecha_nacimiento" control={control} render={({ field }) => (
-          <DatePicker label="Fecha de Nacimiento" value={field.value ? dayjs(field.value) : null} onChange={(v) => { const clamped = v?.isValid() && v.year() > dayjs().year() ? v.year(dayjs().year()) : v; field.onChange(clamped?.isValid() ? clamped.format('YYYY-MM-DD') : null); if (errors.fecha_nacimiento) trigger('fecha_nacimiento') }} disabled={loading} maxDate={dayjs().endOf('year')} slotProps={{ textField: { fullWidth: true, ...fieldError('fecha_nacimiento'), autoComplete: 'bday', onBlur: () => trigger('fecha_nacimiento') } }} format="DD/MM/YYYY" />
-        )} />
-        <Controller name="numero_celular" control={control} render={({ field }) => (
-          <TextField {...field} fullWidth label="Celular" disabled={loading} {...fieldError('numero_celular')} inputProps={{ maxLength: 8, autoComplete: 'tel' }} onChange={(e) => { field.onChange(formatCelularInput(e.target.value)); if (errors.numero_celular) trigger('numero_celular') }} />
-        )} />
-        <Controller name="genero" control={control} render={({ field }) => (
-          <Autocomplete {...field} options={["Masculino", "Femenino", "Prefiero no decir"]}
-            noOptionsText="No hay opciones"
-            value={field.value || null} onChange={(_, v) => field.onChange(v || '')} disabled={loading} renderInput={(params) => <TextField {...params} label="Género" {...fieldError('genero')} inputProps={{ ...params.inputProps, autoComplete: 'off' }} />} />
-        )} />
-        <Controller name="nivel_arbitraje" control={control} render={({ field }) => (
-          <Autocomplete {...field} options={["Regional", "Nacional", "Internacional"]}
-            noOptionsText="No se encontró el nivel"
-            loadingText="Cargando..."
-            value={field.value || null} onChange={(_, v) => field.onChange(v || '')} disabled={loading} renderInput={(params) => <TextField {...params} label="Nivel de Arbitraje" {...fieldError('nivel_arbitraje')} inputProps={{ ...params.inputProps, autoComplete: 'off' }} />} />
-        )} />
-
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 8 }}>
+          <FormInput 
+            name="ci" 
+            label="Carnet de Identidad" 
+            control={control} 
+            disabled={loading} 
+            required 
+            formatValue={formatCIInput} 
+            inputProps={{ maxLength: 7 }} 
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <FormInput 
+            name="ci_extension" 
+            label="Extensión" 
+            control={control} 
+            disabled={loading}
+            formatValue={formatCIExtensionInput}
+            inputProps={{ maxLength: 2 }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <FormInput 
+            name="nombres" 
+            label="Nombres" 
+            control={control} 
+            disabled={loading} 
+            required 
+            formatValue={formatNameInput} 
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormInput 
+            name="apellido_paterno" 
+            label="Primer Apellido" 
+            control={control} 
+            disabled={loading} 
+            required 
+            formatValue={formatNameInput} 
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormInput 
+            name="apellido_materno" 
+            label="Segundo Apellido" 
+            control={control} 
+            disabled={loading} 
+            formatValue={formatNameInput} 
+          />
+        </Grid>
         {!arbitro && (
-          <Alert severity="info" sx={{ mt: 1 }}>
-            La contraseña se generará automáticamente y se enviará por correo al usuario.
-          </Alert>
+          <Grid size={{ xs: 12 }}>
+            <FormInput 
+              name="email" 
+              label="Correo Electrónico" 
+              control={control} 
+              disabled={loading} 
+              required 
+              inputProps={{ type: 'email' }}
+            />
+          </Grid>
         )}
-      </Box>
+        <Grid size={{ xs: 12 }}>
+          <FormInput 
+            name="numero_celular" 
+            label="Teléfono Celular" 
+            control={control} 
+            disabled={loading} 
+            formatValue={formatCelularInput} 
+            inputProps={{ 
+              maxLength: 8, 
+              autoComplete: 'tel',
+              name: 'tel_celular',
+              id: 'tel_celular'
+            }} 
+            onChange={(e) => {
+              if (e.target.value.length === 8) trigger('numero_celular');
+            }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <FormDatePicker 
+            name="fecha_nacimiento" 
+            label="Fecha de Nacimiento" 
+            control={control} 
+            disabled={loading} 
+            maxDate={dayjs()} 
+          />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <FormAutocomplete 
+            name="genero" 
+            label="Género" 
+            control={control} 
+            disabled={loading} 
+            options={GENDERS_LIST.map(g => ({ value: g, label: g }))} 
+          />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <FormAutocomplete 
+            name="nivel_arbitraje" 
+            label="Nivel de Arbitraje" 
+            control={control} 
+            disabled={loading}
+            options={NIVELES_ARBITRAJE.map(n => ({ value: n, label: n }))} 
+          />
+        </Grid>
+      </Grid>
 
-      <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-        {onCancel && <Button variant="outlined" onClick={onCancel} disabled={loading}>Cancelar</Button>}
-        <Button type="submit" variant="contained" disabled={loading} sx={{ height: '40px', minWidth: '120px' }}>
-          {loading ? <CircularProgress size={24} color="inherit" /> : (arbitro ? 'Actualizar' : 'Crear')}
+      <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+        <Button onClick={onCancel} disabled={loading}>
+          Cancelar
+        </Button>
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={loading}
+        >
+          {loading ? <CircularProgress size={20} /> : arbitro ? 'Actualizar Árbitro' : 'Registrar Árbitro'}
         </Button>
       </Box>
     </Box>

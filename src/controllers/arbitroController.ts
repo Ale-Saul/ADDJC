@@ -1,7 +1,9 @@
 import { arbitroService } from '@/services/arbitroService'
 import { Arbitro, ArbitroCreate, ArbitroUpdate } from '@/models/arbitro'
-import { ApiResponse } from '@/types'
+import { ApiResponse } from '@/types/globales'
 import { generarPasswordInicial } from '@/utils/passwordUtils'
+import { personNamesCreateSchema, personNamesUpdateSchema } from '@/schemas/globales'
+
 
 export const arbitroController = {
   /**
@@ -26,32 +28,9 @@ export const arbitroController = {
    * Crear un nuevo árbitro
    */
   async createArbitro(arbitroData: ArbitroCreate): Promise<ApiResponse<Arbitro>> {
-    // Validaciones de negocio
-    if (!arbitroData.nombres || arbitroData.nombres.trim() === '') {
-      return { success: false, error: 'El nombre es requerido' }
-    }
-
-    const paterno = (arbitroData.apellido_paterno ?? '').trim()
-    const materno = (arbitroData.apellido_materno ?? '').trim()
-    if (!paterno && !materno) {
-      return { success: false, error: 'Al menos un apellido (paterno o materno) es requerido' }
-    }
-
-    if (arbitroData.nombres.length < 2) {
-      return { success: false, error: 'El nombre debe tener al menos 2 caracteres' }
-    }
-
-    const apellidosCompletos = [paterno, materno].filter(Boolean).join(' ')
-    if (apellidosCompletos.length < 2) {
-      return { success: false, error: 'Los apellidos deben tener al menos 2 caracteres' }
-    }
-
-    if (arbitroData.nombres.length > 100) {
-      return { success: false, error: 'El nombre no puede exceder 100 caracteres' }
-    }
-
-    if (apellidosCompletos.length > 200) {
-      return { success: false, error: 'Los apellidos no pueden exceder 200 caracteres en total' }
+    const namesValidation = personNamesCreateSchema.safeParse(arbitroData)
+    if (!namesValidation.success) {
+      return { success: false, error: namesValidation.error.issues[0]?.message ?? 'Error de validación' }
     }
 
     // Generar contraseña automática basada en el carnet
@@ -81,31 +60,9 @@ export const arbitroController = {
       return { success: false, error: 'Árbitro no encontrado' }
     }
 
-    // Validaciones de negocio
-    if (arbitroData.nombres !== undefined) {
-      if (arbitroData.nombres.trim() === '') {
-        return { success: false, error: 'El nombre no puede estar vacío' }
-      }
-
-      if (arbitroData.nombres.length < 2) {
-        return { success: false, error: 'El nombre debe tener al menos 2 caracteres' }
-      }
-
-      if (arbitroData.nombres.length > 100) {
-        return { success: false, error: 'El nombre no puede exceder 100 caracteres' }
-      }
-    }
-
-    if (arbitroData.apellido_paterno !== undefined || arbitroData.apellido_materno !== undefined) {
-      const paterno = (arbitroData.apellido_paterno ?? '').trim()
-      const materno = (arbitroData.apellido_materno ?? '').trim()
-      if (!paterno && !materno) {
-        return { success: false, error: 'Al menos un apellido (paterno o materno) debe estar presente' }
-      }
-      const apellidosCompletos = [paterno, materno].filter(Boolean).join(' ')
-      if (apellidosCompletos.length > 200) {
-        return { success: false, error: 'Los apellidos no pueden exceder 200 caracteres en total' }
-      }
+    const namesValidation = personNamesUpdateSchema.safeParse(arbitroData)
+    if (!namesValidation.success) {
+      return { success: false, error: namesValidation.error.issues[0]?.message ?? 'Error de validación' }
     }
 
     return await arbitroService.update(id, arbitroData)

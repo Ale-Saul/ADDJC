@@ -16,8 +16,10 @@ import {
 import SaveIcon from '@mui/icons-material/Save'
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
 import { Controller } from 'react-hook-form'
+import { FormInput } from '@/components/ui'
 import { User } from '@/models/auth'
 import { usePerfilForm } from '@/hooks/usePerfilForm'
+import { formatNameInput } from '@/utils/formatters'
 
 interface PerfilInfoFormProps {
   user: User | null
@@ -44,6 +46,8 @@ export default function PerfilInfoForm({
   setAvatarError,
   getRoleLabel
 }: PerfilInfoFormProps) {
+  if (!user) return null
+
   return (
     <Box>
       {/* Sección de Avatar */}
@@ -106,52 +110,15 @@ export default function PerfilInfoForm({
         {perfil.error && <Alert severity="error" sx={{ mb: 3 }} onClose={() => perfil.setError(null)}>{perfil.error}</Alert>}
 
         <Stack spacing={3}>
-          <Controller
-            name="nombres"
-            control={perfil.form.control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Nombres"
-                fullWidth
-                required
-                disabled={perfil.loading}
-                error={!!perfil.form.formState.errors.nombres}
-                helperText={perfil.form.formState.errors.nombres?.message}
-              />
-            )}
-          />
+          <FormInput fullWidth name="nombres" label="Nombres" control={perfil.form.control} required disabled={perfil.loading} formatValue={formatNameInput} />
 
-          <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
-            <Controller
-              name="apellido_paterno"
-              control={perfil.form.control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Apellido Paterno"
-                  fullWidth
-                  required
-                  disabled={perfil.loading}
-                  error={!!perfil.form.formState.errors.apellido_paterno}
-                  helperText={perfil.form.formState.errors.apellido_paterno?.message}
-                />
-              )}
-            />
-            <Controller
-              name="apellido_materno"
-              control={perfil.form.control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Apellido Materno"
-                  fullWidth
-                  disabled={perfil.loading}
-                  error={!!perfil.form.formState.errors.apellido_materno}
-                  helperText={perfil.form.formState.errors.apellido_materno?.message}
-                />
-              )}
-            />
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, width: '100%' }}>
+            <Box sx={{ flex: 1 }}>
+              <FormInput fullWidth name="primer_apellido" label="Primer Apellido" control={perfil.form.control} required disabled={perfil.loading} formatValue={formatNameInput} />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <FormInput fullWidth name="segundo_apellido" label="Segundo Apellido" control={perfil.form.control} disabled={perfil.loading} formatValue={formatNameInput} />
+            </Box>
           </Box>
 
           <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
@@ -190,3 +157,5 @@ export default function PerfilInfoForm({
     </Box>
   )
 }
+
+

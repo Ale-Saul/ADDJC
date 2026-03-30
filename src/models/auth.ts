@@ -2,7 +2,8 @@
  * Tipos relacionados con autenticación
  */
 
-export type { UserRole } from '@/constants/roles'
+import type { UserRole } from '@/constants/roles'
+export type { UserRole }
 
 export interface LoginCredentials {
   email: string
@@ -22,7 +23,10 @@ export interface User {
   id: string
   email: string
   nombres: string
-  apellidos: string
+  /** String combinado para display rápido (Paterno + Materno) */
+  apellidos: string  
+  apellido_paterno?: string
+  apellido_materno?: string
   rol: UserRole
   club_id?: string | null
   club_nombre?: string | null 
