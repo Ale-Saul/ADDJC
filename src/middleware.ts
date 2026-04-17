@@ -27,33 +27,34 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: Evitar escribir en la base de datos desde el middleware
-  // Solo refrescar la sesión si es necesario
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Si el usuario está autenticado y está intentando acceder a /login, redirigir a home
-  if (user && request.nextUrl.pathname === '/login') {
-    return NextResponse.redirect(new URL('/', request.url))
-  }
+  const pathname = request.nextUrl.pathname
 
-  // Si el usuario NO está autenticado y está intentando acceder a rutas protegidas,
-  // redirigir a login (esto se manejará mejor con protección de rutas específicas)
-  // Por ahora, solo refrescamos la sesión
+  // RBAC Logics
+  if (user) {
+    if (pathname === '/login') {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
+
+    // Protect administrative routes
+    const userRole = user.user_metadata?.role
+    const isAdminRoute = pathname.startsWith('/asociacion') || 
+                        pathname.startsWith('/clubes') || 
+                        pathname.startsWith('/api/admin')
+
+    if (isAdminRoute && userRole !== 'asociacion' && userRole !== 'club') {
+        return NextResponse.redirect(new URL('/', request.url))
+    }
+  }
 
   return supabaseResponse
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

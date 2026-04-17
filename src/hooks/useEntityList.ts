@@ -1,0 +1,179 @@
+import { useReducer, useCallback, useMemo } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+
+export type BaseEntity = {
+  id: string
+  activo?: boolean
+  [key: string]: any
+}
+
+type State = {
+  globalFilter: string
+  filters: Record<string, string>
+  showFilters: boolean
+}
+
+type Action =
+  | { type: 'SET_GLOBAL_FILTER'; payload: string }
+  | { type: 'SET_FILTER'; key: string; value: string }
+  | { type: 'TOGGLE_SHOW_FILTERS' }
+  | { type: 'CLEAR_FILTERS'; initialSearch: string; initialFilters: Record<string, string> }
+
+function stateReducer(state: State, action: Action): State {
+  switch (action.type) {
+    case 'SET_GLOBAL_FILTER': return { ...state, globalFilter: action.payload }
+    case 'SET_FILTER': return { ...state, filters: { ...state.filters, [action.key]: action.value } }
+    case 'TOGGLE_SHOW_FILTERS': return { ...state, showFilters: !state.showFilters }
+    case 'CLEAR_FILTERS': return {
+      ...state,
+      filters: action.initialFilters,
+      globalFilter: action.initialSearch,
+      showFilters: false
+    }
+    default: return state
+  }
+}
+
+export interface UseEntityListOptions<T> {
+  queryKey: string[]
+  fetchItems: () => Promise<{ success: boolean; data?: T[]; error?: string }>
+  updateItemStatus?: (id: string, activo: boolean) => Promise<{ success: boolean; error?: string }>
+  filterFn: (item: T, filters: Record<string, string>, globalSearch: string) => boolean
+  initialFilters?: Record<string, string>
+  initialSearch?: string
+}
+
+export function useEntityList<T extends BaseEntity>({
+  queryKey,
+  fetchItems,
+  updateItemStatus,
+  filterFn,
+  initialFilters = {},
+  initialSearch = ''
+}: UseEntityListOptions<T>) {
+  const queryClient = useQueryClient()
+  
+  // Create a stable reference for the query key to avoid unnecessary hook recreations
+  const stableKeyString = useMemo(() => JSON.stringify(queryKey), [queryKey])
+  const stableQueryKey = useMemo(() => JSON.parse(stableKeyString), [stableKeyString])
+
+  const [state, dispatch] = useReducer(stateReducer, {
+    globalFilter: initialSearch,
+    filters: initialFilters,
+    showFilters: false
+  })
+
+  const { data: items = [], isLoading: loading, error: queryError } = useQuery({
+    queryKey: stableQueryKey,
+    queryFn: async () => {
+      const response = await fetchItems()
+      if (!response.success) throw new Error(response.error || 'Error al cargar los datos')
+      const data = (response.data || []) as T[]
+      // Sort initially: activos first, inactivos last
+      return [...data].sort((a, b) => {
+        const aActive = a.activo ?? true
+        const bActive = b.activo ?? true
+        if (aActive === bActive) return 0
+        return aActive ? -1 : 1
+      })
+    },
+    staleTime: 0, // Desactivar caché para ver cambios inmediatos en desarrollo
+  })
+
+  const error = queryError ? (queryError instanceof Error ? queryError.message : String(queryError)) : null
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string, isActive: boolean }) => {
+      if (!updateItemStatus) throw new Error('No status update function provided')
+      const response = await updateItemStatus(id, isActive)
+      if (!response.success) throw new Error(response.error || 'Error desconocido')
+      return { id, isActive }
+    },
+    onMutate: async ({ id, isActive }) => {
+      await queryClient.cancelQueries({ queryKey: stableQueryKey })
+      const previousItems = queryClient.getQueryData<T[]>(stableQueryKey) || []
+      queryClient.setQueryData<T[]>(stableQueryKey, old => {
+        if (!old) return old
+        return old.map(item => item.id === id ? { ...item, activo: isActive } : item)
+      })
+
+      return { previousItems, stableQueryKey }
+    },
+    onError: (err, { id }, context) => {
+      if (context?.previousItems && context?.stableQueryKey) {
+        queryClient.setQueryData(context.stableQueryKey, context.previousItems)
+      }
+      alert('Error al cambiar el estado: ' + err.message)
+    }
+  })
+
+  // Aliases for compatibility
+  const modifiedIds = new Set<string>()
+
+  const toggleStatus = useCallback(async (id: string, currentStatus: boolean) => {
+    return toggleStatusMutation.mutateAsync({ id, isActive: !currentStatus })
+  }, [toggleStatusMutation])
+
+  const setFilter = useCallback((key: string, value: string) => {
+    dispatch({ type: 'SET_FILTER', key, value })
+  }, [])
+
+  const setGlobalFilter = useCallback((value: string) => {
+    dispatch({ type: 'SET_GLOBAL_FILTER', payload: value })
+  }, [])
+
+  const toggleShowFilters = useCallback(() => {
+    dispatch({ type: 'TOGGLE_SHOW_FILTERS' })
+  }, [])
+
+  const clearFilters = useCallback(() => {
+    dispatch({ type: 'CLEAR_FILTERS', initialSearch, initialFilters })
+  }, [initialSearch, initialFilters])
+
+  const updateLocalItem = useCallback((id: string, data: Partial<T>) => {
+    queryClient.setQueryData<T[]>(stableQueryKey, old => {
+      if (!old) return old
+      return old.map(item => item.id === id ? { ...item, ...data } : item)
+    })
+  }, [queryClient, stableQueryKey])
+
+  const deleteLocalItem = useCallback((id: string) => {
+    queryClient.setQueryData<T[]>(stableQueryKey, old => {
+      if (!old) return old
+      return old.filter(item => item.id !== id)
+    })
+  }, [queryClient, stableQueryKey])
+
+  const loadItems = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: stableQueryKey })
+  }, [queryClient, stableQueryKey])
+
+  const filteredData = useMemo(() => {
+    return items.filter(item => filterFn(item, state.filters, state.globalFilter.toLowerCase()))
+  }, [items, state.filters, state.globalFilter, filterFn])
+
+  return {
+    state: {
+      ...state,
+      loading,
+      error,
+      items,
+      modifiedIds
+    },
+    items,
+    setItems: (newItems: T[]) => queryClient.setQueryData(stableQueryKey, newItems),
+    loadItems,
+    toggleStatus,
+    updateLocalItem,
+    deleteLocalItem,
+    filteredData,
+    setFilter,
+    setGlobalFilter,
+    toggleShowFilters,
+    clearFilters,
+  }
+}
+
+
+
+

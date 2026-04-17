@@ -2,6 +2,9 @@
  * Tipos relacionados con autenticación
  */
 
+import type { UserRole } from '@/constants/roles'
+export type { UserRole }
+
 export interface LoginCredentials {
   email: string
   password: string
@@ -12,7 +15,7 @@ export interface SignUpData {
   password: string
   nombres: string
   apellidos: string
-  rol?: 'admin' | 'asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka'
+  rol?: UserRole
   club_id?: string
 }
 
@@ -20,18 +23,26 @@ export interface User {
   id: string
   email: string
   nombres: string
-  apellidos: string
-  rol: 'admin' | 'asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka'
+  /** String combinado para display rápido (Paterno + Materno) */
+  apellidos: string  
+  apellido_paterno?: string
+  apellido_materno?: string
+  rol: UserRole
   club_id?: string | null
-  club_nombre?: string | null // Nombre del club al que pertenece
+  club_nombre?: string | null 
+  sensei_id?: string | null 
+  judoka_id?: string | null 
   avatar_url?: string | null
+  fecha_nacimiento?: string | null
+  numero_celular?: string | null
+  ci?: string | null
+  genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   activo: boolean
+  debe_cambiar_password?: boolean 
   created_at?: string
   updated_at?: string
 }
 
-// Tipo para roles válidos
-export type UserRole = 'admin' | 'asociacion' | 'sensei' | 'encargado' | 'arbitro' | 'judoka'
 
 export interface AuthSession {
   user: User

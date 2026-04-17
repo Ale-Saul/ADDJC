@@ -1,6 +1,8 @@
 import { certificacionService } from '@/services/certificacionService'
 import { Certificacion, CertificacionCreate, CertificacionUpdate } from '@/models/certificacion'
-import { ApiResponse } from '@/types'
+import { certificacionSchema } from '@/schemas/globales'
+
+import { ApiResponse } from '@/types/globales'
 
 export const certificacionController = {
   /**
@@ -39,17 +41,9 @@ export const certificacionController = {
    * Crear una nueva certificación
    */
   async createCertificacion(certificacion: CertificacionCreate): Promise<ApiResponse<Certificacion>> {
-    // Validaciones
-    if (!certificacion.usuario_id) {
-      return { success: false, error: 'El ID de usuario es requerido' }
-    }
-
-    if (!certificacion.tipo_afiliado) {
-      return { success: false, error: 'El tipo de afiliado es requerido' }
-    }
-
-    if (!certificacion.nombre_certificacion || certificacion.nombre_certificacion.trim() === '') {
-      return { success: false, error: 'El nombre de la certificación es requerido' }
+    const validation = certificacionSchema.safeParse(certificacion)
+    if (!validation.success) {
+      return { success: false, error: validation.error.issues[0]?.message ?? 'Error de validación en certificación' }
     }
 
     return await certificacionService.create({

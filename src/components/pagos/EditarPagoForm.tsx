@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import {
   TextField,
   Button,
@@ -8,16 +7,29 @@ import {
   Alert,
   CircularProgress,
   MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
   Typography,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  InputAdornment,
+  Stack,
+  Divider,
+  Autocomplete
 } from '@mui/material'
-import type { SelectChangeEvent } from '@mui/material/Select'
 import { Pago } from '@/models/pago'
-import { pagoController } from '@/controllers/pagoController'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import dayjs from 'dayjs'
+import { Controller, useWatch } from 'react-hook-form'
+import { FormInput, FormSelect, FormDatePicker, FormAutocomplete } from '@/components/ui'
+import { TIPO_DESCUENTO, TIPO_PAGO_LABELS, TIPO_DESCUENTO_LABELS, RAZON_DESCUENTO_LABELS } from '@/constants/pagos'
+import { useEditarPagoForm } from '@/hooks/useEditarPagoForm'
+import { formatNameWithNumbersInput } from '@/utils/formatters'
+
+const TIPO_PAGO_OPTIONS = Object.entries(TIPO_PAGO_LABELS)
+  .map(([value, label]) => ({ value, label }))
+  .sort((a, b) => a.label.localeCompare(b.label, 'es'))
+
+const TIPO_DESCUENTO_OPTIONS = Object.entries(TIPO_DESCUENTO_LABELS).map(([value, label]) => ({ value, label }))
+const RAZON_DESCUENTO_OPTIONS = Object.entries(RAZON_DESCUENTO_LABELS).map(([value, label]) => ({ value, label }))
 
 interface EditarPagoFormProps {
   pago: Pago
@@ -26,299 +38,188 @@ interface EditarPagoFormProps {
 }
 
 export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPagoFormProps) {
-  const [formData, setFormData] = useState({
-    tipo_pago: pago.tipo_pago,
-    concepto: pago.concepto,
-    descripcion: pago.descripcion || '',
-    monto_base: pago.monto_base,
-    tiene_descuento: pago.tiene_descuento,
-    tipo_descuento: pago.tipo_descuento,
-    descuento_porcentaje: pago.descuento_porcentaje,
-    descuento_monto: pago.descuento_monto,
-    razon_descuento: pago.razon_descuento,
-    fecha_vencimiento: pago.fecha_vencimiento
-  })
-  const [montoFinal, setMontoFinal] = useState(pago.monto_final)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const {
+    form,
+    montoFinal,
+    loading,
+    error,
+    success,
+    onSubmit,
+    setError
+  } = useEditarPagoForm(pago, onSuccess)
 
-  // Calcular monto final
-  useEffect(() => {
-    const montoBase = typeof formData.monto_base === 'string' ? parseFloat(formData.monto_base) || 0 : formData.monto_base
-    let final = montoBase
-
-    if (formData.tiene_descuento) {
-      if (formData.tipo_descuento === 'porcentaje' && formData.descuento_porcentaje) {
-        final = montoBase - (montoBase * formData.descuento_porcentaje / 100)
-      } else if (formData.tipo_descuento === 'monto' && formData.descuento_monto) {
-        final = montoBase - formData.descuento_monto
-      }
-    }
-
-    setMontoFinal(Math.max(0, final))
-  }, [formData.monto_base, formData.tiene_descuento, formData.tipo_descuento, formData.descuento_porcentaje, formData.descuento_monto])
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value === '' ? null : value
-    }))
-    setError(null)
-    setSuccess(false)
-  }
-
-  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value === '' ? null : parseFloat(value)
-    }))
-    setError(null)
-    setSuccess(false)
-  }
-
-  const handleSelectChange = (e: SelectChangeEvent<string>) => {
-    const { name, value } = e.target
-    if (!name) return
-    setFormData(prev => ({
-      ...prev,
-      [name]: value === '' ? null : value
-    }))
-    setError(null)
-    setSuccess(false)
-  }
-
-  const handleSwitchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: checked,
-      ...(name === 'tiene_descuento' && !checked ? {
-        tipo_descuento: null,
-        descuento_porcentaje: null,
-        descuento_monto: null,
-        razon_descuento: null
-      } : {})
-    }))
-    setError(null)
-    setSuccess(false)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    setSuccess(false)
-
-    try {
-      const updateData = {
-        ...formData,
-        monto_final: montoFinal
-      }
-
-      const response = await pagoController.updatePago(pago.id, updateData)
-
-      if (response.success) {
-        setSuccess(true)
-        setTimeout(() => {
-          onSuccess?.()
-        }, 1000)
-      } else {
-        setError(response.error || 'Error al actualizar el pago')
-      }
-    } catch (err) {
-      console.error('Error al actualizar pago:', err)
-      setError('Error inesperado al actualizar el pago')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const watchTieneDescuento = useWatch({ control: form.control, name: 'tiene_descuento' })
+  const watchTipoDescuento = useWatch({ control: form.control, name: 'tipo_descuento' })
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-      <Typography variant="subtitle1" color="text.secondary" mb={2}>
-        Editar pago: <strong>{pago.concepto}</strong>
+    <Box component="form" onSubmit={form.handleSubmit(onSubmit)} sx={{ mt: 2 }}>
+      <Typography variant="subtitle1" color="text.secondary" mb={3}>
+        Editando pago: <strong>{pago.concepto}</strong>
       </Typography>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
       {success && (
-        <Alert severity="success" sx={{ mb: 2 }}>
+        <Alert severity="success" sx={{ mb: 3 }}>
           Pago actualizado exitosamente
         </Alert>
       )}
 
-      <FormControl fullWidth sx={{ mb: 2 }}>
-        <InputLabel>Tipo de Pago</InputLabel>
-        <Select
+      <Stack spacing={3}>
+        <FormAutocomplete
+          control={form.control}
           name="tipo_pago"
-          value={formData.tipo_pago}
-          onChange={handleSelectChange}
           label="Tipo de Pago"
+          options={TIPO_PAGO_OPTIONS}
+          disabled={loading}
           required
-        >
-          <MenuItem value="cuota_mensual">Cuota Mensual</MenuItem>
-          <MenuItem value="cuota_traje">Cuota Traje</MenuItem>
-          <MenuItem value="inscripcion">Inscripción</MenuItem>
-          <MenuItem value="examen_grado">Examen de Grado</MenuItem>
-          <MenuItem value="evento">Evento</MenuItem>
-          <MenuItem value="otro">Otro</MenuItem>
-        </Select>
-      </FormControl>
+        />
 
-      <TextField
-        fullWidth
-        label="Concepto"
-        name="concepto"
-        value={formData.concepto}
-        onChange={handleChange}
-        required
-        sx={{ mb: 2 }}
-      />
+        <FormInput
+          control={form.control}
+          name="concepto"
+          label="Concepto"
+          disabled={loading}
+          required
+          formatValue={formatNameWithNumbersInput}
+        />
 
-      <TextField
-        fullWidth
-        label="Descripción (opcional)"
-        name="descripcion"
-        value={formData.descripcion || ''}
-        onChange={handleChange}
-        multiline
-        rows={2}
-        sx={{ mb: 2 }}
-      />
+        <FormInput
+          control={form.control}
+          name="descripcion"
+          label="Descripción (opcional)"
+          multiline
+          rows={2}
+          disabled={loading}
+          formatValue={formatNameWithNumbersInput}
+        />
 
-      <TextField
-        fullWidth
-        label="Monto Base"
-        name="monto_base"
-        type="number"
-        value={formData.monto_base}
-        onChange={handleNumberChange}
-        required
-        inputProps={{ min: 0, step: 0.01 }}
-        sx={{ mb: 2 }}
-      />
-
-      <TextField
-        fullWidth
-        label="Fecha de Vencimiento"
-        name="fecha_vencimiento"
-        type="date"
-        value={formData.fecha_vencimiento}
-        onChange={handleChange}
-        required
-        InputLabelProps={{ shrink: true }}
-        sx={{ mb: 2 }}
-      />
-
-      <FormControlLabel
-        control={
-          <Switch
-            name="tiene_descuento"
-            checked={formData.tiene_descuento}
-            onChange={handleSwitchChange}
+        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+          <FormInput
+            control={form.control}
+            name="monto_base"
+            label="Monto Base"
+            type="number"
+            disabled={loading}
+            InputProps={{
+              startAdornment: <InputAdornment position="start">Bs.</InputAdornment>,
+            }}
           />
-        }
-        label="Aplicar descuento"
-        sx={{ mb: 2 }}
-      />
 
-      {formData.tiene_descuento && (
-        <>
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Tipo de Descuento</InputLabel>
-            <Select
+          <FormDatePicker
+            control={form.control}
+            name="fecha_vencimiento"
+            label="Fecha de Vencimiento"
+            disabled={loading}
+          />
+        </Box>
+
+        <Divider />
+
+        <Controller
+          name="tiene_descuento"
+          control={form.control}
+          render={({ field }) => (
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={field.value}
+                  onChange={(e) => field.onChange(e.target.checked)}
+                  disabled={loading}
+                />
+              }
+              label="Aplicar descuento"
+            />
+          )}
+        />
+
+        {watchTieneDescuento && (
+          <Stack spacing={3} sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
+            <FormAutocomplete
+              control={form.control}
               name="tipo_descuento"
-              value={formData.tipo_descuento || ''}
-              onChange={handleSelectChange}
               label="Tipo de Descuento"
+              options={TIPO_DESCUENTO_OPTIONS}
+              disabled={loading}
               required
-            >
-              <MenuItem value="porcentaje">Porcentaje (%)</MenuItem>
-              <MenuItem value="monto">Monto Fijo</MenuItem>
-            </Select>
-          </FormControl>
-
-          {formData.tipo_descuento === 'porcentaje' && (
-            <TextField
-              fullWidth
-              label="Descuento (%)"
-              name="descuento_porcentaje"
-              type="number"
-              value={formData.descuento_porcentaje || ''}
-              onChange={handleNumberChange}
-              required
-              inputProps={{ min: 0, max: 100, step: 0.01 }}
-              sx={{ mb: 2 }}
             />
-          )}
 
-          {formData.tipo_descuento === 'monto' && (
-            <TextField
-              fullWidth
-              label="Descuento (Monto)"
-              name="descuento_monto"
-              type="number"
-              value={formData.descuento_monto || ''}
-              onChange={handleNumberChange}
-              required
-              inputProps={{ min: 0, step: 0.01 }}
-              sx={{ mb: 2 }}
-            />
-          )}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              {watchTipoDescuento === TIPO_DESCUENTO.PORCENTAJE && (
+                <FormInput
+                  control={form.control}
+                  name="descuento_porcentaje"
+                  label="Descuento (%)"
+                  type="number"
+                  disabled={loading}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                  }}
+                />
+              )}
 
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Razón del Descuento</InputLabel>
-            <Select
-              name="razon_descuento"
-              value={formData.razon_descuento || ''}
-              onChange={handleSelectChange}
-              label="Razón del Descuento"
-            >
-              <MenuItem value="beca">Beca</MenuItem>
-              <MenuItem value="descuento_hermanos">Descuento Hermanos</MenuItem>
-              <MenuItem value="descuento_especial">Descuento Especial</MenuItem>
-              <MenuItem value="promocion">Promoción</MenuItem>
-              <MenuItem value="ayuda_social">Ayuda Social</MenuItem>
-              <MenuItem value="ninguna">Ninguna</MenuItem>
-            </Select>
-          </FormControl>
-        </>
-      )}
+              {watchTipoDescuento === TIPO_DESCUENTO.MONTO_FIJO && (
+                <FormInput
+                  control={form.control}
+                  name="descuento_monto"
+                  label="Descuento (Monto)"
+                  type="number"
+                  disabled={loading}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">Bs.</InputAdornment>,
+                  }}
+                />
+              )}
 
-      <Box sx={{ p: 2, bgcolor: 'primary.light', borderRadius: 1, mb: 2 }}>
-        <Typography variant="h6">
-          Monto Final: Bs. {montoFinal.toFixed(2)}
-        </Typography>
-        {pago.monto_final !== montoFinal && (
-          <Typography variant="caption" color="text.secondary">
-            (Anterior: Bs. {pago.monto_final.toFixed(2)})
-          </Typography>
+              <FormAutocomplete
+                control={form.control}
+                name="razon_descuento"
+                label="Razón del Descuento"
+                options={RAZON_DESCUENTO_OPTIONS}
+                disabled={loading}
+                required
+              />
+            </Box>
+          </Stack>
         )}
-      </Box>
 
-      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-        <Button
-          variant="outlined"
-          onClick={onCancel}
-          disabled={loading}
-        >
-          Cancelar
-        </Button>
-        <Button
-          type="submit"
-          variant="contained"
-          disabled={loading}
-        >
-          {loading ? <CircularProgress size={24} /> : 'Guardar Cambios'}
-        </Button>
-      </Box>
+        <Box sx={{ p: 2, bgcolor: 'primary.main', color: 'white', borderRadius: 2, boxShadow: 2 }}>
+          <Typography variant="h6" fontWeight="bold">
+            Monto Final: Bs. {montoFinal.toFixed(2)}
+          </Typography>
+          {pago.monto_final !== montoFinal && (
+            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+              Anterior: Bs. {pago.monto_final.toFixed(2)}
+            </Typography>
+          )}
+        </Box>
+
+        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
+          {onCancel && (
+            <Button
+              variant="outlined"
+              onClick={onCancel}
+              disabled={loading}
+              sx={{ height: 48, px: 4 }}
+            >
+              Cancelar
+            </Button>
+          )}
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={loading}
+            sx={{ height: 48, px: 4, minWidth: 180 }}
+            startIcon={loading ? <CircularProgress size={24} color="inherit" /> : null}
+          >
+            {loading ? 'Guardando...' : 'Guardar Cambios'}
+          </Button>
+        </Box>
+      </Stack>
     </Box>
   )
 }

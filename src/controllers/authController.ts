@@ -1,6 +1,9 @@
+import { z } from 'zod'
+import { loginSchema, emailSchema, passwordSchema, perfilSchema } from '@/schemas/globales'
 import { authService } from '@/services/authService'
-import { ApiResponse } from '@/types'
-import { LoginCredentials, SignUpData, User, AuthSession } from '@/models/auth'
+import { ApiResponse } from '@/types/globales'
+import { LoginCredentials, SignUpData, User, AuthSession, UserRole } from '@/models/auth'
+import { ROL } from '@/constants/roles'
 
 export const authController = {
   /**
@@ -8,27 +11,11 @@ export const authController = {
    */
   async signIn(credentials: LoginCredentials): Promise<ApiResponse<AuthSession>> {
     // Validaciones
-    if (!credentials.email || !credentials.password) {
+    const validation = loginSchema.safeParse(credentials)
+    if (!validation.success) {
       return {
         success: false,
-        error: 'Email y contraseña son requeridos',
-      }
-    }
-
-    // Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(credentials.email)) {
-      return {
-        success: false,
-        error: 'El formato del email no es válido',
-      }
-    }
-
-    // Validar longitud de contraseña
-    if (credentials.password.length < 6) {
-      return {
-        success: false,
-        error: 'La contraseña debe tener al menos 6 caracteres',
+        error: validation.error.issues[0].message,
       }
     }
 
@@ -70,28 +57,20 @@ export const authController = {
     }
 
     // Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(signUpData.email)) {
+    const emailResult = emailSchema.safeParse(signUpData.email)
+    if (!emailResult.success) {
       return {
         success: false,
-        error: 'El formato del email no es válido',
+        error: emailResult.error.issues[0].message,
       }
     }
 
-    // Validar longitud de contraseña
-    if (signUpData.password.length < 8) {
+    // Validar contraseña
+    const pwdResult = passwordSchema.safeParse(signUpData.password)
+    if (!pwdResult.success) {
       return {
         success: false,
-        error: 'La contraseña debe tener al menos 8 caracteres',
-      }
-    }
-
-    // Validar que la contraseña tenga al menos una mayúscula, una minúscula y un número
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/
-    if (!passwordRegex.test(signUpData.password)) {
-      return {
-        success: false,
-        error: 'La contraseña debe contener al menos una mayúscula, una minúscula y un número',
+        error: pwdResult.error.issues[0].message,
       }
     }
 
@@ -111,7 +90,7 @@ export const authController = {
     }
 
     // Validar rol
-    const validRoles = ['admin', 'asociacion', 'sensei', 'arbitro', 'judoka', 'encargado']
+    const validRoles: UserRole[] = Object.values(ROL)
     if (signUpData.rol && !validRoles.includes(signUpData.rol)) {
       return {
         success: false,
@@ -141,11 +120,11 @@ export const authController = {
       }
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
+    const emailResult = emailSchema.safeParse(email)
+    if (!emailResult.success) {
       return {
         success: false,
-        error: 'El formato del email no es válido',
+        error: emailResult.error.issues[0].message,
       }
     }
 
@@ -163,22 +142,44 @@ export const authController = {
       }
     }
 
-    if (newPassword.length < 8) {
+    const pwdResult = passwordSchema.safeParse(newPassword)
+    if (!pwdResult.success) {
       return {
         success: false,
-        error: 'La contraseña debe tener al menos 8 caracteres',
-      }
-    }
-
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/
-    if (!passwordRegex.test(newPassword)) {
-      return {
-        success: false,
-        error: 'La contraseña debe contener al menos una mayúscula, una minúscula y un número',
+        error: pwdResult.error.issues[0].message,
       }
     }
 
     return await authService.updatePassword(newPassword)
+  },
+
+  /**
+   * Actualizar contraseña y marcar como completado el cambio obligatorio
+   */
+  async completePasswordChange(newPassword: string, userId: string): Promise<ApiResponse<void>> {
+    if (!newPassword) {
+      return {
+        success: false,
+        error: 'La nueva contraseña es requerida',
+      }
+    }
+
+    const pwdResult = passwordSchema.safeParse(newPassword)
+    if (!pwdResult.success) {
+      return {
+        success: false,
+        error: pwdResult.error.issues[0].message,
+      }
+    }
+
+    if (!userId) {
+      return {
+        success: false,
+        error: 'ID de usuario requerido',
+      }
+    }
+
+    return await authService.completePasswordChange(newPassword, userId)
   },
 
   /**
@@ -192,18 +193,17 @@ export const authController = {
       }
     }
 
-    // Validaciones básicas
-    if (data.nombres && data.nombres.trim().length < 2) {
+    // Validaciones de negocio - Solo validamos lo que mandan (Partial)
+    const validation = z.object({
+      nombres: z.string().optional(),
+      apellido_paterno: z.string().optional(),
+      apellido_materno: z.string().optional(),
+      apellidos: z.string().optional()
+    }).safeParse(data)
+    if (!validation.success) {
       return {
         success: false,
-        error: 'El nombre debe tener al menos 2 caracteres',
-      }
-    }
-
-    if (data.apellidos && data.apellidos.trim().length < 2) {
-      return {
-        success: false,
-        error: 'Los apellidos deben tener al menos 2 caracteres',
+        error: validation.error.issues[0]?.message ?? 'Error de validación de perfil',
       }
     }
 
@@ -222,5 +222,32 @@ export const authController = {
     }
     return await authService.uploadAvatar(userId, file)
   },
+
+  /**
+   * Verificar la contraseña actual del usuario (re-autenticación)
+   */
+  async verifyCurrentPassword(email: string, password: string): Promise<ApiResponse<void>> {
+    if (!email || !password) {
+      return { success: false, error: 'Email y contraseña son requeridos' }
+    }
+    return await authService.verifyCurrentPassword(email, password)
+  },
+
+  /**
+   * Obtener la sesión actual
+   */
+  async getSession(): Promise<ApiResponse<boolean>> {
+    return authService.getSession()
+  },
+
+  /**
+   * Intercambiar código de autorización por sesión
+   */
+  async exchangeCodeForSession(code: string): Promise<ApiResponse<boolean>> {
+    if (!code) return { success: false, error: 'Código requerido' }
+    return authService.exchangeCodeForSession(code)
+  },
 }
+
+
 

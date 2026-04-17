@@ -1,21 +1,40 @@
-'use client'
-
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   TextField,
   Button,
   Box,
   Alert,
   CircularProgress,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
+  Stack,
+  Typography,
 } from '@mui/material'
-import type { SelectChangeEvent } from '@mui/material/Select'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import dayjs from 'dayjs'
+import { useForm } from 'react-hook-form'
+import { FormInput, FormDatePicker } from '@/components/ui'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { Certificacion, CertificacionCreate, CertificacionUpdate } from '@/models/certificacion'
 import { certificacionController } from '@/controllers/certificacionController'
 import { storageService } from '@/services/storageService'
+
+import {
+  formatNameInput,
+  formatNameWithNumbersInput
+} from '@/utils/formatters'
+
+const certificacionSchema = z.object({
+  nombre_certificacion: z.string()
+    .min(1, 'El nombre es requerido')
+    .transform(val => val.trim().replace(/\s+/g, ' ')),
+  descripcion: z.string()
+    .nullable()
+    .optional()
+    .transform(val => val ? val.trim().replace(/\s+/g, ' ') : val),
+  fecha_emision: z.string().min(1, 'La fecha de emisión es requerida'),
+  fecha_vencimiento: z.string().min(1, 'La fecha de vencimiento es requerida'),
+  activo: z.boolean().default(true),
+})
 
 interface CertificacionFormProps {
   certificacion?: Certificacion | null
@@ -32,14 +51,6 @@ export default function CertificacionForm({
   onSuccess,
   onCancel
 }: CertificacionFormProps) {
-  const [formData, setFormData] = useState<CertificacionCreate | CertificacionUpdate>({
-    nombre_certificacion: '',
-    descripcion: '',
-    fecha_emision: '',
-    fecha_vencimiento: '',
-    archivo_url: null,
-    activo: true
-  })
   const [file, setFile] = useState<File | null>(null)
   const [filePreview, setFilePreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -47,64 +58,56 @@ export default function CertificacionForm({
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
+  const {
+    control,
+    handleSubmit,
+    reset,
+    trigger,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(certificacionSchema),
+    mode: 'onBlur',
+    reValidateMode: 'onChange',
+    defaultValues: {
+      nombre_certificacion: '',
+      descripcion: '',
+      fecha_emision: '',
+      fecha_vencimiento: '',
+      activo: true,
+    },
+  })
+
   useEffect(() => {
     if (certificacion) {
-      setFormData({
+      reset({
         nombre_certificacion: certificacion.nombre_certificacion,
         descripcion: certificacion.descripcion || '',
         fecha_emision: certificacion.fecha_emision ? certificacion.fecha_emision.split('T')[0] : '',
         fecha_vencimiento: certificacion.fecha_vencimiento ? certificacion.fecha_vencimiento.split('T')[0] : '',
-        archivo_url: certificacion.archivo_url,
         activo: certificacion.activo
       })
       setFilePreview(certificacion.archivo_url)
     }
-  }, [certificacion])
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-    setError(null)
-    setSuccess(false)
-  }
+  }, [certificacion, reset])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
     if (selectedFile) {
-      // Validar tipo de archivo
-      const allowedTypes = [
-        'application/pdf',
-        'image/jpeg',
-        'image/jpg',
-        'image/png',
-        'image/gif',
-        'image/webp'
-      ]
-
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
       if (!allowedTypes.includes(selectedFile.type)) {
-        setError('Tipo de archivo no permitido. Solo se permiten PDF e imágenes (JPG, PNG, GIF, WEBP)')
+        setError('Tipo de archivo no permitido. Solo se permiten PDF e imágenes')
         return
       }
-
-      // Validar tamaño (máximo 10MB)
       const maxSize = 10 * 1024 * 1024 // 10MB
       if (selectedFile.size > maxSize) {
-        setError('El archivo es demasiado grande. El tamaño máximo es 10MB')
+        setError('El archivo es demasiado grande (máximo 10MB)')
         return
       }
-
       setFile(selectedFile)
       setError(null)
-
-      // Crear preview para imágenes
       if (selectedFile.type.startsWith('image/')) {
         const reader = new FileReader()
-        reader.onloadend = () => {
-          setFilePreview(reader.result as string)
-        }
+        reader.onloadend = () => setFilePreview(reader.result as string)
         reader.readAsDataURL(selectedFile)
       } else {
         setFilePreview(null)
@@ -112,71 +115,57 @@ export default function CertificacionForm({
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onSubmit = async (data: z.infer<typeof certificacionSchema>) => {
     setLoading(true)
     setError(null)
     setSuccess(false)
 
     try {
-      let archivoUrl = formData.archivo_url || null
+      let archivoUrl = certificacion?.archivo_url || null
 
-      // Si hay un archivo nuevo, subirlo primero
       if (file) {
         setUploading(true)
         const timestamp = Date.now()
         const fileExtension = file.name.split('.').pop()
-        const fileName = `${usuarioId}_${timestamp}.${fileExtension}`
-        const path = `certificaciones/${tipoAfiliado}/${fileName}`
-
+        const path = `certificaciones/${tipoAfiliado}/${usuarioId}_${timestamp}.${fileExtension}`
         const uploadResult = await storageService.uploadFile(file, 'certificaciones', path)
-
         if (!uploadResult.success) {
           setError(uploadResult.error || 'Error al subir el archivo')
           setLoading(false)
           setUploading(false)
           return
         }
-
-        archivoUrl = uploadResult.url || null
+        archivoUrl = storageService.getPublicUrl('certificaciones', path)
         setUploading(false)
       }
 
       let response
-
       if (certificacion) {
-        // Actualizar
         response = await certificacionController.updateCertificacion(certificacion.id, {
-          ...formData,
+          ...data,
           archivo_url: archivoUrl
         })
       } else {
-        // Crear
         response = await certificacionController.createCertificacion({
           usuario_id: usuarioId,
           tipo_afiliado: tipoAfiliado,
-          nombre_certificacion: formData.nombre_certificacion!,
-          descripcion: formData.descripcion || null,
-          fecha_emision: formData.fecha_emision || null,
-          fecha_vencimiento: formData.fecha_vencimiento || null,
+          nombre_certificacion: data.nombre_certificacion,
+          descripcion: data.descripcion || null,
+          fecha_emision: data.fecha_emision,
+          fecha_vencimiento: data.fecha_vencimiento,
           archivo_url: archivoUrl,
-          activo: formData.activo ?? true
+          activo: data.activo
         })
       }
 
       if (response.success) {
         setSuccess(true)
-        if (onSuccess) {
-          setTimeout(() => {
-            onSuccess()
-          }, 1000)
-        }
+        if (onSuccess) setTimeout(onSuccess, 1000)
       } else {
-        setError(response.error || 'Error al guardar la certificación')
+        setError(response.error || 'Error al guardar')
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error inesperado'
-      setError(errorMessage)
+      setError(err instanceof Error ? err.message : 'Error inesperado')
     } finally {
       setLoading(false)
       setUploading(false)
@@ -184,162 +173,77 @@ export default function CertificacionForm({
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
+    <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 2 }}>
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+      {success && <Alert severity="success" sx={{ mb: 2 }}>{certificacion ? 'Actualizada' : 'Creada'} exitosamente</Alert>}
 
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {certificacion ? 'Certificación actualizada exitosamente' : 'Certificación creada exitosamente'}
-        </Alert>
-      )}
+      <Stack spacing={2}>
+          <FormInput
+            name="nombre_certificacion"
+            control={control}
+            label="Nombre de la Certificación"
+            required
+            disabled={loading || uploading}
+            formatValue={formatNameWithNumbersInput}
+          />
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <TextField
-          fullWidth
-          label="Nombre de la Certificación"
-          name="nombre_certificacion"
-          value={formData.nombre_certificacion}
-          onChange={handleChange}
-          required
-          disabled={loading || uploading}
+          <FormInput
+            name="descripcion"
+            control={control}
+            label="Descripción"
+            multiline
+            rows={3}
+            disabled={loading || uploading}
+            formatValue={(val) => val.replace(/\s+/g, ' ')}
         />
 
-        <TextField
-          fullWidth
-          label="Descripción"
-          name="descripcion"
-          value={formData.descripcion}
-          onChange={handleChange}
-          multiline
-          rows={3}
-          disabled={loading || uploading}
+<FormDatePicker
+            name="fecha_emision"
+            control={control}
+            label="Fecha de Emisión"
+            disabled={loading || uploading}
         />
 
-        <TextField
-          fullWidth
-          label="Fecha de Emisión"
-          name="fecha_emision"
-          type="date"
-          value={formData.fecha_emision}
-          onChange={handleChange}
-          InputLabelProps={{
-            shrink: true
-          }}
-          disabled={loading || uploading}
-        />
-
-        <TextField
-          fullWidth
-          label="Fecha de Vencimiento"
-          name="fecha_vencimiento"
-          type="date"
-          value={formData.fecha_vencimiento}
-          onChange={handleChange}
-          InputLabelProps={{
-            shrink: true
-          }}
-          disabled={loading || uploading}
+<FormDatePicker
+            name="fecha_vencimiento"
+            control={control}
+            label="Fecha de Vencimiento"
+            disabled={loading || uploading}
         />
 
         <Box>
           <TextField
             fullWidth
-            label="Archivo (PDF o Imagen - Máximo 10MB)"
+            label="Archivo (PDF o Imagen)"
             value={file ? file.name : certificacion?.archivo_url ? 'Archivo actual' : ''}
             InputProps={{
               readOnly: true,
               endAdornment: (
-                <Button
-                  component="label"
-                  variant="text"
-                  size="small"
-                  disabled={loading || uploading}
-                  sx={{ 
-                    mr: 1,
-                    minWidth: 'auto',
-                    textTransform: 'none'
-                  }}
-                >
+                <Button component="label" variant="text" size="small" disabled={loading || uploading} sx={{ mr: 1, textTransform: 'none' }}>
                   Seleccionar
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.gif,.webp"
-                    onChange={handleFileChange}
-                    hidden
-                    disabled={loading || uploading}
-                  />
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp" onChange={handleFileChange} hidden disabled={loading || uploading} />
                 </Button>
               )
             }}
-            placeholder={file ? file.name : certificacion?.archivo_url ? 'Archivo actual' : 'Ningún archivo seleccionado'}
+            placeholder="Ningún archivo seleccionado"
             disabled={loading || uploading}
           />
           {filePreview && (
-            <Box mt={1}>
-              {filePreview.startsWith('data:image') ? (
-                <img
-                  src={filePreview}
-                  alt="Preview"
-                  style={{ maxWidth: '200px', maxHeight: '200px', objectFit: 'contain' }}
-                />
-              ) : filePreview.startsWith('http') ? (
-                <Button
-                  href={filePreview}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  size="small"
-                  variant="outlined"
-                >
-                  Ver archivo actual
-                </Button>
-              ) : null}
+            <Box mt={1} textAlign="center">
+              {filePreview.startsWith('data:image') || (filePreview.startsWith('http') && !filePreview.toLowerCase().endsWith('.pdf')) ? (
+                <img src={filePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '4px', border: '1px solid #ddd' }} />
+              ) : (
+                <Button href={filePreview} target="_blank" rel="noopener noreferrer" size="small" variant="outlined">Ver archivo actual</Button>
+              )}
             </Box>
           )}
         </Box>
-
-        <FormControl fullWidth>
-          <InputLabel>Estado</InputLabel>
-          <Select
-            name="activo"
-            value={formData.activo ? 'true' : 'false'}
-            onChange={(e: SelectChangeEvent) => {
-              setFormData(prev => ({
-                ...prev,
-                activo: e.target.value === 'true'
-              }))
-            }}
-            label="Estado"
-            disabled={loading || uploading}
-          >
-            <MenuItem value="true">Activa</MenuItem>
-            <MenuItem value="false">Inactiva</MenuItem>
-          </Select>
-        </FormControl>
-      </Box>
+      </Stack>
 
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-        {onCancel && (
-          <Button variant="outlined" onClick={onCancel} disabled={loading || uploading}>
-            Cancelar
-          </Button>
-        )}
-        <Button
-          type="submit"
-          variant="contained"
-          disabled={loading || uploading}
-          startIcon={loading || uploading ? <CircularProgress size={20} /> : null}
-        >
-          {uploading
-            ? 'Subiendo archivo...'
-            : loading
-            ? 'Guardando...'
-            : certificacion
-            ? 'Actualizar'
-            : 'Crear'}
+        {onCancel && <Button variant="outlined" onClick={onCancel} disabled={loading || uploading} sx={{ height: 48 }}>Cancelar</Button>}
+        <Button type="submit" variant="contained" disabled={loading || uploading} startIcon={loading || uploading ? <CircularProgress size={20} /> : null} sx={{ height: 48, minWidth: 120 }}>
+          {uploading ? 'Subiendo...' : loading ? 'Guardando...' : certificacion ? 'Actualizar' : 'Crear'}
         </Button>
       </Box>
     </Box>

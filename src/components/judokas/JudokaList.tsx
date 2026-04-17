@@ -1,200 +1,536 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-  IconButton,
   Box,
-  CircularProgress,
   Alert,
-  Typography
+  Switch,
+  IconButton,
+  Tooltip,
+  Typography,
+  Button,
+  CircularProgress,
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import AddLinkIcon from '@mui/icons-material/AddLink'
+import LinkOffIcon from '@mui/icons-material/LinkOff'
 import { Judoka } from '@/models/judoka'
-import { judokaController } from '@/controllers/judokaController'
+import { DataTable, SearchBar, FilterSelect } from '@/components/ui'
+import ConfirmDialog from '@/components/common/ConfirmDialog'
 import Pagination from '@/components/common/Pagination'
+import { judokaController } from '@/controllers/judokaController'
+import { useJudokaList } from '@/hooks/useJudokaList'
+import { CATEGORIES, BELT_COLORS } from '@/constants/globales'
+import { Grid } from '@mui/material'
+import { useAuth } from '@/contexts/AuthContext'
+import { ROL } from '@/constants/roles'
 
 interface JudokaListProps {
+  judokas?: Judoka[]
+  isLoading?: boolean
   onEdit?: (judoka: Judoka) => void
   onDelete?: (judoka: Judoka) => void
   refreshTrigger?: number
-  clubId?: string // Opcional: filtrar por club
-  entrenadorId?: string // Opcional: filtrar por entrenador
+  clubId?: string | null
+  entrenadorId?: string
+  senseiId?: string
   searchTerm?: string
   itemsPerPage?: number
+  showUnassigned?: boolean
+  readOnly?: boolean
 }
 
-export default function JudokaList({ onEdit, onDelete, refreshTrigger, clubId, entrenadorId, searchTerm = '', itemsPerPage: initialItemsPerPage = 10 }: JudokaListProps) {
-  const [judokas, setJudokas] = useState<Judoka[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(initialItemsPerPage)
+const BELT_COLOR_MAP: Record<string, string> = {
+  'Blanco': '#FFFFFF',
+  'Amarillo': '#FFEB3B',
+  'Naranja': '#FF9800',
+  'Verde': '#4CAF50',
+  'Azul': '#2196F3',
+  'Café': '#795548',
+  'Negro': '#212121',
+}
 
-  const loadJudokas = async () => {
-    setLoading(true)
-    setError(null)
-    
-    let response
-    if (clubId) {
-      response = await judokaController.getJudokasByClub(clubId)
-    } else if (entrenadorId) {
-      response = await judokaController.getJudokasByEntrenador(entrenadorId)
-    } else {
-      response = await judokaController.getAllJudokas()
+export default function JudokaList({
+  judokas: judokasProp,
+  isLoading: isLoadingProp,
+  onEdit,
+  onDelete,
+  refreshTrigger,
+  clubId,
+  entrenadorId,
+  senseiId,
+  searchTerm: externalSearchTerm = '',
+  itemsPerPage: initialItemsPerPage = 10,
+  showUnassigned = false,
+  readOnly = false
+}: JudokaListProps) {
+    const { user } = useAuth()
+    const isAdminOrAsoc = user?.rol === ROL.ADMIN || user?.rol === ROL.ASOCIACION
+    const isEncargado = user?.rol === ROL.ENCARGADO
+    const isSensei = user?.rol === ROL.SENSEI
+
+    const {
+    loading,
+    error,
+    toggleStatus,
+    deleteLocalJudoka,
+    updateLocalJudoka,
+    filteredData,
+    state,
+    setGlobalFilter,
+    setFilter,
+    toggleShowFilters
+  } = useJudokaList({
+    clubId: clubId || undefined,
+    entrenadorId,
+    refreshTrigger,
+    judokasProp,
+    initialSearch: externalSearchTerm
+  })
+
+  const [page, setPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+
+  const handleAfiliar = async (judoka: Judoka) => {
+    if (!clubId) return
+    setActionLoading(judoka.id)
+    try {
+      const payload: any = { club_id: clubId }
+      if (isSensei && user?.sensei_id) {
+        payload.entrenador_id = user.sensei_id
+      }
+      const response = await judokaController.updateJudoka(judoka.id, payload)
+      if (response.success && response.data) {
+        updateLocalJudoka(judoka.id, response.data)
+      } else {
+        alert(response.error || 'Error al afiliar judoka')
+      }
+    } catch (err) {
+      alert('Error inesperado al afiliar judoka')
+    } finally {
+      setActionLoading(null)
     }
-    
-    if (response.success && response.data) {
-      setJudokas(response.data)
-    } else {
-      setError(response.error || 'Error al cargar los judokas')
-    }
-    
-    setLoading(false)
   }
 
-  useEffect(() => {
-    loadJudokas()
-  }, [refreshTrigger, clubId, entrenadorId])
-
-  // Resetear a página 1 cuando cambia el término de búsqueda
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchTerm])
-
-  // Filtrar judokas según el término de búsqueda
-  const filteredJudokas = useMemo(() => {
-    if (!searchTerm) return judokas
-    const search = searchTerm.toLowerCase()
-    return judokas.filter((judoka) => (
-      judoka.nombres?.toLowerCase().includes(search) ||
-      judoka.apellidos?.toLowerCase().includes(search) ||
-      judoka.categoria?.toLowerCase().includes(search) ||
-      judoka.cinturon_actual?.toLowerCase().includes(search)
-    ))
-  }, [judokas, searchTerm])
-
-  // Calcular paginación
-  const totalPages = Math.max(1, Math.ceil(filteredJudokas.length / itemsPerPage))
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedJudokas = filteredJudokas.slice(startIndex, endIndex)
-  
-  // Asegurar que currentPage no exceda totalPages
-  useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(1)
+  const handleDesafiliar = async (judoka: Judoka) => {
+    setActionLoading(judoka.id)
+    try {
+      const response = await judokaController.updateJudoka(judoka.id, { club_id: null as any, entrenador_id: null as any })
+      if (response.success && response.data) {
+        updateLocalJudoka(judoka.id, response.data)
+      } else {
+        alert(response.error || 'Error al desafiliar judoka')
+      }
+    } catch (err) {
+      alert('Error inesperado al desafiliar judoka')
+    } finally {
+      setActionLoading(null)
     }
-  }, [totalPages, currentPage])
+  }
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
-        <CircularProgress />
-      </Box>
+  const handleTomarMando = async (judoka: Judoka) => {
+    if (!user?.sensei_id) return
+    setActionLoading(judoka.id)
+    try {
+      const response = await judokaController.updateJudoka(judoka.id, { entrenador_id: user.sensei_id })
+      if (response.success && response.data) {
+        updateLocalJudoka(judoka.id, response.data)
+      } else {
+        alert(response.error || 'Error al tomar mando')
+      }
+    } catch (err) {
+      alert('Error inesperado al tomar mando')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleQuitarMando = async (judoka: Judoka) => {
+    setActionLoading(judoka.id)
+    try {
+      const response = await judokaController.updateJudoka(judoka.id, { entrenador_id: null as any })
+      if (response.success && response.data) {
+        updateLocalJudoka(judoka.id, response.data)
+      } else {
+        alert(response.error || 'Error al quitar mando')
+      }
+    } catch (err) {
+      alert('Error inesperado al quitar mando')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const paginatedData = useMemo(() => {
+    // Si es Sensei, el orden ya viene pre-establecido desde el hook fetchItems
+    // 1. A su mando
+    // 2. Club sin mando
+    // 3. Sin club
+    // Solo aplicamos el filtro de activos/inactivos si no es una vista filtrada por el hook
+    
+    const sortedData = [...filteredData].sort((a, b) => {
+      // Si estamos en la vista de Sensei (tenemos senseiId), respetamos el orden de llegada
+      if (senseiId) return 0;
+
+      // Para otros roles, mantener orden por estado
+      if (a.activo && !b.activo) return -1
+      if (!a.activo && b.activo) return 1
+      
+      if (a.activo && b.activo) {
+        if (a.club_id && !b.club_id) return -1
+        if (!a.club_id && b.club_id) return 1
+      }
+      
+      return 0
+    })
+
+    return sortedData.slice(
+      (page - 1) * itemsPerPage,
+      page * itemsPerPage
     )
+  }, [filteredData, page, itemsPerPage, senseiId])
+
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage)
+
+  const [pendingDelete, setPendingDelete] = useState<Judoka | null>(null)
+  const [confirmLoading, setConfirmLoading] = useState(false)
+
+  const isLoading = isLoadingProp !== undefined ? isLoadingProp : loading
+
+  const handleDeleteClick = (judoka: Judoka) => {
+    if (onDelete) {
+      onDelete(judoka)
+    } else {
+      setPendingDelete(judoka)
+    }
   }
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return
+    setConfirmLoading(true)
+    try {
+      const response = await judokaController.deleteJudoka(pendingDelete.id)
+      if (response.success) {
+        deleteLocalJudoka(pendingDelete.id)
+        setPendingDelete(null)
+      } else {
+        alert(response.error || 'Error al eliminar judoka')
+      }
+    } catch {
+      alert('Error inesperado al eliminar judoka')
+    } finally {
+      setConfirmLoading(false)
+    }
+  }
+
+  const columns = useMemo<any[]>(() => {
+    const cols = [
+      {
+        id: 'index',
+        label: 'N°',
+        align: 'center',
+        render: (_: any, index: number) => (
+          <Typography variant="body2" color="text.secondary">
+            {(page - 1) * itemsPerPage + (index ?? 0) + 1}
+          </Typography>
+        ),
+      },
+      {
+        id: 'nombres',
+        label: 'Judoka',
+        render: (j: Judoka) => (
+          <Box>
+            <Typography variant="body2" fontWeight="bold">
+              {j.nombres} {j.apellidos}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              CI: {j.ci ? (j.ci_extension ? `${j.ci}-${j.ci_extension}` : j.ci) : '-'}
+            </Typography>
+            {showUnassigned && !j.club_id && (
+              <Typography variant="caption" color="error" sx={{ fontStyle: 'italic', fontWeight: 'medium', display: 'block' }}>
+                Sin club asignado
+              </Typography>
+            )}
+            {isEncargado && clubId && (
+              <Box mt={1}>
+                {j.club_id === clubId ? (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    startIcon={actionLoading === j.id ? <CircularProgress size={16} /> : <LinkOffIcon />}
+                    onClick={() => handleDesafiliar(j)}
+                    disabled={!!actionLoading}
+                    sx={{ fontSize: '0.7rem', py: 0 }}
+                  >
+                    Desafiliar del Club
+                  </Button>
+                ) : !j.club_id ? (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="primary"
+                    startIcon={actionLoading === j.id ? <CircularProgress size={16} /> : <AddLinkIcon />}
+                    onClick={() => handleAfiliar(j)}
+                    disabled={!!actionLoading}
+                    sx={{ fontSize: '0.7rem', py: 0 }}
+                  >
+                    Inscribir a mi Club
+                  </Button>
+                ) : null}
+              </Box>
+            )}
+            {isSensei && user?.club_id && (
+              <Box mt={1}>
+                {!j.club_id ? (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="primary"
+                    startIcon={actionLoading === j.id ? <CircularProgress size={16} /> : <AddLinkIcon />}
+                    onClick={() => handleAfiliar(j)}
+                    disabled={!!actionLoading}
+                    sx={{ fontSize: '0.7rem', py: 0 }}
+                  >
+                    Inscribir a mi mando
+                  </Button>
+                ) : j.club_id === user.club_id ? (
+                  <>
+                    {j.entrenador_id === user.sensei_id ? (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        startIcon={actionLoading === j.id ? <CircularProgress size={16} /> : <LinkOffIcon />}
+                        onClick={() => handleQuitarMando(j)}
+                        disabled={!!actionLoading}
+                        sx={{ fontSize: '0.7rem', py: 0 }}
+                      >
+                        Quitar de mi mando
+                      </Button>
+                    ) : !j.entrenador_id ? (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="primary"
+                        startIcon={actionLoading === j.id ? <CircularProgress size={16} /> : <AddLinkIcon />}
+                        onClick={() => handleTomarMando(j)}
+                        disabled={!!actionLoading}
+                        sx={{ fontSize: '0.7rem', py: 0 }}
+                      >
+                        Tomar a mi mando
+                      </Button>
+                    ) : null}
+                  </>
+                ) : null}
+              </Box>
+            )}
+          </Box>
+        )
+      },
+      {
+        id: 'contacto',
+        label: 'Contacto',
+        render: (j: Judoka) => (
+          <Box>
+            <Typography variant="body2">{j.email || '-'}</Typography>
+            <Typography variant="caption" color="text.secondary">
+              {j.numero_celular || 'Sin celular'}
+            </Typography>
+          </Box>
+        ),
+      },
+      {
+        id: 'categoria',
+        label: 'Categoría',
+        render: (j: Judoka) => j.categoria || '-'
+      },
+      {
+        id: 'cinturon_actual',
+        label: 'Cinturón',
+        render: (j: Judoka) => {
+          const belt = j.cinturon_actual
+          if (!belt) return '-'
+          return (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box
+                sx={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: '50%',
+                  backgroundColor: BELT_COLOR_MAP[belt] || '#ccc',
+                  border: belt === 'Blanco' ? '1px solid #ddd' : 'none',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                }}
+              />
+              {belt}
+            </Box>
+          )
+        }
+      }
+    ]
+
+    if (!readOnly || isEncargado) {
+      cols.push({
+        id: 'activo',
+        label: 'Estado',
+        render: (j: Judoka) => (
+          <Tooltip title={isAdminOrAsoc ? (j.activo ? 'Desactivar' : 'Activar') : (j.activo ? 'Activo' : 'Inactivo')}>
+            <span>
+              <Switch
+                checked={!!j.activo}
+                onChange={() => isAdminOrAsoc && toggleStatus(j.id, !!j.activo)}
+                size="medium"
+                disabled={!isAdminOrAsoc}
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': {
+                    color: '#4caf50',
+                    '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.08)' },
+                  },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                    backgroundColor: '#4caf50',
+                  },
+                  '& .MuiSwitch-switchBase': {
+                    color: '#f44336',
+                    '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.08)' },
+                  },
+                  '& .MuiSwitch-switchBase + .MuiSwitch-track': {
+                    backgroundColor: '#f44336',
+                  },
+                  '& .MuiSwitch-switchBase.Mui-disabled': {
+                    color: (j.activo ? '#4caf50' : '#f44336') + ' !important',
+                    opacity: '1 !important'
+                  },
+                  '& .MuiSwitch-switchBase.Mui-disabled + .MuiSwitch-track': {
+                    backgroundColor: (j.activo ? '#4caf50' : '#f44336') + ' !important',
+                    opacity: '0.5 !important'
+                  }
+                }}
+              />
+            </span>
+          </Tooltip>
+        )
+      })
+
+      cols.push({
+        id: 'acciones',
+        label: 'Acciones',
+        render: (j: Judoka) => (
+          <Box display="flex" gap={1} justifyContent="flex-end">
+            {onEdit && (
+              <Tooltip title="Editar">
+                <IconButton
+                  size="small"
+                  color="primary"
+                  onClick={() => onEdit(j)}
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+            {!isEncargado && (
+              <IconButton
+                size="small"
+                color="error"
+                onClick={() => handleDeleteClick(j)}
+                title="Eliminar"
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            )}
+          </Box>
+        )
+      })
+    }
+    return cols
+  }, [onEdit, readOnly, showUnassigned, toggleStatus])
 
   if (error) {
-    return (
-      <Alert severity="error" sx={{ mb: 2 }}>
-        {error}
-      </Alert>
-    )
-  }
-
-  if (judokas.length === 0) {
-    return (
-      <Box textAlign="center" py={4}>
-        <Typography variant="h6" color="text.secondary">
-          No hay judokas registrados
-        </Typography>
-      </Box>
-    )
-  }
-
-  if (filteredJudokas.length === 0 && searchTerm) {
-    return (
-      <Box textAlign="center" py={4}>
-        <Typography variant="h6" color="text.secondary">
-          No se encontraron judokas que coincidan con "{searchTerm}"
-        </Typography>
-      </Box>
-    )
+    return <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
   }
 
   return (
     <>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell><strong>Nombres</strong></TableCell>
-              <TableCell><strong>Apellidos</strong></TableCell>
-              <TableCell><strong>Categoría</strong></TableCell>
-              <TableCell><strong>Cinturón</strong></TableCell>
-              <TableCell><strong>Estado</strong></TableCell>
-              <TableCell align="right"><strong>Acciones</strong></TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {paginatedJudokas.map((judoka) => (
-              <TableRow key={judoka.id} hover>
-                <TableCell>{judoka.nombres}</TableCell>
-                <TableCell>{judoka.apellidos}</TableCell>
-                <TableCell>{judoka.categoria || '-'}</TableCell>
-                <TableCell>{judoka.cinturon_actual || '-'}</TableCell>
-                <TableCell>
-                  <Chip 
-                    label={judoka.activo ? 'Activo' : 'Inactivo'} 
-                    color={judoka.activo ? 'success' : 'default'}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell align="right">
-                  {onEdit && (
-                    <IconButton 
-                      size="small" 
-                      color="primary" 
-                      onClick={() => onEdit(judoka)}
-                      title="Editar"
-                    >
-                      <EditIcon />
-                    </IconButton>
-                  )}
-                  {onDelete && (
-                    <IconButton 
-                      size="small" 
-                      color="error" 
-                      onClick={() => onDelete(judoka)}
-                      title="Eliminar"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalItems={filteredJudokas.length}
-        itemsPerPage={itemsPerPage}
-        onPageChange={setCurrentPage}
-        onItemsPerPageChange={setItemsPerPage}
+      {!readOnly && (
+        <SearchBar
+          value={state.globalFilter}
+          onChange={setGlobalFilter}
+          placeholder="Buscar por nombre, carnet o categoría..."
+          onToggleFilters={toggleShowFilters}
+          showFilters={state.showFilters}
+        >
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={4}>
+              <FilterSelect
+                label="Categoría"
+                value={state.categoriaFilter}
+                onChange={(e) => setFilter('categoria', e.target.value)}
+                options={[
+                  { value: 'all', label: 'Todas las categorías' },
+                  ...CATEGORIES.map(c => ({ value: c, label: c }))
+                ]}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <FilterSelect
+                label="Cinturón"
+                value={state.cinturonFilter}
+                onChange={(e) => setFilter('cinturon', e.target.value)}
+                options={[
+                  { value: 'all', label: 'Todos los cinturones' },
+                  ...BELT_COLORS.map(c => ({ value: c, label: c }))
+                ]}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <FilterSelect
+                label="Estado"
+                value={state.estadoFilter}
+                onChange={(e) => setFilter('estado', e.target.value)}
+                options={[
+                  { value: 'all', label: 'Todos los estados' },
+                  { value: 'activo', label: 'Solo Activos' },
+                  { value: 'inactivo', label: 'Solo Inactivos' }
+                ]}
+              />
+            </Grid>
+          </Grid>
+        </SearchBar>
+      )}
+      
+      <DataTable<Judoka>
+        columns={columns}
+        data={paginatedData}
+        isLoading={isLoading}
+        keyExtractor={(row) => row.id}
+        emptyMessage="No se encontraron judokas"
       />
+
+      <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={filteredData.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
+      </Box>
+
+      {!onDelete && (
+        <ConfirmDialog
+          open={!!pendingDelete}
+          title="Eliminar Judoka"
+          message={pendingDelete ? `Estás seguro de eliminar al judoka "${pendingDelete.nombres} "?` : ''}
+          confirmText="Eliminar"
+          onConfirm={handleConfirmDelete}
+          onClose={() => setPendingDelete(null)}
+          loading={confirmLoading}
+        />
+      )}
     </>
   )
 }
-

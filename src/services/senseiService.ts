@@ -1,327 +1,247 @@
-import { supabase } from '@/lib/supabase'
 import { createClient } from '@/lib/supabase/client'
 import { Sensei, SenseiCreate, SenseiUpdate } from '@/models/sensei'
-import { ApiResponse } from '@/types'
+import { ApiResponse } from '@/types/globales'
 import { userService } from './userService'
 
-// Helper para obtener el cliente correcto (navegador si está disponible, básico si no)
-function getSupabaseClient() {
-  if (typeof window !== 'undefined') {
-    return createClient()
+const SENSEI_WITH_USER_COLUMNS = 'id, club_id, usuario_id, grado_dan, especialidad, created_at, updated_at, usuarios:usuario_id(id, nombre, apellido_paterno, apellido_materno, avatar_url, correo, fecha_nacimiento, numero_celular, ci, ci_extension, genero, activo), clubes:club_id(id, nombre_club)'
+
+function mapSenseiRow(row: any, certsCountMap: Record<string, number>): Sensei {
+  const u = row.usuarios
+  const nombres = u?.nombre ?? ''
+  const email = u?.correo ?? ''
+  const apellidoP = u?.apellido_paterno ?? ''
+  const apellidoM = u?.apellido_materno ?? ''
+
+  const usuarioId = String(row.usuario_id).toLowerCase();
+  const total_certificaciones = certsCountMap[usuarioId] || 0
+
+  return {
+    ...row,
+    nombres,
+    apellidos: [apellidoP, apellidoM].filter(Boolean).join(' '),
+    apellido_paterno: apellidoP,
+    apellido_materno: apellidoM,
+    email,
+    fecha_nacimiento: u?.fecha_nacimiento ?? null,
+    numero_celular: u?.numero_celular ?? null,
+    ci: u?.ci ?? null,
+    ci_extension: u?.ci_extension ?? null,
+    genero: u?.genero ?? null,
+    activo: u?.activo ?? true,
+    avatar_url: u?.avatar_url ?? null,
+    certificacion: null,
+    certificacion_id: null,
+    total_certificaciones,
+    clubes: row.clubes || null,
+    nombre_club: row.clubes?.nombre_club || null
   }
-  return supabase
 }
 
 export const senseiService = {
-  /**
-   * Obtener todos los senseis
-   */
   async getAll(includeInactive: boolean = false): Promise<ApiResponse<Sensei[]>> {
     try {
-      const client = getSupabaseClient()
-      let query = client
+      const client = createClient()
+      
+      // 1. Obtener senseis
+      const { data: senseis, error } = await client
         .from('senseis')
-        .select('*')
+        .select(SENSEI_WITH_USER_COLUMNS)
         .order('created_at', { ascending: false })
 
-      if (!includeInactive) {
-        query = query.eq('activo', true)
+      if (error) throw error
+
+      // 2. Obtener conteo de certificaciones
+      const { data: certs, error: certsError } = await client
+        .from('certificaciones')
+        .select('usuario_id, activo')
+
+      const certsCountMap: Record<string, number> = {}
+      if (!certsError && certs) {
+        certs.forEach(c => {
+          if (c.usuario_id && c.activo) {
+            const uid = String(c.usuario_id).toLowerCase();
+            certsCountMap[uid] = (certsCountMap[uid] || 0) + 1
+          }
+        })
       }
 
-      const { data, error } = await query
-
-      if (error) throw error
-
-      return { success: true, data: data || [] }
+      let mapped = (senseis || []).map(row => mapSenseiRow(row, certsCountMap))
+      
+      if (!includeInactive) {
+        mapped = mapped.filter(s => s.activo)
+      }
+      
+      return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
     }
   },
 
-  /**
-   * Obtener senseis por club
-   */
   async getByClub(clubId: string): Promise<ApiResponse<Sensei[]>> {
     try {
-      const client = getSupabaseClient()
-      const { data, error } = await client
+      const client = createClient()
+      const { data: senseis, error } = await client
         .from('senseis')
-        .select('*')
+        .select(SENSEI_WITH_USER_COLUMNS)
         .eq('club_id', clubId)
-        .eq('activo', true)
         .order('created_at', { ascending: false })
 
       if (error) throw error
 
-      return { success: true, data: data || [] }
+      const { data: certs } = await client.from('certificaciones').select('usuario_id').eq('activo', true)
+      const certsCountMap: Record<string, number> = {}
+      if (certs) {
+        certs.forEach(c => { if (c.usuario_id) certsCountMap[c.usuario_id] = (certsCountMap[c.usuario_id] || 0) + 1 })
+      }
+
+      const mapped = (senseis || []).map(row => mapSenseiRow(row, certsCountMap))
+      return { success: true, data: mapped }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      return { success: false, error: errorMessage }
+      return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
     }
   },
 
-  /**
-   * Obtener un sensei por ID
-   */
   async getById(id: string): Promise<ApiResponse<Sensei>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { data, error } = await client
         .from('senseis')
-        .select('*')
+        .select(SENSEI_WITH_USER_COLUMNS)
         .eq('id', id)
         .single()
 
       if (error) throw error
 
-      return { success: true, data }
+      const { count } = await client.from('certificaciones').select('*', { count: 'exact', head: true }).eq('usuario_id', data.usuario_id).eq('activo', true)
+      const mapped = mapSenseiRow(data, { [data.usuario_id]: count || 0 })
+      return { success: true, data: mapped }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      return { success: false, error: errorMessage }
+      return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
     }
   },
 
-  /**
-   * Crear un nuevo sensei
-   */
   async create(sensei: SenseiCreate): Promise<ApiResponse<Sensei>> {
     try {
       let userId = sensei.usuario_id
-
-      // Si no hay usuario_id o es temporal, crear usuario y perfil automáticamente
       if (!userId || userId === 'temp-user-id') {
-        // Validar que se proporcionen email y password
-        if (!sensei.email || !sensei.password) {
-          return {
-            success: false,
-            error: 'Email y contraseña son requeridos para crear un nuevo sensei'
-          }
-        }
-
-        // Determinar qué función usar según si es encargado o sensei normal
+        if (!sensei.email || !sensei.password) return { success: false, error: 'Email y contraseña requeridos' }
         const userResult = sensei.isEncargado
-          ? await userService.createEncargadoUser(
-              sensei.nombres, 
-              sensei.apellidos, 
-              sensei.email, 
-              sensei.password,
-              sensei.club_id || undefined
-            )
-          : await userService.createSenseiUser(
-              sensei.nombres, 
-              sensei.apellidos, 
-              sensei.email, 
-              sensei.password
-            )
+          ? await userService.createEncargadoUser(sensei.nombres, sensei.apellido_paterno, sensei.apellido_materno, sensei.email!, sensei.password!, sensei.club_id || undefined, sensei.fecha_nacimiento, sensei.numero_celular, sensei.genero, sensei.ci, (sensei as any).ci_extension)
+          : await userService.createSenseiUser(sensei.nombres, sensei.apellido_paterno, sensei.apellido_materno, sensei.email!, sensei.password!, sensei.fecha_nacimiento, sensei.numero_celular, sensei.genero, sensei.ci, (sensei as any).ci_extension)
         
-        if (!userResult.success || !userResult.data) {
-          return { 
-            success: false, 
-            error: userResult.error || 'Error al crear el usuario del sensei' 
-          }
-        }
-
-        userId = userResult.data.userId
+        if (!userResult.success || !userResult.data) return { success: false, error: userResult.error || 'Error al crear usuario' }
+        userId = userResult.data.usuarioId
       }
 
-      // Validar formato UUID
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-      if (!uuidRegex.test(userId)) {
-        return { 
-          success: false, 
-          error: 'Error: El usuario_id debe ser un UUID válido.' 
-        }
-      }
-
-      // Crear el sensei con el usuario_id correcto
-      // Excluir email, password e isEncargado ya que no existen en la tabla senseis
-      const { email, password, isEncargado, ...senseiData } = sensei
-      const senseiConUsuario = {
-        ...senseiData,
-        usuario_id: userId
-      }
-
-      const client = getSupabaseClient()
-      const { data, error } = await client
+      const client = createClient()
+      const { data: inserted, error } = await client
         .from('senseis')
-        .insert(senseiConUsuario)
-        .select()
+        .insert({
+          usuario_id: userId,
+          club_id: sensei.club_id ?? null,
+          grado_dan: sensei.grado_dan ?? null,
+          especialidad: sensei.especialidad ?? null,
+        })
+        .select('id')
         .single()
 
-      if (error) {
-        // Mejorar el mensaje de error
-        let errorMessage = error.message
-        
-        if (error.message.includes('foreign key') || error.message.includes('violates foreign key')) {
-          if (error.message.includes('usuario_id')) {
-            errorMessage = 'Error: El usuario_id no existe en user_profiles. Por favor, primero crea el usuario y su perfil en el sistema.'
-          } else if (error.message.includes('club_id')) {
-            errorMessage = 'Error: El club_id no existe. Por favor, selecciona un club válido.'
-          } else {
-            errorMessage = 'Error: Hay un problema con las relaciones de la base de datos.'
-          }
-        } else if (error.message.includes('duplicate key') || error.message.includes('unique constraint')) {
-          errorMessage = 'Error: Ya existe un sensei con este usuario_id.'
-        } else if (error.message.includes('null value') || error.message.includes('not null')) {
-          errorMessage = 'Error: Faltan campos requeridos. Por favor, completa todos los campos obligatorios.'
-        } else if (error.message.includes('violates check constraint')) {
-          errorMessage = 'Error: Los datos no cumplen con las validaciones de la base de datos.'
-        }
-        
-        return { success: false, error: errorMessage }
+      if (error) throw error
+
+      const userUpdate: Record<string, any> = {}
+      if (sensei.avatar_url) userUpdate.avatar_url = sensei.avatar_url
+      if (sensei.activo !== undefined) userUpdate.activo = sensei.activo
+      if (Object.keys(userUpdate).length > 0) {
+        await client.from('usuarios').update(userUpdate).eq('id', userId)
       }
 
-      // Actualizar club_id en user_profiles si el sensei tiene un club asignado
-      if (data && data.club_id) {
-        await client
-          .from('user_profiles')
-          .update({ club_id: data.club_id, updated_at: new Date().toISOString() })
-          .eq('id', userId)
-      }
-
-      return { success: true, data }
+      return await this.getById(inserted.id)
     } catch (error) {
-      console.error('Error al crear sensei:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear el sensei'
-      return { success: false, error: errorMessage }
+      return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
     }
   },
 
-  /**
-   * Actualizar un sensei
-   */
   async update(id: string, sensei: SenseiUpdate): Promise<ApiResponse<Sensei>> {
     try {
-      const client = getSupabaseClient()
-      const { data, error } = await client
-        .from('senseis')
-        .update(sensei)
-        .eq('id', id)
-        .select()
-        .single()
+      const client = createClient()
+      const { certificacion, nombres, apellido_paterno, apellido_materno, email, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url, ...senseiPayload } = sensei as any
+      
+      const { data: current, error: getError } = await client.from('senseis').select('usuario_id').eq('id', id).single()
+      if (getError || !current) throw new Error('Sensei no encontrado')
 
-      if (error) throw error
+      // 1. Actualizar tabla 'senseis' solo si hay datos específicos
+      const senseiFields = ['club_id', 'grado_dan', 'especialidad']
+      const senseiUpdate: Record<string, any> = {}
+      senseiFields.forEach(f => {
+        if (senseiPayload[f] !== undefined) senseiUpdate[f] = senseiPayload[f]
+      })
 
-      // Si se actualizó el club_id del sensei, actualizar también en user_profiles
-      if (data && sensei.club_id !== undefined) {
-        await client
-          .from('user_profiles')
-          .update({ club_id: sensei.club_id, updated_at: new Date().toISOString() })
-          .eq('id', data.usuario_id)
+      if (Object.keys(senseiUpdate).length > 0) {
+        const { error } = await client.from('senseis').update(senseiUpdate).eq('id', id)
+        if (error) throw error
       }
 
-      return { success: true, data }
+      // 2. Actualizar tabla 'usuarios'
+      const userUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
+      if (nombres !== undefined) userUpdate.nombre = nombres
+      if (apellido_paterno !== undefined) userUpdate.apellido_paterno = apellido_paterno
+      if (apellido_materno !== undefined) userUpdate.apellido_materno = apellido_materno
+      if (email !== undefined) userUpdate.correo = email
+      if (fecha_nacimiento !== undefined) userUpdate.fecha_nacimiento = fecha_nacimiento
+      if (numero_celular !== undefined) userUpdate.numero_celular = numero_celular
+      if (ci !== undefined) userUpdate.ci = ci
+      if (sensei.ci_extension !== undefined) userUpdate.ci_extension = sensei.ci_extension
+      if (genero !== undefined) userUpdate.genero = genero
+      if (activo !== undefined) userUpdate.activo = activo
+      if (avatar_url !== undefined) userUpdate.avatar_url = avatar_url
+      
+      if (Object.keys(userUpdate).length > 1) {
+        const { error } = await client.from('usuarios').update(userUpdate).eq('id', current.usuario_id)
+        if (error) {
+          if (error.message?.includes('usuarios_ci_ci_extension_key') || error.code === '23505') {
+            return { success: false, error: 'Ya existe un usuario registrado con este Carnet de Identidad y extensión' }
+          }
+          throw error
+        }
+      }
+
+      return await this.getById(id)
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      return { success: false, error: errorMessage }
+      return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
     }
   },
 
-  /**
-   * Eliminar un sensei (soft delete - marca como inactivo)
-   * También limpia las referencias en otras tablas (clubes, judokas)
-   */
   async delete(id: string): Promise<ApiResponse<void>> {
     try {
-      const client = getSupabaseClient()
-      
-      // Primero obtener el sensei para conocer su usuario_id
-      const { data: sensei, error: getError } = await client
-        .from('senseis')
-        .select('id, usuario_id')
-        .eq('id', id)
-        .single()
+      const client = createClient()
+      const { data: sensei } = await client.from('senseis').select('usuario_id').eq('id', id).single()
+      if (!sensei) return { success: false, error: 'Sensei no encontrado' }
 
-      if (getError) throw getError
-      if (!sensei) {
-        return { success: false, error: 'Sensei no encontrado' }
-      }
+      const response = await fetch('/api/admin/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuarioId: sensei.usuario_id }),
+      })
 
-      // Actualizar el sensei como inactivo
-      const { error: updateError } = await client
-        .from('senseis')
-        .update({ activo: false })
-        .eq('id', id)
-
-      if (updateError) throw updateError
-
-      // Limpiar referencias en otras tablas
-      // 1. Limpiar director_tecnico_id en clubes (referencia al usuario_id)
-      if (sensei.usuario_id) {
-        const { error: clubesError } = await client
-          .from('clubes')
-          .update({ director_tecnico_id: null })
-          .eq('director_tecnico_id', sensei.usuario_id)
-
-        if (clubesError) {
-          console.warn('Error al limpiar referencias en clubes:', clubesError)
-          // No fallar la eliminación por esto, solo registrar el warning
-        }
-      }
-
-      // 2. Limpiar entrenador_id en judokas (referencia al id del sensei)
-      const { error: judokasError } = await client
-        .from('judokas')
-        .update({ entrenador_id: null })
-        .eq('entrenador_id', id)
-
-      if (judokasError) {
-        console.warn('Error al limpiar referencias en judokas:', judokasError)
-        // No fallar la eliminación por esto, solo registrar el warning
-      }
-
-      // 3. Deshabilitar/eliminar el usuario en auth.users para que el email se pueda reutilizar
-      if (sensei.usuario_id) {
-        try {
-          const response = await fetch('/api/admin/disable-user', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              userId: sensei.usuario_id,
-            }),
-          })
-
-          const result = await response.json()
-          if (!result.success) {
-            console.warn('Error al deshabilitar usuario en auth.users:', result.error)
-            // No fallar la eliminación por esto, solo registrar el warning
-          }
-        } catch (error) {
-          console.warn('Error al llamar API para deshabilitar usuario:', error)
-          // No fallar la eliminación por esto, solo registrar el warning
-        }
-      }
-
-      return { success: true }
+      const result = await response.json()
+      return result.success ? { success: true } : { success: false, error: result.error }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      return { success: false, error: errorMessage }
+      return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
     }
   },
 
-  /**
-   * Restaurar un sensei (marcar como activo)
-   */
   async restore(id: string): Promise<ApiResponse<Sensei>> {
     try {
-      const client = getSupabaseClient()
-      const { data, error } = await client
-        .from('senseis')
-        .update({ activo: true })
-        .eq('id', id)
-        .select()
-        .single()
+      const client = createClient()
+      const { data: sensei } = await client.from('senseis').select('usuario_id').eq('id', id).single()
+      if (!sensei) throw new Error('Sensei no encontrado')
 
+      const { error } = await client.from('usuarios').update({ activo: true }).eq('id', sensei.usuario_id)
       if (error) throw error
-
-      return { success: true, data }
+      
+      return await this.getById(id)
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      return { success: false, error: errorMessage }
+      return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
     }
   }
 }
-

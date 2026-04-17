@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Pagination as MuiPagination, Typography, Select, MenuItem, FormControl, InputLabel } from '@mui/material'
+import { Box, Pagination as MuiPagination, Typography, Select, MenuItem, FormControl, InputLabel, SelectChangeEvent } from '@mui/material'
 
 interface PaginationProps {
   currentPage: number
@@ -27,7 +27,7 @@ export default function Pagination({
   const startItem = totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0
   const endItem = Math.min(currentPage * itemsPerPage, totalItems)
 
-  const handleItemsPerPageChange = (event: any) => {
+  const handleItemsPerPageChange = (event: SelectChangeEvent<number>) => {
     const newItemsPerPage = event.target.value
     if (onItemsPerPageChange) {
       onItemsPerPageChange(newItemsPerPage)
@@ -79,4 +79,5 @@ export default function Pagination({
     </Box>
   )
 }
+
 

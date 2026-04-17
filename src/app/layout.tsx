@@ -1,22 +1,32 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Montserrat, Open_Sans } from "next/font/google";
 import ThemeRegistry from '@/components/common/ThemeRegistry';
+import ReactQueryProvider from '@/components/common/ReactQueryProvider';
 import { AuthProvider } from '@/contexts/AuthContext';
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Fuente para títulos y navegación - Montserrat
+const montserrat = Montserrat({
+  variable: "--font-montserrat-custom",
   subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+// Fuente para texto de cuerpo - Open Sans
+const openSans = Open_Sans({
+  variable: "--font-opensans-custom",
   subsets: ["latin"],
+  weight: ["400", "600"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "Asociación de Judo",
   description: "Sistema de gestión para asociación de judo",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -27,13 +37,15 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${montserrat.variable} ${openSans.variable} antialiased`}
       >
-        <ThemeRegistry>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
-        </ThemeRegistry>
+        <ReactQueryProvider>
+          <ThemeRegistry>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </ThemeRegistry>
+        </ReactQueryProvider>
       </body>
     </html>
   );

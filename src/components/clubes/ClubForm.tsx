@@ -1,465 +1,338 @@
-'use client'
-
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { Controller } from 'react-hook-form'
 import {
-  TextField,
   Button,
   Box,
   Alert,
   CircularProgress,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  InputAdornment,
-  IconButton,
   Typography,
+  Divider,
+  Grid,
+  Paper,
+  Stack,
+  IconButton,
+  Tooltip,
 } from '@mui/material'
-import Visibility from '@mui/icons-material/Visibility'
-import VisibilityOff from '@mui/icons-material/VisibilityOff'
-import AddIcon from '@mui/icons-material/Add'
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import type { SelectChangeEvent } from '@mui/material/Select'
-import { Club, ClubCreate, ClubUpdate } from '@/models/club'
+import DeleteIcon from '@mui/icons-material/Delete'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import DescriptionIcon from '@mui/icons-material/Description'
+import { Club } from '@/models/club'
+import { MUNICIPIOS, CI_EXTENSIONS } from '@/constants/globales'
+import { useClubForm } from '@/hooks/useClubForm'
+import { formatCIInput, formatCIExtensionInput, formatNameInput, formatCelularInput, formatNameWithNumbersInput } from '@/utils/formatters'
+import { FormInput, FormSelect, FormAutocomplete } from '@/components/ui'
+import { storageService } from '@/services/storageService'
 import { clubController } from '@/controllers/clubController'
-import { senseiController } from '@/controllers/senseiController'
-import { Sensei, SenseiCreate } from '@/models/sensei'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface ClubFormProps {
-  club?: Club | null
-  onSuccess?: () => void
-  onCancel?: () => void
+  club?: Club
+  onSuccess: () => void
+  onCancel: () => void
 }
 
 export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
-  const [formData, setFormData] = useState<ClubCreate | ClubUpdate>({
-    nombre_club: '',
-    municipio: '',
-    direccion: '',
-    telefono_contacto: '',
-    director_tecnico_id: null,
-    activo: true
-  })
-  const [senseis, setSenseis] = useState<Sensei[]>([])
-  const [newDirectorNombres, setNewDirectorNombres] = useState('')
-  const [newDirectorApellidos, setNewDirectorApellidos] = useState('')
-  const [newDirectorEmail, setNewDirectorEmail] = useState('')
-  const [newDirectorPassword, setNewDirectorPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [loadingSenseis, setLoadingSenseis] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [isCreatingNewDirector, setIsCreatingNewDirector] = useState(false)
+  const { user } = useAuth()
+  
+  // Manejo de archivos para nuevos clubes
+  const [files, setFiles] = useState<{ file: File, nombre: string, tipo: string }[]>([])
+  
+  const { state, dispatch, control, handleSubmit, onSubmit, errors, isValid, isSubmitting, trigger, senseiOptions } = useClubForm({ 
+    club, 
+    onSuccess,
+    filesCount: files.length
+  }); 
+  const { loading: submitting, error: submitError, loadingSenseis } = state;
 
-  useEffect(() => {
-    // Cargar senseis activos
-    const loadSenseis = async () => {
-      const response = await senseiController.getAllSenseis(false)
-      if (response.success && response.data) {
-        // Si estamos editando un club, filtrar solo senseis del club o sin club
-        if (club) {
-          const senseisDisponibles = response.data.filter(
-            sensei => sensei.club_id === club.id || sensei.club_id === null
-          )
-          setSenseis(senseisDisponibles)
-        } else {
-          // Si estamos creando un club nuevo, mostrar solo senseis sin club
-          const senseisSinClub = response.data.filter(
-            sensei => sensei.club_id === null
-          )
-          setSenseis(senseisSinClub)
-        }
+  const [uploadingFiles, setUploadingFiles] = useState(false)
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0]
+    if (selectedFile) {
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+      if (!allowedTypes.includes(selectedFile.type)) {
+        alert('Tipo de archivo no permitido. Solo se permiten PDF e imágenes')
+        return
       }
-      setLoadingSenseis(false)
+      setFiles(prev => [...prev, { 
+        file: selectedFile, 
+        nombre: selectedFile.name,
+        tipo: selectedFile.type.includes('pdf') ? 'PDF' : 'Imagen'
+      }])
     }
-    loadSenseis()
-  }, [club])
-
-  useEffect(() => {
-    if (club) {
-      setFormData({
-        nombre_club: club.nombre_club,
-        municipio: club.municipio || '',
-        direccion: club.direccion || '',
-        telefono_contacto: club.telefono_contacto || '',
-        director_tecnico_id: club.director_tecnico_id || null,
-        activo: club.activo
-      })
-      // Al editar un club no usamos los campos de nuevo director
-      setNewDirectorNombres('')
-      setNewDirectorApellidos('')
-      setNewDirectorEmail('')
-      setNewDirectorPassword('')
-    }
-  }, [club])
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-    setError(null)
-    setSuccess(false)
   }
 
-  const handleSelectChange = (e: SelectChangeEvent<string>) => {
-    const { name, value } = e.target
-    if (!name) return
-    setFormData(prev => ({
-      ...prev,
-      [name]: value === '' ? null : value
-    }))
-    setError(null)
-    setSuccess(false)
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index))
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    setSuccess(false)
-
+  const handleEnhancedSubmit = async (data: any) => {
     try {
-      let response
-      let directorTecnicoId = formData.director_tecnico_id || null
-      let createdSenseiId: string | null = null
-
-      // Si estamos creando un club y no hay director seleccionado,
-      // pero sí se ingresó nombre y apellido, crear automáticamente un Sensei como Encargado
-      if (
-        !club &&
-        !directorTecnicoId &&
-        newDirectorNombres.trim() !== '' &&
-        newDirectorApellidos.trim() !== ''
-      ) {
-        // Validar email y password para el nuevo director técnico
-        if (!newDirectorEmail.trim() || !newDirectorPassword.trim()) {
-          setError('Email y contraseña son requeridos para crear un nuevo Director Técnico')
-          setLoading(false)
-          return
-        }
-
-        const senseiToCreate: SenseiCreate = {
-          usuario_id: 'temp-user-id', // el servicio creará el usuario real
-          nombres: newDirectorNombres.trim(),
-          apellidos: newDirectorApellidos.trim(),
-          email: newDirectorEmail.trim(),
-          password: newDirectorPassword.trim(),
-          isEncargado: true, // Marcar como encargado para asignar el rol correcto
-          activo: true
-          // No asignamos club_id aquí porque el club aún no existe
-        }
-
-        const senseiResponse = await senseiController.createSensei(senseiToCreate)
-
-        if (!senseiResponse.success || !senseiResponse.data) {
-          const errorMessage = senseiResponse.error || 'Error al crear el director técnico (sensei)'
-          setError(errorMessage)
-          setLoading(false)
-          return
-        }
-
-        // Guardamos el ID del sensei creado para actualizarlo después con el club_id
-        createdSenseiId = senseiResponse.data.id
-
-        // En la tabla clubes guardamos el id de user_profiles,
-        // que coincide con usuario_id del sensei
-        directorTecnicoId = senseiResponse.data.usuario_id
-      }
-
-      const clubPayload: ClubCreate = {
-        ...(formData as ClubCreate),
-        director_tecnico_id: directorTecnicoId
-      }
-
-      if (club) {
-        // Actualizar
-        response = await clubController.updateClub(club.id, clubPayload)
-      } else {
-        // Crear
-        response = await clubController.createClub(clubPayload)
-
-        // Si se creó un sensei nuevo y el club se creó exitosamente,
-        // actualizar el sensei con el club_id del club recién creado
-        if (response.success && response.data && createdSenseiId) {
-          const updateSenseiResponse = await senseiController.updateSensei(
-            createdSenseiId,
-            { club_id: response.data.id }
-          )
-
-          if (!updateSenseiResponse.success) {
-            // No fallamos la creación del club, solo mostramos un warning
-            console.warn('Club creado pero no se pudo asociar al sensei:', updateSenseiResponse.error)
+      // 1. Primero crear/actualizar el club
+      const result = await onSubmit(data)
+      
+      // Si fue exitoso y es creación y hay archivos para subir
+      if (result && (result as any).id) {
+        const clubId = (result as any).id
+        
+        if (!club && files.length > 0) {
+          setUploadingFiles(true)
+          // 2. Subir cada archivo
+          for (const fileItem of files) {
+            const timestamp = Date.now()
+          const fileExtension = fileItem.file.name.split('.').pop()
+          const path = `clubes/${clubId}/${timestamp}_${fileItem.nombre.replace(/\s+/g, '_')}.${fileExtension}`
+          
+          const uploadResult = await storageService.uploadFile(fileItem.file, 'club-documentos', path)
+          
+          if (uploadResult.success) {
+            const url = storageService.getPublicUrl('club-documentos', path)
+            await clubController.addDocument(
+                clubId,
+                fileItem.nombre,
+                url,
+                fileItem.tipo,
+                user?.id || ''
+              )
+            }
           }
         }
-      }
-
-      if (response.success) {
-        setSuccess(true)
-        if (onSuccess) {
-          setTimeout(() => {
-            onSuccess()
-          }, 1000)
-        }
-      } else {
-        setError(response.error || 'Error al guardar el club')
+        // Solo llamar a onSuccess después de que todo esté listo para creación con archivos
+        // O si fue una edición (el hook ya lo llamó pero aquí nos aseguramos para creación)
+        if (!club) onSuccess()
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error inesperado'
-      setError(errorMessage)
+      console.error('Error al procesar archivos:', err)
     } finally {
-      setLoading(false)
+      setUploadingFiles(false)
     }
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-      
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {club ? 'Club actualizado exitosamente' : 'Club creado exitosamente'}
+    <Box component="form" onSubmit={handleSubmit(handleEnhancedSubmit)} noValidate sx={{ mt: 1 }}>
+      {submitError && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {submitError}
         </Alert>
       )}
 
-      {/* Contenedor en columna para que todos los campos ocupen el mismo ancho */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <TextField
-          fullWidth
-          label="Nombre del Club"
-          name="nombre_club"
-          value={formData.nombre_club}
-          onChange={handleChange}
-          required
-          disabled={loading}
-        />
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormInput
+            name="nombre_club"
+            label="Nombre del Club"
+            control={control}
+            disabled={submitting}
+            required
+            formatValue={formatNameWithNumbersInput}
+          />
+        </Grid>
 
-        <TextField
-          fullWidth
-          label="Municipio"
-          name="municipio"
-          value={formData.municipio}
-          onChange={handleChange}
-          disabled={loading}
-        />
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormAutocomplete
+            name="provincia"
+            label="Provincia/Municipio"
+            control={control}
+            disabled={submitting}
+            options={MUNICIPIOS.map(m => ({ value: m, label: m }))}
+          />
+        </Grid>
 
-        <TextField
-          fullWidth
-          label="Dirección"
-          name="direccion"
-          value={formData.direccion}
-          onChange={handleChange}
-          multiline
-          rows={3}
-          disabled={loading}
-        />
+        <Grid size={{ xs: 12 }}>
+            <FormInput
+              name="direccion"
+              label="Dirección de Entrenamiento"
+              control={control}
+              disabled={submitting}
+              multiline
+              rows={2}
+              formatValue={formatNameWithNumbersInput}
+            />
+        </Grid>
 
-        <TextField
-          fullWidth
-          label="Teléfono de Contacto"
-          name="telefono_contacto"
-          value={formData.telefono_contacto}
-          onChange={handleChange}
-          disabled={loading}
-        />
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormInput
+            name="telefono_contacto"
+            label="Teléfono de Contacto"
+            control={control}
+            disabled={submitting}
+            formatValue={formatCelularInput}
+            inputProps={{ 
+              maxLength: 8, 
+              autoComplete: 'tel',
+              name: 'tel_contacto_club',
+              id: 'tel_contacto_club'
+            }}
+            onChange={(e) => {
+              // Solo disparar validación si ya tiene 8 dígitos para limpiar el error
+              if (e.target.value.length === 8) trigger('telefono_contacto');
+            }}
+          />
+        </Grid>
+        
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormAutocomplete
+            name="director_tecnico_id"
+            label="Director Técnico (Sensei/Encargado)"
+            control={control}
+            disabled={submitting || loadingSenseis || state.isCreatingNewDirector}
+            options={senseiOptions}
+            required={!state.isCreatingNewDirector}
+          />
+        </Grid>
 
-        {/* Sección de Director Técnico */}
         {!club && (
-          <Box sx={{ mt: 1 }}>
-            {!isCreatingNewDirector ? (
-              // Modo: Seleccionar director técnico existente
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <FormControl fullWidth>
-                  <InputLabel>Director Técnico</InputLabel>
-                  <Select
-                    name="director_tecnico_id"
-                    value={formData.director_tecnico_id || ''}
-                    onChange={handleSelectChange}
-                    disabled={loading || loadingSenseis}
-                    label="Director Técnico"
-                  >
-                    <MenuItem value="">
-                      <em>Sin director técnico</em>
-                    </MenuItem>
-                    {senseis.map((sensei) => (
-                      <MenuItem key={sensei.id} value={sensei.usuario_id}>
-                        {sensei.nombres} {sensei.apellidos}
-                        {sensei.grado_dan && ` - ${sensei.grado_dan}`}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                
-                <Button
-                  variant="outlined"
-                  startIcon={<AddIcon />}
-                  onClick={() => {
-                    setIsCreatingNewDirector(true)
-                    setFormData(prev => ({ ...prev, director_tecnico_id: null }))
-                  }}
-                  disabled={loading}
-                  sx={{ alignSelf: 'flex-start' }}
-                >
-                  Crear Nuevo Director Técnico
-                </Button>
-              </Box>
-            ) : (
-              // Modo: Crear nuevo director técnico
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    Nuevo Director Técnico
-                  </Typography>
-                  <Button
-                    size="small"
-                    startIcon={<ArrowBackIcon />}
-                    onClick={() => {
-                      setIsCreatingNewDirector(false)
-                      setNewDirectorNombres('')
-                      setNewDirectorApellidos('')
-                      setNewDirectorEmail('')
-                      setNewDirectorPassword('')
-                    }}
-                    disabled={loading}
-                  >
-                    Seleccionar Existente
-                  </Button>
-                </Box>
-                
-                <Alert severity="info" sx={{ mb: 1 }}>
-                  El director técnico se registrará como encargado automáticamente
-                </Alert>
-
-                <TextField
-                  fullWidth
-                  label="Nombre del Director Técnico"
-                  name="nuevo_director_nombres"
-                  value={newDirectorNombres}
-                  onChange={(e) => {
-                    setNewDirectorNombres(e.target.value)
-                    setError(null)
-                    setSuccess(false)
-                  }}
-                  disabled={loading}
-                  required
-                />
-                
-                <TextField
-                  fullWidth
-                  label="Apellidos del Director Técnico"
-                  name="nuevo_director_apellidos"
-                  value={newDirectorApellidos}
-                  onChange={(e) => {
-                    setNewDirectorApellidos(e.target.value)
-                    setError(null)
-                    setSuccess(false)
-                  }}
-                  disabled={loading}
-                  required
-                />
-                
-                <TextField
-                  fullWidth
-                  label="Email del Director Técnico"
-                  name="nuevo_director_email"
-                  type="email"
-                  value={newDirectorEmail}
-                  onChange={(e) => {
-                    setNewDirectorEmail(e.target.value)
-                    setError(null)
-                    setSuccess(false)
-                  }}
-                  disabled={loading}
-                  required
-                  helperText="Email para iniciar sesión en el sistema"
-                />
-                
-                <TextField
-                  fullWidth
-                  label="Contraseña del Director Técnico"
-                  name="nuevo_director_password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={newDirectorPassword}
-                  onChange={(e) => {
-                    setNewDirectorPassword(e.target.value)
-                    setError(null)
-                    setSuccess(false)
-                  }}
-                  disabled={loading}
-                  required
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          aria-label="toggle password visibility"
-                          onClick={() => setShowPassword(!showPassword)}
-                          onMouseDown={(e) => e.preventDefault()}
-                          edge="end"
-                        >
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                  helperText="Mínimo 8 caracteres"
-                  inputProps={{ minLength: 8 }}
-                />
-              </Box>
-            )}
-          </Box>
-        )}
-
-        {/* Al editar, solo mostrar el selector */}
-        {club && (
-          <FormControl fullWidth>
-            <InputLabel>Director Técnico</InputLabel>
-            <Select
-              name="director_tecnico_id"
-              value={formData.director_tecnico_id || ''}
-              onChange={handleSelectChange}
-              disabled={loading || loadingSenseis}
-              label="Director Técnico"
+          <Grid size={{ xs: 12 }}>
+            <Button 
+              type="button" 
+              variant="text"
+              onClick={() => dispatch({ type: "SET_IS_CREATING_NEW_DIRECTOR", payload: !state.isCreatingNewDirector })}
+              sx={{ fontWeight: 'medium' }}
             >
-              <MenuItem value="">
-                <em>Sin director técnico</em>
-              </MenuItem>
-              {senseis.map((sensei) => (
-                <MenuItem key={sensei.id} value={sensei.usuario_id}>
-                  {sensei.nombres} {sensei.apellidos}
-                  {sensei.grado_dan && ` - ${sensei.grado_dan}`}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              {state.isCreatingNewDirector ? "CANCELAR NUEVO DIRECTOR TÉCNICO" : "CREAR NUEVO DIRECTOR TÉCNICO"}
+            </Button>
+          </Grid>
         )}
-      </Box>
 
-      <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-        {onCancel && (
-          <Button
-            variant="outlined"
-            onClick={onCancel}
-            disabled={loading}
-          >
-            Cancelar
-          </Button>
+        {state.isCreatingNewDirector && (
+          <Grid size={{ xs: 12 }} container spacing={2} sx={{ mt: 1 }}>
+            <Grid size={{ xs: 12 }}>
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 'bold', textTransform: 'uppercase', mb: 1 }}>
+                Datos del Nuevo Director
+              </Typography>
+            </Grid>
+            
+            <Grid size={{ xs: 12, sm: 8 }}>
+              <FormInput 
+                name="new_ci" 
+                label="CI del Director Técnico" 
+                control={control} 
+                disabled={submitting} 
+                formatValue={formatCIInput}
+                inputProps={{ maxLength: 7 }} 
+                required
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <FormInput 
+                name="new_ci_extension" 
+                label="Extensión" 
+                control={control} 
+                disabled={submitting} 
+                formatValue={formatCIExtensionInput}
+                inputProps={{ maxLength: 2 }}
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12 }}>
+              <FormInput 
+                name="new_nombres" 
+                label="Nombre del Director Técnico" 
+                control={control} 
+                disabled={submitting} 
+                formatValue={formatNameInput}
+                required
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormInput 
+                name="new_apellido_paterno" 
+                label="Primer Apellido" 
+                control={control} 
+                disabled={submitting} 
+                formatValue={formatNameInput}
+                required
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormInput 
+                name="new_apellido_materno" 
+                label="Segundo Apellido" 
+                control={control} 
+                disabled={submitting} 
+                formatValue={formatNameInput}
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12 }}>
+              <FormInput 
+                name="new_email" 
+                label="Email del Director Técnico" 
+                control={control} 
+                disabled={submitting} 
+                inputProps={{ type: 'email' }}
+                required
+              />
+            </Grid>
+          </Grid>
         )}
+      </Grid>
+
+      {/* Sección de Documentos (Solo al crear) */}
+      {!club && (
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <DescriptionIcon color="primary" />
+            Documentos de Respaldo (Opcional)
+          </Typography>
+          
+          <Paper variant="outlined" sx={{ p: 2, backgroundColor: '#fafafa' }}>
+            <Stack spacing={2}>
+              <Box display="flex" alignItems="center" gap={2}>
+                <Button
+                  component="label"
+                  variant="outlined"
+                  startIcon={<CloudUploadIcon />}
+                  disabled={submitting || uploadingFiles}
+                >
+                  Seleccionar Archivo
+                  <input type="file" hidden accept=".pdf,.jpg,.jpeg,.png,.gif,.webp" onChange={handleFileChange} />
+                </Button>
+                <Typography variant="caption" color="text.secondary">
+                  PDF o Imágenes (Máx. 10MB)
+                </Typography>
+              </Box>
+
+              {files.length > 0 && (
+                <Stack spacing={1} sx={{ mt: 1 }}>
+                  {files.map((f, index) => (
+                    <Box 
+                      key={index} 
+                      display="flex" 
+                      alignItems="center" 
+                      justifyContent="space-between"
+                      sx={{ p: 1, backgroundColor: 'white', borderRadius: 1, border: '1px solid #eee' }}
+                    >
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <DescriptionIcon fontSize="small" color="action" />
+                        <Typography variant="body2">{f.nombre}</Typography>
+                      </Box>
+                      <IconButton size="small" color="error" onClick={() => removeFile(index)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  ))}
+                </Stack>
+              )}
+            </Stack>
+          </Paper>
+        </Box>
+      )}
+
+      <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+        <Button onClick={onCancel} disabled={submitting}>
+          Cancelar
+        </Button>
         <Button
           type="submit"
           variant="contained"
-          disabled={loading}
-          startIcon={loading ? <CircularProgress size={20} /> : null}
+          disabled={submitting || uploadingFiles}
+          startIcon={(submitting || uploadingFiles) ? <CircularProgress size={20} color="inherit" /> : undefined}
         >
-          {loading ? 'Guardando...' : club ? 'Actualizar' : 'Crear'}
+          {uploadingFiles ? 'Subiendo archivos...' : submitting ? 'Guardando...' : club ? 'Actualizar Club' : 'Crear Club'}
         </Button>
       </Box>
     </Box>
   )
 }
-

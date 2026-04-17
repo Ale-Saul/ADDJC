@@ -2,13 +2,13 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { authController } from '@/controllers/authController'
-import { User, LoginCredentials } from '@/models/auth'
-import { ApiResponse } from '@/types'
+import { User, LoginCredentials, AuthSession } from '@/models/auth'
+import { ApiResponse } from '@/types/globales'
 
 interface AuthContextType {
   user: User | null
   loading: boolean
-  signIn: (credentials: LoginCredentials) => Promise<ApiResponse<any>>
+  signIn: (credentials: LoginCredentials) => Promise<ApiResponse<AuthSession>>
   signOut: () => Promise<void>
   refreshUser: () => Promise<void>
   isAuthenticated: boolean
@@ -34,10 +34,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setUser(null)
       }
+      setLoading(false)
     } catch (error) {
       console.error('Error al cargar usuario:', error)
       setUser(null)
-    } finally {
       setLoading(false)
     }
   }
@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (credentials: LoginCredentials) => {
     const response = await authController.signIn(credentials)
     if (response.success && response.data) {
-      setUser(response.data.user)
+      await loadUser()
     }
     return response
   }

@@ -7,6 +7,8 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import PeopleIcon from '@mui/icons-material/People'
 import { Pago } from '@/models/pago'
+import { formatters } from '@/utils/formatters'
+import { ESTADO_PAGO } from '@/constants/pagos'
 
 interface PagosStatsProps {
   pagos: Pago[]
@@ -20,13 +22,23 @@ export default function PagosStats({ pagos }: PagosStatsProps) {
     // Obtener el primer día del mes actual
     const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
 
-    // Total pendiente (solo pagos pendientes, no vencidos)
-    const totalPendiente = pagos
-      .filter(p => p.estado === 'pendiente' && p.activo)
+    // Calcular estado real de cada pago considerando la fecha de vencimiento
+    const pagosConEstadoReal = pagos.map(pago => {
+      if (pago.estado === ESTADO_PAGO.PENDIENTE && pago.fecha_vencimiento) {
+        const vencimiento = new Date(pago.fecha_vencimiento)
+        vencimiento.setHours(0, 0, 0, 0)
+        if (vencimiento < hoy) return { ...pago, estado: ESTADO_PAGO.VENCIDO }
+      }
+      return pago
+    })
+
+    // Total pendiente (solo pagos que aún no vencieron)
+    const totalPendiente = pagosConEstadoReal
+      .filter(p => p.estado === ESTADO_PAGO.PENDIENTE && p.activo)
       .reduce((sum, p) => sum + p.monto_final, 0)
 
     // Total vencido + días promedio de atraso
-    const pagosVencidos = pagos.filter(p => p.estado === 'vencido' && p.activo)
+    const pagosVencidos = pagosConEstadoReal.filter(p => p.estado === ESTADO_PAGO.VENCIDO && p.activo)
     const totalVencido = pagosVencidos.reduce((sum, p) => sum + p.monto_final, 0)
     
     const diasVencidos = pagosVencidos.map(p => {
@@ -41,18 +53,18 @@ export default function PagosStats({ pagos }: PagosStatsProps) {
       : 0
 
     // Total cobrado este mes
-    const totalCobradoMes = pagos
+    const totalCobradoMes = pagosConEstadoReal
       .filter(p => {
-        if (p.estado !== 'pagado' || !p.fecha_pago) return false
+        if (p.estado !== ESTADO_PAGO.PAGADO || !p.fecha_pago) return false
         const fechaPago = new Date(p.fecha_pago)
         return fechaPago >= inicioMes && fechaPago <= hoy
       })
       .reduce((sum, p) => sum + p.monto_final, 0)
 
-    // Judokas únicos con deuda (pendiente o vencido)
+    // Judokas únicos con deuda (pendiente o vencido con estado real)
     const judokasConDeuda = new Set(
-      pagos
-        .filter(p => (p.estado === 'pendiente' || p.estado === 'vencido') && p.activo)
+      pagosConEstadoReal
+        .filter(p => (p.estado === ESTADO_PAGO.PENDIENTE || p.estado === ESTADO_PAGO.VENCIDO) && p.activo)
         .map(p => p.judoka_id)
     ).size
 
@@ -140,7 +152,7 @@ export default function PagosStats({ pagos }: PagosStatsProps) {
             Bs. {stats.totalCobradoMes.toFixed(2)}
           </Typography>
           <Typography variant="caption" color="#000" sx={{ display: 'block', mt: 1 }}>
-            {new Date().toLocaleDateString('es-BO', { month: 'long', year: 'numeric' })}
+            {formatters.formatDate(new Date(), 'long').split(',')[1]?.trim() || formatters.formatDate(new Date(), 'long')}
           </Typography>
         </CardContent>
       </Card>

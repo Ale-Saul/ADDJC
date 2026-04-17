@@ -1,6 +1,9 @@
 import { asociacionService } from '@/services/asociacionService'
 import { MiembroAsociacion, MiembroAsociacionCreate, MiembroAsociacionUpdate } from '@/models/asociacion'
-import { ApiResponse } from '@/types'
+import { ApiResponse } from '@/types/globales'
+import { generarPasswordInicial } from '@/utils/passwordUtils'
+import { personNamesCreateSchema, personNamesUpdateSchema, emailSchema } from '@/schemas/globales'
+
 
 export const asociacionController = {
   /**
@@ -25,30 +28,22 @@ export const asociacionController = {
    * Crear un nuevo miembro de la asociación
    */
   async createMiembro(miembroData: MiembroAsociacionCreate): Promise<ApiResponse<MiembroAsociacion>> {
-    // Validaciones de negocio
-    if (!miembroData.nombres || miembroData.nombres.trim() === '') {
-      return { success: false, error: 'El nombre es requerido' }
+    const namesValidation = personNamesCreateSchema.safeParse(miembroData)
+    if (!namesValidation.success) {
+      return { success: false, error: namesValidation.error.issues[0]?.message ?? 'Error de validación de nombres' }
     }
 
-    if (!miembroData.apellidos || miembroData.apellidos.trim() === '') {
-      return { success: false, error: 'Los apellidos son requeridos' }
+    const emailValidation = emailSchema.safeParse(miembroData.email)
+    if (!emailValidation.success) {
+      return { success: false, error: emailValidation.error.issues[0]?.message ?? 'Error de validación de email' }
     }
 
-    if (!miembroData.email || miembroData.email.trim() === '') {
-      return { success: false, error: 'El email es requerido' }
+    const miembroToCreate: MiembroAsociacionCreate = {
+      ...miembroData,
+      password: miembroData.password || Math.random().toString(36).slice(-8)
     }
 
-    if (!miembroData.password || miembroData.password.length < 8) {
-      return { success: false, error: 'La contraseña debe tener al menos 8 caracteres' }
-    }
-
-    // Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(miembroData.email)) {
-      return { success: false, error: 'El formato del email no es válido' }
-    }
-
-    return await asociacionService.create(miembroData)
+    return await asociacionService.create(miembroToCreate)
   },
 
   /**
@@ -65,23 +60,15 @@ export const asociacionController = {
       return { success: false, error: 'Miembro no encontrado' }
     }
 
-    // Validaciones de negocio
-    if (miembroData.nombres !== undefined) {
-      if (miembroData.nombres.trim() === '') {
-        return { success: false, error: 'El nombre no puede estar vacío' }
-      }
-    }
-
-    if (miembroData.apellidos !== undefined) {
-      if (miembroData.apellidos.trim() === '') {
-        return { success: false, error: 'Los apellidos no pueden estar vacíos' }
-      }
+    const namesValidation = personNamesUpdateSchema.safeParse(miembroData)
+    if (!namesValidation.success) {
+      return { success: false, error: namesValidation.error.issues[0]?.message ?? 'Error de validación de nombres' }
     }
 
     if (miembroData.email !== undefined) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(miembroData.email)) {
-        return { success: false, error: 'El formato del email no es válido' }
+      const emailValidation = emailSchema.safeParse(miembroData.email)
+      if (!emailValidation.success) {
+        return { success: false, error: emailValidation.error.issues[0]?.message ?? 'Error de validación de email' }
       }
     }
 
@@ -116,4 +103,5 @@ export const asociacionController = {
     return await asociacionService.restore(id)
   }
 }
+
 

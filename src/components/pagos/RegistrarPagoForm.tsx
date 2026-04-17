@@ -1,116 +1,62 @@
 'use client'
 
-import { useState } from 'react'
 import {
   Box,
   TextField,
   Button,
   Alert,
   CircularProgress,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
-  Typography
+  Stack,
+  Typography,
 } from '@mui/material'
-import type { SelectChangeEvent } from '@mui/material/Select'
 import { Pago } from '@/models/pago'
-import { pagoController } from '@/controllers/pagoController'
 import { useAuth } from '@/contexts/AuthContext'
+import { FormInput, FormAutocomplete } from '@/components/ui'
+import dayjs from 'dayjs'
+import { METODO_PAGO_LABELS } from '@/constants/pagos'
+import { useRegistrarPagoForm } from '@/hooks/useRegistrarPagoForm'
+import { formatNameWithNumbersInput } from '@/utils/formatters'
+
+const METODO_PAGO_OPTIONS = Object.entries(METODO_PAGO_LABELS)
+  .map(([value, label]) => ({ value, label }))
+  .sort((a, b) => a.label.localeCompare(b.label, 'es'))
 
 interface RegistrarPagoFormProps {
   pagos: Pago[]
+  judokaNombre: string
   onSuccess?: () => void
   onCancel?: () => void
 }
 
-export default function RegistrarPagoForm({ pagos, onSuccess, onCancel }: RegistrarPagoFormProps) {
+export default function RegistrarPagoForm({ pagos, judokaNombre, onSuccess, onCancel }: RegistrarPagoFormProps) {
   const { user } = useAuth()
-  const [formData, setFormData] = useState({
-    fecha_pago: new Date().toISOString().split('T')[0], // Hoy por defecto
-    metodo_pago: 'efectivo',
-    observaciones_pago: ''
-  })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-
-  // Calcular total a pagar
-  const totalPagar = pagos.reduce((sum, pago) => sum + pago.monto_final, 0)
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-    setError(null)
-  }
-
-  const handleSelectChange = (e: SelectChangeEvent<string>) => {
-    const { name, value } = e.target
-    if (!name) return
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-    setError(null)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-
-    try {
-      // Actualizar todos los pagos seleccionados
-      const updatePromises = pagos.map(pago => 
-        pagoController.updatePago(pago.id, {
-          estado: 'pagado',
-          fecha_pago: formData.fecha_pago,
-          metodo_pago: formData.metodo_pago,
-          observaciones_pago: formData.observaciones_pago || null,
-          pagado_por: user?.id || null
-        })
-      )
-
-      const results = await Promise.all(updatePromises)
-      
-      // Verificar si todos fueron exitosos
-      const allSuccess = results.every(r => r.success)
-      
-      if (allSuccess) {
-        setSuccess(true)
-        setTimeout(() => {
-          onSuccess?.()
-        }, 1000)
-      } else {
-        const failedCount = results.filter(r => !r.success).length
-        setError(`Error al registrar ${failedCount} ${failedCount === 1 ? 'pago' : 'pagos'}`)
-      }
-    } catch (err) {
-      console.error('Error al registrar pagos:', err)
-      setError('Error inesperado al registrar los pagos')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const usuarioNombre = user ? `${user.nombres} ${user.apellidos}` : 'Sistema'
+  
+  const {
+    form,
+    loading,
+    error,
+    success,
+    totalPagar,
+    onSubmit,
+    setError
+  } = useRegistrarPagoForm(pagos, user?.id, onSuccess, judokaNombre, usuarioNombre)
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+    <Box component="form" onSubmit={form.handleSubmit(onSubmit)} sx={{ mt: 2 }}>
       <Typography variant="subtitle1" color="text.secondary" mb={2}>
         Registrando <strong>{pagos.length}</strong> {pagos.length === 1 ? 'pago' : 'pagos'}
       </Typography>
 
-      <Box sx={{ p: 2, bgcolor: 'success.light', borderRadius: 1, mb: 2 }}>
-        <Typography variant="h6" color="success.dark">
+      <Box sx={{ p: 2, bgcolor: 'success.light', borderRadius: 2, mb: 3, border: '1px solid', borderColor: 'success.main' }}>
+        <Typography variant="h5" color="success.dark" fontWeight="bold">
           Total a Pagar: Bs. {totalPagar.toFixed(2)}
         </Typography>
         {pagos.length > 1 && (
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+          <Typography variant="caption" color="success.dark" sx={{ display: 'block', mt: 1, opacity: 0.8 }}>
             {pagos.map((p, idx) => (
               <span key={p.id}>
-                {p.concepto}: Bs. {p.monto_final.toFixed(2)}
+                {p.concepto} (Bs. {p.monto_final.toFixed(2)})
                 {idx < pagos.length - 1 && ' + '}
               </span>
             ))}
@@ -119,75 +65,69 @@ export default function RegistrarPagoForm({ pagos, onSuccess, onCancel }: Regist
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
       {success && (
-        <Alert severity="success" sx={{ mb: 2 }}>
+        <Alert severity="success" sx={{ mb: 3 }}>
           {pagos.length === 1 ? 'Pago registrado' : 'Pagos registrados'} exitosamente
         </Alert>
       )}
 
-      <TextField
-        fullWidth
-        label="Fecha de Pago"
-        name="fecha_pago"
-        type="date"
-        value={formData.fecha_pago}
-        onChange={handleChange}
-        required
-        InputLabelProps={{ shrink: true }}
-        sx={{ mb: 2 }}
-      />
+      <Stack spacing={3}>
+        <TextField
+          label="Fecha de Pago"
+          value={dayjs().format('DD/MM/YYYY HH:mm')}
+          fullWidth
+          disabled
+          helperText="Se registra automáticamente con la fecha y hora actual"
+        />
 
-      <FormControl fullWidth sx={{ mb: 2 }}>
-        <InputLabel>Método de Pago</InputLabel>
-        <Select
+        <FormAutocomplete
+          control={form.control}
           name="metodo_pago"
-          value={formData.metodo_pago}
-          onChange={handleSelectChange}
           label="Método de Pago"
+          options={METODO_PAGO_OPTIONS}
+          disabled={loading}
           required
-        >
-          <MenuItem value="efectivo">Efectivo</MenuItem>
-          <MenuItem value="transferencia">Transferencia Bancaria</MenuItem>
-          <MenuItem value="qr">QR/Billetera Digital</MenuItem>
-          <MenuItem value="tarjeta">Tarjeta</MenuItem>
-          <MenuItem value="otro">Otro</MenuItem>
-        </Select>
-      </FormControl>
+        />
 
-      <TextField
-        fullWidth
-        label="Observaciones (opcional)"
-        name="observaciones_pago"
-        value={formData.observaciones_pago}
-        onChange={handleChange}
-        multiline
-        rows={3}
-        sx={{ mb: 2 }}
-        placeholder="Ej: Pagó con billete de 100, se dio vuelto 40"
-      />
+        <FormInput
+          control={form.control}
+          name="observaciones_pago"
+          label="Observaciones (opcional)"
+          multiline
+          rows={3}
+          disabled={loading}
+          placeholder="Ej: Pago realizado por transferencia bancaria..."
+          formatValue={formatNameWithNumbersInput}
+        />
 
-      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-        <Button
-          variant="outlined"
-          onClick={onCancel}
-          disabled={loading}
-        >
-          Cancelar
-        </Button>
-        <Button
-          type="submit"
-          variant="contained"
-          color="success"
-          disabled={loading}
-        >
-          {loading ? <CircularProgress size={24} /> : `Registrar ${pagos.length === 1 ? 'Pago' : `${pagos.length} Pagos`}`}
-        </Button>
-      </Box>
+        <Box sx={{ mt: 2, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+          {onCancel && (
+            <Button
+              variant="outlined"
+              onClick={onCancel}
+              disabled={loading}
+              sx={{ height: 48, px: 4 }}
+            >
+              Cancelar
+            </Button>
+          )}
+          <Button
+            type="submit"
+            variant="contained"
+            color="success"
+            disabled={loading}
+            sx={{ height: 48, px: 4, minWidth: 180 }}
+            startIcon={loading ? <CircularProgress size={24} color="inherit" /> : null}
+          >
+            {loading ? 'Registrando...' : `Registrar ${pagos.length === 1 ? 'Pago' : `${pagos.length} Pagos`}`}
+          </Button>
+        </Box>
+      </Stack>
     </Box>
   )
 }

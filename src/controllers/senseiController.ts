@@ -1,6 +1,8 @@
 import { senseiService } from '@/services/senseiService'
 import { Sensei, SenseiCreate, SenseiUpdate } from '@/models/sensei'
-import { ApiResponse } from '@/types'
+import { ApiResponse } from '@/types/globales'
+import { generarPasswordInicial } from '@/utils/passwordUtils'
+import { personNamesCreateSchema, personNamesUpdateSchema } from '@/schemas/globales'
 
 export const senseiController = {
   /**
@@ -36,34 +38,18 @@ export const senseiController = {
    * Crear un nuevo sensei
    */
   async createSensei(senseiData: SenseiCreate): Promise<ApiResponse<Sensei>> {
-    // Validaciones de negocio
-    if (!senseiData.nombres || senseiData.nombres.trim() === '') {
-      return { success: false, error: 'El nombre es requerido' }
+    const validation = personNamesCreateSchema.safeParse(senseiData)
+    if (!validation.success) {
+      return { success: false, error: validation.error.issues[0]?.message ?? 'Error de validación' }
     }
 
-    if (!senseiData.apellidos || senseiData.apellidos.trim() === '') {
-      return { success: false, error: 'Los apellidos son requeridos' }
-    }
-
-    if (senseiData.nombres.length < 2) {
-      return { success: false, error: 'El nombre debe tener al menos 2 caracteres' }
-    }
-
-    if (senseiData.apellidos.length < 2) {
-      return { success: false, error: 'Los apellidos deben tener al menos 2 caracteres' }
-    }
-
-    if (senseiData.nombres.length > 100) {
-      return { success: false, error: 'El nombre no puede exceder 100 caracteres' }
-    }
-
-    if (senseiData.apellidos.length > 100) {
-      return { success: false, error: 'Los apellidos no pueden exceder 100 caracteres' }
-    }
+    // Generar contraseña automática basada en el carnet
+    const autoPassword = generarPasswordInicial(senseiData.ci || '')
 
     // Por defecto, el sensei se crea como activo
     const senseiToCreate: SenseiCreate = {
       ...senseiData,
+      password: autoPassword,
       activo: senseiData.activo !== undefined ? senseiData.activo : true
     }
 
@@ -84,33 +70,9 @@ export const senseiController = {
       return { success: false, error: 'Sensei no encontrado' }
     }
 
-    // Validaciones de negocio
-    if (senseiData.nombres !== undefined) {
-      if (senseiData.nombres.trim() === '') {
-        return { success: false, error: 'El nombre no puede estar vacío' }
-      }
-
-      if (senseiData.nombres.length < 2) {
-        return { success: false, error: 'El nombre debe tener al menos 2 caracteres' }
-      }
-
-      if (senseiData.nombres.length > 100) {
-        return { success: false, error: 'El nombre no puede exceder 100 caracteres' }
-      }
-    }
-
-    if (senseiData.apellidos !== undefined) {
-      if (senseiData.apellidos.trim() === '') {
-        return { success: false, error: 'Los apellidos no pueden estar vacíos' }
-      }
-
-      if (senseiData.apellidos.length < 2) {
-        return { success: false, error: 'Los apellidos deben tener al menos 2 caracteres' }
-      }
-
-      if (senseiData.apellidos.length > 100) {
-        return { success: false, error: 'Los apellidos no pueden exceder 100 caracteres' }
-      }
+    const validation = personNamesUpdateSchema.safeParse(senseiData)
+    if (!validation.success) {
+      return { success: false, error: validation.error.issues[0]?.message ?? 'Error de validación' }
     }
 
     return await senseiService.update(id, senseiData)
