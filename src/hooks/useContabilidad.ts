@@ -24,7 +24,6 @@ export function useContabilidad() {
   const [fechaFin, setFechaFin] = useState(() => new Date().toISOString().split('T')[0])
   const [tipoFiltro, setTipoFiltro] = useState<string>('todos')
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>('todos')
-  const [clubFiltro, setClubFiltro] = useState<string>('todos')
   const clearFilters = () => {
     const fecha = new Date()
     fecha.setMonth(fecha.getMonth() - 1)
@@ -32,7 +31,6 @@ export function useContabilidad() {
     setFechaFin(new Date().toISOString().split('T')[0])
     setTipoFiltro('todos')
     setCategoriaFiltro('todos')
-    setClubFiltro('todos')
   }
 
   const cargarDatos = async () => {
@@ -78,9 +76,6 @@ export function useContabilidad() {
         // Filtro por categoría
         if (categoriaFiltro !== 'todos' && mov.categoria !== categoriaFiltro) return false
         
-        // Filtro por club
-        if (clubFiltro !== 'todos' && mov.origen_club_id !== clubFiltro) return false
-        
         // Los movimientos anulados se muestran en la tabla (locked) pero no desaparecen
         return true
       })
@@ -89,7 +84,7 @@ export function useContabilidad() {
         const bAnulado = b.estado === ESTADO_MOVIMIENTO.ANULADO ? 1 : 0
         return aAnulado - bAnulado
       })
-  }, [movimientos, fechaInicio, fechaFin, tipoFiltro, categoriaFiltro, clubFiltro])
+  }, [movimientos, fechaInicio, fechaFin, tipoFiltro, categoriaFiltro])
 
   // Calcular balance (excluye anulados, que no representan dinero real)
   const balance = useMemo(() => {
@@ -159,8 +154,6 @@ export function useContabilidad() {
     setTipoFiltro,
     categoriaFiltro,
     setCategoriaFiltro,
-    clubFiltro,
-    setClubFiltro,
     clearFilters,
     cargarDatos,
     movimientosFiltrados,

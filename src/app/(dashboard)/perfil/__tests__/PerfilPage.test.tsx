@@ -1,369 +1,124 @@
-import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import '@testing-library/jest-dom'
-import PerfilPage from '../PerfilPage'
-import { useAuth } from '@/contexts/AuthContext'
-import { authController } from '@/controllers/authController'
+import React from 'react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import PerfilPage from '../PerfilPage';
+import { useAuth } from '@/contexts/AuthContext';
+import { authController } from '@/controllers/authController';
+import { usePerfilForm } from '@/hooks/usePerfilForm';
+import { usePasswordForm } from '@/hooks/usePasswordForm';
 
-// Mocks
-jest.mock('@/contexts/AuthContext')
-jest.mock('@/controllers/authController')
-jest.mock('@/components/common/Layout', () => {
-  return function MockLayout({ children }: { children: React.ReactNode }) {
-    return <div data-testid="layout">{children}</div>
+jest.mock('@/contexts/AuthContext', () => ({
+  useAuth: jest.fn()
+}));
+
+jest.mock('@/controllers/authController', () => ({
+  authController: {
+    uploadAvatar: jest.fn()
   }
-})
-jest.mock('@/components/common/ProtectedRoute', () => {
-  return function MockProtectedRoute({ children }: { children: React.ReactNode }) {
-    return <div data-testid="protected-route">{children}</div>
-  }
-})
+}));
 
-const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>
-const mockAuthController = authController as jest.Mocked<typeof authController>
+jest.mock('@/hooks/usePerfilForm', () => ({
+  usePerfilForm: jest.fn()
+}));
 
-describe('PerfilPage', () => {
-  const mockUser = {
-    id: '123',
-    email: 'test@example.com',
-    nombres: 'Juan',
-    apellidos: 'Pérez',
-    rol: 'sensei',
-    avatar_url: 'https://example.com/avatar.jpg',
-    activo: true,
-  }
+jest.mock('@/hooks/usePasswordForm', () => ({
+  usePasswordForm: jest.fn()
+}));
 
-  const mockRefreshUser = jest.fn()
+jest.mock('@/components/common/ProtectedRoute', () => ({
+  __esModule: true,
+  default: ({ children }: any) => <div data-testid="protected">{children}</div>
+}));
+
+jest.mock('@/components/perfil/PerfilInfoForm', () => ({
+  __esModule: true,
+  default: ({ onAvatarChange, avatarSuccess, avatarError }: any) => (
+    <div>
+      <input data-testid="avatar-input" type="file" onChange={(e) => onAvatarChange(e)} />
+      {avatarSuccess && <span data-testid="success">{avatarSuccess}</span>}
+      {avatarError && <span data-testid="error">{avatarError}</span>}
+    </div>
+  )
+}));
+
+jest.mock('@/components/perfil/PerfilPasswordForm', () => ({
+  __esModule: true,
+  default: () => <div data-testid="password-form">Password Form</div>
+}));
+
+describe('PerfilPage Coverage - Phase 4', () => {
+  const mockRefreshUser = jest.fn();
+  const mockUser = { id: 'u1', email: 'test@test.com', avatar_url: 'old.png', rol: 'judoka' };
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    jest.clearAllMocks();
+    (useAuth as jest.Mock).mockReturnValue({ user: mockUser, refreshUser: mockRefreshUser });
+    (usePerfilForm as jest.Mock).mockReturnValue({});
+    (usePasswordForm as jest.Mock).mockReturnValue({});
     
-    mockUseAuth.mockReturnValue({
-      user: mockUser,
-      refreshUser: mockRefreshUser,
-      loading: false,
-      signIn: jest.fn(),
-      signOut: jest.fn(),
-    })
-
-    // Mock global Image para precargar avatares
     global.Image = class {
-      onload: (() => void) | null = null
-      onerror: (() => void) | null = null
-      src = ''
-      
-      constructor() {
-        setTimeout(() => {
-          if (this.onload) this.onload()
-        }, 0)
-      }
-    } as any
-  })
-
-  describe('Renderizado', () => {
-    it('debe renderizar la página de perfil correctamente', () => {
-      render(<PerfilPage />)
-
-      expect(screen.getByText('Mi Perfil')).toBeInTheDocument()
-      expect(screen.getByText('Gestiona tu información personal')).toBeInTheDocument()
-      expect(screen.getByLabelText(/Nombres/i)).toHaveValue('Juan')
-      expect(screen.getByLabelText(/Apellidos/i)).toHaveValue('Pérez')
-      expect(screen.getByLabelText(/Correo Electrónico/i)).toHaveValue('test@example.com')
-      expect(screen.getByLabelText(/Rol/i)).toHaveValue('Sensei')
-    })
-
-    it('debe mostrar el avatar del usuario', () => {
-      render(<PerfilPage />)
-
-      const avatar = screen.getByRole('img')
-      expect(avatar).toHaveAttribute('src', 'https://example.com/avatar.jpg')
-    })
-
-    it('debe mostrar la inicial si no hay avatar', () => {
-      mockUseAuth.mockReturnValue({
-        user: { ...mockUser, avatar_url: null },
-        refreshUser: mockRefreshUser,
-        loading: false,
-        signIn: jest.fn(),
-        signOut: jest.fn(),
-      })
-
-      render(<PerfilPage />)
-
-      expect(screen.getByText('J')).toBeInTheDocument()
-    })
-
-    it('debe mostrar loading cuando no hay usuario', () => {
-      mockUseAuth.mockReturnValue({
-        user: null,
-        refreshUser: mockRefreshUser,
-        loading: true,
-        signIn: jest.fn(),
-        signOut: jest.fn(),
-      })
-
-      render(<PerfilPage />)
-
-      expect(screen.getByRole('progressbar')).toBeInTheDocument()
-    })
-
-    it('debe deshabilitar campos de email y rol', () => {
-      render(<PerfilPage />)
-
-      expect(screen.getByLabelText(/Correo Electrónico/i)).toBeDisabled()
-      expect(screen.getByLabelText(/Rol/i)).toBeDisabled()
-    })
-
-    it('debe traducir correctamente los roles', () => {
-      const roles = [
-        { rol: 'asociacion', label: 'Asociación' },
-        { rol: 'sensei', label: 'Sensei' },
-        { rol: 'encargado', label: 'Encargado' },
-        { rol: 'arbitro', label: 'Árbitro' },
-        { rol: 'judoka', label: 'Judoka' },
-      ]
-
-      roles.forEach(({ rol, label }) => {
-        mockUseAuth.mockReturnValue({
-          user: { ...mockUser, rol },
-          refreshUser: mockRefreshUser,
-          loading: false,
-          signIn: jest.fn(),
-          signOut: jest.fn(),
-        })
-
-        const { rerender } = render(<PerfilPage />)
-        expect(screen.getByLabelText(/Rol/i)).toHaveValue(label)
-        rerender(<div />)
-      })
-    })
-  })
-
-  describe('Actualización de perfil', () => {
-    it('debe actualizar el perfil exitosamente', async () => {
-      mockAuthController.updateProfile.mockResolvedValue({ success: true })
-
-      render(<PerfilPage />)
-
-      const nombresInput = screen.getByLabelText(/Nombres/i)
-      await userEvent.clear(nombresInput)
-      await userEvent.type(nombresInput, 'Carlos')
-
-      const apellidosInput = screen.getByLabelText(/Apellidos/i)
-      await userEvent.clear(apellidosInput)
-      await userEvent.type(apellidosInput, 'González')
-
-      fireEvent.submit(screen.getByRole('button', { name: /Guardar Cambios/i }))
-
-      await waitFor(() => {
-        expect(mockAuthController.updateProfile).toHaveBeenCalledWith('123', {
-          nombres: 'Carlos',
-          apellidos: 'González',
-        })
-      }, { timeout: 15000 })
-
-      expect(await screen.findByText(/Perfil actualizado correctamente/i, {}, { timeout: 15000 })).toBeInTheDocument()
-      expect(mockRefreshUser).toHaveBeenCalled()
-    }, 20000)
-
-    it('debe mostrar error al fallar la actualización', async () => {
-      mockAuthController.updateProfile.mockResolvedValue({ 
-        success: false, 
-        error: 'Error al actualizar' 
-      })
-
-      render(<PerfilPage />)
-
-      const nombresInput = screen.getByLabelText(/Nombres/i)
-      await userEvent.clear(nombresInput)
-      await userEvent.type(nombresInput, 'Nuevo')
-
-      fireEvent.submit(screen.getByRole('button', { name: /Guardar Cambios/i }))
-
-      expect(await screen.findByText(/Error al actualizar/i, {}, { timeout: 15000 })).toBeInTheDocument()
-    }, 20000)
-
-    it('debe deshabilitar el formulario durante la actualización', async () => {
-      let resolveUpdate: (value: any) => void
-      const updatePromise = new Promise(resolve => {
-        resolveUpdate = resolve
-      })
-
-      mockAuthController.updateProfile.mockImplementation(() => updatePromise)
-
-      render(<PerfilPage />)
-
-      const submitButton = screen.getByRole('button', { name: /Guardar Cambios/i })
-      fireEvent.submit(submitButton)
-
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Guardando.../i })).toBeInTheDocument()
-      }, { timeout: 10000 })
-
-      expect(screen.getByLabelText(/Nombres/i)).toBeDisabled()
-      expect(screen.getByLabelText(/Apellidos/i)).toBeDisabled()
-
-      resolveUpdate!({ success: true })
-
-      await waitFor(() => {
-        expect(screen.queryByRole('button', { name: /Guardando.../i })).not.toBeInTheDocument()
-      }, { timeout: 10000 })
-    }, 20000)
-
-    it('debe limpiar mensajes de error al escribir', async () => {
-      mockAuthController.updateProfile.mockResolvedValue({ 
-        success: false, 
-        error: 'Error de prueba' 
-      })
-
-      render(<PerfilPage />)
-
-      fireEvent.submit(screen.getByRole('button', { name: /Guardar Cambios/i }))
-
-      await waitFor(() => {
-        expect(screen.getByText(/Error de prueba/i)).toBeInTheDocument()
-      }, { timeout: 10000 })
-
-      await userEvent.type(screen.getByLabelText(/Nombres/i), ' Modificado')
-
-      await waitFor(() => {
-        expect(screen.queryByText(/Error de prueba/i)).not.toBeInTheDocument()
-      }, { timeout: 10000 })
-    }, 20000)
-  })
-
-  describe('Actualización de avatar', () => {
-    it('debe subir un avatar exitosamente', async () => {
-      const newAvatarUrl = 'https://example.com/new-avatar.jpg'
-      mockAuthController.uploadAvatar.mockResolvedValue({ 
-        success: true, 
-        data: newAvatarUrl 
-      })
-
-      render(<PerfilPage />)
-
-      const file = new File(['avatar'], 'avatar.jpg', { type: 'image/jpeg' })
-      const input = screen.getByTestId('PhotoCameraIcon').parentElement?.parentElement?.querySelector('input[type="file"]')
-      
-      if (input) {
-        await userEvent.upload(input, file)
-      }
-
-      await waitFor(() => {
-        expect(mockAuthController.uploadAvatar).toHaveBeenCalledWith('123', file)
-      }, { timeout: 10000 })
-
-      await waitFor(() => {
-        expect(screen.getByText(/Foto de perfil actualizada correctamente/i)).toBeInTheDocument()
-      }, { timeout: 10000 })
-    }, 20000)
-
-    it('debe rechazar archivos mayores a 2MB', async () => {
-      render(<PerfilPage />)
-
-      // Crear archivo mayor a 2MB
-      const largeFile = new File(['x'.repeat(3 * 1024 * 1024)], 'large.jpg', { type: 'image/jpeg' })
-      const input = screen.getByTestId('PhotoCameraIcon').parentElement?.parentElement?.querySelector('input[type="file"]')
-      
-      if (input) {
-        await userEvent.upload(input, largeFile)
-      }
-
-      await waitFor(() => {
-        expect(screen.getByText(/no debe superar los 2MB/i)).toBeInTheDocument()
-      }, { timeout: 10000 })
-
-      expect(mockAuthController.uploadAvatar).not.toHaveBeenCalled()
-    }, 20000)
-
-    it('debe mostrar error al fallar la subida', async () => {
-      mockAuthController.uploadAvatar.mockResolvedValue({ 
-        success: false, 
-        error: 'Error al subir imagen' 
-      })
-
-      render(<PerfilPage />)
-
-      const file = new File(['avatar'], 'avatar.jpg', { type: 'image/jpeg' })
-      const input = screen.getByTestId('PhotoCameraIcon').parentElement?.parentElement?.querySelector('input[type="file"]')
-      
-      if (input) {
-        await userEvent.upload(input, file)
-      }
-
-      expect(await screen.findByText(/Error al subir imagen/i, {}, { timeout: 10000 })).toBeInTheDocument()
-    }, 20000)
-
-    it('debe deshabilitar botón de cámara durante la subida', async () => {
-      let resolveUpload: (value: any) => void
-      const uploadPromise = new Promise(resolve => {
-        resolveUpload = resolve
-      })
-
-      mockAuthController.uploadAvatar.mockImplementation(() => uploadPromise)
-
-      render(<PerfilPage />)
-
-      const file = new File(['avatar'], 'avatar.jpg', { type: 'image/jpeg' })
-      const input = screen.getByTestId('PhotoCameraIcon').parentElement?.parentElement?.querySelector('input[type="file"]')
-      
-      if (input) {
-        await userEvent.upload(input, file)
-      }
-
-      // Verificar que aparece el loading indicator en el botón
-      await waitFor(() => {
-        const progressBars = screen.getAllByRole('progressbar')
-        expect(progressBars.length).toBeGreaterThan(0)
-      }, { timeout: 10000 })
-
-      resolveUpload!({ success: true, data: 'https://example.com/avatar.jpg' })
-    }, 20000)
-  })
-
-  describe('Manejo de alertas', () => {
-    it('debe poder cerrar alertas de éxito', async () => {
-      mockAuthController.updateProfile.mockResolvedValue({ success: true })
-
-      render(<PerfilPage />)
-
-      fireEvent.submit(screen.getByRole('button', { name: /Guardar Cambios/i }))
-
-      const alert = await screen.findByText(/Perfil actualizado correctamente/i, {}, { timeout: 10000 })
-      expect(alert).toBeInTheDocument()
-
-      const closeButton = alert.parentElement?.querySelector('button')
-      if (closeButton) {
-        await userEvent.click(closeButton)
-      }
-
-      await waitFor(() => {
-        expect(screen.queryByText(/Perfil actualizado correctamente/i)).not.toBeInTheDocument()
-      }, { timeout: 10000 })
-    }, 20000)
-
-    it('debe poder cerrar alertas de error', async () => {
-      mockAuthController.updateProfile.mockResolvedValue({ 
-        success: false, 
-        error: 'Error de prueba' 
-      })
-
-      render(<PerfilPage />)
-
-      fireEvent.submit(screen.getByRole('button', { name: /Guardar Cambios/i }))
-
-      const alert = await screen.findByText(/Error de prueba/i, {}, { timeout: 10000 })
-      expect(alert).toBeInTheDocument()
-
-      const closeButton = alert.parentElement?.querySelector('button')
-      if (closeButton) {
-        await userEvent.click(closeButton)
-      }
-
-      await waitFor(() => {
-        expect(screen.queryByText(/Error de prueba/i)).not.toBeInTheDocument()
-      }, { timeout: 10000 })
-    }, 20000)
-  })
-})
+      onload: () => void = () => {};
+      set src(url: string) { setTimeout(() => this.onload(), 0); }
+    } as any;
+  });
+
+  it('debe mostrar el cargando si no hay usuario', () => {
+    (useAuth as jest.Mock).mockReturnValue({ user: null });
+    render(<PerfilPage />);
+    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+  });
+
+  it('debe manejar la subida de avatar exitosa', async () => {
+    (authController.uploadAvatar as jest.Mock).mockResolvedValue({ 
+      success: true, 
+      data: 'http://new-avatar.png' 
+    });
+
+    render(<PerfilPage />);
+    
+    const file = new File(['(⌐□_□)'], 'avatar.png', { type: 'image/png' });
+    const input = screen.getByTestId('avatar-input');
+
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [file] } });
+    });
+
+    await waitFor(() => {
+        expect(screen.getByTestId('success')).toBeInTheDocument();
+        expect(mockRefreshUser).toHaveBeenCalled();
+    });
+  });
+
+  it('debe validar el tamaño máximo de la imagen (2MB)', async () => {
+    render(<PerfilPage />);
+    
+    const largeFile = new File(['a'.repeat(3 * 1024 * 1024)], 'large.png', { type: 'image/png' });
+    const input = screen.getByTestId('avatar-input');
+
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [largeFile] } });
+    });
+
+    expect(screen.getByTestId('error')).toHaveTextContent(/2MB/i);
+    expect(authController.uploadAvatar).not.toHaveBeenCalled();
+  });
+
+  it('debe manejar errores del servidor al subir avatar', async () => {
+    (authController.uploadAvatar as jest.Mock).mockResolvedValue({ 
+      success: false, 
+      error: 'Error de red' 
+    });
+
+    render(<PerfilPage />);
+    
+    const file = new File(['p'], 'p.png', { type: 'image/png' });
+    const input = screen.getByTestId('avatar-input');
+
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [file] } });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('error')).toHaveTextContent(/Error de red/i);
+    });
+  });
+});

@@ -31,10 +31,24 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (user && request.nextUrl.pathname === '/login') {
-    return NextResponse.redirect(new URL('/', request.url))
-  }
+  const pathname = request.nextUrl.pathname
 
+  // RBAC Logics
+  if (user) {
+    if (pathname === '/login') {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
+
+    // Protect administrative routes
+    const userRole = user.user_metadata?.role
+    const isAdminRoute = pathname.startsWith('/asociacion') || 
+                        pathname.startsWith('/clubes') || 
+                        pathname.startsWith('/api/admin')
+
+    if (isAdminRoute && userRole !== 'asociacion' && userRole !== 'club') {
+        return NextResponse.redirect(new URL('/', request.url))
+    }
+  }
 
   return supabaseResponse
 }

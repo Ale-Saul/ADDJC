@@ -35,6 +35,62 @@ export const pagoController = {
   },
 
   /**
+   * Obtener pagos pendientes (Reporte)
+   */
+  async getPagosPendientes(): Promise<ApiResponse<Pago[]>> {
+    const response = await pagoService.getAll()
+    if (!response.success) return response
+    return {
+      success: true,
+      data: response.data?.filter(p => p.estado === 'pendiente') || []
+    }
+  },
+
+  /**
+   * Obtener pagos por rango de fechas (Reporte Temporal)
+   */
+  async getPagosPorRango(inicio: string, fin: string): Promise<ApiResponse<Pago[]>> {
+    const response = await pagoService.getAll()
+    if (!response.success) return response
+    
+    const dInicio = new Date(inicio)
+    const dFin = new Date(fin)
+    
+    return {
+      success: true,
+      data: response.data?.filter(p => {
+        const dPago = new Date(p.created_at || '')
+        return dPago >= dInicio && dPago <= dFin
+      }) || []
+    }
+  },
+
+  /**
+   * Generar reporte consolidado para la asociación (R1)
+   */
+  async getReporteConsolidadoAsociacion(): Promise<ApiResponse<any>> {
+    const response = await pagoService.getAll()
+    if (!response.success) return response
+
+    const pagos = response.data || []
+    const totalRecaudado = pagos
+      .filter(p => p.estado === 'pago' || p.estado === 'completado')
+      .reduce((sum, p) => sum + (p.monto_final || 0), 0)
+
+    const reporte = {
+      totalRecaudado,
+      cantidadPagos: pagos.length,
+      pagosCompletados: pagos.filter(p => p.estado === 'pago' || p.estado === 'completado').length,
+      pagosPendientes: pagos.filter(p => p.estado === 'pendiente').length
+    }
+
+    return {
+      success: true,
+      data: reporte
+    }
+  },
+
+  /**
    * Obtener un pago por ID
    */
   async getPagoById(id: string): Promise<ApiResponse<Pago>> {
@@ -60,6 +116,17 @@ export const pagoController = {
     // Usar los datos validados y transformados por Zod
     const validatedData = validation.data as PagoCreate
 
+    // R3 - Cálculo automático de monto_final
+    let montoFinal = validatedData.monto_base
+    if (validatedData.tiene_descuento && validatedData.tipo_descuento) {
+      if (validatedData.tipo_descuento === TIPO_DESCUENTO.PORCENTAJE && validatedData.descuento_porcentaje) {
+        montoFinal = validatedData.monto_base - (validatedData.monto_base * (validatedData.descuento_porcentaje / 100))
+      } else if (validatedData.tipo_descuento === TIPO_DESCUENTO.MONTO_FIJO && validatedData.descuento_monto) {
+        montoFinal = validatedData.monto_base - validatedData.descuento_monto
+      }
+    }
+    validatedData.monto_final = montoFinal
+
     return await pagoService.create(validatedData)
   },
 
@@ -71,6 +138,21 @@ export const pagoController = {
       return { success: false, error: 'ID del pago es requerido' }
     }
 
+    // Validar que el pago existe
+    const existingResult = await pagoService.getById(id)
+    if (!existingResult.success || !existingResult.data) {
+      return { success: false, error: 'Pago no encontrado' }
+    }
+
+    const existingPago = existingResult.data
+
+    // R2 - Inmutabilidad: No editar si ya está pagado
+    if (existingPago.estado === 'pago' || existingPago.estado === 'completado') {
+      if (pagoData.monto_final !== undefined || pagoData.monto_base !== undefined) {
+        return { success: false, error: 'Un pago completado está bloqueado para edición de montos' }
+      }
+    }
+
     // Validación básica de campos con Zod
     const validation = updatePagoSchema.safeParse(pagoData)
     if (!validation.success) {
@@ -78,17 +160,11 @@ export const pagoController = {
       return { success: false, error: errorMessage }
     }
 
-    // Validar que el pago existe
-    const existingPago = await pagoService.getById(id)
-    if (!existingPago.success || !existingPago.data) {
-      return { success: false, error: 'Pago no encontrado' }
-    }
-
     // Validaciones complejas que dependen del estado actual (DB)
     // Validar descuentos si se actualizan o si se activa el descuento
     if (pagoData.tiene_descuento !== undefined && pagoData.tiene_descuento) {
-      const montoBase = pagoData.monto_base || existingPago.data.monto_base
-      const tipoDescuento = pagoData.tipo_descuento || existingPago.data.tipo_descuento
+      const montoBase = pagoData.monto_base || existingPago.monto_base
+      const tipoDescuento = pagoData.tipo_descuento || existingPago.tipo_descuento
 
       if (!tipoDescuento) {
         return { success: false, error: 'Debe especificar el tipo de descuento' }
@@ -97,7 +173,7 @@ export const pagoController = {
       if (tipoDescuento === TIPO_DESCUENTO.PORCENTAJE) {
         const descuentoPorcentaje = pagoData.descuento_porcentaje !== undefined 
           ? pagoData.descuento_porcentaje 
-          : existingPago.data.descuento_porcentaje
+          : existingPago.descuento_porcentaje
 
         if (descuentoPorcentaje === null || descuentoPorcentaje === undefined || descuentoPorcentaje < 0 || descuentoPorcentaje > 100) {
           return { success: false, error: 'El descuento por porcentaje debe estar entre 0 y 100' }
@@ -105,7 +181,7 @@ export const pagoController = {
       } else if (tipoDescuento === TIPO_DESCUENTO.MONTO_FIJO) {
         const descuentoMonto = pagoData.descuento_monto !== undefined 
           ? pagoData.descuento_monto 
-          : existingPago.data.descuento_monto
+          : existingPago.descuento_monto
 
         if (descuentoMonto === null || descuentoMonto === undefined || descuentoMonto <= 0) {
           return { success: false, error: 'El descuento en monto debe ser mayor a 0' }

@@ -51,8 +51,8 @@ export interface MovimientoFinancieroInput {
   fecha: string;
   origen_club_id?: string;
   origen_entidad?: string;
-  comprobante_url?: string | null;
-  comprobante_nombre?: string | null;
+  comprobante_url?: string;
+  comprobante_nombre?: string;
   estado?: EstadoMovimiento;
   notas?: string;
 }

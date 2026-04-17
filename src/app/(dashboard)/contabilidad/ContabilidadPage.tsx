@@ -24,7 +24,7 @@ import { ROL } from '@/constants/roles'
 import { useAuth } from '@/contexts/AuthContext'
 import BalanceCards from '@/components/contabilidad/BalanceCards'
 import MovimientosTable from '@/components/contabilidad/MovimientosTable'
-import MovimientoFormDialog from '@/components/contabilidad/MovimientoFormDialog'
+import { MovimientoFormDialog } from '@/components/contabilidad/MovimientoFormDialog'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { formatters } from '@/utils/formatters'
@@ -56,8 +56,6 @@ export default function ContabilidadPage() {
     setTipoFiltro,
     categoriaFiltro,
     setCategoriaFiltro,
-    clubFiltro,
-    setClubFiltro,
     clearFilters,
     cargarDatos,
     movimientosFiltrados,
@@ -285,22 +283,7 @@ export default function ContabilidadPage() {
                         ))}
                       </Select>
                     </FormControl>
-                    <FormControl size="small" fullWidth sx={{ backgroundColor: 'white' }}>
-                      <InputLabel>Club</InputLabel>
-                      <Select
-                        value={clubFiltro}
-                        label="Club"
-                        onChange={(e) => setClubFiltro(e.target.value)}
-                      >
-                        <MenuItem value="todos">Todos</MenuItem>
-                        {[...clubes].sort((a, b) => a.nombre_club.localeCompare(b.nombre_club)).map(club => (
-                          <MenuItem key={club.id} value={club.id}>
-                            {club.nombre_club}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                    {(tipoFiltro !== 'todos' || categoriaFiltro !== 'todos' || clubFiltro !== 'todos') && (
+                    {(tipoFiltro !== 'todos' || categoriaFiltro !== 'todos') && (
                       <Button
                         variant="outlined"
                         size="small"
@@ -314,7 +297,7 @@ export default function ContabilidadPage() {
                       </Button>
                     )}
                   </Box>
-                  {(tipoFiltro !== 'todos' || categoriaFiltro !== 'todos' || clubFiltro !== 'todos') && (
+                  {(tipoFiltro !== 'todos' || categoriaFiltro !== 'todos') && (
                     <Stack direction="row" spacing={1} flexWrap="wrap">
                       {tipoFiltro !== 'todos' && (
                         <Chip
@@ -329,15 +312,6 @@ export default function ContabilidadPage() {
                         <Chip
                           label={`Categoría: ${CATEGORIA_MOVIMIENTO_LABELS[categoriaFiltro as keyof typeof CATEGORIA_MOVIMIENTO_LABELS] ?? categoriaFiltro}`}
                           onDelete={() => setCategoriaFiltro('todos')}
-                          size="small"
-                          color="primary"
-                          variant="outlined"
-                        />
-                      )}
-                      {clubFiltro !== 'todos' && (
-                        <Chip
-                          label={`Club: ${clubes.find(c => c.id === clubFiltro)?.nombre_club ?? clubFiltro}`}
-                          onDelete={() => setClubFiltro('todos')}
                           size="small"
                           color="primary"
                           variant="outlined"

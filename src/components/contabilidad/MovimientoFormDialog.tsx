@@ -5,28 +5,25 @@ import {
   DialogContent,
   DialogActions,
   Button,
+  Grid,
   Typography,
   CircularProgress,
   Alert,
   Box,
   IconButton,
-  InputAdornment,
-  Stack,
-  TextField
+  Stack
 } from '@mui/material'
 import {
   CloudUpload as CloudUploadIcon,
   Delete as DeleteIcon,
   Description as DescriptionIcon
 } from '@mui/icons-material'
-import { FormProvider, useWatch } from 'react-hook-form'
+import { FormProvider } from 'react-hook-form'
 
 import { MovimientoFinanciero } from '@/models/movimientoFinanciero'
-import { useClubList } from '@/hooks/useClubList'
-import { FormInput, FormSelect, FormDatePicker, FormAutocomplete } from '@/components/ui'
+import { useClubes } from '@/hooks/useClubes'
+import { FormInput, FormSelect } from '@/components/ui'
 import { useMovimientoForm } from '@/hooks/useMovimientoForm'
-import { formatNameWithNumbersInput } from '@/utils/formatters'
-import dayjs from 'dayjs'
 
 interface MovimientoFormDialogProps {
   open: boolean
@@ -72,151 +69,141 @@ export const MovimientoFormDialog: React.FC<MovimientoFormDialogProps> = ({
     onSubmit
   } = useMovimientoForm(movimiento, onClose, onSave)
 
-  const { state: { clubes } } = useClubList()
+  const { clubes } = useClubes()
 
-  const watchTipo = useWatch({ control: form.control, name: 'tipo' })
-  const watchCategoria = useWatch({ control: form.control, name: 'categoria' })
+  const tipo = form.watch('tipo')
+  const categoria = form.watch('categoria')
 
-  const isIngreso = watchTipo === 'ingreso'
-  const requiresClub = isIngreso && (watchCategoria === 'pago_club' || watchCategoria === 'donacion_club')
-  const requiresEntidad = isIngreso && (watchCategoria === 'aporte_estado' || watchCategoria === 'sponsor')
+  const isIngreso = tipo === 'ingreso'
+  const requiresClub = isIngreso && (categoria === 'pago_club' || categoria === 'donacion_club')
+  const requiresEntidad = isIngreso && (categoria === 'aporte_estado' || categoria === 'sponsor')
 
   return (
     <Dialog open={open} onClose={loading ? undefined : onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ fontWeight: 'bold' }}>
+      <DialogTitle>
         {movimiento ? 'Editar Movimiento' : 'Nuevo Movimiento'}
       </DialogTitle>
       
       <FormProvider {...form}>
-        <Box component="form" onSubmit={form.handleSubmit(onSubmit)} noValidate>
-          <DialogContent dividers>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <DialogContent>
             {error && (
-              <Alert severity="error" sx={{ mb: 3 }}>
+              <Alert severity="error" sx={{ mb: 2 }}>
                 {error}
               </Alert>
             )}
 
             <Stack spacing={3}>
-              <FormAutocomplete
-                control={form.control}
-                name="tipo"
-                label="Tipo de Movimiento"
-                options={[
-                  { value: 'ingreso', label: 'Ingreso' },
-                  { value: 'egreso', label: 'Egreso' }
-                ]}
-                disabled={!!movimiento || loading}
-                required
-              />
+              <Box>
+                <FormSelect control={form.control}
+                  name="tipo"
+                  label="Tipo de Movimiento"
+                  options={[
+                    { value: 'ingreso', label: 'Ingreso' },
+                    { value: 'egreso', label: 'Egreso' }
+                  ]}
+                  disabled={!!movimiento}
+                  fullWidth
+                />
+              </Box>
 
-              <FormAutocomplete
-                control={form.control}
-                name="categoria"
-                label="Categoría"
-                options={watchTipo === 'ingreso' ? CATEGORIAS_INGRESO : CATEGORIAS_EGRESO}
-                disabled={loading}
-                required
-                key={`categoria-${watchTipo}`} // Forzar re-renderizado cuando cambia el tipo
-              />
+              <Box>
+                <FormSelect control={form.control}
+                  name="categoria"
+                  label="Categoría"
+                  options={isIngreso ? CATEGORIAS_INGRESO : CATEGORIAS_EGRESO}
+                  fullWidth
+                />
+              </Box>
 
-              <FormInput
-                control={form.control}
-                name="concepto"
-                label="Concepto"
-                disabled={loading}
-                required
-                formatValue={formatNameWithNumbersInput}
-              />
-
-              <FormInput
-                control={form.control}
-                name="descripcion"
-                label="Descripción Adicional (Opcional)"
-                multiline
-                rows={2}
-                disabled={loading}
-                formatValue={formatNameWithNumbersInput}
-              />
-
-              <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
-                <FormInput
-                  control={form.control}
+              <Box>
+                <FormInput control={form.control}
                   name="monto"
                   label="Monto"
                   type="number"
-                  disabled={loading}
-                  required
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start">Bs.</InputAdornment>,
-                  }}
-                />
-
-                <TextField
-                  label="Fecha"
-                  value={dayjs().format('DD/MM/YYYY HH:mm')}
+                  inputProps={{ step: '0.01', min: '0.01' }}
                   fullWidth
-                  disabled
+                />
+              </Box>
+
+              <Box>
+                <FormInput control={form.control}
+                  name="fecha"
+                  label="Fecha"
+                  type="date"
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                />
+              </Box>
+
+              <Box>
+                <FormInput control={form.control}
+                  name="concepto"
+                  label="Concepto"
+                  placeholder="Ej: Pago de cuota enero 2024"
+                  fullWidth
                 />
               </Box>
 
               {requiresClub && (
-                <FormAutocomplete
-                  control={form.control}
-                  name="origenClubId"
-                  label="Club de Origen"
-                  options={clubes.map(c => ({ value: c.id, label: c.nombre_club }))}
-                  disabled={loading}
-                  required
-                />
+                <Box>
+                  <FormSelect control={form.control}
+                    name="origenClubId"
+                    label="Club de Origen"
+                    options={[
+                      { value: '', label: 'Seleccione un club...' },
+                      ...clubes.map(c => ({ value: c.id, label: c.nombre_club }))
+                    ]}
+                    fullWidth
+                  />
+                </Box>
               )}
 
               {requiresEntidad && (
-                <FormInput
-                  control={form.control}
-                  name="origenEntidad"
-                  label="Entidad de Origen"
-                  placeholder="Ej: Ministerio de Deportes, Sponsor X"
-                  disabled={loading}
-                  required
-                  formatValue={formatNameWithNumbersInput}
-                />
+                <Box>
+                  <FormInput control={form.control}
+                    name="origenEntidad"
+                    label="Entidad de Origen"
+                    placeholder="Ej: Ministerio de Deportes, Sponsor X"
+                    fullWidth
+                  />
+                </Box>
               )}
 
               <Box>
-                <Typography variant="subtitle2" gutterBottom fontWeight="bold" color="text.secondary">
-                  COMPROBANTE (OPCIONAL)
+                <FormInput control={form.control}
+                  name="descripcion"
+                  label="Descripción Adicional (Opcional)"
+                  multiline
+                  rows={3}
+                  fullWidth
+                />
+              </Box>
+
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  Comprobante (Opcional)
                 </Typography>
                 
-                <Box sx={{ 
-                  border: '1px dashed', 
-                  borderColor: 'divider',
-                  p: 3, 
-                  borderRadius: 2, 
-                  textAlign: 'center', 
-                  bgcolor: 'grey.50',
-                  '&:hover': { bgcolor: 'grey.100' }
-                }}>
+                <Box sx={{ border: '1px dashed grey', p: 2, borderRadius: 1, textAlign: 'center', bgcolor: 'background.default' }}>
                   {comprobanteUrl || comprobanteFile ? (
-                    <Box display="flex" alignItems="center" justifyContent="center" gap={2}>
-                      <DescriptionIcon color="primary" sx={{ fontSize: 32 }} />
-                      <Box textAlign="left" sx={{ flexGrow: 1, minWidth: 0 }}>
-                        <Typography variant="body2" noWrap fontWeight="medium">
-                          {comprobanteFile ? comprobanteFile.name : comprobanteNombre || 'Comprobante adjunto'}
-                        </Typography>
-                        {comprobanteUrl && !comprobanteFile && (
-                          <Typography 
-                            variant="caption" 
-                            component="a" 
-                            href={comprobanteUrl} 
-                            target="_blank"
-                            sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
-                          >
-                            Ver archivo actual
-                          </Typography>
-                        )}
-                      </Box>
-                      <IconButton size="small" color="error" onClick={clearComprobante} disabled={loading}>
-                        <DeleteIcon />
+                    <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
+                      <DescriptionIcon color="primary" />
+                      <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
+                        {comprobanteFile ? comprobanteFile.name : comprobanteNombre || 'Comprobante adjunto'}
+                      </Typography>
+                      {comprobanteUrl && !comprobanteFile && (
+                        <Button 
+                          size="small" 
+                          href={comprobanteUrl} 
+                          target="_blank"
+                          sx={{ ml: 1 }}
+                        >
+                          Ver
+                        </Button>
+                      )}
+                      <IconButton size="small" color="error" onClick={clearComprobante} title="Eliminar archivo">
+                        <DeleteIcon fontSize="small" />
                       </IconButton>
                     </Box>
                   ) : (
@@ -224,10 +211,8 @@ export const MovimientoFormDialog: React.FC<MovimientoFormDialogProps> = ({
                       component="label"
                       variant="outlined"
                       startIcon={<CloudUploadIcon />}
-                      disabled={loading || uploadingFile}
-                      sx={{ textTransform: 'none', px: 4 }}
                     >
-                      SELECCIONAR ARCHIVO
+                      Seleccionar Archivo
                       <input
                         type="file"
                         hidden
@@ -237,41 +222,30 @@ export const MovimientoFormDialog: React.FC<MovimientoFormDialogProps> = ({
                     </Button>
                   )}
                   {uploadingFile && (
-                    <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                      <CircularProgress size={16} />
-                      <Typography variant="caption" color="text.secondary">
-                        Preparando archivo...
-                      </Typography>
-                    </Box>
+                    <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
+                      Preparando archivo...
+                    </Typography>
                   )}
                 </Box>
               </Box>
             </Stack>
           </DialogContent>
 
-          <DialogActions sx={{ p: 2.5, gap: 1.5 }}>
-            <Button 
-              onClick={onClose} 
-              disabled={loading || uploadingFile}
-              variant="outlined"
-              sx={{ px: 3 }}
-            >
-              CANCELAR
+          <DialogActions>
+            <Button onClick={onClose} disabled={loading || uploadingFile}>
+              Cancelar
             </Button>
             <Button
               type="submit"
               variant="contained"
               disabled={loading || uploadingFile}
-              sx={{ px: 3, minWidth: 180 }}
-              startIcon={(loading || uploadingFile) && <CircularProgress size={20} color="inherit" />}
+              startIcon={(loading || uploadingFile) && <CircularProgress size={20} />}
             >
-              {loading ? 'GUARDANDO...' : 'GUARDAR MOVIMIENTO'}
+              {loading ? 'Guardando...' : 'Guardar Movimiento'}
             </Button>
           </DialogActions>
-        </Box>
+        </form>
       </FormProvider>
     </Dialog>
   )
 }
-
-export default MovimientoFormDialog
