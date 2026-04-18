@@ -2,7 +2,9 @@ import { createClient } from '@/lib/supabase/client'
 import { 
   AsistenciaSesion, 
   AsistenciaSesionCreate, 
-  AsistenciaSesionUpdate 
+  AsistenciaSesionUpdate,
+  AsistenciaDetalle,
+  AsistenciaDetalleUpsert
 } from '@/models/asistencia'
 import { ApiResponse } from '@/types/globales'
 
@@ -27,6 +29,21 @@ const SELECT_SESION_BASE = `
   clubes:club_id(nombre_club)
 `
 
+const SELECT_DETALLE_BASE = `
+  id,
+  sesion_id,
+  judoka_id,
+  estado,
+  observacion,
+  marcado_por,
+  marcado_at,
+  created_at,
+  updated_at,
+  judokas:judoka_id(
+    usuarios:usuario_id(nombre, apellido_paterno, apellido_materno)
+  )
+`
+
 /**
  * Mapea una fila de la base de datos al modelo AsistenciaSesion
  */
@@ -43,7 +60,23 @@ function mapSesionRow(row: any): AsistenciaSesion {
   }
 }
 
+/**
+ * Mapea una fila de la base de datos al modelo AsistenciaDetalle
+ */
+function mapDetalleRow(row: any): AsistenciaDetalle {
+  const u = row.judokas?.usuarios
+  const nombreJudoka = u?.nombre ?? ''
+  const apellidoJudoka = [u?.apellido_paterno, u?.apellido_materno].filter(Boolean).join(' ')
+
+  return {
+    ...row,
+    nombre_judoka: nombreJudoka,
+    apellido_judoka: apellidoJudoka
+  }
+}
+
 export const asistenciaService = {
+  // ... (métodos de sesiones existentes)
   /**
    * Obtiene todas las sesiones activas de un club
    */
@@ -186,6 +219,84 @@ export const asistenciaService = {
     } catch (error) {
       console.error('Error en asistenciaService.delete:', error)
       return { success: false, error: error instanceof Error ? error.message : 'Error al eliminar la sesión' }
+    }
+  },
+
+  /**
+   * Obtiene el detalle de asistencia de una sesión específica
+   */
+  async getDetalleBySesion(sesionId: string): Promise<ApiResponse<AsistenciaDetalle[]>> {
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('asistencia_detalle')
+        .select(SELECT_DETALLE_BASE)
+        .eq('sesion_id', sesionId)
+        .order('judokas(usuarios(apellido_paterno))', { ascending: true })
+
+      if (error) throw error
+      return { success: true, data: (data || []).map(mapDetalleRow) }
+    } catch (error) {
+      console.error('Error en asistenciaService.getDetalleBySesion:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Error al obtener el detalle de asistencia' }
+    }
+  },
+
+  /**
+   * Guarda o actualiza la asistencia de varios judokas para una sesión (Upsert masivo)
+   */
+  async upsertAsistencias(asistencias: AsistenciaDetalleUpsert[]): Promise<ApiResponse<void>> {
+    try {
+      if (asistencias.length === 0) return { success: true }
+
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('asistencia_detalle')
+        .upsert(
+          asistencias.map(a => ({
+            sesion_id: a.sesion_id,
+            judoka_id: a.judoka_id,
+            estado: a.estado,
+            observacion: a.observacion || null,
+            marcado_por: a.marcado_por || null,
+            updated_at: new Date().toISOString()
+          })),
+          { onConflict: 'sesion_id, judoka_id' }
+        )
+
+      if (error) throw error
+      return { success: true }
+    } catch (error) {
+      console.error('Error en asistenciaService.upsertAsistencias:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Error al guardar las asistencias' }
+    }
+  },
+
+  /**
+   * Obtiene el historial de asistencia de un judoka específico
+   */
+  async getHistorialByJudoka(judokaId: string, fechaInicio?: string, fechaFin?: string): Promise<ApiResponse<AsistenciaDetalle[]>> {
+    try {
+      const supabase = createClient()
+      let query = supabase
+        .from('asistencia_detalle')
+        .select(`
+          ${SELECT_DETALLE_BASE},
+          asistencia_sesiones!inner(fecha, titulo, activo)
+        `)
+        .eq('judoka_id', judokaId)
+        .eq('asistencia_sesiones.activo', true)
+
+      if (fechaInicio) query = query.gte('asistencia_sesiones.fecha', fechaInicio)
+      if (fechaFin) query = query.lte('asistencia_sesiones.fecha', fechaFin)
+
+      const { data, error } = await query.order('asistencia_sesiones(fecha)', { ascending: false })
+
+      if (error) throw error
+      return { success: true, data: (data || []).map(mapDetalleRow) }
+    } catch (error) {
+      console.error('Error en asistenciaService.getHistorialByJudoka:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Error al obtener el historial del judoka' }
     }
   }
 }
