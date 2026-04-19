@@ -34,6 +34,8 @@ export function useRegistrarAsistencia(senseiId?: string, clubId?: string) {
       if (!res.success) return
       // Invalida el detalle de la sesión recién guardada
       queryClient.invalidateQueries({ queryKey: ASISTENCIA_QUERY_KEYS.detalle(variables.sesionId) })
+      // Invalida todas las listas de sesiones para que el controlador recalcule los totales
+      queryClient.invalidateQueries({ queryKey: ASISTENCIA_QUERY_KEYS.sesiones() })
       // Invalida estadísticas derivadas para que reflejen el cambio
       if (senseiId) {
         queryClient.invalidateQueries({ queryKey: ASISTENCIA_QUERY_KEYS.statsSensei(senseiId) })

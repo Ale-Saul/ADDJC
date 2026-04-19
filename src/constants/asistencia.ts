@@ -14,4 +14,5 @@ export const ASISTENCIA_QUERY_KEYS = {
   statsJudoka: (judokaId: string) => [...ASISTENCIA_QUERY_KEYS.all, 'stats', 'judoka', judokaId] as const,
   statsSensei: (senseiId: string) => [...ASISTENCIA_QUERY_KEYS.all, 'stats', 'sensei', senseiId] as const,
   reporteClub: (clubId: string) => [...ASISTENCIA_QUERY_KEYS.all, 'reporte', 'club', clubId] as const,
+  statsJudokasByClub: (clubId: string) => [...ASISTENCIA_QUERY_KEYS.all, 'stats', 'judokas', 'club', clubId] as const,
 } as const

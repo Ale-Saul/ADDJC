@@ -39,13 +39,11 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/', request.url))
     }
 
-    // Protect administrative routes
-    const userRole = user.user_metadata?.role
-    const isAdminRoute = pathname.startsWith('/asociacion') || 
-                        pathname.startsWith('/clubes') || 
-                        pathname.startsWith('/api/admin')
+    // Protect administrative UI routes (not API routes — those use server-only service key)
+    const userRole = user.user_metadata?.rol ?? user.user_metadata?.role
+    const isAdminUiRoute = pathname.startsWith('/asociacion') || pathname.startsWith('/clubes')
 
-    if (isAdminRoute && userRole !== 'asociacion' && userRole !== 'club') {
+    if (isAdminUiRoute && userRole !== 'asociacion' && userRole !== 'encargado' && userRole !== 'club' && userRole !== 'admin') {
         return NextResponse.redirect(new URL('/', request.url))
     }
   }

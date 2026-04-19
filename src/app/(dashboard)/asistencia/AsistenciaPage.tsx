@@ -19,11 +19,13 @@ import {
   Snackbar,
   Divider,
   Chip,
+  Paper,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import ChecklistIcon from '@mui/icons-material/Checklist'
 import FilterListIcon from '@mui/icons-material/FilterList'
 import ClearIcon from '@mui/icons-material/Clear'
+import PersonIcon from '@mui/icons-material/Person'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import { ROL } from '@/constants/roles'
 import { useAsistenciaPage } from '@/hooks/useAsistenciaPage'
@@ -47,6 +49,7 @@ export default function AsistenciaPage() {
     handleEliminarSesion,
     eliminarLoading,
     crearLoading,
+    sesionesAgrupadas,
     snackbar,
     cerrarSnackbar,
   } = useAsistenciaPage()
@@ -130,8 +133,8 @@ export default function AsistenciaPage() {
               )}
             </Stack>
 
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={4}>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} sm={3.5}>
                 <TextField
                   label="Desde"
                   type="date"
@@ -142,7 +145,7 @@ export default function AsistenciaPage() {
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={3.5}>
                 <TextField
                   label="Hasta"
                   type="date"
@@ -154,15 +157,15 @@ export default function AsistenciaPage() {
                 />
               </Grid>
               {filtros.senseiOptions.length > 0 && (
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} sm={5}>
                   <FormControl size="small" fullWidth>
-                    <InputLabel>Sensei</InputLabel>
+                    <InputLabel>Filtrar por Sensei</InputLabel>
                     <Select
-                      label="Sensei"
+                      label="Filtrar por Sensei"
                       value={filtros.senseiId}
                       onChange={e => filtros.setSenseiId(e.target.value)}
                     >
-                      <MenuItem value="all">Todos</MenuItem>
+                      <MenuItem value="all">Todos los senseis del club</MenuItem>
                       {filtros.senseiOptions.map(opt => (
                         <MenuItem key={opt.value} value={opt.value}>
                           {opt.label}
@@ -211,19 +214,80 @@ export default function AsistenciaPage() {
                 : 'Crea la primera sesión con el botón "Nueva sesión".'}
             </Typography>
           </Box>
-        ) : (
+        ) : isSensei ? (
           <Grid container spacing={2}>
             {sesiones.map(sesion => (
               <Grid item xs={12} sm={6} md={4} key={sesion.id}>
                 <SesionCard
                   sesion={sesion}
-                  mostrarSensei={isEncargado || isAdmin}
+                  mostrarSensei={false}
                   onEliminar={handleEliminarSesion}
                   eliminarLoading={eliminarLoading}
                 />
               </Grid>
             ))}
           </Grid>
+        ) : (
+          <Stack spacing={5}>
+            {sesionesAgrupadas?.map(grupo => (
+              <Box key={grupo.id}>
+                <Typography
+                  variant="h6"
+                  fontWeight="bold"
+                  gutterBottom
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    mb: 2.5,
+                    color: grupo.id === senseiId ? 'primary.main' : 'text.primary',
+                  }}
+                >
+                  <PersonIcon fontSize="small" />
+                  {grupo.id === senseiId ? `Mis clases (${grupo.nombre})` : `Clases de ${grupo.nombre}`}
+                  <Chip
+                    label={`${grupo.sesiones.length} sesión${grupo.sesiones.length === 1 ? '' : 'es'}`}
+                    size="small"
+                    variant="outlined"
+                    color={grupo.id === senseiId ? 'primary' : 'default'}
+                    sx={{ ml: 1, fontWeight: 500 }}
+                  />
+                </Typography>
+                
+                <Grid container spacing={2}>
+                  {grupo.sesiones.length > 0 ? (
+                    grupo.sesiones.map(sesion => (
+                      <Grid item xs={12} sm={6} md={4} key={sesion.id}>
+                        <SesionCard
+                          sesion={sesion}
+                          mostrarSensei={false}
+                          onEliminar={handleEliminarSesion}
+                          eliminarLoading={eliminarLoading}
+                        />
+                      </Grid>
+                    ))
+                  ) : (
+                    <Grid item xs={12}>
+                      <Paper
+                        variant="outlined"
+                        sx={{
+                          p: 3,
+                          textAlign: 'center',
+                          bgcolor: 'grey.50',
+                          borderStyle: 'dashed',
+                          borderRadius: 2,
+                        }}
+                      >
+                        <Typography variant="body2" color="text.secondary">
+                          No hay sesiones registradas para este sensei en el periodo seleccionado.
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                  )}
+                </Grid>
+              </Box>
+            ))}
+          </Stack>
         )}
 
         {/* ── Dialog nueva sesión ── */}

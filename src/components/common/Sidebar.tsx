@@ -148,6 +148,12 @@ export default function Sidebar() {
       allowedRoles: [ROL.ADMIN, ROL.SENSEI, ROL.ENCARGADO]
     },
     {
+      label: 'Estadísticas',
+      path: '/asistencia/estadisticas',
+      icon: <InsightsIcon />,
+      allowedRoles: [ROL.ADMIN, ROL.SENSEI, ROL.ENCARGADO]
+    },
+    {
       label: 'Mi Asistencia',
       path: '/asistencia/mi-asistencia',
       icon: <InsightsIcon />,
@@ -202,7 +208,10 @@ export default function Sidebar() {
   const showAfiliadosMenu = visibleAfiliadosItems.length > 0
   
   // Obtener todas las rutas del menú para la función isActive
-  const allMenuPaths = visibleMenuItems.map(item => item.path)
+  const allMenuPaths = [
+    ...visibleMenuItems.map(item => item.path),
+    ...visibleAsistenciaItems.map(item => item.path)
+  ]
 
   // Evitar renderizar hasta que esté montado en el cliente
   if (!mounted) {
@@ -300,7 +309,7 @@ export default function Sidebar() {
                 {visibleAsistenciaItems.map((item) => (
                   <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
                     <ListItemButton
-                      selected={isActive(item.path)}
+                      selected={isActive(item.path, allMenuPaths)}
                       onClick={() => router.push(item.path)}
                       sx={{
                         pl: 3.5,

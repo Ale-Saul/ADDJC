@@ -41,6 +41,25 @@ export function useStatsBySensei(
 }
 
 /**
+ * Estadísticas de asistencia de todos los judokas de un club en un período.
+ * Uso: desglose por judoka en dashboard de encargado/admin.
+ */
+export function useStatsJudokasByClub(
+  clubId: string,
+  filtros: { fecha_inicio: string; fecha_fin: string; sensei_id?: string }
+) {
+  return useQuery({
+    queryKey: [...ASISTENCIA_QUERY_KEYS.statsJudokasByClub(clubId), filtros],
+    queryFn: async () => {
+      const res = await asistenciaController.getStatsJudokasByClub(clubId, filtros)
+      if (!res.success) throw new Error(res.error || 'Error al obtener estadísticas de judokas')
+      return res.data ?? []
+    },
+    enabled: !!clubId && !!filtros.fecha_inicio && !!filtros.fecha_fin,
+  })
+}
+
+/**
  * Reporte global del club con filtro de fechas obligatorio.
  * Uso: dashboard de encargado.
  */

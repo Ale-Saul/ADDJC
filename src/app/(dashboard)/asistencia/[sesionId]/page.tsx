@@ -1,9 +1,10 @@
 import MarcarAsistenciaPage from './MarcarAsistenciaPage'
 
 interface Props {
-  params: { sesionId: string }
+  params: Promise<{ sesionId: string }>
 }
 
-export default function Page({ params }: Props) {
-  return <MarcarAsistenciaPage sesionId={params.sesionId} />
+export default async function Page({ params }: Props) {
+  const { sesionId } = await params
+  return <MarcarAsistenciaPage sesionId={sesionId} />
 }

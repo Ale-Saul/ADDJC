@@ -42,6 +42,9 @@ export interface AsistenciaDetalle {
   // Campos virtuales (joins)
   nombre_judoka?: string
   apellido_judoka?: string
+  // Campos de la sesión vinculada (disponibles en historial)
+  sesion_fecha?: string
+  sesion_titulo?: string | null
 }
 
 /**
@@ -83,6 +86,8 @@ export interface AsistenciaDetalleUpsert {
 
 export interface AsistenciaStatsJudoka {
   judoka_id: string
+  nombre_judoka?: string
+  apellido_judoka?: string
   total_sesiones: number
   presentes: number
   ausentes: number
@@ -92,8 +97,8 @@ export interface AsistenciaStatsJudoka {
 export interface AsistenciaReporteClub {
   club_id: string
   periodo: {
-    inicio: string
-    fin: string
+    fecha_inicio: string
+    fecha_fin: string
   }
   stats_globales: {
     total_sesiones: number

@@ -1,26 +1,193 @@
 'use client'
 
-import { Box, Typography } from '@mui/material'
+import { useState } from 'react'
+import {
+  Box,
+  Typography,
+  Stack,
+  TextField,
+  Skeleton,
+  Alert,
+  Chip,
+} from '@mui/material'
 import InsightsIcon from '@mui/icons-material/Insights'
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
+import FilterListIcon from '@mui/icons-material/FilterList'
+import ClearIcon from '@mui/icons-material/Clear'
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
+import HighlightOffIcon from '@mui/icons-material/HighlightOff'
+import TrendingUpIcon from '@mui/icons-material/TrendingUp'
+import EventAvailableIcon from '@mui/icons-material/EventAvailable'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import { ROL } from '@/constants/roles'
+import { useAuth } from '@/contexts/AuthContext'
+import { useStatsJudoka } from '@/hooks/useAsistenciaStats'
+import { useHistorialJudoka } from '@/hooks/useAsistenciaDetalle'
+import KpiCard from '@/components/asistencia/stats/KpiCard'
+import HistorialTable from '@/components/asistencia/stats/HistorialTable'
+import dayjs from 'dayjs'
+
+function getColorByPct(pct: number): 'success' | 'warning' | 'error' {
+  if (pct >= 80) return 'success'
+  if (pct >= 50) return 'warning'
+  return 'error'
+}
 
 export default function MiAsistenciaPage() {
+  const { user } = useAuth()
+  const judokaId = user?.judoka_id ?? ''
+
+  const [fechaInicio, setFechaInicio] = useState('')
+  const [fechaFin, setFechaFin] = useState('')
+  const hayFiltros = fechaInicio !== '' || fechaFin !== ''
+
+  const filtros = hayFiltros
+    ? { fecha_inicio: fechaInicio || undefined, fecha_fin: fechaFin || undefined }
+    : undefined
+
+  const statsQuery = useStatsJudoka(judokaId, filtros)
+  const historialQuery = useHistorialJudoka(judokaId, filtros)
+
+  const stats = statsQuery.data
+  const historial = historialQuery.data ?? []
+  const isLoading = statsQuery.isLoading || historialQuery.isLoading
+
   return (
     <ProtectedRoute allowedRoles={[ROL.JUDOKA]}>
       <Box>
-        <Box display="flex" alignItems="center" gap={2} mb={4}>
-          <InsightsIcon sx={{ fontSize: 40, color: 'primary.main' }} />
+        {/* ── Header ── */}
+        <Stack direction="row" alignItems="center" spacing={1.5} mb={4}>
+          <InsightsIcon sx={{ fontSize: 36, color: 'primary.main' }} />
           <Box>
             <Typography variant="h4" component="h1" fontWeight="bold">
               Mi Asistencia
             </Typography>
-            <Typography variant="body1" color="text.secondary">
+            <Typography variant="body2" color="text.secondary">
               Tu porcentaje de asistencia y resumen por periodo
             </Typography>
           </Box>
+        </Stack>
+
+        {/* ── Filtro de fechas ── */}
+        <Box
+          sx={{
+            mb: 3,
+            p: 2,
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 2,
+            bgcolor: 'background.paper',
+          }}
+        >
+          <Stack direction="row" alignItems="center" spacing={1} mb={1.5} flexWrap="wrap">
+            <FilterListIcon fontSize="small" color="action" />
+            <Typography variant="body2" fontWeight="600">
+              Filtrar por periodo
+            </Typography>
+            {hayFiltros && (
+              <Chip
+                label="Limpiar"
+                size="small"
+                icon={<ClearIcon />}
+                onClick={() => { setFechaInicio(''); setFechaFin('') }}
+                variant="outlined"
+                clickable
+                sx={{ cursor: 'pointer' }}
+              />
+            )}
+          </Stack>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2 }}>
+            <TextField
+              label="Desde"
+              type="date"
+              size="small"
+              fullWidth
+              value={fechaInicio}
+              onChange={e => setFechaInicio(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ max: fechaFin || dayjs().format('YYYY-MM-DD') }}
+            />
+            <TextField
+              label="Hasta"
+              type="date"
+              size="small"
+              fullWidth
+              value={fechaFin}
+              onChange={e => setFechaFin(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ min: fechaInicio, max: dayjs().format('YYYY-MM-DD') }}
+            />
+          </Box>
         </Box>
-        {/* Contenido implementado en Epic 4 */}
+
+        {/* ── KPIs ── */}
+        {isLoading ? (
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2, mb: 4 }}>
+            {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" height={180} />)}
+          </Box>
+        ) : statsQuery.error ? (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {statsQuery.error?.message ?? 'Error al cargar tus estadísticas.'}
+          </Alert>
+        ) : !judokaId ? (
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            Tu perfil de judoka no está vinculado. Contacta al encargado de tu club.
+          </Alert>
+        ) : stats ? (
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2, mb: 4 }}>
+            <KpiCard
+              label="Rendimiento de Asistencia"
+              value={stats.porcentaje}
+              color={getColorByPct(stats.porcentaje)}
+              subtitle={
+                hayFiltros
+                  ? `Periodo: ${fechaInicio ? dayjs(fechaInicio).format('DD/MM') : '—'} al ${fechaFin ? dayjs(fechaFin).format('DD/MM/YY') : 'hoy'}`
+                  : 'Resumen histórico total'
+              }
+              icon={<TrendingUpIcon />}
+              sx={{ borderLeft: 6, borderColor: `${getColorByPct(stats.porcentaje)}.main` }}
+            />
+            <KpiCard
+              label="Clases Asistidas"
+              value={stats.presentes}
+              isPercentage={false}
+              color="success"
+              subtitle={`De un total de ${stats.total_sesiones} clases`}
+              icon={<CheckCircleOutlineIcon color="success" />}
+            />
+            <KpiCard
+              label="Inasistencias"
+              value={stats.ausentes}
+              isPercentage={false}
+              color={stats.ausentes === 0 ? 'success' : stats.ausentes <= 2 ? 'warning' : 'error'}
+              subtitle={stats.ausentes === 0 ? '¡Excelente asistencia!' : `Has faltado a ${stats.ausentes} clase${stats.ausentes === 1 ? '' : 's'}`}
+              icon={<HighlightOffIcon color={stats.ausentes === 0 ? 'success' : 'error'} />}
+            />
+          </Box>
+        ) : (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            {hayFiltros
+              ? 'Sin registros en el periodo seleccionado.'
+              : 'Aún no tienes sesiones de asistencia registradas.'}
+          </Alert>
+        )}
+
+        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <EventAvailableIcon color="action" />
+          <Typography variant="h6" fontWeight="bold">
+            Historial Detallado
+          </Typography>
+        </Box>
+
+        {historialQuery.isLoading ? (
+          <Stack spacing={1}>
+            {[1, 2, 3, 4].map(i => <Skeleton key={i} variant="rounded" height={44} />)}
+          </Stack>
+        ) : (
+          <Box sx={{ bgcolor: 'background.paper', borderRadius: 2, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
+            <HistorialTable historial={historial} />
+          </Box>
+        )}
       </Box>
     </ProtectedRoute>
   )

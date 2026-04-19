@@ -68,10 +68,14 @@ function mapDetalleRow(row: any): AsistenciaDetalle {
   const nombreJudoka = u?.nombre ?? ''
   const apellidoJudoka = [u?.apellido_paterno, u?.apellido_materno].filter(Boolean).join(' ')
 
+  // El join con asistencia_sesiones solo está disponible en getHistorialByJudoka
+  const sesion = row.asistencia_sesiones
   return {
     ...row,
     nombre_judoka: nombreJudoka,
-    apellido_judoka: apellidoJudoka
+    apellido_judoka: apellidoJudoka,
+    sesion_fecha: sesion?.fecha,
+    sesion_titulo: sesion?.titulo ?? null,
   }
 }
 
@@ -228,11 +232,10 @@ export const asistenciaService = {
   async getDetalleBySesion(sesionId: string): Promise<ApiResponse<AsistenciaDetalle[]>> {
     try {
       const supabase = createClient()
-      const { data, error } = await supabase
-        .from('asistencia_detalle')
-        .select(SELECT_DETALLE_BASE)
-        .eq('sesion_id', sesionId)
-        .order('judokas(usuarios(apellido_paterno))', { ascending: true })
+    const { data, error } = await supabase
+      .from('asistencia_detalle')
+      .select(SELECT_DETALLE_BASE)
+      .eq('sesion_id', sesionId)
 
       if (error) throw error
       return { success: true, data: (data || []).map(mapDetalleRow) }
@@ -290,7 +293,9 @@ export const asistenciaService = {
       if (fechaInicio) query = query.gte('asistencia_sesiones.fecha', fechaInicio)
       if (fechaFin) query = query.lte('asistencia_sesiones.fecha', fechaFin)
 
-      const { data, error } = await query.order('asistencia_sesiones(fecha)', { ascending: false })
+      const { data, error } = await query
+      // .order('asistencia_sesiones(fecha)', { ascending: false }) // Eliminado por error de sintaxis en join
+
 
       if (error) throw error
       return { success: true, data: (data || []).map(mapDetalleRow) }

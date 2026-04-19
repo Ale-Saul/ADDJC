@@ -89,6 +89,35 @@ export function useAsistenciaPage() {
   }
   const cerrarSnackbar = () => setSnackbar(prev => ({ ...prev, open: false }))
 
+  const sesionesAgrupadas = useMemo(() => {
+    if (isSensei) return null
+
+    const grupos: Record<string, { nombre: string; sesiones: AsistenciaSesion[] }> = {}
+    
+    // Inicializar grupo del encargado actual
+    const miNombre = `${user?.nombres} ${user?.apellidos}`
+    grupos[senseiId] = { nombre: miNombre, sesiones: [] }
+
+    sesionesVisibles.forEach(s => {
+      const sId = s.sensei_id
+      const sNombre = s.nombre_sensei || 'Sensei desconocido'
+      
+      if (!grupos[sId]) {
+        grupos[sId] = { nombre: sNombre, sesiones: [] }
+      }
+      grupos[sId].sesiones.push(s)
+    })
+
+    return Object.entries(grupos)
+      .filter(([id, data]) => data.sesiones.length > 0 || id === senseiId)
+      .sort(([idA, dataA], [idB, dataB]) => {
+        if (idA === senseiId) return -1
+        if (idB === senseiId) return 1
+        return dataA.nombre.localeCompare(dataB.nombre)
+      })
+      .map(([id, data]) => ({ id, ...data }))
+  }, [sesionesVisibles, isSensei, senseiId, user])
+
   return {
     user,
     isSensei,
@@ -97,6 +126,7 @@ export function useAsistenciaPage() {
     senseiId,
     clubId,
     sesiones: sesionesVisibles,
+    sesionesAgrupadas,
     isLoading,
     fetchError: fetchError ?? null,
     filtros: {

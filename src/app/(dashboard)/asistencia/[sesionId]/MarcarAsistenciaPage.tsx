@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Box,
   Typography,
@@ -49,15 +49,31 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
   const sesionQuery = useSesionById(sesionId)
   const detalleQuery = useDetalleSesion(sesionId)
 
-  // Judokas del sensei (o del club si es encargado/admin)
-  const senseiId = isSensei ? (user?.sensei_id ?? '') : undefined
-  const clubId = (isEncargado || isAdmin) ? (user?.club_id ?? '') : undefined
+  // Filtramos por el sensei de la sesión. Mientras carga la sesión, el sensei
+  // usa su propio ID como fallback para no esperar la carga.
+  const sesionSenseiId = sesionQuery.data?.sensei_id || null
+  const senseiId = sesionSenseiId || (isSensei ? (user?.sensei_id || undefined) : undefined)
+  const autoFetchJudokas = !!sesionSenseiId || (isSensei && !!user?.sensei_id)
 
   const judokasQuery = useJudokas({
     entrenadorId: senseiId,
-    clubId,
-    autoFetch: true,
+    clubId: undefined,
+    autoFetch: autoFetchJudokas,
   })
+
+  // Filtrar judokas inscritos antes o en la fecha de la sesión.
+  // Usamos la fecha LOCAL del judoka (no UTC) para evitar el desfase de zona horaria.
+  const sesionFecha = sesionQuery.data?.fecha
+  const judokasElegibles = useMemo(() => {
+    if (!sesionFecha) return judokasQuery.judokas
+    return judokasQuery.judokas.filter(j => {
+      if (!j.created_at) return true
+      // Convertir created_at (UTC) a fecha local YYYY-MM-DD
+      const d = new Date(j.created_at)
+      const inscripcionLocal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      return inscripcionLocal <= sesionFecha
+    })
+  }, [judokasQuery.judokas, sesionFecha])
 
   // Mutation para guardar
   const guardarMutation = useRegistrarAsistencia(user?.sensei_id, user?.club_id)
@@ -70,6 +86,10 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
     const res = await guardarMutation.mutateAsync({ sesionId, asistencias })
     if (res.success) {
       setSnackbar({ open: true, message: 'Asistencia guardada correctamente', severity: 'success' })
+      // Esperar un poco para que el usuario vea el mensaje y luego volver
+      setTimeout(() => {
+        router.push('/asistencia')
+      }, 1000)
     } else {
       setSnackbar({ open: true, message: res.error || 'Error al guardar', severity: 'error' })
     }
@@ -156,9 +176,9 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
                 </Stack>
               )}
 
-              {judokasQuery.judokas.length > 0 && !isLoading && (
+              {judokasElegibles.length > 0 && !isLoading && (
                 <Chip
-                  label={`${judokasQuery.judokas.length} judokas`}
+                  label={`${judokasElegibles.length} judokas`}
                   size="small"
                   variant="outlined"
                   color="primary"
@@ -182,17 +202,17 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
           <Alert severity="error">
             {judokasQuery.error ?? 'No se pudo cargar la lista de judokas.'}
           </Alert>
-        ) : judokasQuery.judokas.length === 0 ? (
+        ) : judokasElegibles.length === 0 ? (
           <Alert severity="info">
             {isSensei
-              ? 'No tienes judokas asignados. Pide al encargado que te asigne estudiantes.'
-              : 'El club no tiene judokas registrados.'}
+              ? 'No tienes judokas asignados que estuvieran inscritos en la fecha de esta sesión.'
+              : 'No hay judokas del club inscritos en la fecha de esta sesión.'}
           </Alert>
         ) : (
           <MarcarAsistenciaForm
             sesionId={sesionId}
             marcadoPor={user?.id ?? ''}
-            judokas={judokasQuery.judokas}
+            judokas={judokasElegibles}
             detalleExistente={detalleQuery.data ?? []}
             onGuardar={handleGuardar}
             guardandoLoading={guardarMutation.isPending}

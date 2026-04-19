@@ -4,7 +4,9 @@ import {
   AsistenciaSesionCreate, 
   AsistenciaSesionUpdate,
   AsistenciaDetalle,
-  AsistenciaDetalleUpsert
+  AsistenciaDetalleUpsert,
+  AsistenciaStatsJudoka,
+  AsistenciaReporteClub,
 } from '@/models/asistencia'
 import { 
   createSesionSchema, 
@@ -22,7 +24,25 @@ export const asistenciaController = {
     if (!clubId) {
       return { success: false, error: 'El ID del club es requerido' }
     }
-    return await asistenciaService.getByClub(clubId)
+    const res = await asistenciaService.getByClub(clubId)
+    if (!res.success || !res.data) return res
+
+    // Calcular conteos para cada sesión
+    const sesionesConStats = await Promise.all(
+      res.data.map(async (s) => {
+        const detRes = await asistenciaService.getDetalleBySesion(s.id)
+        if (detRes.success && detRes.data) {
+          return {
+            ...s,
+            total_presentes: detRes.data.filter(d => d.estado === 'presente').length,
+            total_judokas: detRes.data.length
+          }
+        }
+        return s
+      })
+    )
+
+    return { success: true, data: sesionesConStats }
   },
 
   /**
@@ -32,7 +52,25 @@ export const asistenciaController = {
     if (!senseiId) {
       return { success: false, error: 'El ID del sensei es requerido' }
     }
-    return await asistenciaService.getBySensei(senseiId)
+    const res = await asistenciaService.getBySensei(senseiId)
+    if (!res.success || !res.data) return res
+
+    // Calcular conteos para cada sesión
+    const sesionesConStats = await Promise.all(
+      res.data.map(async (s) => {
+        const detRes = await asistenciaService.getDetalleBySesion(s.id)
+        if (detRes.success && detRes.data) {
+          return {
+            ...s,
+            total_presentes: detRes.data.filter(d => d.estado === 'presente').length,
+            total_judokas: detRes.data.length
+          }
+        }
+        return s
+      })
+    )
+
+    return { success: true, data: sesionesConStats }
   },
 
   /**
@@ -179,37 +217,41 @@ export const asistenciaController = {
       return { success: false, error: sesionesRes.error || 'Error al obtener sesiones del sensei' }
     }
 
-    let sesionesIds = sesionesRes.data.map(s => s.id)
-    // Filtrar sesiones por fecha si hay filtros
-    if (filtros?.fecha_inicio || filtros?.fecha_fin) {
-      sesionesRes.data.filter(s => {
-        let ok = true
-        if (filtros.fecha_inicio && s.fecha < filtros.fecha_inicio) ok = false
-        if (filtros.fecha_fin && s.fecha > filtros.fecha_fin) ok = false
-        return ok
-      }).map(s => s.id)
-    }
+    // Filtrar sesiones por fecha antes de iterar (fix: asignar el resultado)
+    const sesionesFiltradas = (filtros?.fecha_inicio || filtros?.fecha_fin)
+      ? sesionesRes.data.filter(s => {
+          if (filtros.fecha_inicio && s.fecha < filtros.fecha_inicio) return false
+          if (filtros.fecha_fin && s.fecha > filtros.fecha_fin) return false
+          return true
+        })
+      : sesionesRes.data
+
+    const sesionesIds = sesionesFiltradas.map(s => s.id)
 
     if (sesionesIds.length === 0) {
       return { success: true, data: [] }
     }
 
-    // 2. Obtener todos los detalles de esas sesiones
-    // Nota: En una v2 esto se optimizaría con una sola query SQL agregada en el servicio.
-    // Para v1 y respetando la arquitectura, orquestamos desde el controlador.
-    const todasAsistencias: AsistenciaDetalle[] = []
-    for (const sId of sesionesIds) {
-      const det = await asistenciaService.getDetalleBySesion(sId)
-      if (det.success && det.data) {
-        todasAsistencias.push(...det.data)
-      }
-    }
+    // 2. Obtener todos los detalles de esas sesiones en paralelo (bundle-parallel)
+    const detallesResultados = await Promise.all(
+      sesionesIds.map(sId => asistenciaService.getDetalleBySesion(sId))
+    )
 
-    // 3. Agrupar por judoka_id
-    const statsMap = new Map<string, { presentes: number, total: number }>()
+    const todasAsistencias: AsistenciaDetalle[] = detallesResultados
+      .filter(r => r.success && r.data)
+      .flatMap(r => r.data!)
+
+    // 3. Agrupar por judoka_id, acumulando nombre
+    const statsMap = new Map<string, { presentes: number; total: number; nombre: string; apellido: string }>()
     todasAsistencias.forEach(a => {
-      const current = statsMap.get(a.judoka_id) || { presentes: 0, total: 0 }
+      const current = statsMap.get(a.judoka_id) || {
+        presentes: 0,
+        total: 0,
+        nombre: a.nombre_judoka ?? '',
+        apellido: a.apellido_judoka ?? ''
+      }
       statsMap.set(a.judoka_id, {
+        ...current,
         presentes: current.presentes + (a.estado === 'presente' ? 1 : 0),
         total: current.total + 1
       })
@@ -217,6 +259,8 @@ export const asistenciaController = {
 
     const result: AsistenciaStatsJudoka[] = Array.from(statsMap.entries()).map(([jId, s]) => ({
       judoka_id: jId,
+      nombre_judoka: s.nombre,
+      apellido_judoka: s.apellido,
       total_sesiones: s.total,
       presentes: s.presentes,
       ausentes: s.total - s.presentes,
@@ -229,6 +273,70 @@ export const asistenciaController = {
   /**
    * Obtener reporte global del club (para Encargado)
    */
+  /**
+   * Estadísticas de asistencia agrupadas por judoka para todo el club en un período.
+   */
+  async getStatsJudokasByClub(
+    clubId: string,
+    filtros: { fecha_inicio: string; fecha_fin: string; sensei_id?: string }
+  ): Promise<ApiResponse<AsistenciaStatsJudoka[]>> {
+    if (!clubId) return { success: false, error: 'El ID del club es requerido' }
+
+    const sesionesRes = await asistenciaService.getByClub(clubId)
+    if (!sesionesRes.success || !sesionesRes.data) {
+      return { success: false, error: sesionesRes.error || 'Error al obtener sesiones' }
+    }
+
+    const sesionesFiltradas = sesionesRes.data.filter(
+      s =>
+        s.fecha >= filtros.fecha_inicio &&
+        s.fecha <= filtros.fecha_fin &&
+        (!filtros.sensei_id || s.sensei_id === filtros.sensei_id)
+    )
+    if (sesionesFiltradas.length === 0) return { success: true, data: [] }
+
+    const detalles = await Promise.all(
+      sesionesFiltradas.map(s => asistenciaService.getDetalleBySesion(s.id))
+    )
+
+    const judokaMap = new Map<string, {
+      nombre: string; apellido: string
+      sesiones: Set<string>; presentes: number; total: number
+    }>()
+
+    detalles.forEach((res, i) => {
+      if (!res.success || !res.data) return
+      const sesionId = sesionesFiltradas[i].id
+      res.data.forEach(d => {
+        const entry = judokaMap.get(d.judoka_id) ?? {
+          nombre: d.nombre_judoka ?? '',
+          apellido: d.apellido_judoka ?? '',
+          sesiones: new Set<string>(),
+          presentes: 0,
+          total: 0,
+        }
+        entry.sesiones.add(sesionId)
+        entry.total++
+        if (d.estado === 'presente') entry.presentes++
+        judokaMap.set(d.judoka_id, entry)
+      })
+    })
+
+    const data: AsistenciaStatsJudoka[] = Array.from(judokaMap.entries())
+      .map(([id, j]) => ({
+        judoka_id: id,
+        nombre_judoka: j.nombre,
+        apellido_judoka: j.apellido,
+        total_sesiones: j.sesiones.size,
+        presentes: j.presentes,
+        ausentes: j.total - j.presentes,
+        porcentaje: j.total > 0 ? Number(((j.presentes / j.total) * 100).toFixed(2)) : 0,
+      }))
+      .sort((a, b) => (a.apellido_judoka ?? '').localeCompare(b.apellido_judoka ?? ''))
+
+    return { success: true, data }
+  },
+
   async getReporteClub(clubId: string, filtros: { fecha_inicio: string, fecha_fin: string }): Promise<ApiResponse<AsistenciaReporteClub>> {
     if (!clubId) return { success: false, error: 'El ID del club es requerido' }
     

@@ -132,8 +132,26 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         cinturon_actual: judoka.cinturon_actual || '',
         activo: judoka.activo ?? true,
       })
+    } else if (isClubManager) {
+      // El encargado siempre registra en su propio club; puede elegir el sensei
+      reset({
+        club_id: user?.club_id || '',
+        entrenador_id: '',
+        nombres: '',
+        apellido_paterno: '',
+        apellido_materno: '',
+        email: '',
+        fecha_nacimiento: null,
+        numero_celular: '',
+        ci: '',
+        ci_extension: '',
+        genero: '',
+        categoria: '',
+        cinturon_actual: '',
+        activo: true,
+      })
     } else if (isSensei) {
-      // Pre-seleccionar club y sensei solo para el rol SENSEI
+      // El sensei siempre registra en su club y queda asignado a él mismo
       reset({
         club_id: user?.club_id || '',
         entrenador_id: user?.sensei_id || '',
@@ -151,7 +169,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         activo: true,
       })
     }
-  }, [judoka, reset, isSensei, user?.club_id, user?.sensei_id])
+  }, [judoka, reset, isClubManager, isSensei, user?.club_id, user?.sensei_id])
 
   return (
     <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 1 }}>
