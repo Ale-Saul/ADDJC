@@ -66,6 +66,16 @@ export default function SesionCard({ sesion, mostrarSensei, onEliminar, eliminar
     : porcentaje >= 50 ? 'warning'
     : 'error'
 
+  const formatTime = (time: string | null | undefined) => {
+    if (!time) return ''
+    // Si viene en formato HH:MM:SS, solo tomar HH:MM
+    const parts = time.split(':')
+    if (parts.length >= 2) {
+      return `${parts[0]}:${parts[1]}`
+    }
+    return time
+  }
+
   return (
     <Card
       variant="outlined"
@@ -109,7 +119,7 @@ export default function SesionCard({ sesion, mostrarSensei, onEliminar, eliminar
             <Stack direction="row" alignItems="center" spacing={0.5}>
               <AccessTimeIcon fontSize="small" color="action" />
               <Typography variant="body2" color="text.secondary">
-                {sesion.hora_inicio}{sesion.hora_fin ? ` – ${sesion.hora_fin}` : ''}
+                {formatTime(sesion.hora_inicio)}{sesion.hora_fin ? ` – ${formatTime(sesion.hora_fin)}` : ''}
               </Typography>
             </Stack>
           )}

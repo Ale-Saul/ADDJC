@@ -8,6 +8,7 @@ import { FormInput } from '@/components/ui/FormInput'
 import { FormDatePicker } from '@/components/ui/FormDatePicker'
 import { createSesionSchema } from '@/schemas/asistenciaSchema'
 import { AsistenciaSesionCreate } from '@/models/asistencia'
+import { formatHoraInput, formatTextoInput } from '@/utils/formatters'
 import dayjs from 'dayjs'
 
 type FormValues = z.infer<typeof createSesionSchema>
@@ -40,7 +41,13 @@ export default function NuevaSesionForm({ clubId, senseiId, createdBy, onSuccess
   })
 
   const onSubmit = async (values: FormValues) => {
-    const payload: AsistenciaSesionCreate = { ...values, created_by: createdBy }
+    // Normalizar espacios y recortar bordes en campos de texto libre
+    const payload: AsistenciaSesionCreate = {
+      ...values,
+      titulo: values.titulo ? values.titulo.replace(/\s+/g, ' ').trim() || null : null,
+      notas: values.notas ? values.notas.replace(/\s+/g, ' ').trim() || null : null,
+      created_by: createdBy,
+    }
     const res = await onSuccess(payload)
     if (!res.success) {
       setError('root', { message: res.error || 'Error al crear la sesión' })
@@ -69,6 +76,8 @@ export default function NuevaSesionForm({ clubId, senseiId, createdBy, onSuccess
           label="Título / tema (opcional)"
           placeholder="Ej: Clase de técnica de pie"
           size="small"
+          formatValue={formatTextoInput}
+          inputProps={{ maxLength: 120 }}
         />
 
         <Stack direction="row" spacing={2}>
@@ -76,17 +85,19 @@ export default function NuevaSesionForm({ clubId, senseiId, createdBy, onSuccess
             name="hora_inicio"
             control={control}
             label="Hora inicio"
-            placeholder="Ej: 08:00"
+            placeholder="08:00"
             size="small"
-            inputProps={{ maxLength: 5 }}
+            formatValue={formatHoraInput}
+            inputProps={{ maxLength: 5, inputMode: 'numeric' }}
           />
           <FormInput
             name="hora_fin"
             control={control}
             label="Hora fin"
-            placeholder="Ej: 10:00"
+            placeholder="10:00"
             size="small"
-            inputProps={{ maxLength: 5 }}
+            formatValue={formatHoraInput}
+            inputProps={{ maxLength: 5, inputMode: 'numeric' }}
           />
         </Stack>
 
@@ -97,6 +108,8 @@ export default function NuevaSesionForm({ clubId, senseiId, createdBy, onSuccess
           multiline
           rows={2}
           size="small"
+          formatValue={formatTextoInput}
+          inputProps={{ maxLength: 500 }}
         />
 
         <Stack direction="row" spacing={1.5} justifyContent="flex-end" sx={{ pt: 1 }}>

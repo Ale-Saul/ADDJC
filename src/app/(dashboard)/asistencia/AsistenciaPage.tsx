@@ -4,7 +4,6 @@ import {
   Box,
   Typography,
   Button,
-  Grid,
   Stack,
   TextField,
   MenuItem,
@@ -133,49 +132,50 @@ export default function AsistenciaPage() {
               )}
             </Stack>
 
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} sm={3.5}>
-                <TextField
-                  label="Desde"
-                  type="date"
-                  size="small"
-                  fullWidth
-                  value={filtros.fechaInicio}
-                  onChange={e => filtros.setFechaInicio(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={3.5}>
-                <TextField
-                  label="Hasta"
-                  type="date"
-                  size="small"
-                  fullWidth
-                  value={filtros.fechaFin}
-                  onChange={e => filtros.setFechaFin(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
+            <Box sx={{
+              display: 'grid',
+              gridTemplateColumns: filtros.senseiOptions.length > 0
+                ? { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1.5fr' }
+                : { xs: '1fr', sm: '1fr 1fr' },
+              gap: 2,
+              alignItems: 'center',
+            }}>
+              <TextField
+                label="Desde"
+                type="date"
+                size="small"
+                fullWidth
+                value={filtros.fechaInicio}
+                onChange={e => filtros.setFechaInicio(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                label="Hasta"
+                type="date"
+                size="small"
+                fullWidth
+                value={filtros.fechaFin}
+                onChange={e => filtros.setFechaFin(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
               {filtros.senseiOptions.length > 0 && (
-                <Grid item xs={12} sm={5}>
-                  <FormControl size="small" fullWidth>
-                    <InputLabel>Filtrar por Sensei</InputLabel>
-                    <Select
-                      label="Filtrar por Sensei"
-                      value={filtros.senseiId}
-                      onChange={e => filtros.setSenseiId(e.target.value)}
-                    >
-                      <MenuItem value="all">Todos los senseis del club</MenuItem>
-                      {filtros.senseiOptions.map(opt => (
-                        <MenuItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
+                <FormControl size="small" fullWidth>
+                  <InputLabel>Filtrar por Sensei</InputLabel>
+                  <Select
+                    label="Filtrar por Sensei"
+                    value={filtros.senseiId}
+                    onChange={e => filtros.setSenseiId(e.target.value)}
+                  >
+                    <MenuItem value="all">Todos los senseis del club</MenuItem>
+                    {filtros.senseiOptions.map(opt => (
+                      <MenuItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               )}
-            </Grid>
+            </Box>
           </Box>
         )}
 
@@ -189,13 +189,11 @@ export default function AsistenciaPage() {
         )}
 
         {isLoading ? (
-          <Grid container spacing={2}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2 }}>
             {[1, 2, 3, 4].map(i => (
-              <Grid item xs={12} sm={6} md={4} key={i}>
-                <Skeleton variant="rounded" height={180} />
-              </Grid>
+              <Skeleton key={i} variant="rounded" height={180} />
             ))}
-          </Grid>
+          </Box>
         ) : sesiones.length === 0 ? (
           <Box
             sx={{
@@ -215,18 +213,17 @@ export default function AsistenciaPage() {
             </Typography>
           </Box>
         ) : isSensei ? (
-          <Grid container spacing={2}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2 }}>
             {sesiones.map(sesion => (
-              <Grid item xs={12} sm={6} md={4} key={sesion.id}>
-                <SesionCard
-                  sesion={sesion}
-                  mostrarSensei={false}
-                  onEliminar={handleEliminarSesion}
-                  eliminarLoading={eliminarLoading}
-                />
-              </Grid>
+              <SesionCard
+                key={sesion.id}
+                sesion={sesion}
+                mostrarSensei={false}
+                onEliminar={handleEliminarSesion}
+                eliminarLoading={eliminarLoading}
+              />
             ))}
-          </Grid>
+          </Box>
         ) : (
           <Stack spacing={5}>
             {sesionesAgrupadas?.map(grupo => (
@@ -253,38 +250,29 @@ export default function AsistenciaPage() {
                     sx={{ ml: 1, fontWeight: 500 }}
                   />
                 </Typography>
-                
-                <Grid container spacing={2}>
-                  {grupo.sesiones.length > 0 ? (
-                    grupo.sesiones.map(sesion => (
-                      <Grid item xs={12} sm={6} md={4} key={sesion.id}>
-                        <SesionCard
-                          sesion={sesion}
-                          mostrarSensei={false}
-                          onEliminar={handleEliminarSesion}
-                          eliminarLoading={eliminarLoading}
-                        />
-                      </Grid>
-                    ))
-                  ) : (
-                    <Grid item xs={12}>
-                      <Paper
-                        variant="outlined"
-                        sx={{
-                          p: 3,
-                          textAlign: 'center',
-                          bgcolor: 'grey.50',
-                          borderStyle: 'dashed',
-                          borderRadius: 2,
-                        }}
-                      >
-                        <Typography variant="body2" color="text.secondary">
-                          No hay sesiones registradas para este sensei en el periodo seleccionado.
-                        </Typography>
-                      </Paper>
-                    </Grid>
-                  )}
-                </Grid>
+
+                {grupo.sesiones.length > 0 ? (
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+                    {grupo.sesiones.map(sesion => (
+                      <SesionCard
+                        key={sesion.id}
+                        sesion={sesion}
+                        mostrarSensei={false}
+                        onEliminar={handleEliminarSesion}
+                        eliminarLoading={eliminarLoading}
+                      />
+                    ))}
+                  </Box>
+                ) : (
+                  <Paper
+                    variant="outlined"
+                    sx={{ p: 3, textAlign: 'center', bgcolor: 'grey.50', borderStyle: 'dashed', borderRadius: 2 }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      No hay sesiones registradas para este sensei en el periodo seleccionado.
+                    </Typography>
+                  </Paper>
+                )}
               </Box>
             ))}
           </Stack>
