@@ -1,249 +1,240 @@
-import { supabase } from '@/lib/supabase'
 import { createClient } from '@/lib/supabase/client'
 import { Arbitro, ArbitroCreate, ArbitroUpdate } from '@/models/arbitro'
-import { ApiResponse } from '@/types'
+import { ApiResponse } from '@/types/globales'
 import { userService } from './userService'
 
-// Helper para obtener el cliente correcto (navegador si está disponible, básico si no)
-function getSupabaseClient() {
-  if (typeof window !== 'undefined') {
-    return createClient()
+const selectArbitrosWithUsuario = 'id, usuario_id, nivel_arbitraje, created_at, updated_at, usuarios:usuario_id(id, nombre, apellido_paterno, apellido_materno, avatar_url, correo, fecha_nacimiento, numero_celular, ci, ci_extension, genero, activo)'
+
+function mapArbitroRow(row: any, certsCountMap: Record<string, number>): Arbitro {
+  const u = row.usuarios
+  const nombres = u?.nombre ?? ''
+  const email = u?.correo ?? ''
+  const apellidoPaterno = u?.apellido_paterno ?? ''
+  const apellidoMaterno = u?.apellido_materno ?? ''
+  const apellidos = [apellidoPaterno, apellidoMaterno].filter(Boolean).join(' ')
+  
+  const usuarioId = String(row.usuario_id).toLowerCase();
+  const total_certificaciones = certsCountMap[usuarioId] || 0
+
+  return {
+    ...row,
+    nombres,
+    apellidos,
+    apellido_paterno: apellidoPaterno,
+    apellido_materno: apellidoMaterno,
+    email,
+    fecha_nacimiento: u?.fecha_nacimiento ?? null,
+    numero_celular: u?.numero_celular ?? null,
+    ci: u?.ci ?? null,
+    ci_extension: u?.ci_extension ?? null,
+    genero: u?.genero ?? null,
+    activo: u?.activo ?? true,
+    avatar_url: u?.avatar_url ?? null,
+    certificacion: null,
+    certificacion_id: null,
+    total_certificaciones,
   }
-  return supabase
 }
 
 export const arbitroService = {
-  /**
-   * Obtener todos los árbitros
-   */
   async getAll(includeInactive: boolean = false): Promise<ApiResponse<Arbitro[]>> {
     try {
-      const client = getSupabaseClient()
-      let query = client
+      const client = createClient()
+      
+      // 1. Obtener árbitros
+      const { data: arbitros, error } = await client
         .from('arbitros')
-        .select('*')
+        .select(selectArbitrosWithUsuario)
         .order('created_at', { ascending: false })
-
-      if (!includeInactive) {
-        query = query.eq('activo', true)
-      }
-
-      const { data, error } = await query
 
       if (error) throw error
 
-      return { success: true, data: data || [] }
+      // 2. Obtener conteo de certificaciones en una consulta separada
+      const { data: certs, error: certsError } = await client
+        .from('certificaciones')
+        .select('usuario_id, activo')
+
+      const certsCountMap: Record<string, number> = {}
+      if (!certsError && certs) {
+        certs.forEach(c => {
+          if (c.usuario_id && c.activo) {
+            const uid = String(c.usuario_id).toLowerCase();
+            certsCountMap[uid] = (certsCountMap[uid] || 0) + 1
+          }
+        })
+      }
+
+      const mapped = (arbitros || []).map(row => mapArbitroRow(row, certsCountMap))
+      
+      if (!includeInactive) {
+        return { success: true, data: mapped.filter(a => a.activo) }
+      }
+
+      return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
     }
   },
 
-  /**
-   * Obtener un árbitro por ID
-   */
   async getById(id: string): Promise<ApiResponse<Arbitro>> {
     try {
-      const client = getSupabaseClient()
+      const client = createClient()
       const { data, error } = await client
         .from('arbitros')
-        .select('*')
+        .select(selectArbitrosWithUsuario)
         .eq('id', id)
         .single()
 
       if (error) throw error
 
-      return { success: true, data }
+      const { count } = await client
+        .from('certificaciones')
+        .select('*', { count: 'exact', head: true })
+        .eq('usuario_id', data.usuario_id)
+        .eq('activo', true)
+
+      const mapped = mapArbitroRow(data, { [data.usuario_id]: count || 0 })
+      return { success: true, data: mapped }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
     }
   },
 
-  /**
-   * Crear un nuevo árbitro
-   */
   async create(arbitro: ArbitroCreate): Promise<ApiResponse<Arbitro>> {
     try {
-      let userId = arbitro.usuario_id
+      let usuarioId: string | undefined = arbitro.usuario_id && arbitro.usuario_id !== 'temp-user-id' ? arbitro.usuario_id : undefined
 
-      // Si no hay usuario_id o es temporal, crear usuario y perfil automáticamente
-      if (!userId || userId === 'temp-user-id') {
-        // Validar que se proporcionen email y password
+      if (!usuarioId) {
         if (!arbitro.email || !arbitro.password) {
-          return {
-            success: false,
-            error: 'Email y contraseña son requeridos para crear un nuevo árbitro'
-          }
+          return { success: false, error: 'Email y contraseña son requeridos' }
         }
 
         const userResult = await userService.createArbitroUser(
-          arbitro.nombres, 
-          arbitro.apellidos, 
-          arbitro.email, 
-          arbitro.password
+          arbitro.nombres,
+          arbitro.apellido_paterno,
+          arbitro.apellido_materno,
+          arbitro.email!,
+          arbitro.password!,
+          arbitro.fecha_nacimiento ?? null,
+          arbitro.numero_celular,
+          arbitro.genero,
+          arbitro.ci,
+          (arbitro as any).ci_extension
         )
-        
         if (!userResult.success || !userResult.data) {
-          return { 
-            success: false, 
-            error: userResult.error || 'Error al crear el usuario del árbitro' 
-          }
+          return { success: false, error: userResult.error || 'Error al crear usuario' }
         }
-
-        userId = userResult.data.userId
+        usuarioId = userResult.data.usuarioId
       }
 
-      // Validar formato UUID
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-      if (!uuidRegex.test(userId)) {
-        return { 
-          success: false, 
-          error: 'Error: El usuario_id debe ser un UUID válido.' 
-        }
-      }
-
-      // Crear el árbitro con el usuario_id correcto
-      // Excluir email y password ya que no existen en la tabla arbitros
-      const { email, password, ...arbitroData } = arbitro
-      const arbitroConUsuario = {
-        ...arbitroData,
-        usuario_id: userId
-      }
-
-      const client = getSupabaseClient()
-      const { data, error } = await client
+      const client = createClient()
+      const { data: inserted, error } = await client
         .from('arbitros')
-        .insert(arbitroConUsuario)
-        .select()
+        .insert({
+          usuario_id: usuarioId,
+          nivel_arbitraje: arbitro.nivel_arbitraje ?? null,
+        })
+        .select('id')
         .single()
 
-      if (error) {
-        // Mejorar el mensaje de error
-        let errorMessage = error.message
-        
-        if (error.message.includes('foreign key') || error.message.includes('violates foreign key')) {
-          errorMessage = 'Error: El usuario_id no existe en user_profiles. Por favor, primero crea el usuario y su perfil en el sistema.'
-        } else if (error.message.includes('duplicate key') || error.message.includes('unique constraint')) {
-          errorMessage = 'Error: Ya existe un árbitro con este usuario_id.'
-        } else if (error.message.includes('null value') || error.message.includes('not null')) {
-          errorMessage = 'Error: Faltan campos requeridos. Por favor, completa todos los campos obligatorios.'
-        } else if (error.message.includes('violates check constraint')) {
-          errorMessage = 'Error: Los datos no cumplen con las validaciones de la base de datos.'
-        }
-        
-        return { success: false, error: errorMessage }
+      if (error) throw error
+
+      const userUpdate: Record<string, any> = {}
+      if (arbitro.avatar_url) userUpdate.avatar_url = arbitro.avatar_url
+      if (arbitro.activo !== undefined) userUpdate.activo = arbitro.activo
+      if (Object.keys(userUpdate).length > 0) {
+        await client.from('usuarios').update(userUpdate).eq('id', usuarioId)
       }
 
-      return { success: true, data }
+      return await this.getById(inserted.id)
     } catch (error) {
-      console.error('Error al crear árbitro:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear el árbitro'
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
     }
   },
 
-  /**
-   * Actualizar un árbitro
-   */
   async update(id: string, arbitro: ArbitroUpdate): Promise<ApiResponse<Arbitro>> {
     try {
-      const client = getSupabaseClient()
-      const { data, error } = await client
-        .from('arbitros')
-        .update(arbitro)
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) throw error
-
-      return { success: true, data }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      return { success: false, error: errorMessage }
-    }
-  },
-
-  /**
-   * Eliminar un árbitro (soft delete - marca como inactivo)
-   * También elimina el usuario en auth.users para que el email se pueda reutilizar
-   */
-  async delete(id: string): Promise<ApiResponse<void>> {
-    try {
-      const client = getSupabaseClient()
+      const client = createClient()
+      const { certificacion, nombres, apellido_paterno, apellido_materno, email, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url, ...updatePayload } = arbitro as any
       
-      // Primero obtener el árbitro para conocer su usuario_id
-      const { data: arbitro, error: getError } = await client
-        .from('arbitros')
-        .select('id, usuario_id')
-        .eq('id', id)
-        .single()
+      const { data: current, error: getError } = await client.from('arbitros').select('usuario_id').eq('id', id).single()
+      if (getError || !current) throw new Error('Árbitro no encontrado')
 
-      if (getError) throw getError
-      if (!arbitro) {
-        return { success: false, error: 'Árbitro no encontrado' }
+      const arbitroFields = ['nivel_arbitraje']
+      const arbitroUpdate: Record<string, any> = {}
+      arbitroFields.forEach(f => {
+        if (updatePayload[f] !== undefined) arbitroUpdate[f] = updatePayload[f]
+      })
+
+      if (Object.keys(arbitroUpdate).length > 0) {
+        const { error } = await client.from('arbitros').update(arbitroUpdate).eq('id', id)
+        if (error) throw error
       }
 
-      // Marcar el árbitro como inactivo
-      const { error: updateError } = await client
-        .from('arbitros')
-        .update({ activo: false })
-        .eq('id', id)
-
-      if (updateError) throw updateError
-
-      // Deshabilitar/eliminar el usuario en auth.users para que el email se pueda reutilizar
-      if (arbitro.usuario_id) {
-        try {
-          const response = await fetch('/api/admin/disable-user', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              userId: arbitro.usuario_id,
-            }),
-          })
-
-          const result = await response.json()
-          if (!result.success) {
-            console.warn('Error al deshabilitar usuario en auth.users:', result.error)
-            // No fallar la eliminación por esto, solo registrar el warning
+      const userUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
+      if (nombres !== undefined) userUpdate.nombre = nombres
+      if (apellido_paterno !== undefined) userUpdate.apellido_paterno = apellido_paterno
+      if (apellido_materno !== undefined) userUpdate.apellido_materno = apellido_materno
+      if (email !== undefined) userUpdate.correo = email
+      if (fecha_nacimiento !== undefined) userUpdate.fecha_nacimiento = fecha_nacimiento
+      if (numero_celular !== undefined) userUpdate.numero_celular = numero_celular
+      if (ci !== undefined) userUpdate.ci = ci
+      if (arbitro.ci_extension !== undefined) userUpdate.ci_extension = arbitro.ci_extension
+      if (genero !== undefined) userUpdate.genero = genero
+      if (activo !== undefined) userUpdate.activo = activo
+      if (avatar_url !== undefined) userUpdate.avatar_url = avatar_url
+      
+      if (Object.keys(userUpdate).length > 1) {
+        const { error } = await client.from('usuarios').update(userUpdate).eq('id', current.usuario_id)
+        if (error) {
+          if (error.message?.includes('usuarios_ci_ci_extension_key') || error.code === '23505') {
+            return { success: false, error: 'Ya existe un usuario registrado con este Carnet de Identidad y extensión' }
           }
-        } catch (error) {
-          console.warn('Error al llamar API para deshabilitar usuario:', error)
-          // No fallar la eliminación por esto, solo registrar el warning
+          throw error
         }
       }
 
-      return { success: true }
+      return await this.getById(id)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
     }
   },
 
-  /**
-   * Restaurar un árbitro (marcar como activo)
-   */
+  async delete(id: string): Promise<ApiResponse<void>> {
+    try {
+      const client = createClient()
+      const { data: arbitro } = await client.from('arbitros').select('usuario_id').eq('id', id).single()
+      if (!arbitro) return { success: false, error: 'Árbitro no encontrado' }
+
+      const response = await fetch('/api/admin/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuarioId: arbitro.usuario_id }),
+      })
+
+      const result = await response.json()
+      return result.success ? { success: true } : { success: false, error: result.error }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
+    }
+  },
+
   async restore(id: string): Promise<ApiResponse<Arbitro>> {
     try {
-      const client = getSupabaseClient()
-      const { data, error } = await client
-        .from('arbitros')
-        .update({ activo: true })
-        .eq('id', id)
-        .select()
-        .single()
+      const client = createClient()
+      const { data: arbitro } = await client.from('arbitros').select('usuario_id').eq('id', id).single()
+      if (!arbitro) throw new Error('Árbitro no encontrado')
 
+      const { error } = await client.from('usuarios').update({ activo: true }).eq('id', arbitro.usuario_id)
       if (error) throw error
 
-      return { success: true, data }
+      return await this.getById(id)
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      return { success: false, error: errorMessage }
+      return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
     }
   }
 }
-

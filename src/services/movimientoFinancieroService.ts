@@ -11,7 +11,33 @@ import {
   BalanceFinanciero,
   ResumenPorCategoria,
   MovimientosPorMes,
+  TipoMovimiento,
+  CategoriaMovimiento,
+  EstadoMovimiento
 } from '@/models/movimientoFinanciero';
+
+// Tipo interno para manejar la respuesta de Supabase con relaciones
+interface MovimientoDB {
+  id: string;
+  tipo: TipoMovimiento;
+  categoria: CategoriaMovimiento;
+  monto: number;
+  concepto: string;
+  descripcion?: string;
+  fecha: string;
+  origen_club_id?: string;
+  origen_entidad?: string;
+  comprobante_url?: string;
+  comprobante_nombre?: string;
+  estado: EstadoMovimiento;
+  activo: boolean;
+  notas?: string;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  clubes?: { nombre_club: string } | null;
+  usuarios?: { correo: string } | null;
+}
 
 /**
  * Obtener todos los movimientos financieros con información relacionada
@@ -21,25 +47,45 @@ export async function getAllMovimientos(): Promise<MovimientoFinanciero[]> {
   const { data, error } = await supabase
     .from('movimientos_financieros')
     .select(`
-      *,
+      id, tipo, categoria, monto, concepto, descripcion, fecha, origen_club_id, origen_entidad, comprobante_url, comprobante_nombre, estado, activo, notas, created_at, updated_at, created_by,
       clubes:origen_club_id (
         nombre_club
       ),
-      user_profiles:created_by (
-        email
+      usuarios:created_by (
+        correo
       )
     `)
-    .order('fecha', { ascending: false });
+    .eq('activo', true)
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error al obtener movimientos financieros:', error);
     throw new Error(`Error al obtener movimientos financieros: ${error.message}`);
   }
 
-  return (data || []).map((mov: any) => ({
-    ...mov,
+  // Cast seguro usando el tipo intermedio
+  const movimientosDB = (data || []) as unknown as MovimientoDB[];
+
+  return movimientosDB.map((mov) => ({
+    id: mov.id,
+    tipo: mov.tipo,
+    categoria: mov.categoria,
+    monto: mov.monto,
+    concepto: mov.concepto,
+    descripcion: mov.descripcion,
+    fecha: mov.fecha,
+    origen_club_id: mov.origen_club_id,
+    origen_entidad: mov.origen_entidad,
+    comprobante_url: mov.comprobante_url,
+    comprobante_nombre: mov.comprobante_nombre,
+    estado: mov.estado,
+    activo: mov.activo,
+    notas: mov.notas,
+    created_at: mov.created_at,
+    updated_at: mov.updated_at,
+    created_by: mov.created_by,
     origen_club_nombre: mov.clubes?.nombre_club,
-    created_by_email: mov.user_profiles?.email,
+    created_by_email: mov.usuarios?.correo,
   }));
 }
 
@@ -54,27 +100,46 @@ export async function getMovimientosByDateRange(
   const { data, error } = await supabase
     .from('movimientos_financieros')
     .select(`
-      *,
+      id, tipo, categoria, monto, concepto, descripcion, fecha, origen_club_id, origen_entidad, comprobante_url, comprobante_nombre, estado, activo, notas, created_at, updated_at, created_by,
       clubes:origen_club_id (
         nombre_club
       ),
-      user_profiles:created_by (
-        email
+      usuarios:created_by (
+        correo
       )
     `)
     .gte('fecha', fechaInicio)
     .lte('fecha', fechaFin)
-    .order('fecha', { ascending: false });
+    .eq('activo', true)
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error al obtener movimientos por rango de fechas:', error);
     throw new Error(`Error al obtener movimientos: ${error.message}`);
   }
 
-  return (data || []).map((mov: any) => ({
-    ...mov,
+  const movimientosDB = (data || []) as unknown as MovimientoDB[];
+
+  return movimientosDB.map((mov) => ({
+    id: mov.id,
+    tipo: mov.tipo,
+    categoria: mov.categoria,
+    monto: mov.monto,
+    concepto: mov.concepto,
+    descripcion: mov.descripcion,
+    fecha: mov.fecha,
+    origen_club_id: mov.origen_club_id,
+    origen_entidad: mov.origen_entidad,
+    comprobante_url: mov.comprobante_url,
+    comprobante_nombre: mov.comprobante_nombre,
+    estado: mov.estado,
+    activo: mov.activo,
+    notas: mov.notas,
+    created_at: mov.created_at,
+    updated_at: mov.updated_at,
+    created_by: mov.created_by,
     origen_club_nombre: mov.clubes?.nombre_club,
-    created_by_email: mov.user_profiles?.email,
+    created_by_email: mov.usuarios?.correo,
   }));
 }
 
@@ -86,12 +151,12 @@ export async function getMovimientoById(id: string): Promise<MovimientoFinancier
   const { data, error } = await supabase
     .from('movimientos_financieros')
     .select(`
-      *,
+      id, tipo, categoria, monto, concepto, descripcion, fecha, origen_club_id, origen_entidad, comprobante_url, comprobante_nombre, estado, activo, notas, created_at, updated_at, created_by,
       clubes:origen_club_id (
         nombre_club
       ),
-      user_profiles:created_by (
-        email
+      usuarios:created_by (
+        correo
       )
     `)
     .eq('id', id)
@@ -107,10 +172,28 @@ export async function getMovimientoById(id: string): Promise<MovimientoFinancier
 
   if (!data) return null;
 
+  const mov = data as unknown as MovimientoDB;
+
   return {
-    ...data,
-    origen_club_nombre: data.clubes?.nombre_club,
-    created_by_email: data.user_profiles?.email,
+    id: mov.id,
+    tipo: mov.tipo,
+    categoria: mov.categoria,
+    monto: mov.monto,
+    concepto: mov.concepto,
+    descripcion: mov.descripcion,
+    fecha: mov.fecha,
+    origen_club_id: mov.origen_club_id,
+    origen_entidad: mov.origen_entidad,
+    comprobante_url: mov.comprobante_url,
+    comprobante_nombre: mov.comprobante_nombre,
+    estado: mov.estado,
+    activo: mov.activo,
+    notas: mov.notas,
+    created_at: mov.created_at,
+    updated_at: mov.updated_at,
+    created_by: mov.created_by,
+    origen_club_nombre: mov.clubes?.nombre_club,
+    created_by_email: mov.usuarios?.correo,
   };
 }
 
@@ -129,12 +212,12 @@ export async function createMovimiento(
       created_by: userId,
     })
     .select(`
-      *,
+      id, tipo, categoria, monto, concepto, descripcion, fecha, origen_club_id, origen_entidad, comprobante_url, comprobante_nombre, estado, activo, notas, created_at, updated_at, created_by,
       clubes:origen_club_id (
         nombre_club
       ),
-      user_profiles:created_by (
-        email
+      usuarios:created_by (
+        correo
       )
     `)
     .single();
@@ -144,10 +227,28 @@ export async function createMovimiento(
     throw new Error(`Error al crear movimiento: ${error.message}`);
   }
 
+  const mov = data as unknown as MovimientoDB;
+
   return {
-    ...data,
-    origen_club_nombre: data.clubes?.nombre_club,
-    created_by_email: data.user_profiles?.email,
+    id: mov.id,
+    tipo: mov.tipo,
+    categoria: mov.categoria,
+    monto: mov.monto,
+    concepto: mov.concepto,
+    descripcion: mov.descripcion,
+    fecha: mov.fecha,
+    origen_club_id: mov.origen_club_id,
+    origen_entidad: mov.origen_entidad,
+    comprobante_url: mov.comprobante_url,
+    comprobante_nombre: mov.comprobante_nombre,
+    estado: mov.estado,
+    activo: mov.activo,
+    notas: mov.notas,
+    created_at: mov.created_at,
+    updated_at: mov.updated_at,
+    created_by: mov.created_by,
+    origen_club_nombre: mov.clubes?.nombre_club,
+    created_by_email: mov.usuarios?.correo,
   };
 }
 
@@ -164,25 +265,48 @@ export async function updateMovimiento(
     .update(updates)
     .eq('id', id)
     .select(`
-      *,
+      id, tipo, categoria, monto, concepto, descripcion, fecha, origen_club_id, origen_entidad, comprobante_url, comprobante_nombre, estado, activo, notas, created_at, updated_at, created_by,
       clubes:origen_club_id (
         nombre_club
       ),
-      user_profiles:created_by (
-        email
+      usuarios:created_by (
+        correo
       )
     `)
     .single();
 
   if (error) {
-    console.error('Error al actualizar movimiento financiero:', error);
+    console.error('Error detallado de Supabase:', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint
+    });
     throw new Error(`Error al actualizar movimiento: ${error.message}`);
   }
 
+  const mov = data as unknown as MovimientoDB;
+
   return {
-    ...data,
-    origen_club_nombre: data.clubes?.nombre_club,
-    created_by_email: data.user_profiles?.email,
+    id: mov.id,
+    tipo: mov.tipo,
+    categoria: mov.categoria,
+    monto: mov.monto,
+    concepto: mov.concepto,
+    descripcion: mov.descripcion,
+    fecha: mov.fecha,
+    origen_club_id: mov.origen_club_id,
+    origen_entidad: mov.origen_entidad,
+    comprobante_url: mov.comprobante_url,
+    comprobante_nombre: mov.comprobante_nombre,
+    estado: mov.estado,
+    activo: mov.activo,
+    notas: mov.notas,
+    created_at: mov.created_at,
+    updated_at: mov.updated_at,
+    created_by: mov.created_by,
+    origen_club_nombre: mov.clubes?.nombre_club,
+    created_by_email: mov.usuarios?.correo,
   };
 }
 
@@ -193,7 +317,7 @@ export async function deleteMovimiento(id: string): Promise<void> {
   const supabase = createClient()
   const { error } = await supabase
     .from('movimientos_financieros')
-    .delete()
+    .update({ activo: false })
     .eq('id', id);
 
   if (error) {
@@ -222,6 +346,7 @@ export async function getBalance(
     .select('tipo, monto')
     .gte('fecha', fechaInicio)
     .lte('fecha', fechaFin)
+    .eq('activo', true)
     .neq('estado', 'anulado');
 
   if (error) {
@@ -229,14 +354,15 @@ export async function getBalance(
     throw new Error(`Error al calcular balance: ${error.message}`);
   }
 
-  const movimientos = data || [];
+  const movimientos = (data || []) as { tipo: TipoMovimiento; monto: number }[];
+  
   const ingresos = movimientos
-    .filter((m: any) => m.tipo === 'ingreso')
-    .reduce((sum: number, m: any) => sum + parseFloat(m.monto), 0);
+    .filter((m) => m.tipo === 'ingreso')
+    .reduce((sum, m) => sum + Number(m.monto), 0);
   
   const egresos = movimientos
-    .filter((m: any) => m.tipo === 'egreso')
-    .reduce((sum: number, m: any) => sum + parseFloat(m.monto), 0);
+    .filter((m) => m.tipo === 'egreso')
+    .reduce((sum, m) => sum + Number(m.monto), 0);
 
   return {
     total_ingresos: ingresos,
@@ -258,6 +384,7 @@ export async function getResumenPorCategoria(
   let query = supabase
     .from('movimientos_financieros')
     .select('tipo, categoria, monto')
+    .eq('activo', true)
     .neq('estado', 'anulado');
 
   if (fechaInicio) {
@@ -274,10 +401,12 @@ export async function getResumenPorCategoria(
     throw new Error(`Error al obtener resumen: ${error.message}`);
   }
 
+  const movimientos = (data || []) as { tipo: TipoMovimiento; categoria: CategoriaMovimiento; monto: number }[];
+
   // Agrupar manualmente en cliente
   const agrupado: { [key: string]: ResumenPorCategoria } = {};
   
-  (data || []).forEach((mov: any) => {
+  movimientos.forEach((mov) => {
     const key = `${mov.tipo}-${mov.categoria}`;
     if (!agrupado[key]) {
       agrupado[key] = {
@@ -287,7 +416,7 @@ export async function getResumenPorCategoria(
         cantidad: 0,
       };
     }
-    agrupado[key].total += parseFloat(mov.monto);
+    agrupado[key].total += Number(mov.monto);
     agrupado[key].cantidad += 1;
   });
 
@@ -304,6 +433,7 @@ export async function getMovimientosPorMes(
   let query = supabase
     .from('movimientos_financieros')
     .select('fecha, tipo, monto')
+    .eq('activo', true)
     .neq('estado', 'anulado')
     .order('fecha', { ascending: true });
 
@@ -320,10 +450,12 @@ export async function getMovimientosPorMes(
     throw new Error(`Error al obtener movimientos por mes: ${error.message}`);
   }
 
+  const movimientos = (data || []) as { fecha: string; tipo: TipoMovimiento; monto: number }[];
+
   // Agrupar por mes
   const agrupado: { [key: string]: MovimientosPorMes } = {};
 
-  (data || []).forEach((mov: any) => {
+  movimientos.forEach((mov) => {
     const mes = mov.fecha.substring(0, 7); // 'YYYY-MM'
     if (!agrupado[mes]) {
       agrupado[mes] = {
@@ -334,7 +466,7 @@ export async function getMovimientosPorMes(
       };
     }
 
-    const monto = parseFloat(mov.monto);
+    const monto = Number(mov.monto);
     if (mov.tipo === 'ingreso') {
       agrupado[mes].ingresos += monto;
     } else {

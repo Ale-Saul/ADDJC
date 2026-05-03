@@ -6,7 +6,6 @@ import {
   Box,
   Container,
   Paper,
-  TextField,
   Button,
   Typography,
   Alert,
@@ -19,14 +18,25 @@ import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import { useAuth } from '@/contexts/AuthContext'
 import { LoginCredentials } from '@/models/auth'
+import { useForm, FormProvider } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { loginSchema } from '@/schemas/globales'
+import { FormInput } from '@/components/ui'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { signIn, isAuthenticated, loading: authLoading } = useAuth()
-  const [formData, setFormData] = useState<LoginCredentials>({
-    email: '',
-    password: '',
+  const { user, signIn, isAuthenticated, loading: authLoading } = useAuth()
+
+  const form = useForm<LoginCredentials>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
   })
+
+  const { control, handleSubmit } = form
+
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -40,35 +50,33 @@ export default function LoginPage() {
   // Redirigir si ya está autenticado
   useEffect(() => {
     if (mounted && !authLoading && isAuthenticated) {
-      router.push('/')
+      if (user?.debe_cambiar_password) {
+        router.push('/cambiar-password')
+      } else {
+        router.push('/')
+      }
     }
-  }, [mounted, isAuthenticated, authLoading, router])
+  }, [mounted, isAuthenticated, authLoading, user, router])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
-    setError(null)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onSubmit = async (data: LoginCredentials) => {
     setError(null)
     setLoading(true)
 
     try {
-      const response = await signIn(formData)
-      
-      if (response.success) {
-        router.push('/')
+      const response = await signIn(data)
+
+      if (response.success && response.data) {
+        if (response.data.user.debe_cambiar_password) {
+          router.push('/cambiar-password')
+        } else {
+          router.push('/')
+        }
       } else {
         setError(response.error || 'Error al iniciar sesión')
       }
+      setLoading(false)
     } catch (err) {
       setError('Error inesperado al iniciar sesión')
-    } finally {
       setLoading(false)
     }
   }
@@ -134,73 +142,71 @@ export default function LoginPage() {
             </Alert>
           )}
 
-          <Box
-            component="form"
-            onSubmit={handleSubmit}
-            sx={{ width: '100%', mt: 1 }}
-          >
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email"
-              name="email"
-              autoComplete="email"
-              autoFocus
-              value={formData.email}
-              onChange={handleChange}
-              disabled={loading}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Contraseña"
-              type={showPassword ? 'text' : 'password'}
-              id="password"
-              autoComplete="current-password"
-              value={formData.password}
-              onChange={handleChange}
-              disabled={loading}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={() => setShowPassword(!showPassword)}
-                      onMouseDown={(e) => e.preventDefault()}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
+          <FormProvider {...form}>
+            <Box
+              component="form"
+              onSubmit={handleSubmit(onSubmit)}
+              sx={{ width: '100%', mt: 1 }}
             >
-              {loading ? <CircularProgress size={24} /> : 'Iniciar Sesión'}
-            </Button>
-            <Box sx={{ textAlign: 'center', mt: 2 }}>
-              <Link
-                href="/reset-password"
-                variant="body2"
-                sx={{ cursor: 'pointer' }}
+              <FormInput
+                control={control}
+                name="email"
+                label="Email"
+                margin="normal"
+                fullWidth
+                id="email"
+                autoComplete="email"
+                disabled={loading}
+              />
+
+              <FormInput
+                control={control}
+                name="password"
+                label="Contraseña"
+                type={showPassword ? 'text' : 'password'}
+                margin="normal"
+                fullWidth
+                id="password"
+                autoComplete="current-password"
+                disabled={loading}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() => setShowPassword(!showPassword)}
+                        onMouseDown={(e) => e.preventDefault()}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                sx={{ mt: 3, mb: 2, height: '48px' }}
+                disabled={loading}
               >
-                ¿Olvidaste tu contraseña?
-              </Link>
+                {loading ? <CircularProgress size={24} color="inherit" /> : 'Iniciar Sesión'}
+              </Button>
+              <Box sx={{ textAlign: 'center', mt: 2 }}>
+                <Link
+                  href="/reset-password"
+                  variant="body2"
+                  sx={{ cursor: 'pointer' }}
+                >
+                  Olvidaste tu contraseña?
+                </Link>
+              </Box>
             </Box>
-          </Box>
+          </FormProvider>
         </Paper>
       </Container>
     </Box>
   )
 }
-

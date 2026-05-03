@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendEmail, getWelcomeEmailTemplate } from '@/lib/email'
 
 /**
  * API Route para crear usuarios confirmados automáticamente
@@ -8,7 +9,19 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, password, nombres, apellidos, rol, club_id } = body
+    const {
+      email,
+      password,
+      nombres,
+      apellidos,
+      apellido_paterno: apellidoPaternoBody,
+      apellido_materno: apellidoMaternoBody,
+      fecha_nacimiento: fechaNacimientoBody,
+      genero: generoBody,
+      numero_celular: numeroCelularBody,
+      ci: ciBody,
+      rol,
+    } = body
 
     // Validaciones con mensajes específicos
     if (!email) {
@@ -27,21 +40,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!nombres) {
-      console.error('Nombres faltantes en la solicitud')
+    const nombresTrimmed = (typeof nombres === 'string' ? nombres.trim() : '') || ''
+    if (!nombresTrimmed) {
       return NextResponse.json(
         { success: false, error: 'Nombres son requeridos' },
         { status: 400 }
       )
     }
 
-    if (!apellidos) {
-      console.error('Apellidos faltantes en la solicitud')
-      return NextResponse.json(
-        { success: false, error: 'Apellidos son requeridos' },
-        { status: 400 }
-      )
-    }
+    // Apellidos: opcionales en BD; la app exige al menos uno. Enviamos null si viene vacío.
+    const rawPaterno =
+      apellidoPaternoBody ??
+      (typeof apellidos === 'string' ? apellidos.trim().split(/\s+/)[0] || '' : '')
+    const rawMaterno =
+      apellidoMaternoBody ??
+      (typeof apellidos === 'string' ? apellidos.trim().split(/\s+/).slice(1).join(' ') || '' : '')
+    const apellidoPaterno = (typeof rawPaterno === 'string' ? rawPaterno.trim() : '') || null
+    const apellidoMaterno = (typeof rawMaterno === 'string' ? rawMaterno.trim() : '') || null
+    const fechaNacimiento = fechaNacimientoBody || null
+    const genero = generoBody || 'Prefiero no decir'
 
     // Verificar que la Service Role Key esté configurada
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -69,20 +86,56 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Verificar unicidad de CI + extensión antes de crear el usuario
+    if (ciBody) {
+      const ciExtension = body.ci_extension?.trim() || null
+
+      let query = supabaseAdmin
+        .from('usuarios')
+        .select('id')
+        .eq('ci', ciBody)
+      
+      if (ciExtension) {
+        query = query.eq('ci_extension', ciExtension)
+      } else {
+        query = query.or('ci_extension.is.null,ci_extension.eq.')
+      }
+
+      const { data: existingUsers } = await query.limit(1)
+
+      if (existingUsers && existingUsers.length > 0) {
+        const extLabel = ciExtension ? `-${ciExtension}` : ''
+        return NextResponse.json(
+          { success: false, error: `Ya existe un usuario registrado con el Carnet de Identidad ${ciBody}${extLabel}` },
+          { status: 400 }
+        )
+      }
+    }
+
     // Crear usuario usando Admin API (auto-confirmado)
+    // El trigger handle_new_user crea la fila en usuarios usando estos metadata
     let authData, authError
     try {
+      // LOG PARA DEPURACIÓN: Ver qué estamos enviando exactamente
+      const userMetadata = {
+        nombres: nombresTrimmed,
+        apellido_paterno: apellidoPaterno,
+        apellido_materno: apellidoMaterno,
+        fecha_nacimiento: fechaNacimiento,
+        genero,
+      numero_celular: numeroCelularBody,
+      ci: ciBody,
+      ci_extension: body.ci_extension,
+      user_type: rol === 'encargado' ? 'sensei' : rol === 'admin' ? 'admin' : rol || 'judoka',
+        rol: rol || 'judoka',
+        debe_cambiar_password: true,
+      }
+      
       const result = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
-        email_confirm: true, // Auto-confirmar email
-        user_metadata: {
-          nombres,
-          apellidos,
-          user_type: rol === 'encargado' ? 'sensei' : (rol === 'admin' ? 'admin' : rol), // encargado usa user_type 'sensei', admin usa 'admin'
-          rol: rol || 'judoka',
-          club_id: club_id || null,
-        },
+        email_confirm: true,
+        user_metadata: userMetadata,
       })
       authData = result.data
       authError = result.error
@@ -98,27 +151,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (authError) {
-      console.error('Error al crear usuario con Admin API:', {
-        message: authError.message,
-        status: authError.status,
-      })
+      console.error('Error detallado de Supabase Auth Admin:', authError)
       
       // Mensaje de error más descriptivo
       let errorMessage = authError.message || 'Error desconocido'
       
-      // Mapear códigos de error comunes de Supabase
-      if (authError.message?.includes('duplicate') || 
-          authError.message?.includes('already exists') ||
-          authError.message?.includes('already registered') ||
-          (authError as any).code === 'PGRST204') {
-        errorMessage = 'Este email ya está registrado en el sistema'
-      } else if (authError.message?.includes('invalid') || 
-                 authError.message?.includes('format') ||
-                 authError.message?.includes('Invalid email')) {
-        errorMessage = 'El formato del email no es válido'
-      } else if (authError.message?.includes('password') || 
-                 authError.message?.includes('Password')) {
-        errorMessage = 'La contraseña no cumple con los requisitos mínimos'
+      if (authError.message?.includes('usuarios_ci_ci_extension_key') || authError.message?.includes('duplicate key')) {
+        errorMessage = `Ya existe un usuario registrado con este Carnet de Identidad y extensión`
+      } else if (authError.message?.includes('Database error')) {
+        errorMessage = `Error de base de datos al crear el perfil: ${authError.message}. Esto suele ser causado por el trigger 'handle_new_user' fallando. Revisa los logs de Supabase -> Database -> Error Logs.`
       }
       
       // Retornar el error con el mensaje descriptivo
@@ -126,7 +167,8 @@ export async function POST(request: NextRequest) {
         { 
           success: false, 
           error: errorMessage,
-          details: authError.message // Incluir el mensaje original para debugging
+          details: authError.message,
+          code: (authError as {code?: string}).code
         },
         { status: 400 }
       )
@@ -139,61 +181,75 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const userId = authData.user.id
+    const authUserId = authData.user.id
 
-    // El perfil se crea automáticamente por el trigger handle_new_user
-    // Pero verificamos que se haya creado correctamente
-    const { data: profileData, error: profileError } = await supabaseAdmin
-      .from('user_profiles')
-      .select('*')
-      .eq('id', userId)
+    // El trigger handle_new_user crea la fila en usuarios; verificamos que exista
+    const { data: usuarioRow, error: usuarioError } = await supabaseAdmin
+      .from('usuarios')
+      .select('id')
+      .eq('auth_user_id', authUserId)
       .single()
 
-    if (profileError) {
-      console.warn('Perfil no encontrado después de crear usuario, creándolo manualmente:', profileError)
-      // Crear perfil manualmente si el trigger no funcionó
-      const { error: createProfileError } = await supabaseAdmin
-        .from('user_profiles')
-        .insert({
-          id: userId,
-          email,
-          nombres,
-          apellidos,
-          user_type: rol === 'encargado' ? 'sensei' : (rol === 'admin' ? 'admin' : rol),
-          rol: rol || 'judoka',
-          club_id: club_id || null,
-          activo: true,
-        })
+    if (usuarioError || !usuarioRow) {
+      console.error('Usuario no encontrado en tabla usuarios después del trigger:', usuarioError)
+      return NextResponse.json(
+        { success: false, error: 'El usuario se creó en Auth pero no se encontró en la base de datos. Revisa el trigger handle_new_user.' },
+        { status: 500 }
+      )
+    }
 
-      if (createProfileError) {
-        console.error('Error al crear perfil manualmente:', createProfileError.message)
-        
-        // Si falla crear el perfil, intentar eliminar el usuario de auth.users para mantener consistencia
-        try {
-          await supabaseAdmin.auth.admin.deleteUser(userId)
-          console.log('Usuario eliminado de auth.users debido a error al crear perfil')
-        } catch (deleteError) {
-          console.error('Error al eliminar usuario después de fallar crear perfil:', deleteError)
-        }
-        
-        // Retornar error para que el usuario sepa que algo falló
-        let errorMessage = createProfileError.message || 'Error desconocido'
-        if (createProfileError.message?.includes('check constraint') || createProfileError.message?.includes('violates check')) {
-          errorMessage = 'Error: El rol especificado no es válido. Verifica la configuración de la base de datos.'
-        } else if (createProfileError.message?.includes('foreign key') || createProfileError.message?.includes('violates foreign key')) {
-          errorMessage = 'Error: Problema con las relaciones de la base de datos. Contacta al administrador.'
-        }
-        
+    // Actualizar campos adicionales en usuarios que podrían no haber sido mapeados por el trigger
+    const updateData: Record<string, unknown> = {}
+    if (numeroCelularBody) updateData.numero_celular = numeroCelularBody
+    if (ciBody) updateData.ci = ciBody
+    if (body.ci_extension) updateData.ci_extension = body.ci_extension
+
+    if (Object.keys(updateData).length > 0) {
+      await supabaseAdmin
+        .from('usuarios')
+        .update(updateData)
+        .eq('id', usuarioRow.id)
+    }
+
+    // Si el rol es admin, insertar en la tabla admin
+    const rolFinal = rol || 'judoka'
+    if (rolFinal === 'admin') {
+      const { error: adminError } = await supabaseAdmin.from('admin').insert({
+        usuario_id: usuarioRow.id,
+        activo: true,
+      })
+      if (adminError) {
+        console.error('Error al crear registro en tabla admin:', adminError)
         return NextResponse.json(
-          { success: false, error: `Error al crear perfil: ${errorMessage}` },
+          { success: false, error: `Usuario creado pero falló al asignar rol admin: ${adminError.message}` },
           { status: 500 }
         )
       }
     }
 
+    // Enviar correo de bienvenida con credenciales
+    // DESHABILITADO TEMPORALMENTE PARA PRUEBAS
+    /*
+    if (ciBody && password) {
+      const ciConExtension = body.ci_extension ? `${ciBody}-${body.ci_extension}` : ciBody
+      const emailHtml = getWelcomeEmailTemplate(nombresTrimmed, ciConExtension, password)
+      sendEmail({
+        to: email,
+        subject: 'Bienvenido a la Asociación de Judo - Credenciales de Acceso',
+        html: emailHtml
+      }).then(result => {
+        if (!result.success) {
+          console.error('Fallo al enviar correo de bienvenida:', result.error)
+        }
+      }).catch(err => {
+        console.error('Error inesperado al enviar correo:', err)
+      })
+    }
+    */
+
     return NextResponse.json({
       success: true,
-      data: { userId },
+      data: { userId: authUserId, usuarioId: usuarioRow.id },
     })
   } catch (error) {
     console.error('Error en API route create-user:', error)

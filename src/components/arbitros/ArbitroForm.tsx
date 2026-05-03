@@ -1,24 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import {
-  TextField,
-  Button,
-  Box,
-  Alert,
-  CircularProgress,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  InputAdornment,
-  IconButton,
-} from '@mui/material'
-import Visibility from '@mui/icons-material/Visibility'
-import VisibilityOff from '@mui/icons-material/VisibilityOff'
-import type { SelectChangeEvent } from '@mui/material/Select'
-import { Arbitro, ArbitroCreate, ArbitroUpdate } from '@/models/arbitro'
-import { arbitroController } from '@/controllers/arbitroController'
+import { Box, Button, Grid, Alert, CircularProgress } from '@mui/material'
+import dayjs from 'dayjs'
+import 'dayjs/locale/es'
+import { Arbitro } from '@/models/arbitro'
+import { useArbitroForm } from '@/hooks/useArbitroForm'
+import { formatCIInput, formatCIExtensionInput, formatNameInput, formatCelularInput } from '@/utils/formatters'
+import { FormInput, FormAutocomplete, FormDatePicker } from '@/components/ui'
+import { GENDERS_LIST, NIVELES_ARBITRAJE } from '@/constants/globales'
+
+dayjs.locale('es')
 
 interface ArbitroFormProps {
   arbitro?: Arbitro | null
@@ -27,236 +18,135 @@ interface ArbitroFormProps {
 }
 
 export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFormProps) {
-  const [formData, setFormData] = useState<ArbitroCreate | ArbitroUpdate>({
-    usuario_id: '',
-    nombres: '',
-    apellidos: '',
-    email: '',
-    password: '',
-    fecha_nacimiento: null,
-    nivel_arbitraje: '',
-    foto_perfil: null,
-    activo: true
-  })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-
-  useEffect(() => {
-    if (arbitro) {
-      setFormData({
-        nombres: arbitro.nombres,
-        apellidos: arbitro.apellidos,
-        fecha_nacimiento: arbitro.fecha_nacimiento || null,
-        nivel_arbitraje: arbitro.nivel_arbitraje || '',
-        foto_perfil: arbitro.foto_perfil || null,
-        activo: arbitro.activo
-      })
-    }
-  }, [arbitro])
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-    setError(null)
-    setSuccess(false)
-  }
-
-  const handleSelectChange = (e: SelectChangeEvent<string>) => {
-    const { name, value } = e.target
-    if (!name) return
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-    setError(null)
-    setSuccess(false)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    setSuccess(false)
-
-    try {
-      let response
-      
-      if (arbitro) {
-        // Actualizar
-        response = await arbitroController.updateArbitro(arbitro.id, formData)
-      } else {
-        // Crear - El servicio creará automáticamente el usuario y perfil
-        // Validar email y password si se está creando un nuevo árbitro
-        if (!formData.email || !formData.password) {
-          setError('Email y contraseña son requeridos para crear un nuevo árbitro')
-          setLoading(false)
-          return
-        }
-
-        const createData: ArbitroCreate = {
-          ...formData as ArbitroCreate,
-          usuario_id: 'temp-user-id', // El servicio lo reemplazará automáticamente
-          email: formData.email,
-          password: formData.password
-        }
-        response = await arbitroController.createArbitro(createData)
-      }
-
-      if (response.success) {
-        setSuccess(true)
-        if (onSuccess) {
-          setTimeout(() => {
-            onSuccess()
-          }, 1000)
-        }
-      } else {
-        setError(response.error || 'Error al guardar el árbitro')
-      }
-    } catch (err: any) {
-      setError(err.message || 'Error inesperado')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { form, loading, error, onSubmit } = useArbitroForm(arbitro, onSuccess)
+  const { control, handleSubmit, trigger } = form
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-      
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {arbitro ? 'Árbitro actualizado exitosamente' : 'Árbitro creado exitosamente'}
-        </Alert>
-      )}
+    <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 1 }}>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      {/* Contenedor en columna para que todos los campos tengan mismo ancho y estén uno debajo del otro */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <TextField
-          fullWidth
-          label="Nombres"
-          name="nombres"
-          value={formData.nombres}
-          onChange={handleChange}
-          required
-          disabled={loading}
-        />
-
-        <TextField
-          fullWidth
-          label="Apellidos"
-          name="apellidos"
-          value={formData.apellidos}
-          onChange={handleChange}
-          required
-          disabled={loading}
-        />
-
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 8 }}>
+          <FormInput 
+            name="ci" 
+            label="Carnet de Identidad" 
+            control={control} 
+            disabled={loading} 
+            required 
+            formatValue={formatCIInput} 
+            inputProps={{ maxLength: 7 }} 
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <FormInput 
+            name="ci_extension" 
+            label="Extensión" 
+            control={control} 
+            disabled={loading}
+            formatValue={formatCIExtensionInput}
+            inputProps={{ maxLength: 2 }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <FormInput 
+            name="nombres" 
+            label="Nombres" 
+            control={control} 
+            disabled={loading} 
+            required 
+            formatValue={formatNameInput} 
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormInput 
+            name="apellido_paterno" 
+            label="Primer Apellido" 
+            control={control} 
+            disabled={loading} 
+            required 
+            formatValue={formatNameInput} 
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormInput 
+            name="apellido_materno" 
+            label="Segundo Apellido" 
+            control={control} 
+            disabled={loading} 
+            formatValue={formatNameInput} 
+          />
+        </Grid>
         {!arbitro && (
-          <>
-            <TextField
-              fullWidth
-              label="Email"
-              name="email"
-              type="email"
-              value={formData.email || ''}
-              onChange={handleChange}
-              required
-              disabled={loading}
-              helperText="Email para iniciar sesión en el sistema"
+          <Grid size={{ xs: 12 }}>
+            <FormInput 
+              name="email" 
+              label="Correo Electrónico" 
+              control={control} 
+              disabled={loading} 
+              required 
+              inputProps={{ type: 'email' }}
             />
-
-            <TextField
-              fullWidth
-              label="Contraseña"
-              name="password"
-              type={showPassword ? 'text' : 'password'}
-              value={formData.password || ''}
-              onChange={handleChange}
-              required
-              disabled={loading}
-              helperText="Mínimo 8 caracteres"
-              inputProps={{ minLength: 8 }}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={() => setShowPassword(!showPassword)}
-                      onMouseDown={(e) => e.preventDefault()}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </>
+          </Grid>
         )}
-
-        <TextField
-          fullWidth
-          label="Fecha de Nacimiento"
-          name="fecha_nacimiento"
-          type="date"
-          value={formData.fecha_nacimiento || ''}
-          onChange={handleChange}
-          disabled={loading}
-          InputLabelProps={{
-            shrink: true,
-          }}
-        />
-
-        <FormControl fullWidth>
-          <InputLabel>Nivel de Arbitraje</InputLabel>
-          <Select
-            name="nivel_arbitraje"
-            value={formData.nivel_arbitraje || ''}
-            onChange={handleSelectChange}
+        <Grid size={{ xs: 12 }}>
+          <FormInput 
+            name="numero_celular" 
+            label="Teléfono Celular" 
+            control={control} 
+            disabled={loading} 
+            formatValue={formatCelularInput} 
+            inputProps={{ 
+              maxLength: 8, 
+              autoComplete: 'tel',
+              name: 'tel_celular',
+              id: 'tel_celular'
+            }} 
+            onChange={(e) => {
+              if (e.target.value.length === 8) trigger('numero_celular');
+            }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <FormDatePicker 
+            name="fecha_nacimiento" 
+            label="Fecha de Nacimiento" 
+            control={control} 
+            disabled={loading} 
+            maxDate={dayjs()} 
+          />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <FormAutocomplete 
+            name="genero" 
+            label="Género" 
+            control={control} 
+            disabled={loading} 
+            options={GENDERS_LIST.map(g => ({ value: g, label: g }))} 
+          />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <FormAutocomplete 
+            name="nivel_arbitraje" 
+            label="Nivel de Arbitraje" 
+            control={control} 
             disabled={loading}
-            label="Nivel de Arbitraje"
-          >
-            <MenuItem value="">
-              <em>Sin definir</em>
-            </MenuItem>
-            <MenuItem value="Regional">Regional</MenuItem>
-            <MenuItem value="Nacional">Nacional</MenuItem>
-            <MenuItem value="Internacional">Internacional</MenuItem>
-          </Select>
-        </FormControl>
+            options={NIVELES_ARBITRAJE.map(n => ({ value: n, label: n }))} 
+          />
+        </Grid>
+      </Grid>
 
-        {/* TODO: Agregar campo para subir foto_perfil */}
-      </Box>
-
-      <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-        {onCancel && (
-          <Button
-            variant="outlined"
-            onClick={onCancel}
-            disabled={loading}
-          >
-            Cancelar
-          </Button>
-        )}
+      <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+        <Button onClick={onCancel} disabled={loading}>
+          Cancelar
+        </Button>
         <Button
           type="submit"
           variant="contained"
           disabled={loading}
-          startIcon={loading ? <CircularProgress size={20} /> : null}
         >
-          {loading ? 'Guardando...' : arbitro ? 'Actualizar' : 'Crear'}
+          {loading ? <CircularProgress size={20} /> : arbitro ? 'Actualizar Árbitro' : 'Registrar Árbitro'}
         </Button>
       </Box>
     </Box>
   )
 }
-

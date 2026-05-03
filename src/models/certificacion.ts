@@ -1,6 +1,6 @@
 export interface Certificacion {
   id: string
-  usuario_id: string // Referencia a user_profiles.id
+  usuario_id: string // Referencia a usuarios.id
   tipo_afiliado: 'sensei' | 'arbitro' // Tipo de afiliado al que pertenece
   nombre_certificacion: string
   descripcion: string | null

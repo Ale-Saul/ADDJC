@@ -27,33 +27,32 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: Evitar escribir en la base de datos desde el middleware
-  // Solo refrescar la sesión si es necesario
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Si el usuario está autenticado y está intentando acceder a /login, redirigir a home
-  if (user && request.nextUrl.pathname === '/login') {
-    return NextResponse.redirect(new URL('/', request.url))
-  }
+  const pathname = request.nextUrl.pathname
 
-  // Si el usuario NO está autenticado y está intentando acceder a rutas protegidas,
-  // redirigir a login (esto se manejará mejor con protección de rutas específicas)
-  // Por ahora, solo refrescamos la sesión
+  // RBAC Logics
+  if (user) {
+    if (pathname === '/login') {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
+
+    // Protect administrative UI routes (not API routes — those use server-only service key)
+    const userRole = user.user_metadata?.rol ?? user.user_metadata?.role
+    const isAdminUiRoute = pathname.startsWith('/asociacion') || pathname.startsWith('/clubes')
+
+    if (isAdminUiRoute && !['asociacion', 'encargado', 'club', 'admin', 'sensei', 'judoka', 'arbitro'].includes(userRole)) {
+        return NextResponse.redirect(new URL('/', request.url))
+    }
+  }
 
   return supabaseResponse
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

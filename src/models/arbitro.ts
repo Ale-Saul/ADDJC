@@ -3,35 +3,57 @@ export interface Arbitro {
   usuario_id: string
   nombres: string
   apellidos: string
+  apellido_paterno?: string
+  apellido_materno?: string
+  email?: string
   fecha_nacimiento: string | null
+  numero_celular?: string | null
+  ci?: string | null
+  ci_extension?: string | null
+  genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   nivel_arbitraje: string | null
-  certificacion: string | null
-  foto_perfil: string | null
+  /** ID de la certificación principal (FK a certificaciones) */
+  certificacion_id: string | null
+  /** Nombre de la certificación (desde join con certificaciones, solo lectura) */
+  certificacion?: string | null
+  avatar_url?: string | null
   activo: boolean
+  total_certificaciones?: number
   created_at: string
   updated_at: string
 }
 
 export interface ArbitroCreate {
-  usuario_id?: string // Opcional: si no se proporciona, se creará automáticamente
+  usuario_id?: string
   nombres: string
-  apellidos: string
-  email?: string // Opcional: requerido si se crea nuevo usuario
-  password?: string // Opcional: requerido si se crea nuevo usuario
+  apellido_paterno: string
+  apellido_materno: string
+  email?: string
+  password?: string
   fecha_nacimiento?: string | null
+  numero_celular?: string | null
+  ci?: string | null
+  ci_extension?: string | null
+  genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   nivel_arbitraje?: string | null
-  certificacion?: string | null
-  foto_perfil?: string | null
+  certificacion_id?: string | null
+  avatar_url?: string | null
   activo?: boolean
 }
 
 export interface ArbitroUpdate {
   nombres?: string
-  apellidos?: string
+  apellido_paterno?: string
+  apellido_materno?: string
+  email?: string
   fecha_nacimiento?: string | null
+  numero_celular?: string | null
+  ci?: string | null
+  ci_extension?: string | null
+  genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   nivel_arbitraje?: string | null
-  certificacion?: string | null
-  foto_perfil?: string | null
+  certificacion_id?: string | null
+  avatar_url?: string | null
   activo?: boolean
 }
 

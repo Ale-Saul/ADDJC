@@ -1,182 +1,295 @@
-'use client'
-
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
   Chip,
   IconButton,
+  Switch,
+  Tooltip,
+  MenuItem,
   Box,
-  CircularProgress,
-  Alert,
-  Typography
+  Typography,
+  Pagination as MuiPagination,
+  Grid
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
+import DirectionsRunIcon from '@mui/icons-material/DirectionsRun'
+import DescriptionIcon from '@mui/icons-material/Description'
 import { Club } from '@/models/club'
 import { clubController } from '@/controllers/clubController'
+import { useClubList } from '@/hooks/useClubList'
+import ConfirmDialog from '@/components/common/ConfirmDialog'
 import Pagination from '@/components/common/Pagination'
+import { DataTable, Column, FilterSelect, SearchBar } from '@/components/ui'
+import { useAuth } from '@/contexts/AuthContext'
+import { ROL } from '@/constants/roles'
 
 interface ClubListProps {
   onEdit?: (club: Club) => void
   onDelete?: (club: Club) => void
+  onViewJudokas?: (club: Club) => void
+  onViewDocumentos?: (club: Club) => void
   refreshTrigger?: number
-  searchTerm?: string
-  itemsPerPage?: number
+  readOnly?: boolean
 }
 
-export default function ClubList({ onEdit, onDelete, refreshTrigger, searchTerm = '', itemsPerPage: initialItemsPerPage = 10 }: ClubListProps) {
-  const [clubes, setClubes] = useState<Club[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(initialItemsPerPage)
+export default function ClubList({ onEdit, onDelete, onViewJudokas, onViewDocumentos, refreshTrigger = 0, readOnly = false }: ClubListProps) {
+  const { user } = useAuth()
+  const isEncargado = user?.rol === ROL.ENCARGADO
+  const isAdminOrAsoc = user?.rol === ROL.ADMIN || user?.rol === ROL.ASOCIACION
 
-  const loadClubes = async () => {
-    setLoading(true)
-    setError(null)
-    
-    const response = await clubController.getAllClubes()
-    
-    if (response.success && response.data) {
-      setClubes(response.data)
-    } else {
-      setError(response.error || 'Error al cargar los clubes')
-    }
-    
-    setLoading(false)
-  }
+  const { state, loadClubes, toggleStatus, filteredData, dispatch } = useClubList('', refreshTrigger)
+  const { loading, error } = state
+
+  const [page, setPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
 
   useEffect(() => {
     loadClubes()
-  }, [refreshTrigger])
+  }, [refreshTrigger, loadClubes])
 
-  // Resetear a página 1 cuando cambia el término de búsqueda
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchTerm])
-
-  // Filtrar clubes según el término de búsqueda
-  const filteredClubes = useMemo(() => {
-    if (!searchTerm) return clubes
-    const search = searchTerm.toLowerCase()
-    return clubes.filter((club) => (
-      club.nombre_club?.toLowerCase().includes(search) ||
-      club.municipio?.toLowerCase().includes(search) ||
-      club.direccion?.toLowerCase().includes(search) ||
-      club.telefono_contacto?.toLowerCase().includes(search)
-    ))
-  }, [clubes, searchTerm])
-
-  // Calcular paginación
-  const totalPages = Math.ceil(filteredClubes.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedClubes = filteredClubes.slice(startIndex, endIndex)
-
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
-        <CircularProgress />
-      </Box>
-    )
-  }
-
-  if (error) {
-    return (
-      <Alert severity="error" sx={{ mb: 2 }}>
-        {error}
-      </Alert>
-    )
-  }
-
-  if (clubes.length === 0) {
-    return (
-      <Box textAlign="center" py={4}>
-        <Typography variant="h6" color="text.secondary">
-          No hay clubes registrados
+  const columns: Column<Club>[] = [
+    {
+      id: 'index',
+      label: 'N°',
+      align: 'center',
+      render: (_, index) => (
+        <Typography variant="body2" color="text.secondary">
+          {(page - 1) * itemsPerPage + (index ?? 0) + 1}
         </Typography>
-      </Box>
-    )
+      ),
+    },
+    {
+      id: 'nombre_club',
+      label: 'Club',
+      render: (club: Club) => (
+        <Box display="flex" flexDirection="column">
+          <Typography variant="body2" fontWeight="bold">{club.nombre_club}</Typography>
+          <Typography variant="caption" color="text.secondary">
+            Provincia: {club.provincia}
+          </Typography>
+          {club.direccion && (
+            <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+              Dir: {club.direccion}
+            </Typography>
+          )}
+        </Box>
+      )
+    },
+    {
+      id: 'director',
+      label: 'Director Técnico',
+      render: (club: Club) => (
+        <Box>
+          <Typography variant="body2" fontWeight="medium">
+            {club.director_tecnico ? `${club.director_tecnico.nombres} ${club.director_tecnico.apellidos}` : 'No asignado'}
+          </Typography>
+          {club.director_tecnico?.ci && (
+            <Typography variant="caption" color="text.secondary" display="block">
+              CI: {club.director_tecnico.ci}{club.director_tecnico.ci_extension ? `-${club.director_tecnico.ci_extension}` : ''}
+            </Typography>
+          )}
+        </Box>
+      )
+    },
+    {
+      id: 'contacto',
+      label: 'Teléfono',
+      render: (club: Club) => (
+        <Typography variant="body2">
+          {club.telefono_contacto || 'Sin teléfono'}
+        </Typography>
+      )
+    },
+    {
+      id: 'estado',
+      label: 'Estado',
+      align: 'center',
+      render: (club: Club) => (
+        <Tooltip title={isAdminOrAsoc ? (club.activo ? 'Desactivar' : 'Activar') : (club.activo ? 'Activo' : 'Inactivo')}>
+          <span>
+            <Switch
+              checked={!!club.activo}
+              onChange={() => isAdminOrAsoc && toggleStatus(club.id, !!club.activo)}
+              size="medium"
+              disabled={!isAdminOrAsoc}
+              sx={{
+                '& .MuiSwitch-switchBase.Mui-checked': {
+                  color: '#4caf50',
+                  '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.08)' },
+                },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                  backgroundColor: '#4caf50',
+                },
+                '& .MuiSwitch-switchBase': {
+                  color: '#f44336',
+                  '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.08)' },
+                },
+                '& .MuiSwitch-switchBase + .MuiSwitch-track': {
+                  backgroundColor: '#f44336',
+                },
+                '& .MuiSwitch-switchBase.Mui-disabled': {
+                  color: (club.activo ? '#4caf50' : '#f44336') + ' !important',
+                  opacity: '1 !important'
+                },
+                '& .MuiSwitch-switchBase.Mui-disabled + .MuiSwitch-track': {
+                  backgroundColor: (club.activo ? '#4caf50' : '#f44336') + ' !important',
+                  opacity: '0.5 !important'
+                }
+              }}
+            />
+          </span>
+        </Tooltip>
+      )
+    }
+  ]
+
+  if (!readOnly || isEncargado) {
+    columns.push({
+      id: 'acciones',
+      label: 'Acciones',
+      align: 'right',
+      render: (club: Club) => (
+        <Box display="flex" justifyContent="flex-end" gap={1}>
+          {onViewDocumentos && (isEncargado ? club.id === user?.club_id : true) && (
+            <Tooltip title="Documentos del Club">
+              <IconButton size="small" onClick={() => onViewDocumentos(club)} color="info">
+                <DescriptionIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          
+          {onViewJudokas && (
+            <Tooltip title="Ver Judokas">
+              <IconButton size="small" onClick={() => onViewJudokas(club)} color="info">
+                <DirectionsRunIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          {onEdit && !isEncargado && (
+            <Tooltip title="Editar">
+              <IconButton size="small" onClick={() => onEdit(club)} color="primary">
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          {onDelete && !isEncargado && (
+            <Tooltip title="Eliminar">
+              <IconButton size="small" onClick={() => onDelete(club)} color="error">
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
+      )
+    })
+  } else if (onViewJudokas) {
+     columns.push({
+      id: 'acciones',
+      label: 'Acciones',
+      align: 'right',
+      render: (club: Club) => (
+        <Box display="flex" justifyContent="flex-end" gap={1}>          
+            <Tooltip title="Ver Judokas">
+              <IconButton size="small" onClick={() => onViewJudokas(club)} color="info">
+                <DirectionsRunIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+        </Box>
+      )
+    })
   }
 
-  if (filteredClubes.length === 0 && searchTerm) {
-    return (
-      <Box textAlign="center" py={4}>
-        <Typography variant="h6" color="text.secondary">
-          No se encontraron clubes que coincidan con "{searchTerm}"
-        </Typography>
-      </Box>
-    )
-  }
+  const paginatedData = filteredData.slice(
+    (page - 1) * itemsPerPage,
+    page * itemsPerPage
+  )
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage)
 
   return (
-    <>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell><strong>Nombre del Club</strong></TableCell>
-              <TableCell><strong>Municipio</strong></TableCell>
-              <TableCell><strong>Teléfono</strong></TableCell>
-              <TableCell><strong>Estado</strong></TableCell>
-              <TableCell align="right"><strong>Acciones</strong></TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {paginatedClubes.map((club) => (
-              <TableRow key={club.id} hover>
-                <TableCell>{club.nombre_club}</TableCell>
-                <TableCell>{club.municipio || '-'}</TableCell>
-                <TableCell>{club.telefono_contacto || '-'}</TableCell>
-                <TableCell>
-                  <Chip 
-                    label={club.activo ? 'Activo' : 'Inactivo'} 
-                    color={club.activo ? 'success' : 'default'}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell align="right">
-                  {onEdit && (
-                    <IconButton 
-                      size="small" 
-                      color="primary" 
-                      onClick={() => onEdit(club)}
-                      title="Editar"
-                    >
-                      <EditIcon />
-                    </IconButton>
-                  )}
-                  {onDelete && (
-                    <IconButton 
-                      size="small" 
-                      color="error" 
-                      onClick={() => onDelete(club)}
-                      title="Eliminar"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalItems={filteredClubes.length}
-        itemsPerPage={itemsPerPage}
-        onPageChange={setCurrentPage}
-        onItemsPerPageChange={setItemsPerPage}
-      />
-    </>
+    <Box>
+      <SearchBar
+        value={state.globalFilter || ''}
+        onChange={(val) => dispatch({ type: 'SET_GLOBAL_FILTER', payload: val })}
+        placeholder="Buscar por club, dirigente..."
+        onToggleFilters={() => dispatch({ type: 'TOGGLE_SHOW_FILTERS' })}
+        showFilters={state.showFilters}
+      >
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <FilterSelect
+              label="Provincia"
+              value={state.filters.municipio || 'all'}
+              onChange={(e) => dispatch({ type: 'SET_MUNICIPIO_FILTER', payload: e.target.value })}
+              options={[
+                { value: 'all', label: 'Todas las provincias' },
+                { value: 'Cercado', label: 'Cercado' },
+                { value: 'Quillacollo', label: 'Quillacollo' },
+                { value: 'Chapare', label: 'Chapare' },
+                { value: 'Punata', label: 'Punata' },
+                { value: 'Tapacarí', label: 'Tapacarí' },
+                { value: 'Ayopaya', label: 'Ayopaya' },
+                { value: 'Arani', label: 'Arani' },
+                { value: 'Esteban Arce', label: 'Esteban Arce' },
+                { value: 'Capinota', label: 'Capinota' },
+                { value: 'Germán Jordán', label: 'Germán Jordán' },
+                { value: 'Mizque', label: 'Mizque' },
+                { value: 'Campero', label: 'Campero' },
+                { value: 'Carrasco', label: 'Carrasco' },
+                { value: 'Tiraque', label: 'Tiraque' },
+                { value: 'Caranavi', label: 'Caranavi' },
+                { value: 'Bolívar', label: 'Bolívar' },
+              ]}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <FilterSelect
+              label="Estado"
+              value={state.filters.estado || 'all'}
+              onChange={(e) => dispatch({ type: 'SET_ESTADO_FILTER', payload: e.target.value })}
+              options={[
+                { value: 'all', label: 'Todos los estados' },
+                { value: 'activo', label: 'Activos' },
+                { value: 'inactivo', label: 'Inactivos' },
+              ]}
+            />
+          </Grid>
+        </Grid>
+      </SearchBar>
+
+      {error ? (
+        <Typography color="error">{error}</Typography>
+      ) : (
+        <DataTable
+          data={paginatedData}
+          columns={columns}
+          isLoading={loading}
+          keyExtractor={(club) => club.id}
+        />
+      )}
+
+      <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={filteredData.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
+      </Box>
+
+      
+    </Box>
   )
 }
+
+
+
+
+
+
+
+
 

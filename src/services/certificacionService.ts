@@ -1,6 +1,6 @@
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { Certificacion, CertificacionCreate, CertificacionUpdate } from '@/models/certificacion'
-import { ApiResponse } from '@/types'
+import { ApiResponse } from '@/types/globales'
 
 export const certificacionService = {
   /**
@@ -8,9 +8,10 @@ export const certificacionService = {
    */
   async getAll(activo?: boolean): Promise<ApiResponse<Certificacion[]>> {
     try {
-      let query = supabase
+      const client = createClient()
+      let query = client
         .from('certificaciones')
-        .select('*')
+        .select('id, usuario_id, tipo_afiliado, nombre_certificacion, descripcion, fecha_emision, fecha_vencimiento, archivo_url, activo, created_at, updated_at')
         .order('fecha_emision', { ascending: false })
 
       if (activo !== undefined) {
@@ -33,9 +34,10 @@ export const certificacionService = {
    */
   async getByUsuario(usuarioId: string, tipoAfiliado?: 'sensei' | 'arbitro'): Promise<ApiResponse<Certificacion[]>> {
     try {
-      let query = supabase
+      const client = createClient()
+      let query = client
         .from('certificaciones')
-        .select('*')
+        .select('id, usuario_id, tipo_afiliado, nombre_certificacion, descripcion, fecha_emision, fecha_vencimiento, archivo_url, activo, created_at, updated_at')
         .eq('usuario_id', usuarioId)
         .order('fecha_emision', { ascending: false })
 
@@ -59,9 +61,10 @@ export const certificacionService = {
    */
   async getById(id: string): Promise<ApiResponse<Certificacion>> {
     try {
-      const { data, error } = await supabase
+      const client = createClient()
+      const { data, error } = await client
         .from('certificaciones')
-        .select('*')
+        .select('id, usuario_id, tipo_afiliado, nombre_certificacion, descripcion, fecha_emision, fecha_vencimiento, archivo_url, activo, created_at, updated_at')
         .eq('id', id)
         .single()
 
@@ -79,10 +82,11 @@ export const certificacionService = {
    */
   async create(certificacion: CertificacionCreate): Promise<ApiResponse<Certificacion>> {
     try {
-      const { data, error } = await supabase
+      const client = createClient()
+      const { data, error } = await client
         .from('certificaciones')
         .insert(certificacion)
-        .select()
+        .select('id, usuario_id, tipo_afiliado, nombre_certificacion, descripcion, fecha_emision, fecha_vencimiento, archivo_url, activo, created_at, updated_at')
         .single()
 
       if (error) throw error
@@ -99,11 +103,12 @@ export const certificacionService = {
    */
   async update(id: string, certificacion: CertificacionUpdate): Promise<ApiResponse<Certificacion>> {
     try {
-      const { data, error } = await supabase
+      const client = createClient()
+      const { data, error } = await client
         .from('certificaciones')
         .update({ ...certificacion, updated_at: new Date().toISOString() })
         .eq('id', id)
-        .select()
+        .select('id, usuario_id, tipo_afiliado, nombre_certificacion, descripcion, fecha_emision, fecha_vencimiento, archivo_url, activo, created_at, updated_at')
         .single()
 
       if (error) throw error
@@ -120,7 +125,8 @@ export const certificacionService = {
    */
   async delete(id: string): Promise<ApiResponse<void>> {
     try {
-      const { error } = await supabase
+      const client = createClient()
+      const { error } = await client
         .from('certificaciones')
         .update({ activo: false, updated_at: new Date().toISOString() })
         .eq('id', id)
@@ -139,7 +145,8 @@ export const certificacionService = {
    */
   async deletePermanent(id: string): Promise<ApiResponse<void>> {
     try {
-      const { error } = await supabase
+      const client = createClient()
+      const { error } = await client
         .from('certificaciones')
         .delete()
         .eq('id', id)

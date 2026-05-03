@@ -31,7 +31,11 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
 import PaymentIcon from '@mui/icons-material/Payment'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
+import ChecklistIcon from '@mui/icons-material/Checklist'
+import InsightsIcon from '@mui/icons-material/Insights'
+import ManageSearchIcon from '@mui/icons-material/ManageSearch'
 import { useAuth } from '@/contexts/AuthContext'
+import { ROL } from '@/constants/roles'
 
 const DRAWER_WIDTH = 280
 
@@ -41,6 +45,7 @@ export default function Sidebar() {
   const theme = useTheme()
   const { user, signOut } = useAuth()
   const [openAfiliados, setOpenAfiliados] = useState(false)
+  const [openAsistencia, setOpenAsistencia] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -52,25 +57,42 @@ export default function Sidebar() {
     setOpenAfiliados(!openAfiliados)
   }
 
+  const handleAsistenciaClick = () => {
+    setOpenAsistencia(!openAsistencia)
+  }
+
   const handleLogout = async () => {
     await signOut()
     router.push('/login')
   }
 
   const getRoleLabel = (rol?: string) => {
-    const roles: Record<string, string> = {
-      admin: 'Administrador',
-      asociacion: 'Asociación',
-      sensei: 'Sensei',
-      encargado: 'Encargado-Sensei',
-      arbitro: 'Árbitro',
-      judoka: 'Judoka'
+    const labels: Record<string, string> = {
+      [ROL.ADMIN]: 'Administrador',
+      [ROL.ASOCIACION]: 'Asociación',
+      [ROL.SENSEI]: 'Sensei',
+      [ROL.ENCARGADO]: 'Encargado-Sensei',
+      [ROL.ARBITRO]: 'Árbitro',
+      [ROL.JUDOKA]: 'Judoka',
     }
-    return roles[rol || ''] || rol || 'Usuario'
+    return labels[rol || ''] || rol || 'Usuario'
   }
 
-  const isActive = (path: string) => {
-    return pathname === path || pathname?.startsWith(path + '/')
+  const isActive = (path: string, allPaths?: string[]) => {
+    if (!pathname) return false
+    // Coincidencia exacta siempre es activa
+    if (pathname === path) return true
+    // Para subrutas, verificar que empiece con path + '/'
+    // Pero solo si no hay otra ruta más específica que coincida exactamente
+    if (pathname.startsWith(path + '/')) {
+      // Si hay una lista de rutas, verificar que no haya una más específica que coincida exactamente
+      if (allPaths) {
+        const exactMatch = allPaths.find(p => p !== path && pathname === p)
+        if (exactMatch) return false // Hay una ruta más específica que coincide exactamente
+      }
+      return true
+    }
+    return false
   }
 
   // Función para verificar si el usuario tiene acceso a una ruta
@@ -84,37 +106,64 @@ export default function Sidebar() {
       label: 'Inicio',
       path: '/',
       icon: <HomeIcon />,
-      allowedRoles: ['admin', 'asociacion', 'sensei', 'encargado', 'arbitro', 'judoka'] // Todos los roles
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.SENSEI, ROL.ENCARGADO, ROL.ARBITRO, ROL.JUDOKA] // Todos los roles
     },
     {
       label: 'Miembros de la Asociación',
       path: '/asociacion',
       icon: <AdminPanelSettingsIcon />,
-      allowedRoles: ['admin', 'asociacion'] // Admin y asociación
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION] // Admin y asociación
     },
     {
       label: 'Pagos y Cuotas',
       path: '/pagos',
       icon: <PaymentIcon />,
-      allowedRoles: ['admin', 'encargado'] // Admin y encargados
+      allowedRoles: [ROL.ADMIN, ROL.ENCARGADO] // Admin y encargados
     },
     {
       label: 'Reportes',
       path: '/reportes',
       icon: <AssessmentIcon />,
-      allowedRoles: ['admin', 'encargado'] // Admin y encargados
+      allowedRoles: [ROL.ADMIN, ROL.ENCARGADO] // Admin y encargados
     },
     {
       label: 'Reportes Asociación',
       path: '/reportes/asociacion',
       icon: <AssessmentIcon />,
-      allowedRoles: ['admin', 'asociacion'] // Admin y asociación
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION] // Admin y asociación
     },
     {
       label: 'Contabilidad',
       path: '/contabilidad',
       icon: <AccountBalanceIcon />,
-      allowedRoles: ['admin', 'asociacion'] // Admin y asociación
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO] // Admin, asociación y encargados
+    }
+  ]
+
+  const asistenciaItems = [
+    {
+      label: 'Sesiones',
+      path: '/asistencia',
+      icon: <ChecklistIcon />,
+      allowedRoles: [ROL.ADMIN, ROL.SENSEI, ROL.ENCARGADO]
+    },
+    {
+      label: 'Estadísticas',
+      path: '/asistencia/estadisticas',
+      icon: <InsightsIcon />,
+      allowedRoles: [ROL.ADMIN, ROL.SENSEI, ROL.ENCARGADO]
+    },
+    {
+      label: 'Mi Asistencia',
+      path: '/asistencia/mi-asistencia',
+      icon: <InsightsIcon />,
+      allowedRoles: [ROL.JUDOKA]
+    },
+    {
+      label: 'Consulta por Judoka',
+      path: '/asistencia/consulta',
+      icon: <ManageSearchIcon />,
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION]
     }
   ]
 
@@ -123,36 +172,46 @@ export default function Sidebar() {
       label: 'Clubes',
       path: '/clubes',
       icon: <BusinessIcon />,
-      allowedRoles: ['admin', 'asociacion'] // Admin y asociación
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.JUDOKA, ROL.SENSEI, ROL.ENCARGADO, ROL.ARBITRO] // Admin, asociación, judokas, senseis, encargados y árbitros (solo lectura)
     },
     {
       label: 'Árbitros',
       path: '/arbitros',
       icon: <GavelIcon />,
-      allowedRoles: ['admin', 'asociacion', 'arbitro'] // Admin, asociación y árbitros
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ARBITRO, ROL.SENSEI, ROL.ENCARGADO]
     },
     {
       label: 'Senseis',
       path: '/senseis',
       icon: <SchoolIcon />,
-      allowedRoles: ['admin', 'asociacion', 'encargado'] // Admin, asociación y encargados
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.SENSEI, ROL.JUDOKA] // Admin, asociación, encargados, senseis y judokas (solo lectura)
     },
     {
       label: 'Judokas',
       path: '/judokas',
       icon: <SportsKabaddiIcon />,
-      allowedRoles: ['admin', 'asociacion', 'sensei', 'judoka', 'encargado'] // Todos excepto árbitros
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.SENSEI, ROL.JUDOKA, ROL.ENCARGADO] // Todos excepto árbitros
     }
   ]
 
   // Filtrar items del menú según los permisos del usuario
   const visibleMenuItems = menuItems.filter(item => hasAccess(item.allowedRoles))
-  
+
+  // Filtrar items de asistencia según permisos del usuario
+  const visibleAsistenciaItems = asistenciaItems.filter(item => hasAccess(item.allowedRoles))
+  const showAsistenciaMenu = visibleAsistenciaItems.length > 0
+
   // Filtrar items de afiliados según los permisos del usuario
   const visibleAfiliadosItems = afiliadosItems.filter(item => hasAccess(item.allowedRoles))
   
   // Solo mostrar el menú "Afiliados" si hay al menos un item visible
   const showAfiliadosMenu = visibleAfiliadosItems.length > 0
+  
+  // Obtener todas las rutas del menú para la función isActive
+  const allMenuPaths = [
+    ...visibleMenuItems.map(item => item.path),
+    ...visibleAsistenciaItems.map(item => item.path)
+  ]
 
   // Evitar renderizar hasta que esté montado en el cliente
   if (!mounted) {
@@ -189,7 +248,7 @@ export default function Sidebar() {
         {visibleMenuItems.map((item) => (
           <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
             <ListItemButton
-              selected={isActive(item.path)}
+              selected={isActive(item.path, allMenuPaths)}
               onClick={() => router.push(item.path)}
               sx={{
                 py: 1,
@@ -219,6 +278,66 @@ export default function Sidebar() {
             </ListItemButton>
           </ListItem>
         ))}
+
+        {/* Menú Asistencia */}
+        {showAsistenciaMenu && (
+          <>
+            <Divider sx={{ my: 0.5 }} />
+
+            <ListItem disablePadding sx={{ mb: 0.5 }}>
+              <ListItemButton
+                onClick={handleAsistenciaClick}
+                sx={{
+                  py: 1,
+                  minHeight: 40,
+                  '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.08)' }
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 36 }}>
+                  <ChecklistIcon />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Asistencia"
+                  primaryTypographyProps={{ fontSize: '0.9rem' }}
+                />
+                {openAsistencia ? <ExpandLess /> : <ExpandMore />}
+              </ListItemButton>
+            </ListItem>
+
+            <Collapse in={openAsistencia} timeout="auto" unmountOnExit>
+              <List component="div" disablePadding>
+                {visibleAsistenciaItems.map((item) => (
+                  <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
+                    <ListItemButton
+                      selected={isActive(item.path, allMenuPaths)}
+                      onClick={() => router.push(item.path)}
+                      sx={{
+                        pl: 3.5,
+                        py: 0.75,
+                        minHeight: 36,
+                        '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.08)' },
+                        '&.Mui-selected': {
+                          backgroundColor: 'rgba(0, 0, 0, 0.12)',
+                          color: theme.palette.text.primary,
+                          '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.16)' },
+                          '& .MuiListItemIcon-root': { color: theme.palette.text.primary }
+                        }
+                      }}
+                    >
+                      <ListItemIcon sx={{ color: 'inherit', minWidth: 32 }}>
+                        {item.icon}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={item.label}
+                        primaryTypographyProps={{ fontSize: '0.85rem' }}
+                      />
+                    </ListItemButton>
+                  </ListItem>
+                ))}
+              </List>
+            </Collapse>
+          </>
+        )}
 
         {/* Mostrar menú Afiliados solo si hay items visibles */}
         {showAfiliadosMenu && (
@@ -324,9 +443,9 @@ export default function Sidebar() {
                     label={getRoleLabel(user.rol)} 
                     size="small" 
                     sx={{ height: 18, fontSize: '0.65rem', cursor: 'pointer', alignSelf: 'flex-start' }}
-                    color={user.rol === 'admin' || user.rol === 'asociacion' ? 'primary' : 'default'}
+                    color={user.rol === ROL.ADMIN || user.rol === ROL.ASOCIACION ? 'primary' : 'default'}
                   />
-                  {user.club_nombre && (user.rol === 'sensei' || user.rol === 'encargado') && (
+                  {user.club_nombre && (user.rol === ROL.SENSEI || user.rol === ROL.ENCARGADO || user.rol === ROL.JUDOKA) && (
                     <Typography 
                       variant="caption" 
                       sx={{ 

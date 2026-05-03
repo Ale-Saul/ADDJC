@@ -1,6 +1,9 @@
 import { arbitroService } from '@/services/arbitroService'
 import { Arbitro, ArbitroCreate, ArbitroUpdate } from '@/models/arbitro'
-import { ApiResponse } from '@/types'
+import { ApiResponse } from '@/types/globales'
+import { generarPasswordInicial } from '@/utils/passwordUtils'
+import { personNamesCreateSchema, personNamesUpdateSchema } from '@/schemas/globales'
+
 
 export const arbitroController = {
   /**
@@ -25,34 +28,18 @@ export const arbitroController = {
    * Crear un nuevo árbitro
    */
   async createArbitro(arbitroData: ArbitroCreate): Promise<ApiResponse<Arbitro>> {
-    // Validaciones de negocio
-    if (!arbitroData.nombres || arbitroData.nombres.trim() === '') {
-      return { success: false, error: 'El nombre es requerido' }
+    const namesValidation = personNamesCreateSchema.safeParse(arbitroData)
+    if (!namesValidation.success) {
+      return { success: false, error: namesValidation.error.issues[0]?.message ?? 'Error de validación' }
     }
 
-    if (!arbitroData.apellidos || arbitroData.apellidos.trim() === '') {
-      return { success: false, error: 'Los apellidos son requeridos' }
-    }
-
-    if (arbitroData.nombres.length < 2) {
-      return { success: false, error: 'El nombre debe tener al menos 2 caracteres' }
-    }
-
-    if (arbitroData.apellidos.length < 2) {
-      return { success: false, error: 'Los apellidos deben tener al menos 2 caracteres' }
-    }
-
-    if (arbitroData.nombres.length > 100) {
-      return { success: false, error: 'El nombre no puede exceder 100 caracteres' }
-    }
-
-    if (arbitroData.apellidos.length > 100) {
-      return { success: false, error: 'Los apellidos no pueden exceder 100 caracteres' }
-    }
+    // Generar contraseña automática basada en el carnet
+    const autoPassword = generarPasswordInicial(arbitroData.ci || '')
 
     // Por defecto, el árbitro se crea como activo
     const arbitroToCreate: ArbitroCreate = {
       ...arbitroData,
+      password: autoPassword,
       activo: arbitroData.activo !== undefined ? arbitroData.activo : true
     }
 
@@ -73,33 +60,9 @@ export const arbitroController = {
       return { success: false, error: 'Árbitro no encontrado' }
     }
 
-    // Validaciones de negocio
-    if (arbitroData.nombres !== undefined) {
-      if (arbitroData.nombres.trim() === '') {
-        return { success: false, error: 'El nombre no puede estar vacío' }
-      }
-
-      if (arbitroData.nombres.length < 2) {
-        return { success: false, error: 'El nombre debe tener al menos 2 caracteres' }
-      }
-
-      if (arbitroData.nombres.length > 100) {
-        return { success: false, error: 'El nombre no puede exceder 100 caracteres' }
-      }
-    }
-
-    if (arbitroData.apellidos !== undefined) {
-      if (arbitroData.apellidos.trim() === '') {
-        return { success: false, error: 'Los apellidos no pueden estar vacíos' }
-      }
-
-      if (arbitroData.apellidos.length < 2) {
-        return { success: false, error: 'Los apellidos deben tener al menos 2 caracteres' }
-      }
-
-      if (arbitroData.apellidos.length > 100) {
-        return { success: false, error: 'Los apellidos no pueden exceder 100 caracteres' }
-      }
+    const namesValidation = personNamesUpdateSchema.safeParse(arbitroData)
+    if (!namesValidation.success) {
+      return { success: false, error: namesValidation.error.issues[0]?.message ?? 'Error de validación' }
     }
 
     return await arbitroService.update(id, arbitroData)

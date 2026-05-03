@@ -47,32 +47,10 @@ export const storageService = {
         .from(bucket)
         .upload(path, file, {
           cacheControl: '3600',
-          upsert: false // No sobrescribir archivos existentes
+          upsert: true // Permitir sobrescribir si el path es idéntico
         })
 
       if (error) {
-        // Si el archivo ya existe, intentar con un nombre único
-        if (error.message.includes('already exists')) {
-          const timestamp = Date.now()
-          const fileExtension = file.name.split('.').pop()
-          const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '')
-          const uniquePath = `${path.replace(/\.[^/.]+$/, '')}_${timestamp}.${fileExtension}`
-
-          const { data: retryData, error: retryError } = await supabase.storage
-            .from(bucket)
-            .upload(uniquePath, file, {
-              cacheControl: '3600',
-              upsert: false
-            })
-
-          if (retryError) {
-            return { success: false, error: retryError.message }
-          }
-
-          // Para buckets privados, guardar el path
-          return { success: true, url: uniquePath }
-        }
-
         return { success: false, error: error.message }
       }
 

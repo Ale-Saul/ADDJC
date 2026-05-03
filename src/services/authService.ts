@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import { ApiResponse } from '@/types'
+import { ApiResponse } from '@/types/globales'
 import { LoginCredentials, SignUpData, User, AuthSession } from '@/models/auth'
 
 export const authService = {
@@ -29,20 +29,111 @@ export const authService = {
         }
       }
 
-      // Obtener el perfil del usuario
-      const profileResponse = await this.getUserProfile(data.user.id)
+      // Crear un nuevo cliente con la sesión actualizada
+      const supabaseWithSession = createClient()
+      await supabaseWithSession.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      })
+
+      // Obtener el perfil del usuario con el cliente autenticado
+      // OPTIMIZACIÓN: Seleccionamos solo las columnas necesarias para el objeto User
+      const { data: profileData, error: profileError } = await supabaseWithSession
+        .from('usuarios')
+        .select(`
+          id, 
+          correo, 
+          nombre, 
+          apellido_paterno, 
+          apellido_materno, 
+          rol, 
+          avatar_url, 
+          fecha_nacimiento, 
+          numero_celular, 
+          genero, 
+          activo, 
+          debe_cambiar_password, 
+          created_at, 
+          updated_at
+        `)
+        .eq('auth_user_id', data.user.id)
+        .single()
       
-      if (!profileResponse.success || !profileResponse.data) {
+      if (profileError || !profileData) {
+        console.error('Error al obtener perfil:', profileError)
         return {
           success: false,
-          error: 'Error al obtener el perfil del usuario',
+          error: profileError?.message || 'Perfil de usuario no encontrado',
         }
+      }
+
+      // Obtener información del club y role-specific IDs si corresponde
+      let clubInfo = { club_id: null, club_nombre: null }
+      let senseiId = null
+      let judokaId = null
+      const userRole = profileData.rol || 'judoka'
+
+      if (userRole === 'judoka') {
+        const { data: judokaData } = await supabaseWithSession
+          .from('judokas')
+          .select('id, club_id, clubes(nombre_club)')
+          .eq('usuario_id', profileData.id)
+          .single()
+        
+        if (judokaData) {
+          judokaId = judokaData.id
+          clubInfo = {
+            club_id: judokaData.club_id,
+            club_nombre: (judokaData.clubes as any)?.nombre_club || null
+          }
+        }
+      } else if (userRole === 'sensei' || userRole === 'encargado') {
+        const { data: senseiData } = await supabaseWithSession
+          .from('senseis')
+          .select('id, club_id, clubes(nombre_club)')
+          .eq('usuario_id', profileData.id)
+          .single()
+          
+        if (senseiData) {
+          senseiId = senseiData.id
+          clubInfo = {
+            club_id: senseiData.club_id,
+            club_nombre: (senseiData.clubes as any)?.nombre_club || null
+          }
+        }
+      }
+
+      // Construir nombre completo
+      const nombreSolo = profileData.nombre || ''
+      const apellidoPaterno = profileData.apellido_paterno || ''
+      const apellidoMaterno = profileData.apellido_materno || ''
+
+      const userData: User = {
+        id: profileData.id,
+        email: profileData.correo || '',
+        nombres: nombreSolo,
+        apellidos: `${apellidoPaterno} ${apellidoMaterno}`.trim(),
+        apellido_paterno: apellidoPaterno,
+        apellido_materno: apellidoMaterno,
+        rol: userRole,
+        club_id: clubInfo.club_id || null,
+        club_nombre: clubInfo.club_nombre || null,
+        sensei_id: senseiId,
+        judoka_id: judokaId,
+        avatar_url: profileData.avatar_url || null,
+        fecha_nacimiento: profileData.fecha_nacimiento || null,
+        numero_celular: profileData.numero_celular || null,
+        genero: profileData.genero || null,
+        activo: profileData.activo ?? true,
+        debe_cambiar_password: profileData.debe_cambiar_password ?? false,
+        created_at: profileData.created_at,
+        updated_at: profileData.updated_at,
       }
 
       return {
         success: true,
         data: {
-          user: profileResponse.data,
+          user: userData,
           access_token: data.session.access_token,
           expires_at: data.session.expires_at,
         },
@@ -153,17 +244,17 @@ export const authService = {
   },
 
   /**
-   * Obtener el perfil del usuario desde user_profiles
+   * Obtener el perfil del usuario desde la tabla usuarios
    */
-  async getUserProfile(userId: string): Promise<ApiResponse<User>> {
+  async getUserProfile(authUserId: string): Promise<ApiResponse<User>> {
     try {
       const supabase = createClient()
       
-      // Primero obtenemos el perfil base del usuario
+      // Buscar usuario por auth_user_id en la tabla usuarios
       const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
+        .from('usuarios')
+        .select('id, correo, nombre, apellido_paterno, apellido_materno, rol, avatar_url, fecha_nacimiento, numero_celular, ci, genero, activo, debe_cambiar_password, created_at, updated_at')
+        .eq('auth_user_id', authUserId)
         .single()
 
       if (error) {
@@ -180,68 +271,85 @@ export const authService = {
         }
       }
 
-      let clubId = data.club_id
-      let clubNombre = null
+      // Obtener información del club y role-specific IDs si corresponde
+      let clubInfo = { club_id: null, club_nombre: null }
+      let senseiId = null
+      let judokaId = null
+      const userRole = data.rol || 'judoka'
 
-      // Si es sensei o encargado, obtener el club desde la tabla senseis
-      if (data.rol === 'sensei' || data.rol === 'encargado') {
-        const { data: senseiData, error: senseiError } = await supabase
-          .from('senseis')
-          .select(`
-            club_id,
-            clubes:club_id (
-              nombre_club
-            )
-          `)
-          .eq('usuario_id', userId)
-          .single()
-
-        if (!senseiError && senseiData) {
-          clubId = senseiData.club_id
-          clubNombre = senseiData.clubes?.nombre_club || null
-        }
-      } 
-      // Si es judoka, obtener el club desde la tabla judokas
-      else if (data.rol === 'judoka') {
-        const { data: judokaData, error: judokaError } = await supabase
+      if (userRole === 'judoka') {
+        const { data: judokaData } = await supabase
           .from('judokas')
-          .select(`
-            club_id,
-            clubes:club_id (
-              nombre_club
-            )
-          `)
-          .eq('usuario_id', userId)
+          .select('id, club_id')
+          .eq('usuario_id', data.id)
           .single()
-
-        if (!judokaError && judokaData) {
-          clubId = judokaData.club_id
-          clubNombre = judokaData.clubes?.nombre_club || null
+        
+        if (judokaData) {
+          judokaId = judokaData.id
+          
+          if (judokaData.club_id) {
+            const { data: clubData } = await supabase
+              .from('clubes')
+              .select('nombre_club')
+              .eq('id', judokaData.club_id)
+              .single()
+              
+            clubInfo = {
+              club_id: judokaData.club_id,
+              club_nombre: clubData?.nombre_club || null
+            }
+          }
+        }
+      } else if (userRole === 'sensei' || userRole === 'encargado') {
+        // 1. Obtener datos del sensei primero (sin join para evitar problemas)
+        const { data: senseiData } = await supabase
+          .from('senseis')
+          .select('id, club_id')
+          .eq('usuario_id', data.id)
+          .single()
+          
+        if (senseiData) {
+          senseiId = senseiData.id
+          
+          if (senseiData.club_id) {
+            // 2. Si tiene club, obtener nombre del club
+            const { data: clubData } = await supabase
+              .from('clubes')
+              .select('nombre_club')
+              .eq('id', senseiData.club_id)
+              .single()
+              
+            clubInfo = {
+              club_id: senseiData.club_id,
+              club_nombre: clubData?.nombre_club || null
+            }
+          }
         }
       }
-      // Si tiene club_id directamente en user_profiles (caso legacy)
-      else if (data.club_id) {
-        const { data: clubData } = await supabase
-          .from('clubes')
-          .select('nombre_club')
-          .eq('id', data.club_id)
-          .single()
 
-        if (clubData) {
-          clubNombre = clubData.nombre_club
-        }
-      }
+      // Construir nombre completo
+      const nombreSolo = data.nombre || ''
+      const apellidoPaterno = data.apellido_paterno || ''
+      const apellidoMaterno = data.apellido_materno || ''
 
-      const userData = {
+      const userData: User = {
         id: data.id,
-        email: data.email || '',
-        nombres: data.nombres || '',
-        apellidos: data.apellidos || '',
-        rol: data.rol || 'judoka',
-        club_id: clubId || null,
-        club_nombre: clubNombre,
+        email: data.correo || '',
+        nombres: nombreSolo,
+        apellidos: `${apellidoPaterno} ${apellidoMaterno}`.trim(),
+        apellido_paterno: apellidoPaterno,
+        apellido_materno: apellidoMaterno,
+        rol: userRole,
+        club_id: clubInfo.club_id || null,
+        club_nombre: clubInfo.club_nombre || null,
+        sensei_id: senseiId,
+        judoka_id: judokaId,
         avatar_url: data.avatar_url || null,
+        fecha_nacimiento: data.fecha_nacimiento || null,
+        numero_celular: data.numero_celular || null,
+        genero: data.genero || null,
         activo: data.activo ?? true,
+        debe_cambiar_password: data.debe_cambiar_password ?? false,
         created_at: data.created_at,
         updated_at: data.updated_at,
       }
@@ -266,7 +374,7 @@ export const authService = {
   async resetPassword(email: string, redirectUrl?: string): Promise<ApiResponse<void>> {
     try {
       const supabase = createClient()
-      const redirectTo = redirectUrl || (typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : '/reset-password')
+      const redirectTo = redirectUrl || `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/reset-password`
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo,
@@ -319,6 +427,50 @@ export const authService = {
   },
 
   /**
+   * Actualizar contraseña y marcar como completado el cambio obligatorio
+   */
+  async completePasswordChange(newPassword: string, userId: string): Promise<ApiResponse<void>> {
+    try {
+      const supabase = createClient()
+      
+      // 1. Actualizar la contraseña en Auth
+      const { error: authError } = await supabase.auth.updateUser({
+        password: newPassword,
+      })
+
+      if (authError) {
+        return {
+          success: false,
+          error: authError.message || 'Error al actualizar la contraseña',
+        }
+      }
+
+      // 2. Marcar debe_cambiar_password como false en la tabla usuarios
+      const { error: dbError } = await supabase
+        .from('usuarios')
+        .update({ 
+          debe_cambiar_password: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+
+      if (dbError) {
+        console.error('Error al actualizar flag debe_cambiar_password:', dbError)
+        // No fallamos el proceso completo porque la contraseña ya se cambió en Auth
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Error en completePasswordChange:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido al completar el cambio de contraseña'
+      return {
+        success: false,
+        error: errorMessage,
+      }
+    }
+  },
+
+  /**
    * Actualizar perfil de usuario
    */
   async updateProfile(userId: string, data: Partial<User>): Promise<ApiResponse<User>> {
@@ -330,21 +482,24 @@ export const authService = {
         updated_at: new Date().toISOString(),
       }
       
-      if (data.nombres) updates.nombres = data.nombres
-      if (data.apellidos) updates.apellidos = data.apellidos
+      if (data.avatar_url !== undefined) updates.avatar_url = data.avatar_url
+      if (data.nombres !== undefined) updates.nombre = data.nombres
+      if (data.apellido_paterno !== undefined) updates.apellido_paterno = data.apellido_paterno
+      if (data.apellido_materno !== undefined) updates.apellido_materno = data.apellido_materno
+      // Retrocompatibilidad temporal si envían "apellidos" unidos y no paterno
+      if (data.apellidos !== undefined && data.apellido_paterno === undefined) { 
+        const parts = data.apellidos.trim().split(/\s+/); 
+        updates.apellido_paterno = parts[0] || ''; 
+        updates.apellido_materno = parts.slice(1).join(' ') || '' 
+      }
       
-      // Nota: Email, rol y club_id no se actualizan aquí por seguridad
+      // Nota: Email (correo), rol y club_id no se actualizan aquí por seguridad
       
       const { data: updatedData, error } = await supabase
-        .from('user_profiles')
+        .from('usuarios')
         .update(updates)
         .eq('id', userId)
-        .select(`
-          *,
-          clubes:club_id (
-            nombre_club
-          )
-        `)
+        .select('id, correo, nombre, apellido_paterno, apellido_materno, rol, avatar_url, fecha_nacimiento, numero_celular, ci, genero, activo, debe_cambiar_password, created_at, updated_at')
         .single()
 
       if (error) {
@@ -354,18 +509,86 @@ export const authService = {
         }
       }
 
+      // Obtener información del club y role-specific IDs si corresponde
+      let clubInfo = { club_id: null, club_nombre: null }
+      let senseiId = null
+      let judokaId = null
+      const userRole = updatedData.rol || 'judoka'
+
+      if (userRole === 'judoka') {
+        const { data: judokaData } = await supabase
+          .from('judokas')
+          .select('id, club_id')
+          .eq('usuario_id', updatedData.id)
+          .single()
+        
+        if (judokaData) {
+          judokaId = judokaData.id
+          
+          if (judokaData.club_id) {
+            const { data: clubData } = await supabase
+              .from('clubes')
+              .select('nombre_club')
+              .eq('id', judokaData.club_id)
+              .single()
+              
+            clubInfo = {
+              club_id: judokaData.club_id,
+              club_nombre: clubData?.nombre_club || null
+            }
+          }
+        }
+      } else if (userRole === 'sensei' || userRole === 'encargado') {
+        // 1. Obtener datos del sensei primero (sin join para evitar problemas)
+        const { data: senseiData } = await supabase
+          .from('senseis')
+          .select('id, club_id')
+          .eq('usuario_id', updatedData.id)
+          .single()
+          
+        if (senseiData) {
+          senseiId = senseiData.id
+          
+          if (senseiData.club_id) {
+            // 2. Si tiene club, obtener nombre del club
+            const { data: clubData } = await supabase
+              .from('clubes')
+              .select('nombre_club')
+              .eq('id', senseiData.club_id)
+              .single()
+              
+            clubInfo = {
+              club_id: senseiData.club_id,
+              club_nombre: clubData?.nombre_club || null
+            }
+          }
+        }
+      }
+
+      const nombreSolo = updatedData.nombre || ''
+      const apellidoPaterno = updatedData.apellido_paterno || ''
+      const apellidoMaterno = updatedData.apellido_materno || ''
+
       return {
         success: true,
         data: {
           id: updatedData.id,
-          email: updatedData.email || '',
-          nombres: updatedData.nombres || '',
-          apellidos: updatedData.apellidos || '',
-          rol: updatedData.rol || 'judoka',
-          club_id: updatedData.club_id || null,
-          club_nombre: updatedData.clubes?.nombre_club || null,
+          email: updatedData.correo || '',
+          nombres: nombreSolo,
+          apellidos: `${apellidoPaterno} ${apellidoMaterno}`.trim(),
+          apellido_paterno: apellidoPaterno,
+          apellido_materno: apellidoMaterno,
+          rol: userRole,
+          club_id: clubInfo.club_id || null,
+          club_nombre: clubInfo.club_nombre || null,
+          sensei_id: senseiId,
+          judoka_id: judokaId,
           avatar_url: updatedData.avatar_url || null,
+          fecha_nacimiento: updatedData.fecha_nacimiento || null,
+          numero_celular: updatedData.numero_celular || null,
+          genero: updatedData.genero || null,
           activo: updatedData.activo ?? true,
+          debe_cambiar_password: updatedData.debe_cambiar_password ?? false,
           created_at: updatedData.created_at,
           updated_at: updatedData.updated_at,
         },
@@ -428,7 +651,7 @@ export const authService = {
 
       // 4. Actualizar perfil con la nueva URL
       const { error: updateError } = await supabase
-        .from('user_profiles')
+        .from('usuarios')
         .update({ 
           avatar_url: publicUrl,
           updated_at: new Date().toISOString()
@@ -452,7 +675,55 @@ export const authService = {
       }
     }
   },
+
+  /**
+   * Obtener la sesión actual
+   */
+  async getSession(): Promise<ApiResponse<boolean>> {
+    try {
+      const supabase = createClient()
+      const { data: { session }, error } = await supabase.auth.getSession()
+      if (error) return { success: false, error: error.message }
+      return { success: true, data: !!session }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Error al obtener sesión' }
+    }
+  },
+
+  /**
+   * Intercambiar código de autorización por sesión
+   */
+  async exchangeCodeForSession(code: string): Promise<ApiResponse<boolean>> {
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+      if (error) return { success: false, error: error.message }
+      return { success: true, data: !!data.session }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Error al intercambiar código' }
+    }
+  },
+
+  /**
+   * Verificar la contraseña actual del usuario (re-autenticación)
+   */
+  async verifyCurrentPassword(email: string, password: string): Promise<ApiResponse<void>> {
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        return { success: false, error: 'La contraseña actual es incorrecta' }
+      }
+      return { success: true }
+    } catch (error) {
+      console.error('Error en verifyCurrentPassword:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Error al verificar la contraseña' }
+    }
+  },
 }
+
+
+
 
 
 

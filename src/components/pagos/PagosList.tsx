@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
+import { SortingState } from '@tanstack/react-table'
 import {
   Box,
   Table,
@@ -19,15 +20,35 @@ import {
   DialogTitle,
   DialogContent,
   Checkbox,
-  Button
+  Button,
+  TextField,
+  InputAdornment,
+  Stack,
+  Alert,
+  Snackbar,
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import PaymentIcon from '@mui/icons-material/Payment'
 import EditIcon from '@mui/icons-material/Edit'
+import SearchIcon from '@mui/icons-material/Search'
+import ClearIcon from '@mui/icons-material/Clear'
+import {
+  useReactTable,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getFilteredRowModel,
+  getSortedRowModel,
+  flexRender,
+  createColumnHelper
+} from '@tanstack/react-table'
 import { Pago } from '@/models/pago'
-import { pagoController } from '@/controllers/pagoController'
 import RegistrarPagoForm from './RegistrarPagoForm'
 import EditarPagoForm from './EditarPagoForm'
+import ConfirmDialog from '@/components/common/ConfirmDialog'
+import { formatters } from '@/utils/formatters'
+import { ESTADO_PAGO, TIPO_PAGO_LABELS } from '@/constants/pagos'
+import { usePagosList } from '@/hooks/usePagosList'
+import Pagination from '@/components/common/Pagination'
 
 interface PagosListProps {
   judokaId: string
@@ -36,61 +57,154 @@ interface PagosListProps {
 }
 
 export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: PagosListProps) {
-  const [pagos, setPagos] = useState<Pago[]>([])
-  const [loading, setLoading] = useState(true)
-  const [deleting, setDeleting] = useState<string | null>(null)
+  const {
+    pagos, loading, deleting, fetchError, deleteError,
+    pagoToDelete, fetchPagos, requestDelete, confirmDelete, cancelDelete, clearDeleteError,
+  } = usePagosList(judokaId, onPagoDeleted)
+
+  const [globalFilter, setGlobalFilter] = useState('')
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [selectedPagos, setSelectedPagos] = useState<string[]>([])
   const [openRegistrarDialog, setOpenRegistrarDialog] = useState(false)
   const [openEditarDialog, setOpenEditarDialog] = useState(false)
   const [selectedPago, setSelectedPago] = useState<Pago | null>(null)
-  const [selectedPagos, setSelectedPagos] = useState<string[]>([])
 
-  const fetchPagos = async () => {
-    try {
-      const response = await pagoController.getPagosByJudoka(judokaId)
-      if (response.success && response.data) {
-        // Filtrar solo pagos pendientes y vencidos
-        const pagosPendientes = response.data.filter(
-          p => p.estado === 'pendiente' || p.estado === 'vencido'
-        )
-        setPagos(pagosPendientes)
-      }
-    } catch (error) {
-      console.error('Error al cargar pagos:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
-  useEffect(() => {
-    fetchPagos()
-  }, [judokaId])
 
-  const handleDelete = async (pago: Pago) => {
-    if (!confirm(`¿Estás seguro de eliminar el pago "${pago.concepto}"?`)) {
-      return
-    }
+  const columnHelper = createColumnHelper<Pago>()
 
-    setDeleting(pago.id)
-    try {
-      const response = await pagoController.deletePago(pago.id)
-      if (response.success) {
-        await fetchPagos()
-        onPagoDeleted?.()
-      } else {
-        alert(`Error al eliminar: ${response.error}`)
-      }
-    } catch (error) {
-      console.error('Error al eliminar pago:', error)
-      alert('Error inesperado al eliminar el pago')
-    } finally {
-      setDeleting(null)
-    }
-  }
+  const columns = useMemo(() => [
+    columnHelper.display({
+      id: 'select',
+      header: ({ table }) => (
+        <Checkbox
+          checked={table.getIsAllPageRowsSelected()}
+          indeterminate={table.getIsSomePageRowsSelected()}
+          onChange={table.getToggleAllPageRowsSelectedHandler()}
+          size="small"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          disabled={!row.getCanSelect()}
+          indeterminate={row.getIsSomeSelected()}
+          onChange={row.getToggleSelectedHandler()}
+          size="small"
+        />
+      ),
+    }),
+    columnHelper.accessor('concepto', {
+      header: 'Concepto',
+      cell: (info) => (
+        <Box>
+          <Typography variant="body2">{info.getValue()}</Typography>
+          {info.row.original.descripcion && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+              {info.row.original.descripcion}
+            </Typography>
+          )}
+        </Box>
+      ),
+    }),
+    columnHelper.accessor('tipo_pago', {
+      header: 'Tipo',
+      cell: (info) => (
+        <Typography variant="caption">
+          {TIPO_PAGO_LABELS[info.getValue() as keyof typeof TIPO_PAGO_LABELS] || info.getValue()}
+        </Typography>
+      ),
+    }),
+    columnHelper.accessor('monto_final', {
+      header: 'Monto',
+      cell: (info) => (
+        <Box textAlign="right">
+          <Typography variant="body2" fontWeight="bold">
+            Bs. {info.getValue().toFixed(2)}
+          </Typography>
+          {info.row.original.tiene_descuento && (
+            <Typography variant="caption" color="text.secondary">
+              (Base: Bs. {info.row.original.monto_base.toFixed(2)})
+            </Typography>
+          )}
+        </Box>
+      ),
+    }),
+    columnHelper.accessor('fecha_vencimiento', {
+      header: 'Vencimiento',
+      cell: (info) => formatters.formatDate(info.getValue()),
+    }),
+    columnHelper.accessor('estado', {
+      header: 'Estado',
+      cell: (info) => {
+        const estado = info.getValue()
+        const color = estado === ESTADO_PAGO.VENCIDO ? 'error' : 'warning'
+        const label = estado === ESTADO_PAGO.VENCIDO ? 'Vencido' : 'Pendiente'
+        return <Chip label={label} color={color} size="small" variant="outlined" />
+      },
+    }),
+    columnHelper.display({
+      id: 'acciones',
+      header: () => <Box textAlign="right">Acciones</Box>,
+      cell: (info) => (
+        <Box textAlign="right">
+          <Tooltip title="Editar Pago">
+            <IconButton
+              color="primary"
+              size="small"
+              onClick={() => {
+                setSelectedPago(info.row.original)
+                setOpenEditarDialog(true)
+              }}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Eliminar pago">
+            <IconButton
+              color="error"
+              size="small"
+              onClick={() => requestDelete(info.row.original)}
+              disabled={deleting === info.row.original.id}
+            >
+              {deleting === info.row.original.id ? (
+                <CircularProgress size={20} />
+              ) : (
+                <DeleteIcon fontSize="small" />
+              )}
+            </IconButton>
+          </Tooltip>
+        </Box>
+      ),
+    }),
+  ], [deleting, requestDelete])
 
-  const handleRegistrarPagos = () => {
-    if (selectedPagos.length === 0) return
-    setOpenRegistrarDialog(true)
-  }
+  const table = useReactTable({
+    data: pagos,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    state: {
+      globalFilter,
+      sorting,
+      rowSelection: selectedPagos.reduce((acc, id) => ({ ...acc, [id]: true }), {}),
+    },
+    onGlobalFilterChange: setGlobalFilter,
+    onSortingChange: setSorting,
+    onRowSelectionChange: (updater) => {
+      const newSelection = typeof updater === 'function' ? updater(table.getState().rowSelection) : updater
+      const selectedIds = Object.keys(newSelection).filter(key => newSelection[key])
+      setSelectedPagos(selectedIds)
+    },
+    getRowId: (row) => row.id,
+    initialState: {
+      pagination: {
+        pageSize: 5,
+      },
+    },
+  })
 
   const handleRegistrarSuccess = async () => {
     setOpenRegistrarDialog(false)
@@ -99,84 +213,25 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
     onPagoDeleted?.()
   }
 
-  const handleTogglePago = (pagoId: string) => {
-    setSelectedPagos(prev => 
-      prev.includes(pagoId) 
-        ? prev.filter(id => id !== pagoId)
-        : [...prev, pagoId]
-    )
-  }
-
-  const handleToggleAll = () => {
-    if (selectedPagos.length === pagos.length) {
-      setSelectedPagos([])
-    } else {
-      setSelectedPagos(pagos.map(p => p.id))
-    }
-  }
-
-  const handleEditarPago = (pago: Pago) => {
-    setSelectedPago(pago)
-    setOpenEditarDialog(true)
-  }
-
-  const handleEditarSuccess = async () => {
-    setOpenEditarDialog(false)
-    setSelectedPago(null)
-    await fetchPagos()
-    onPagoDeleted?.()
-  }
-
-  const handleEditarCancel = () => {
-    setOpenEditarDialog(false)
-    setSelectedPago(null)
-  }
-
-  const getEstadoChip = (estado: string) => {
-    const colores: Record<string, 'success' | 'warning' | 'error' | 'default' | 'info'> = {
-      pagado: 'success',
-      pendiente: 'warning',
-      vencido: 'error',
-      parcial: 'info',
-      cancelado: 'default'
-    }
-
-    const labels: Record<string, string> = {
-      pagado: 'Pagado',
-      pendiente: 'Pendiente',
-      vencido: 'Vencido',
-      parcial: 'Parcial',
-      cancelado: 'Cancelado'
-    }
-
+  if (loading && pagos.length === 0) {
     return (
-      <Chip 
-        label={labels[estado] || estado} 
-        color={colores[estado] || 'default'} 
-        size="small" 
-      />
-    )
-  }
-
-  const formatFecha = (fecha: string) => {
-    return new Date(fecha).toLocaleDateString('es-BO', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
-
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" p={3}>
+      <Box display="flex" justifyContent="center" p={5}>
         <CircularProgress />
+      </Box>
+    )
+  }
+
+  if (fetchError) {
+    return (
+      <Box p={2}>
+        <Alert severity="error">{fetchError}</Alert>
       </Box>
     )
   }
 
   if (pagos.length === 0) {
     return (
-      <Box p={3} textAlign="center">
+      <Box p={5} textAlign="center">
         <Typography color="text.secondary">
           No hay pagos pendientes para {judokaNombre}
         </Typography>
@@ -185,138 +240,129 @@ export default function PagosList({ judokaId, judokaNombre, onPagoDeleted }: Pag
   }
 
   return (
-    <>
-    <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
-      <Button
-        variant="contained"
-        color="success"
-        startIcon={<PaymentIcon />}
-        onClick={handleRegistrarPagos}
-        disabled={selectedPagos.length === 0}
-      >
-        Registrar Pagos Seleccionados ({selectedPagos.length})
-      </Button>
-    </Box>
-    
-    <TableContainer component={Paper} elevation={0}>
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell padding="checkbox">
-              <Checkbox
-                checked={pagos.length > 0 && selectedPagos.length === pagos.length}
-                indeterminate={selectedPagos.length > 0 && selectedPagos.length < pagos.length}
-                onChange={handleToggleAll}
-              />
-            </TableCell>
-            <TableCell>Concepto</TableCell>
-            <TableCell>Tipo</TableCell>
-            <TableCell align="right">Monto</TableCell>
-            <TableCell>Vencimiento</TableCell>
-            <TableCell>Estado</TableCell>
-            <TableCell align="center">Acciones</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {pagos.map((pago) => (
-            <TableRow key={pago.id} hover selected={selectedPagos.includes(pago.id)}>
-              <TableCell padding="checkbox">
-                <Checkbox
-                  checked={selectedPagos.includes(pago.id)}
-                  onChange={() => handleTogglePago(pago.id)}
-                />
-              </TableCell>
-              <TableCell>
-                <Box>
-                  <Typography variant="body2">
-                    {pago.concepto}
-                  </Typography>
-                  {pago.descripcion && (
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                      {pago.descripcion}
-                    </Typography>
-                  )}
-                </Box>
-              </TableCell>
-              <TableCell>
-                <Typography variant="caption">
-                  {pago.tipo_pago.replace('_', ' ')}
-                </Typography>
-              </TableCell>
-              <TableCell align="right">
-                <Box>
-                  <Typography variant="body2" fontWeight="bold">
-                    Bs. {pago.monto_final.toFixed(2)}
-                  </Typography>
-                  {pago.tiene_descuento && (
-                    <Typography variant="caption" color="text.secondary">
-                      (Base: Bs. {pago.monto_base.toFixed(2)})
-                    </Typography>
-                  )}
-                </Box>
-              </TableCell>
-              <TableCell>{formatFecha(pago.fecha_vencimiento)}</TableCell>
-              <TableCell>{getEstadoChip(pago.estado)}</TableCell>
-              <TableCell align="center">
-                {(pago.estado === 'pendiente' || pago.estado === 'vencido') && (
-                  <Tooltip title="Editar Pago">
-                    <IconButton
-                      color="primary"
-                      size="small"
-                      onClick={() => handleEditarPago(pago)}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                )}
-                <Tooltip title="Eliminar pago">
-                  <span>
-                    <IconButton
-                      color="error"
-                      size="small"
-                      onClick={() => handleDelete(pago)}
-                      disabled={deleting === pago.id}
-                    >
-                      {deleting === pago.id ? (
-                        <CircularProgress size={20} />
-                      ) : (
-                        <DeleteIcon fontSize="small" />
-                      )}
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
-
-    <Dialog open={openRegistrarDialog} onClose={() => setOpenRegistrarDialog(false)} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        Registrar Pagos ({selectedPagos.length} {selectedPagos.length === 1 ? 'pago' : 'pagos'})
-      </DialogTitle>
-      <DialogContent>
-        <RegistrarPagoForm
-          pagos={pagos.filter(p => selectedPagos.includes(p.id))}
-          onSuccess={handleRegistrarSuccess}
-          onCancel={() => setOpenRegistrarDialog(false)}
+    <Box>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" mb={3}>
+        <TextField
+          size="small"
+          placeholder="Buscar por concepto o descripción..."
+          value={globalFilter}
+          onChange={(e) => setGlobalFilter(e.target.value)}
+          sx={{ flexGrow: 1, backgroundColor: 'white' }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" />
+              </InputAdornment>
+            ),
+            endAdornment: globalFilter && (
+              <InputAdornment position="end">
+                <IconButton size="small" onClick={() => setGlobalFilter('')}>
+                  <ClearIcon fontSize="small" />
+                </IconButton>
+              </InputAdornment>
+            )
+          }}
         />
-      </DialogContent>
-    </Dialog>
+        <Button
+          variant="contained"
+          color="success"
+          startIcon={<PaymentIcon />}
+          onClick={() => setOpenRegistrarDialog(true)}
+          disabled={selectedPagos.length === 0}
+          sx={{ height: 40, textTransform: 'none', fontWeight: 'bold', whiteSpace: 'nowrap' }}
+        >
+          Registrar Seleccionados ({selectedPagos.length})
+        </Button>
+      </Stack>
 
-    <Dialog open={openEditarDialog} onClose={handleEditarCancel} maxWidth="sm" fullWidth>
-      <DialogTitle>Editar Pago</DialogTitle>
-      <DialogContent>
-        {selectedPago && (
-          <EditarPagoForm
-            pago={selectedPago}
-            onSuccess={handleEditarSuccess}
-            onCancel={handleEditarCancel}
+      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+        <Table size="small">
+          <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+            {table.getHeaderGroups().map(headerGroup => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map(header => (
+                  <TableCell key={header.id} sx={{ fontWeight: 'bold', py: 1.5 }}>
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableHead>
+          <TableBody>
+            {table.getRowModel().rows.map(row => (
+              <TableRow key={row.id} hover selected={row.getIsSelected()}>
+                {row.getVisibleCells().map(cell => (
+                  <TableCell key={cell.id} sx={{ py: 1 }}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <Pagination
+        currentPage={table.getState().pagination.pageIndex + 1}
+        totalPages={table.getPageCount()}
+        totalItems={table.getFilteredRowModel().rows.length}
+        itemsPerPage={table.getState().pagination.pageSize}
+        onPageChange={(page) => table.setPageIndex(page - 1)}
+        onItemsPerPageChange={(size) => table.setPageSize(size)}
+      />
+
+      {/* Confirm delete dialog */}
+      <ConfirmDialog
+        open={!!pagoToDelete}
+        title="Eliminar pago"
+        message={`¿Estás seguro de eliminar el pago "${pagoToDelete?.concepto}"? Esta acción lo marcará como inactivo.`}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        onConfirm={confirmDelete}
+        onClose={cancelDelete}
+      />
+
+      {/* Error snackbar */}
+      <Snackbar
+        open={!!deleteError}
+        autoHideDuration={4000}
+        onClose={clearDeleteError}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="error" onClose={clearDeleteError} sx={{ width: '100%' }}>
+          {deleteError}
+        </Alert>
+      </Snackbar>
+
+      <Dialog open={openRegistrarDialog} onClose={() => setOpenRegistrarDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle fontWeight="bold">Registrar Pagos</DialogTitle>
+        <DialogContent dividers>
+          <RegistrarPagoForm
+            pagos={pagos.filter(p => selectedPagos.includes(p.id))}
+            judokaNombre={judokaNombre}
+            onSuccess={handleRegistrarSuccess}
+            onCancel={() => setOpenRegistrarDialog(false)}
           />
-        )}
-      </DialogContent>
-    </Dialog>
-    </>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={openEditarDialog} onClose={() => setOpenEditarDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle fontWeight="bold">Editar Pago</DialogTitle>
+        <DialogContent dividers>
+          {selectedPago && (
+            <EditarPagoForm
+              pago={selectedPago}
+              onSuccess={async () => {
+                setOpenEditarDialog(false)
+                setSelectedPago(null)
+                await fetchPagos()
+                onPagoDeleted?.()
+              }}
+              onCancel={() => setOpenEditarDialog(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </Box>
   )
 }
