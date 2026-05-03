@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState, useMemo, useEffect } from 'react'
 import { Club } from '@/models/club'
 import { clubController } from '@/controllers/clubController'
 import { useEntityList } from './useEntityList'
@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { ROL } from '@/constants/roles'
 
 export function useClubList(initialSearch: string = '', refreshTrigger: number = 0) {
+  const [initialOrder, setInitialOrder] = useState<string[] | null>(null)
   const { user } = useAuth()
   const isEncargado = user?.rol === ROL.ENCARGADO
   const userClubId = user?.club_id
@@ -35,6 +36,56 @@ export function useClubList(initialSearch: string = '', refreshTrigger: number =
     initialSearch
   })
 
+  // Estabilizar el orden inicial para evitar saltos al cambiar el estado
+  useEffect(() => {
+    if (entityList.items.length > 0 && !initialOrder) {
+      const sortedIds = [...entityList.items]
+        .sort((a, b) => {
+          // 1. Prioridad por estado (activos primero)
+          const aActivo = a.activo ?? true;
+          const bActivo = b.activo ?? true;
+          if (aActivo !== bActivo) return aActivo ? -1 : 1;
+          
+          // 2. Orden alfabético por nombre del club (con localeCompare para manejar tildes/ñ)
+          const nombreA = (a.nombre_club || '').trim().toLowerCase();
+          const nombreB = (b.nombre_club || '').trim().toLowerCase();
+          
+          return nombreA.localeCompare(nombreB, 'es', { sensitivity: 'base' });
+        })
+        .map(item => item.id);
+      setInitialOrder(sortedIds);
+    }
+  }, [entityList.items, initialOrder]);
+
+  // Si se presiona el botón de refrescar, resetear el orden para que se aplique el nuevo
+  useEffect(() => {
+    setInitialOrder(null);
+  }, [refreshTrigger]);
+
+  // Obtener data con orden diferido (basado en el orden capturado al cargar)
+  const filteredData = useMemo(() => {
+    // Si no hay orden inicial capturado, servimos la data con el orden por defecto del filtrado
+    if (!initialOrder) {
+        return [...entityList.filteredData].sort((a, b) => {
+            const aActivo = a.activo ?? true;
+            const bActivo = b.activo ?? true;
+            if (aActivo !== bActivo) return aActivo ? -1 : 1;
+            
+            const nombreA = (a.nombre_club || '').trim().toLowerCase();
+            const nombreB = (b.nombre_club || '').trim().toLowerCase();
+            return nombreA.localeCompare(nombreB, 'es', { sensitivity: 'base' });
+        });
+    }
+
+    const orderMap = new Map(initialOrder.map((id, index) => [id, index]));
+    
+    return [...entityList.filteredData].sort((a, b) => {
+      const indexA = orderMap.get(a.id) ?? 999;
+      const indexB = orderMap.get(b.id) ?? 999;
+      return indexA - indexB;
+    });
+  }, [entityList.filteredData, initialOrder]);
+
   // Retain the old shape so standard consumers don't break immediately
   const state = {
     ...entityList.state,
@@ -63,7 +114,7 @@ export function useClubList(initialSearch: string = '', refreshTrigger: number =
     toggleStatus: entityList.toggleStatus,
     updateLocalClub: entityList.updateLocalItem,
     deleteLocalClub: entityList.deleteLocalItem,
-    filteredData: entityList.filteredData,
+    filteredData,
     entityList
   }
 }

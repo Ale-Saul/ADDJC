@@ -65,16 +65,39 @@ export function useMovimientoForm(movimiento: MovimientoFinanciero | null, onClo
   })
 
   const watchTipo = form.watch('tipo')
+  const watchCategoria = form.watch('categoria')
 
   useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name === 'tipo') {
-        // Resetear categoría cuando cambia el tipo
-        form.setValue('categoria', value.tipo === 'ingreso' ? 'otro' : 'otro')
-      }
-    })
-    return () => subscription.unsubscribe()
-  }, [form])
+    // Si estamos editando y el tipo es igual al del movimiento, no forzamos el reseteo
+    if (movimiento && watchTipo === movimiento.tipo) {
+      return;
+    }
+    
+    // Resetear campos dependientes cuando cambia el tipo
+    form.setValue('categoria', 'otro', { shouldValidate: true })
+    form.setValue('origenClubId', '', { shouldValidate: true })
+    form.setValue('origenEntidad', '', { shouldValidate: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchTipo])
+
+  useEffect(() => {
+    if (movimiento && watchCategoria === movimiento.categoria) {
+      return;
+    }
+    
+    // Limpiar campos dependiendo de la categoría seleccionada
+    const isIngreso = watchTipo === 'ingreso'
+    const requiresClub = isIngreso && (watchCategoria === 'pago_club' || watchCategoria === 'donacion_club')
+    const requiresEntidad = isIngreso && (watchCategoria === 'aporte_estado' || watchCategoria === 'sponsor')
+
+    if (!requiresClub) {
+      form.setValue('origenClubId', '', { shouldValidate: true })
+    }
+    if (!requiresEntidad) {
+      form.setValue('origenEntidad', '', { shouldValidate: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchCategoria, watchTipo])
 
   useEffect(() => {
     if (movimiento) {
@@ -158,7 +181,7 @@ export function useMovimientoForm(movimiento: MovimientoFinanciero | null, onClo
         monto: data.monto,
         concepto: data.concepto.trim(),
         descripcion: data.descripcion?.trim() || undefined,
-        fecha: new Date().toISOString(), // Siempre guardar con fecha y hora actual
+        fecha: data.fecha ? `${data.fecha}T${new Date().toLocaleTimeString('en-GB')}` : new Date().toISOString(),
         origen_club_id: data.origenClubId || undefined,
         origen_entidad: data.origenEntidad?.trim() || undefined,
         comprobante_url: finalComprobanteUrl || null,

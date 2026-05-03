@@ -25,6 +25,8 @@ import { useStatsJudoka } from '@/hooks/useAsistenciaStats'
 import { useHistorialJudoka } from '@/hooks/useAsistenciaDetalle'
 import KpiCard from '@/components/asistencia/stats/KpiCard'
 import HistorialTable from '@/components/asistencia/stats/HistorialTable'
+import HistogramIcon from '@mui/icons-material/Histogram' // Just keeping imports matching
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 
 function getColorByPct(pct: number): 'success' | 'warning' | 'error' {
@@ -97,25 +99,34 @@ export default function MiAsistenciaPage() {
             )}
           </Stack>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2 }}>
-            <TextField
+            <DatePicker
               label="Desde"
-              type="date"
-              size="small"
-              fullWidth
-              value={fechaInicio}
-              onChange={e => setFechaInicio(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ max: fechaFin || dayjs().format('YYYY-MM-DD') }}
+              format="DD/MM/YYYY"
+              value={fechaInicio ? dayjs(fechaInicio) : null}
+              onChange={(newValue) => setFechaInicio(newValue ? newValue.format('YYYY-MM-DD') : '')}
+              maxDate={fechaFin ? dayjs(fechaFin) : dayjs()}
+              slotProps={{ 
+                textField: { 
+                  size: 'small', 
+                  fullWidth: true,
+                  InputLabelProps: { shrink: true }
+                } 
+              }}
             />
-            <TextField
+            <DatePicker
               label="Hasta"
-              type="date"
-              size="small"
-              fullWidth
-              value={fechaFin}
-              onChange={e => setFechaFin(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ min: fechaInicio, max: dayjs().format('YYYY-MM-DD') }}
+              format="DD/MM/YYYY"
+              value={fechaFin ? dayjs(fechaFin) : null}
+              onChange={(newValue) => setFechaFin(newValue ? newValue.format('YYYY-MM-DD') : '')}
+              minDate={fechaInicio ? dayjs(fechaInicio) : undefined}
+              maxDate={dayjs()}
+              slotProps={{ 
+                textField: { 
+                  size: 'small', 
+                  fullWidth: true,
+                  InputLabelProps: { shrink: true }
+                } 
+              }}
             />
           </Box>
         </Box>

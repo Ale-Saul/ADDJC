@@ -11,6 +11,7 @@ export function useJudokaList(options: {
   refreshTrigger?: number
   judokasProp?: Judoka[]
   initialSearch?: string
+  singleSenseiMode?: boolean
 }) {
   const filterFn = useCallback((j: Judoka, filters: Record<string, string>, search: string) => {
     const normalizedSearch = search.toLowerCase()
@@ -32,31 +33,17 @@ export function useJudokaList(options: {
     fetchItems: async () => {
       if (options.judokasProp) return { success: true, data: options.judokasProp }
       
-      // Si hay entrenadorId (Sensei), traer:
-      // 1. Judokas a su mando
-      // 2. Judokas del club sin entrenador
-      // 3. Judokas sin club
-      // Si hay entrenadorId (Sensei), traer:
-      // 1. Judokas a su mando
-      // 2. Judokas del club sin entrenador
-      // 3. Judokas sin club
-      if (options.entrenadorId && options.clubId) {
-        const [mandoResp, clubResp, unassignedResp] = await Promise.all([
-          judokaController.getJudokasByEntrenador(options.entrenadorId),
-          judokaController.getJudokasByClub(options.clubId),
-          judokaController.getAllJudokas(true)
-        ])
-
-        const misJudokas = mandoResp.success ? (mandoResp.data || []) : []
-        const clubSinMando = clubResp.success ? (clubResp.data || []).filter(j => !j.entrenador_id) : []
-        const sinClub = unassignedResp.success ? (unassignedResp.data || []).filter(j => !j.club_id) : []
-
-        const combined = [...misJudokas, ...clubSinMando, ...sinClub];
-
-        return {
-          success: true,
-          data: combined
+      // Si estamos en singleSenseiMode (Judoka viendo a sus compañeros)
+      if (options.singleSenseiMode) {
+        if (options.entrenadorId) {
+          return await judokaController.getJudokasByEntrenador(options.entrenadorId)
         }
+        return { success: true, data: [] }
+      }
+
+      // Si hay entrenadorId (Sensei), traer solo los judokas a su mando
+      if (options.entrenadorId && options.clubId) {
+        return await judokaController.getJudokasByEntrenador(options.entrenadorId)
       }
 
       // Si hay clubId (Encargado), traer judokas del club y judokas sin club
@@ -79,7 +66,10 @@ export function useJudokaList(options: {
         return clubResp.success ? clubResp : unassignedResp
       }
 
-      if (options.entrenadorId) return await judokaController.getJudokasByEntrenador(options.entrenadorId)
+      if (options.entrenadorId && !options.clubId) {
+        return await judokaController.getJudokasByEntrenador(options.entrenadorId)
+      }
+
       return await judokaController.getAllJudokas(true)
     },
     updateItemStatus: async (id, activo) => {

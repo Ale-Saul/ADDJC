@@ -28,6 +28,8 @@ import { useStatsJudoka } from '@/hooks/useAsistenciaStats'
 import { useHistorialJudoka } from '@/hooks/useAsistenciaDetalle'
 import KpiCard from '@/components/asistencia/stats/KpiCard'
 import HistorialTable from '@/components/asistencia/stats/HistorialTable'
+import { FormDatePicker } from '@/components/ui'
+import { useForm } from 'react-hook-form'
 import { Judoka } from '@/models/judoka'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
@@ -157,6 +159,12 @@ function ResumenComision({
 }
 
 export default function ConsultaAsistenciaPage() {
+  const { control } = useForm({
+    defaultValues: {
+      fecha_inicio: '',
+      fecha_fin: '',
+    }
+  })
   const [judokaSeleccionado, setJudokaSeleccionado] = useState<Judoka | null>(null)
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaFin, setFechaFin] = useState('')
@@ -290,7 +298,10 @@ export default function ConsultaAsistenciaPage() {
                 label="Limpiar fechas"
                 size="small"
                 icon={<ClearIcon />}
-                onClick={() => { setFechaInicio(''); setFechaFin('') }}
+                onClick={() => { 
+                  setFechaInicio(''); 
+                  setFechaFin('');
+                }}
                 variant="outlined"
                 clickable
                 sx={{ cursor: 'pointer', ml: 'auto !important' }}
@@ -298,25 +309,19 @@ export default function ConsultaAsistenciaPage() {
             )}
           </Stack>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2 }}>
-            <TextField
+            <FormDatePicker
+              name="fecha_inicio"
+              control={control}
               label="Desde"
-              type="date"
-              size="small"
-              fullWidth
-              value={fechaInicio}
-              onChange={e => setFechaInicio(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ max: fechaFin || dayjs().format('YYYY-MM-DD') }}
+              maxDate={dayjs()}
+              onChangeCustom={(val) => setFechaInicio(val || '')}
             />
-            <TextField
+            <FormDatePicker
+              name="fecha_fin"
+              control={control}
               label="Hasta"
-              type="date"
-              size="small"
-              fullWidth
-              value={fechaFin}
-              onChange={e => setFechaFin(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ min: fechaInicio, max: dayjs().format('YYYY-MM-DD') }}
+              maxDate={dayjs()}
+              onChangeCustom={(val) => setFechaFin(val || '')}
             />
           </Box>
         </Paper>

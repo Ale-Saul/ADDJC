@@ -337,7 +337,7 @@ export const asistenciaController = {
     return { success: true, data }
   },
 
-  async getReporteClub(clubId: string, filtros: { fecha_inicio: string, fecha_fin: string }): Promise<ApiResponse<AsistenciaReporteClub>> {
+  async getReporteClub(clubId: string, filtros?: { fecha_inicio?: string, fecha_fin?: string }): Promise<ApiResponse<AsistenciaReporteClub>> {
     if (!clubId) return { success: false, error: 'El ID del club es requerido' }
     
     const sesionesRes = await asistenciaService.getByClub(clubId)
@@ -345,16 +345,20 @@ export const asistenciaController = {
       return { success: false, error: sesionesRes.error || 'Error al obtener sesiones del club' }
     }
 
-    const sesionesFiltradas = sesionesRes.data.filter(s => 
-      s.fecha >= filtros.fecha_inicio && s.fecha <= filtros.fecha_fin
-    )
+    const { fecha_inicio, fecha_fin } = filtros || {}
+
+    const sesionesFiltradas = sesionesRes.data.filter(s => {
+      if (fecha_inicio && s.fecha < fecha_inicio) return false
+      if (fecha_fin && s.fecha > fecha_fin) return false
+      return true
+    })
 
     if (sesionesFiltradas.length === 0) {
       return {
         success: true,
         data: {
           club_id: clubId,
-          periodo: filtros,
+          periodo: { fecha_inicio: fecha_inicio || '', fecha_fin: fecha_fin || '' },
           stats_globales: { total_sesiones: 0, promedio_asistencia: 0 },
           stats_por_sensei: []
         }

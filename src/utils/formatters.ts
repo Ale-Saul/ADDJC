@@ -41,6 +41,21 @@ export const formatters = {
   },
 
   /**
+   * Limpia los espacios extra y capitaliza la primera letra de cada palabra.
+   * Útil para limpiar la entrada en tiempo real o antes de enviarla.
+   */
+  capitalizeWords(text: string): string {
+    if (!text) return ''
+    return text
+      // 1. Reemplazar múltiples espacios por un solo espacio (no trim para permitir escribir espacios entre palabras)
+      .replace(/\s{2,}/g, ' ')
+      // 2. Capitalizar cada palabra (el inicio de cada bloque que comienza después de un límite de palabra que no sea espacio inicial vacío)
+      .replace(/\b\p{L}+/gu, (v) => v.charAt(0).toUpperCase() + v.slice(1).toLowerCase())
+      // 3. Eliminar espacios iniciales completamente
+      .replace(/^\s+/, '');
+  },
+
+  /**
    * Formatea una fecha y hora con segundos
    */
   formatDateTime(date: string | Date, includeSeconds: boolean = false): string {

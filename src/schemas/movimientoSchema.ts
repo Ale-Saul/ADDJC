@@ -14,7 +14,12 @@ const CategoriaMovimientoEnum = z.enum([
   CATEGORIA_MOVIMIENTO.EVENTO,
   CATEGORIA_MOVIMIENTO.GASTO_OPERATIVO,
   CATEGORIA_MOVIMIENTO.PAGO_PROVEEDOR,
-  CATEGORIA_MOVIMIENTO.OTRO
+  CATEGORIA_MOVIMIENTO.OTRO,
+  'inscripcion_torneo',
+  'pago_arbitro',
+  'gastos_operativos',
+  'equipamiento',
+  'mantenimiento'
 ])
 
 const EstadoMovimientoEnum = z.enum([

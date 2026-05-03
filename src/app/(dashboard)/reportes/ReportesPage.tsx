@@ -83,15 +83,15 @@ export default function ReportesPage() {
     // Calcular totales
     const totalCobrado = pagosFiltrados
       .filter(p => p.estado === ESTADO_PAGO.PAGADO)
-      .reduce((sum, p) => sum + p.monto_final, 0)
+      .reduce((sum, p) => sum + (p.monto_final || 0), 0)
     
     const totalPendiente = pagosFiltrados
       .filter(p => p.estado === ESTADO_PAGO.PENDIENTE)
-      .reduce((sum, p) => sum + p.monto_final, 0)
+      .reduce((sum, p) => sum + (p.monto_final || 0), 0)
 
     const totalVencidoExport = pagosFiltrados
       .filter(p => p.estado === ESTADO_PAGO.VENCIDO)
-      .reduce((sum, p) => sum + p.monto_final, 0)
+      .reduce((sum, p) => sum + (p.monto_final || 0), 0)
 
     // Agregar líneas de totales
     const totalesRows = [
@@ -133,15 +133,15 @@ export default function ReportesPage() {
     // Totales
     const totalCobrado = pagosFiltrados
       .filter(p => p.estado === ESTADO_PAGO.PAGADO)
-      .reduce((sum, p) => sum + p.monto_final, 0)
+      .reduce((sum, p) => sum + (p.monto_final || 0), 0)
     
     const totalPendientePDF = pagosFiltrados
       .filter(p => p.estado === ESTADO_PAGO.PENDIENTE)
-      .reduce((sum, p) => sum + p.monto_final, 0)
+      .reduce((sum, p) => sum + (p.monto_final || 0), 0)
 
     const totalVencidopdf = pagosFiltrados
       .filter(p => p.estado === ESTADO_PAGO.VENCIDO)
-      .reduce((sum, p) => sum + p.monto_final, 0)
+      .reduce((sum, p) => sum + (p.monto_final || 0), 0)
 
     doc.setFontSize(10)
     doc.setFont('helvetica', 'bold')

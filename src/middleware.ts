@@ -43,7 +43,7 @@ export async function middleware(request: NextRequest) {
     const userRole = user.user_metadata?.rol ?? user.user_metadata?.role
     const isAdminUiRoute = pathname.startsWith('/asociacion') || pathname.startsWith('/clubes')
 
-    if (isAdminUiRoute && userRole !== 'asociacion' && userRole !== 'encargado' && userRole !== 'club' && userRole !== 'admin') {
+    if (isAdminUiRoute && !['asociacion', 'encargado', 'club', 'admin', 'sensei', 'judoka', 'arbitro'].includes(userRole)) {
         return NextResponse.redirect(new URL('/', request.url))
     }
   }

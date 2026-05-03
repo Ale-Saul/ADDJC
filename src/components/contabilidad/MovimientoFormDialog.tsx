@@ -18,7 +18,7 @@ import {
   Delete as DeleteIcon,
   Description as DescriptionIcon
 } from '@mui/icons-material'
-import { FormProvider } from 'react-hook-form'
+import { FormProvider, useWatch } from 'react-hook-form'
 
 import { MovimientoFinanciero } from '@/models/movimientoFinanciero'
 import { useClubes } from '@/hooks/useClubes'
@@ -44,6 +44,7 @@ const CATEGORIAS_INGRESO = [
 const CATEGORIAS_EGRESO = [
   { value: 'pago_arbitro', label: 'Pago a Árbitro' },
   { value: 'gastos_operativos', label: 'Gastos Operativos' },
+  { value: 'gasto_operativo', label: 'Gasto Operativo (Sistema)' },
   { value: 'equipamiento', label: 'Compra de Equipamiento' },
   { value: 'mantenimiento', label: 'Mantenimiento' },
   { value: 'evento', label: 'Gastos de Evento/Torneo' },
@@ -71,12 +72,27 @@ export const MovimientoFormDialog: React.FC<MovimientoFormDialogProps> = ({
 
   const { clubes } = useClubes()
 
-  const tipo = form.watch('tipo')
-  const categoria = form.watch('categoria')
+  const tipo = useWatch({ control: form.control, name: 'tipo' })
+  const categoria = useWatch({ control: form.control, name: 'categoria' })
 
   const isIngreso = tipo === 'ingreso'
   const requiresClub = isIngreso && (categoria === 'pago_club' || categoria === 'donacion_club')
   const requiresEntidad = isIngreso && (categoria === 'aporte_estado' || categoria === 'sponsor')
+
+  const formatTextCapitalized = (val: string) => {
+    if (!val) return ''
+    // Remover espacios inicales extras que causan que el string empiece con espacio,
+    // pero permitimos escribir espacios normales entre palabras.
+    let singleSpace = val.replace(/\s+/g, ' ')
+    // Si empieza con espacio, lo quitamos
+    if (singleSpace.startsWith(' ')) {
+      singleSpace = singleSpace.slice(1)
+    }
+    if (singleSpace.length > 0) {
+      return singleSpace.charAt(0).toUpperCase() + singleSpace.slice(1)
+    }
+    return singleSpace
+  }
 
   return (
     <Dialog open={open} onClose={loading ? undefined : onClose} maxWidth="sm" fullWidth>
@@ -142,6 +158,7 @@ export const MovimientoFormDialog: React.FC<MovimientoFormDialogProps> = ({
                   label="Concepto"
                   placeholder="Ej: Pago de cuota enero 2024"
                   fullWidth
+                  formatValue={formatTextCapitalized}
                 />
               </Box>
 
@@ -166,6 +183,7 @@ export const MovimientoFormDialog: React.FC<MovimientoFormDialogProps> = ({
                     label="Entidad de Origen"
                     placeholder="Ej: Ministerio de Deportes, Sponsor X"
                     fullWidth
+                    formatValue={formatTextCapitalized}
                   />
                 </Box>
               )}
@@ -177,6 +195,7 @@ export const MovimientoFormDialog: React.FC<MovimientoFormDialogProps> = ({
                   multiline
                   rows={3}
                   fullWidth
+                  formatValue={formatTextCapitalized}
                 />
               </Box>
 

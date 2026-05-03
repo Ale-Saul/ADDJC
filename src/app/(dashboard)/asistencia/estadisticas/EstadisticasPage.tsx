@@ -38,6 +38,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useStatsBySensei, useReporteClub, useStatsJudokasByClub } from '@/hooks/useAsistenciaStats'
 import KpiCard from '@/components/asistencia/stats/KpiCard'
 import SenseiStatsTable from '@/components/asistencia/stats/SenseiStatsTable'
+import { FormDatePicker } from '@/components/ui'
+import { useForm } from 'react-hook-form'
 import dayjs from 'dayjs'
 
 const HOY = dayjs().format('YYYY-MM-DD')
@@ -56,12 +58,18 @@ export default function EstadisticasPage() {
   const isEncargado = user?.rol === ROL.ENCARGADO
   const isAdmin = user?.rol === ROL.ADMIN
 
-  const senseiId = user?.sensei_id ?? ''
-  const clubId = user?.club_id ?? ''
+  const { control, setValue } = useForm({
+    defaultValues: {
+      fecha_inicio: isEncargado || isAdmin ? HACE_30 : '',
+      fecha_fin: isEncargado || isAdmin ? HOY : '',
+    }
+  })
 
   // Los encargados/admin tienen fechas requeridas; senseis las fechas son opcionales
   const [fechaInicio, setFechaInicio] = useState(isEncargado || isAdmin ? HACE_30 : '')
   const [fechaFin, setFechaFin] = useState(isEncargado || isAdmin ? HOY : '')
+  const senseiId = user?.sensei_id ?? ''
+  const clubId = user?.club_id ?? ''
   const [vistaDesglose, setVistaDesglose] = useState<'sensei' | 'judoka'>('sensei')
   const [senseiFiltroDesglose, setSenseiFiltroDesglose] = useState<string>('all')
 
@@ -145,7 +153,12 @@ export default function EstadisticasPage() {
                 label="Limpiar"
                 size="small"
                 icon={<ClearIcon />}
-                onClick={() => { setFechaInicio(''); setFechaFin('') }}
+                onClick={() => { 
+                  setFechaInicio(''); 
+                  setFechaFin('');
+                  setValue('fecha_inicio', '');
+                  setValue('fecha_fin', '');
+                }}
                 variant="outlined"
                 clickable
                 sx={{ cursor: 'pointer' }}
@@ -156,25 +169,19 @@ export default function EstadisticasPage() {
             )}
           </Stack>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2 }}>
-            <TextField
+            <FormDatePicker
+              name="fecha_inicio"
+              control={control}
               label="Desde"
-              type="date"
-              size="small"
-              fullWidth
-              value={fechaInicio}
-              onChange={e => setFechaInicio(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ max: fechaFin || HOY }}
+              maxDate={dayjs()}
+              onChangeCustom={(val) => setFechaInicio(val || '')}
             />
-            <TextField
+            <FormDatePicker
+              name="fecha_fin"
+              control={control}
               label="Hasta"
-              type="date"
-              size="small"
-              fullWidth
-              value={fechaFin}
-              onChange={e => setFechaFin(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ min: fechaInicio, max: HOY }}
+              maxDate={dayjs()}
+              onChangeCustom={(val) => setFechaFin(val || '')}
             />
           </Box>
         </Box>

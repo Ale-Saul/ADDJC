@@ -17,8 +17,6 @@ import { FormInput, FormSelect, FormDatePicker, FormAutocomplete } from '@/compo
 import { useAuth } from '@/contexts/AuthContext'
 import { usePagoCreateForm } from '@/hooks/usePagoCreateForm'
 import { TIPO_PAGO_LABELS, TIPO_DESCUENTO, TIPO_DESCUENTO_LABELS, RAZON_DESCUENTO_LABELS } from '@/constants/pagos'
-import { generatePagoReceipt } from '@/utils/receiptGenerator'
-import { clubController } from '@/controllers/clubController'
 
 interface PagoFormProps {
   judokaId: string
@@ -53,21 +51,6 @@ export default function PagoForm({ judokaId, judokaNombre, clubId, onSuccess, on
   const handleFormSubmit = async (data: any) => {
     const pago = await onSubmit(data)
     if (pago) {
-      // Obtener nombre del club para el recibo
-      let clubNombre = ''
-      if (pago.club_id) {
-        const clubRes = await clubController.getClubById(pago.club_id)
-        if (clubRes.success && clubRes.data) {
-          clubNombre = clubRes.data.nombre_club
-        }
-      }
-
-      // Obtener el nombre legible del usuario actual
-      const nombreGenerador = user ? `${user.nombres} ${user.apellidos}` : 'Sistema'
-
-      // Generar el recibo
-      generatePagoReceipt(pago, judokaNombre, clubNombre, nombreGenerador)
-
       // Ejecutar el callback de éxito después de una pequeña pausa
       setTimeout(() => {
         if (onSuccess) onSuccess()
