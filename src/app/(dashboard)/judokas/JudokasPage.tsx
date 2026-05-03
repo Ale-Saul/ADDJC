@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Alert, Box, Button, Dialog, DialogContent, DialogTitle, Snackbar, Typography } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
@@ -26,7 +26,24 @@ export default function JudokasPage() {
   const isJudoka = user?.rol === ROL.JUDOKA
   const isSensei = user?.rol === ROL.SENSEI
   const clubId = (user?.rol === ROL.ENCARGADO || isJudoka || isSensei) ? user?.club_id : undefined
-  const entrenadorId = isSensei ? user?.sensei_id : undefined
+  
+  const [miEntrenadorId, setMiEntrenadorId] = useState<string | undefined>(undefined)
+  const [loadingJudokaInfo, setLoadingJudokaInfo] = useState<boolean>(isJudoka)
+
+  useEffect(() => {
+    if (isJudoka && user?.judoka_id) {
+      judokaController.getJudokaById(user.judoka_id).then(res => {
+        if (res.success && res.data?.entrenador_id) {
+          setMiEntrenadorId(res.data.entrenador_id)
+        }
+        setLoadingJudokaInfo(false)
+      })
+    } else if (isJudoka) {
+      setLoadingJudokaInfo(false)
+    }
+  }, [isJudoka, user?.judoka_id])
+
+  const entrenadorId = isSensei ? user?.sensei_id : isJudoka ? miEntrenadorId : undefined
   const senseiId = isSensei ? user?.sensei_id : undefined
 
   const handleRefresh = () => {
@@ -88,16 +105,21 @@ export default function JudokasPage() {
           )}
         </Box>
 
-        <JudokaList
-          clubId={clubId}
-          entrenadorId={entrenadorId}
-          senseiId={senseiId}
-          refreshTrigger={refreshTrigger}
-          onEdit={isJudoka ? undefined : handleEdit}
-          onDelete={isJudoka ? undefined : handleDelete}
-          showUnassigned={user?.rol === ROL.ENCARGADO || isSensei || user?.rol === ROL.ADMIN || user?.rol === ROL.ASOCIACION}
-          readOnly={isJudoka}
-        />
+        {loadingJudokaInfo ? (
+          <Typography>Cargando información del judoka...</Typography>
+        ) : (
+          <JudokaList
+            clubId={clubId}
+            entrenadorId={entrenadorId}
+            senseiId={senseiId}
+            refreshTrigger={refreshTrigger}
+            onEdit={isJudoka ? undefined : handleEdit}
+            onDelete={isJudoka ? undefined : handleDelete}
+            showUnassigned={user?.rol === ROL.ENCARGADO || isSensei || user?.rol === ROL.ADMIN || user?.rol === ROL.ASOCIACION}
+            readOnly={isJudoka}
+            singleSenseiMode={isJudoka}
+          />
+        )}
 
         {/* Diálogo de Creación */}
         <Dialog open={createDialog.isOpen} onClose={createDialog.close} maxWidth="md" fullWidth>

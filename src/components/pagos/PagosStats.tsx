@@ -24,10 +24,15 @@ export default function PagosStats({ pagos }: PagosStatsProps) {
 
     // Calcular estado real de cada pago considerando la fecha de vencimiento
     const pagosConEstadoReal = pagos.map(pago => {
-      if (pago.estado === ESTADO_PAGO.PENDIENTE && pago.fecha_vencimiento) {
-        const vencimiento = new Date(pago.fecha_vencimiento)
+      // SOLO si el pago está pendiente chequeamos si ya venció
+      if (pago.estado === ESTADO_PAGO.PENDIENTE && pago.fecha_vencimiento && pago.activo) {
+        const [year, month, day] = pago.fecha_vencimiento.split('-').map(Number)
+        const vencimiento = new Date(year, month - 1, day) // Mes es 0-indexed
         vencimiento.setHours(0, 0, 0, 0)
-        if (vencimiento < hoy) return { ...pago, estado: ESTADO_PAGO.VENCIDO }
+        
+        if (vencimiento < hoy) {
+          return { ...pago, estado: ESTADO_PAGO.VENCIDO }
+        }
       }
       return pago
     })
@@ -35,14 +40,15 @@ export default function PagosStats({ pagos }: PagosStatsProps) {
     // Total pendiente (solo pagos que aún no vencieron)
     const totalPendiente = pagosConEstadoReal
       .filter(p => p.estado === ESTADO_PAGO.PENDIENTE && p.activo)
-      .reduce((sum, p) => sum + p.monto_final, 0)
+      .reduce((sum, p) => sum + (p.monto_final || 0), 0)
 
     // Total vencido + días promedio de atraso
     const pagosVencidos = pagosConEstadoReal.filter(p => p.estado === ESTADO_PAGO.VENCIDO && p.activo)
-    const totalVencido = pagosVencidos.reduce((sum, p) => sum + p.monto_final, 0)
+    const totalVencido = pagosVencidos.reduce((sum, p) => sum + (p.monto_final || 0), 0)
     
     const diasVencidos = pagosVencidos.map(p => {
-      const fechaVencimiento = new Date(p.fecha_vencimiento)
+      const [year, month, day] = p.fecha_vencimiento.split('-').map(Number)
+      const fechaVencimiento = new Date(year, month - 1, day)
       const diffTime = hoy.getTime() - fechaVencimiento.getTime()
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
       return diffDays > 0 ? diffDays : 0

@@ -41,6 +41,21 @@ export const formatters = {
   },
 
   /**
+   * Limpia los espacios extra y capitaliza la primera letra de cada palabra.
+   * Útil para limpiar la entrada en tiempo real o antes de enviarla.
+   */
+  capitalizeWords(text: string): string {
+    if (!text) return ''
+    return text
+      // 1. Reemplazar múltiples espacios por un solo espacio (no trim para permitir escribir espacios entre palabras)
+      .replace(/\s{2,}/g, ' ')
+      // 2. Capitalizar cada palabra (el inicio de cada bloque que comienza después de un límite de palabra que no sea espacio inicial vacío)
+      .replace(/\b\p{L}+/gu, (v) => v.charAt(0).toUpperCase() + v.slice(1).toLowerCase())
+      // 3. Eliminar espacios iniciales completamente
+      .replace(/^\s+/, '');
+  },
+
+  /**
    * Formatea una fecha y hora con segundos
    */
   formatDateTime(date: string | Date, includeSeconds: boolean = false): string {
@@ -230,6 +245,51 @@ export function formatNameInput(value: string): string {
 export function formatCelularInput(value: string): string {
   if (!value) return '';
   return value.replace(/[^0-9]/g, '').slice(0, 8);
+}
+
+/**
+ * Normaliza espacios en campos de texto libre: colapsa múltiples espacios
+ * consecutivos a uno solo. El recorte final ocurre al enviar el formulario.
+ */
+export function formatTextoInput(value: string): string {
+  return value.replace(/\s{2,}/g, ' ');
+}
+
+/**
+ * Formatea input de hora HH:MM mientras el usuario escribe.
+ * - Solo acepta dígitos; el ":" se inserta automáticamente.
+ * - Horas: 00-23 · Minutos: 00-59
+ */
+export function formatHoraInput(raw: string): string {
+  // Extraer solo dígitos del valor crudo
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return '';
+
+  // Parte de las horas (primeros 2 dígitos)
+  let h = digits.slice(0, 2);
+
+  // Si el primer dígito es > 2, no puede ser una hora válida de dos dígitos → auto-pad con 0
+  if (h.length === 1 && parseInt(h, 10) > 2) {
+    h = '0' + h;
+  }
+
+  // Clampear horas al rango 00-23
+  if (h.length === 2 && parseInt(h, 10) > 23) h = '23';
+
+  if (digits.length <= 2) {
+    // Si el valor ya tenía ":" significa que el usuario está borrando: no re-insertar
+    const hadColon = raw.includes(':');
+    if (digits.length === 2 && !hadColon) return h + ':';
+    return h;
+  }
+
+  // Parte de los minutos (dígitos 3 y 4)
+  let m = digits.slice(2, 4);
+  // El primer dígito de los minutos no puede ser > 5 (rango 00-59)
+  if (m.length >= 1 && parseInt(m[0], 10) > 5) m = '5' + m.slice(1);
+  if (m.length === 2 && parseInt(m, 10) > 59) m = '59';
+
+  return h + ':' + m;
 }
 
 export function formatNameWithNumbersInput(value: string): string {

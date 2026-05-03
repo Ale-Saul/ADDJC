@@ -19,7 +19,7 @@ import DescriptionIcon from '@mui/icons-material/Description'
 import { Club } from '@/models/club'
 import { MUNICIPIOS, CI_EXTENSIONS } from '@/constants/globales'
 import { useClubForm } from '@/hooks/useClubForm'
-import { formatCIInput, formatCIExtensionInput, formatNameInput, formatCelularInput, formatNameWithNumbersInput } from '@/utils/formatters'
+import { formatters, formatCIInput, formatCIExtensionInput, formatNameInput, formatCelularInput, formatNameWithNumbersInput } from '@/utils/formatters'
 import { FormInput, FormSelect, FormAutocomplete } from '@/components/ui'
 import { storageService } from '@/services/storageService'
 import { clubController } from '@/controllers/clubController'
@@ -124,7 +124,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
             control={control}
             disabled={submitting}
             required
-            formatValue={formatNameWithNumbersInput}
+            formatValue={formatters.capitalizeWords}
           />
         </Grid>
 
@@ -146,7 +146,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
               disabled={submitting}
               multiline
               rows={2}
-              formatValue={formatNameWithNumbersInput}
+              formatValue={formatters.capitalizeWords}
             />
         </Grid>
 

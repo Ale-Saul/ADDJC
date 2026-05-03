@@ -31,6 +31,9 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
 import PaymentIcon from '@mui/icons-material/Payment'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
+import ChecklistIcon from '@mui/icons-material/Checklist'
+import InsightsIcon from '@mui/icons-material/Insights'
+import ManageSearchIcon from '@mui/icons-material/ManageSearch'
 import { useAuth } from '@/contexts/AuthContext'
 import { ROL } from '@/constants/roles'
 
@@ -42,6 +45,7 @@ export default function Sidebar() {
   const theme = useTheme()
   const { user, signOut } = useAuth()
   const [openAfiliados, setOpenAfiliados] = useState(false)
+  const [openAsistencia, setOpenAsistencia] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -51,6 +55,10 @@ export default function Sidebar() {
 
   const handleAfiliadosClick = () => {
     setOpenAfiliados(!openAfiliados)
+  }
+
+  const handleAsistenciaClick = () => {
+    setOpenAsistencia(!openAsistencia)
   }
 
   const handleLogout = async () => {
@@ -132,6 +140,33 @@ export default function Sidebar() {
     }
   ]
 
+  const asistenciaItems = [
+    {
+      label: 'Sesiones',
+      path: '/asistencia',
+      icon: <ChecklistIcon />,
+      allowedRoles: [ROL.ADMIN, ROL.SENSEI, ROL.ENCARGADO]
+    },
+    {
+      label: 'Estadísticas',
+      path: '/asistencia/estadisticas',
+      icon: <InsightsIcon />,
+      allowedRoles: [ROL.ADMIN, ROL.SENSEI, ROL.ENCARGADO]
+    },
+    {
+      label: 'Mi Asistencia',
+      path: '/asistencia/mi-asistencia',
+      icon: <InsightsIcon />,
+      allowedRoles: [ROL.JUDOKA]
+    },
+    {
+      label: 'Consulta por Judoka',
+      path: '/asistencia/consulta',
+      icon: <ManageSearchIcon />,
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION]
+    }
+  ]
+
   const afiliadosItems = [
     {
       label: 'Clubes',
@@ -161,7 +196,11 @@ export default function Sidebar() {
 
   // Filtrar items del menú según los permisos del usuario
   const visibleMenuItems = menuItems.filter(item => hasAccess(item.allowedRoles))
-  
+
+  // Filtrar items de asistencia según permisos del usuario
+  const visibleAsistenciaItems = asistenciaItems.filter(item => hasAccess(item.allowedRoles))
+  const showAsistenciaMenu = visibleAsistenciaItems.length > 0
+
   // Filtrar items de afiliados según los permisos del usuario
   const visibleAfiliadosItems = afiliadosItems.filter(item => hasAccess(item.allowedRoles))
   
@@ -169,7 +208,10 @@ export default function Sidebar() {
   const showAfiliadosMenu = visibleAfiliadosItems.length > 0
   
   // Obtener todas las rutas del menú para la función isActive
-  const allMenuPaths = visibleMenuItems.map(item => item.path)
+  const allMenuPaths = [
+    ...visibleMenuItems.map(item => item.path),
+    ...visibleAsistenciaItems.map(item => item.path)
+  ]
 
   // Evitar renderizar hasta que esté montado en el cliente
   if (!mounted) {
@@ -236,6 +278,66 @@ export default function Sidebar() {
             </ListItemButton>
           </ListItem>
         ))}
+
+        {/* Menú Asistencia */}
+        {showAsistenciaMenu && (
+          <>
+            <Divider sx={{ my: 0.5 }} />
+
+            <ListItem disablePadding sx={{ mb: 0.5 }}>
+              <ListItemButton
+                onClick={handleAsistenciaClick}
+                sx={{
+                  py: 1,
+                  minHeight: 40,
+                  '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.08)' }
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 36 }}>
+                  <ChecklistIcon />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Asistencia"
+                  primaryTypographyProps={{ fontSize: '0.9rem' }}
+                />
+                {openAsistencia ? <ExpandLess /> : <ExpandMore />}
+              </ListItemButton>
+            </ListItem>
+
+            <Collapse in={openAsistencia} timeout="auto" unmountOnExit>
+              <List component="div" disablePadding>
+                {visibleAsistenciaItems.map((item) => (
+                  <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
+                    <ListItemButton
+                      selected={isActive(item.path, allMenuPaths)}
+                      onClick={() => router.push(item.path)}
+                      sx={{
+                        pl: 3.5,
+                        py: 0.75,
+                        minHeight: 36,
+                        '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.08)' },
+                        '&.Mui-selected': {
+                          backgroundColor: 'rgba(0, 0, 0, 0.12)',
+                          color: theme.palette.text.primary,
+                          '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.16)' },
+                          '& .MuiListItemIcon-root': { color: theme.palette.text.primary }
+                        }
+                      }}
+                    >
+                      <ListItemIcon sx={{ color: 'inherit', minWidth: 32 }}>
+                        {item.icon}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={item.label}
+                        primaryTypographyProps={{ fontSize: '0.85rem' }}
+                      />
+                    </ListItemButton>
+                  </ListItem>
+                ))}
+              </List>
+            </Collapse>
+          </>
+        )}
 
         {/* Mostrar menú Afiliados solo si hay items visibles */}
         {showAfiliadosMenu && (

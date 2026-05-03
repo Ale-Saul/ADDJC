@@ -96,12 +96,7 @@ export default function SenseiList({
       return true
     })
 
-    // Ordenar: primero los que tienen club, luego los que no
-    return [...filtered].sort((a, b) => {
-      if (a.club_id && !b.club_id) return -1
-      if (!a.club_id && b.club_id) return 1
-      return 0
-    })
+    return filtered;
   }, [filteredData, clubId, showUnassigned])
 
   const columns: Column<Sensei>[] = [

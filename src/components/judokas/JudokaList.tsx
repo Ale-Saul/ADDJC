@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Box,
   Alert,
@@ -40,6 +40,7 @@ interface JudokaListProps {
   itemsPerPage?: number
   showUnassigned?: boolean
   readOnly?: boolean
+  singleSenseiMode?: boolean
 }
 
 const BELT_COLOR_MAP: Record<string, string> = {
@@ -62,9 +63,10 @@ export default function JudokaList({
   entrenadorId,
   senseiId,
   searchTerm: externalSearchTerm = '',
-  itemsPerPage: initialItemsPerPage = 10,
+  initialItemsPerPage = 10,
   showUnassigned = false,
-  readOnly = false
+  readOnly = false,
+  singleSenseiMode = false
 }: JudokaListProps) {
     const { user } = useAuth()
     const isAdminOrAsoc = user?.rol === ROL.ADMIN || user?.rol === ROL.ASOCIACION
@@ -87,7 +89,8 @@ export default function JudokaList({
     entrenadorId,
     refreshTrigger,
     judokasProp,
-    initialSearch: externalSearchTerm
+    initialSearch: externalSearchTerm,
+    singleSenseiMode
   })
 
   const [page, setPage] = useState(1)
@@ -164,34 +167,58 @@ export default function JudokaList({
     }
   }
 
-  const paginatedData = useMemo(() => {
-    // Si es Sensei, el orden ya viene pre-establecido desde el hook fetchItems
-    // 1. A su mando
-    // 2. Club sin mando
-    // 3. Sin club
-    // Solo aplicamos el filtro de activos/inactivos si no es una vista filtrada por el hook
-    
-    const sortedData = [...filteredData].sort((a, b) => {
-      // Si estamos en la vista de Sensei (tenemos senseiId), respetamos el orden de llegada
-      if (senseiId) return 0;
+  const [initialOrder, setInitialOrder] = useState<string[]>([])
 
-      // Para otros roles, mantener orden por estado
-      if (a.activo && !b.activo) return -1
-      if (!a.activo && b.activo) return 1
-      
-      if (a.activo && b.activo) {
+  useEffect(() => {
+    if (initialOrder.length === 0 && filteredData.length > 0) {
+      setInitialOrder(filteredData.map(j => j.id))
+    }
+  }, [filteredData, initialOrder.length])
+
+  const paginatedData = useMemo(() => {
+    // Si estamos en la vista de Sensei (tenemos senseiId), respetamos el orden de llegada
+    if (senseiId) {
+      return filteredData.slice(
+        (page - 1) * itemsPerPage,
+        page * itemsPerPage
+      )
+    }
+
+    // Lógica para mantener orden estable durante la sesión (evitar saltos bruscos)
+    let finalOrder = [...filteredData]
+    if (initialOrder.length > 0) {
+      finalOrder.sort((a, b) => {
+        const idxA = initialOrder.indexOf(a.id)
+        const idxB = initialOrder.indexOf(b.id)
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB
+        if (idxA === -1 && idxB !== -1) return 1
+        if (idxA !== -1 && idxB === -1) return -1
+        
+        // Fallback lógica de negocio si son nuevos
+        if (a.activo && !b.activo) return -1
+        if (!a.activo && b.activo) return 1
         if (a.club_id && !b.club_id) return -1
         if (!a.club_id && b.club_id) return 1
-      }
-      
-      return 0
-    })
+        return (a.nombres || '').localeCompare(b.nombres || '')
+      })
+    } else {
+      // Orden inicial (primera carga)
+      finalOrder.sort((a, b) => {
+        if (a.activo && !b.activo) return -1
+        if (!a.activo && b.activo) return 1
+        if (a.club_id && !b.club_id) return -1
+        if (!a.club_id && b.club_id) return 1
+        const nombreA = (a.nombres || '').trim().toLowerCase()
+        const nombreB = (b.nombres || '').trim().toLowerCase()
+        return nombreA.localeCompare(nombreB)
+      })
+    }
 
-    return sortedData.slice(
+    return finalOrder.slice(
       (page - 1) * itemsPerPage,
       page * itemsPerPage
     )
-  }, [filteredData, page, itemsPerPage, senseiId])
+  }, [filteredData, page, itemsPerPage, senseiId, initialOrder])
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage)
 

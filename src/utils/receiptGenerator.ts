@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable'
 import { formatters } from '@/utils/formatters'
 import { Pago } from '@/models/pago'
 import { TIPO_PAGO_LABELS } from '@/constants/pagos'
+import { numeroALiteral } from '@/utils/numberToLiteral'
 
 export const generatePagoReceipt = (pagos: Pago | Pago[], judokaNombre: string, clubNombre: string, usuarioGenerador: string) => {
   const listaPagos = Array.isArray(pagos) ? pagos : [pagos]
@@ -19,47 +20,50 @@ export const generatePagoReceipt = (pagos: Pago | Pago[], judokaNombre: string, 
   const today = new Date().toISOString()
 
   // --- Encabezado ---
-  doc.setFontSize(16)
+  doc.setFontSize(14)
   doc.setFont('helvetica', 'bold')
   doc.text('COMPROBANTE DE PAGO', pageWidth / 2, 20, { align: 'center' })
   
-  doc.setFontSize(10)
+  doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
-  doc.text('ASOCIACIÓN DE JUDO', pageWidth / 2, 26, { align: 'center' })
+  doc.text('ASOCIACIÓN DE JUDO', pageWidth / 2, 25, { align: 'center' })
   
   if (clubNombre) {
-    doc.setFontSize(9)
-    doc.text(`Club: ${clubNombre}`, pageWidth / 2, 31, { align: 'center' })
+    doc.setFontSize(8)
+    doc.text(`Club: ${clubNombre}`, pageWidth / 2, 29, { align: 'center' })
   }
 
   // --- Línea divisoria ---
-  doc.setDrawColor(200, 200, 200)
-  doc.line(margin, 35, pageWidth - margin, 35)
+  doc.setDrawColor(150, 150, 150)
+  doc.line(margin, 33, pageWidth - margin, 33)
 
   // --- Información del Comprobante ---
-  doc.setFontSize(9)
+  doc.setFontSize(7)
   doc.setFont('helvetica', 'bold')
-  doc.text('Fecha y Hora:', margin, 42)
+  const infoX = margin
+  doc.text('Fecha y Hora:', infoX, 39)
   doc.setFont('helvetica', 'normal')
-  doc.text(formatters.formatDateTime(today, true), margin + 22, 42)
+  doc.text(formatters.formatDateTime(today, true), infoX + 18, 39)
 
   doc.setFont('helvetica', 'bold')
-  doc.text('Generado por:', margin, 47)
+  doc.text('Generado por:', infoX, 43)
   doc.setFont('helvetica', 'normal')
-  doc.text(usuarioGenerador || 'Sistema', margin + 22, 47)
+  doc.text(usuarioGenerador || 'Sistema', infoX + 18, 43)
 
   // --- Datos del Judoka ---
   doc.setFillColor(245, 245, 245)
-  doc.rect(margin, 52, pageWidth - (margin * 2), 12, 'F')
+  doc.rect(margin, 48, pageWidth - (margin * 2), 10, 'F')
   
+  doc.setFontSize(9)
   doc.setFont('helvetica', 'bold')
-  doc.text('Judoka:', margin + 5, 60)
+  doc.text('JUDOKA:', margin + 4, 54.5)
   doc.setFont('helvetica', 'normal')
-  doc.text(judokaNombre, margin + 20, 60)
+  doc.text(judokaNombre.toUpperCase(), margin + 20, 54.5)
 
   // --- Detalle de Pagos ---
+  doc.setFontSize(8)
   doc.setFont('helvetica', 'bold')
-  doc.text('Detalle de Pagos:', margin, 72)
+  doc.text('DETALLE DE PAGOS', margin, 65)
 
   const tableBody = listaPagos.map(pago => {
     let detalleMonto = `Bs. ${pago.monto_base.toFixed(2)}`
@@ -79,27 +83,50 @@ export const generatePagoReceipt = (pagos: Pago | Pago[], judokaNombre: string, 
   })
 
   autoTable(doc, {
-    startY: 75,
+    startY: 68,
     margin: { left: margin, right: margin },
     head: [['Concepto', 'Tipo', 'Base/Desc.', 'Subtotal']],
     body: tableBody,
-    theme: 'striped',
-    headStyles: { fillColor: [66, 139, 202], textColor: 255 },
-    styles: { fontSize: 8, cellPadding: 2 },
+    theme: 'plain',
+    headStyles: { 
+      fillColor: [230, 230, 230], 
+      textColor: 50, 
+      fontStyle: 'bold',
+      lineColor: [200, 200, 200],
+      lineWidth: 0.1
+    },
+    styles: { 
+      fontSize: 7, 
+      cellPadding: 2, 
+      font: 'helvetica',
+      textColor: 50
+    },
     columnStyles: {
-      2: { halign: 'right' },
-      3: { halign: 'right', fontStyle: 'bold' }
+      0: { cellWidth: 'auto' },
+      1: { cellWidth: 20 },
+      2: { halign: 'right', cellWidth: 22 },
+      3: { halign: 'right', fontStyle: 'bold', cellWidth: 22 }
     }
   })
 
-  let currentY = (doc as any).lastAutoTable.finalY + 10
+  let currentY = (doc as any).lastAutoTable.finalY + 8
   const totalPagado = listaPagos.reduce((sum, p) => sum + p.monto_final, 0)
 
   // --- Total ---
-  doc.setFontSize(11)
+  doc.setFontSize(10)
   doc.setFont('helvetica', 'bold')
-  doc.text('TOTAL PAGADO:', pageWidth - margin - 50, currentY)
-  doc.text(`Bs. ${totalPagado.toFixed(2)}`, pageWidth - margin, currentY, { align: 'right' })
+  const totalLabel = 'TOTAL PAGADO:'
+  const totalMonto = `Bs. ${totalPagado.toFixed(2)}`
+  
+  // Aumentamos el margen derecho para que el número no choque con el texto
+  doc.text(totalLabel, pageWidth - margin - 55, currentY)
+  doc.text(totalMonto, pageWidth - margin, currentY, { align: 'right' })
+
+  // --- Total Literal ---
+  currentY += 5
+  doc.setFontSize(7)
+  doc.setFont('helvetica', 'italic')
+  doc.text(`SON: ${numeroALiteral(totalPagado)}`, pageWidth - margin, currentY, { align: 'right' })
 
   // --- Notas/Observaciones ---
   const observaciones = listaPagos.map(p => p.observaciones_pago).filter(Boolean).join('; ')

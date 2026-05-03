@@ -228,6 +228,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Enviar correo de bienvenida con credenciales
+    // DESHABILITADO TEMPORALMENTE PARA PRUEBAS
+    /*
     if (ciBody && password) {
       const ciConExtension = body.ci_extension ? `${ciBody}-${body.ci_extension}` : ciBody
       const emailHtml = getWelcomeEmailTemplate(nombresTrimmed, ciConExtension, password)
@@ -243,6 +245,7 @@ export async function POST(request: NextRequest) {
         console.error('Error inesperado al enviar correo:', err)
       })
     }
+    */
 
     return NextResponse.json({
       success: true,

@@ -85,11 +85,14 @@ export function useReportes() {
       return pago.estado
     }
     // Si está pendiente pero ya venció la fecha, mostrarlo como vencido
-    if (pago.estado === ESTADO_PAGO.PENDIENTE && pago.fecha_vencimiento) {
+    if (pago.estado === ESTADO_PAGO.PENDIENTE && pago.fecha_vencimiento && pago.activo) {
       const hoy = new Date()
       hoy.setHours(0, 0, 0, 0)
-      const vencimiento = new Date(pago.fecha_vencimiento)
+      
+      const [year, month, day] = pago.fecha_vencimiento.split('-').map(Number)
+      const vencimiento = new Date(year, month - 1, day)
       vencimiento.setHours(0, 0, 0, 0)
+      
       if (vencimiento < hoy) return ESTADO_PAGO.VENCIDO
     }
     return pago.estado
@@ -103,13 +106,32 @@ export function useReportes() {
   // Filtrar pagos según criterios
   const pagosFiltrados = useMemo(() => {
     return pagosConEstadoReal.filter(pago => {
-      // Filtro por fecha (usando fecha de creación)
-      const fechaPago = new Date(pago.created_at)
-      const inicio = new Date(fechaInicio)
-      const fin = new Date(fechaFin)
+      // Filtro por fecha (usando fecha de creación o vencimiento según sea el caso)
+      // Para reportes, solemos querer ver lo que "ocurre" en el rango.
+      // Si el pago es pendiente/vencido, la fecha relevante es el vencimiento.
+      // Si el pago está cobrado, la fecha relevante es la de pago.
+      
+      let fechaReferenciaStr: string | undefined = pago.created_at
+      
+      if (pago.estado === ESTADO_PAGO.PAGADO && pago.fecha_pago) {
+        fechaReferenciaStr = pago.fecha_pago
+      } else if (pago.fecha_vencimiento) {
+        fechaReferenciaStr = pago.fecha_vencimiento
+      }
+
+      const [year, month, day] = (fechaReferenciaStr || '').split('T')[0].split('-').map(Number)
+      const fechaRef = new Date(year, month - 1, day)
+      fechaRef.setHours(0, 0, 0, 0)
+
+      const [sYear, sMonth, sDay] = fechaInicio.split('-').map(Number)
+      const inicio = new Date(sYear, sMonth - 1, sDay)
+      inicio.setHours(0, 0, 0, 0)
+
+      const [eYear, eMonth, eDay] = fechaFin.split('-').map(Number)
+      const fin = new Date(eYear, eMonth - 1, eDay)
       fin.setHours(23, 59, 59, 999)
       
-      if (fechaPago < inicio || fechaPago > fin) return false
+      if (fechaRef < inicio || fechaRef > fin) return false
 
       // Filtro por estado (usando el estado real)
       if (estadoFiltro !== 'todos' && pago.estado !== estadoFiltro) return false
@@ -134,15 +156,15 @@ export function useReportes() {
   const estadisticas = useMemo(() => {
     const totalGenerado = pagosFiltrados
       .filter(p => p.estado === ESTADO_PAGO.PAGADO)
-      .reduce((sum, p) => sum + p.monto_final, 0)
+      .reduce((sum, p) => sum + (p.monto_final || 0), 0)
 
     const totalPendiente = pagosFiltrados
       .filter(p => p.estado === ESTADO_PAGO.PENDIENTE)
-      .reduce((sum, p) => sum + p.monto_final, 0)
+      .reduce((sum, p) => sum + (p.monto_final || 0), 0)
 
     const totalVencido = pagosFiltrados
       .filter(p => p.estado === ESTADO_PAGO.VENCIDO)
-      .reduce((sum, p) => sum + p.monto_final, 0)
+      .reduce((sum, p) => sum + (p.monto_final || 0), 0)
 
     // Desglose por tipo de pago
     const porTipo = pagosFiltrados.reduce((acc, pago) => {

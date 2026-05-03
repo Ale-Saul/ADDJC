@@ -119,6 +119,18 @@ export default function ClubDocumentoForm({
     }
   }
 
+  const formatTextCapitalized = (val: string) => {
+    if (!val) return ''
+    let singleSpace = val.replace(/\s+/g, ' ')
+    if (singleSpace.startsWith(' ')) {
+      singleSpace = singleSpace.slice(1)
+    }
+    if (singleSpace.length > 0) {
+      return singleSpace.charAt(0).toUpperCase() + singleSpace.slice(1)
+    }
+    return singleSpace
+  }
+
   return (
     <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1 }}>
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
@@ -128,9 +140,10 @@ export default function ClubDocumentoForm({
         <FormInput
           name="nombre_documento"
           control={control}
-          label="Nombre del Documento"
+          label="Nombre del Documento *"
           required
           disabled={loading || uploading}
+          formatValue={formatTextCapitalized}
         />
 
         <FormInput
@@ -138,6 +151,7 @@ export default function ClubDocumentoForm({
           control={control}
           label="Tipo (ej: Estatuto, Personería)"
           disabled={loading || uploading}
+          formatValue={formatTextCapitalized}
         />
 
         <Box>

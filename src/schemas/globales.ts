@@ -73,10 +73,6 @@ const zNombreSchema = z.string()
   .transform(cleanStr)
   .pipe(z.string().min(1, 'El campo es requerido').regex(/^[A-Za-zÁÉÍÓÚÜáéíóúüÑñ\s]+$/, 'Solo se permiten letras y espacios'))
 
-const zApellidoOpcionalSchema = z.string().optional().nullable()
-  .transform(val => val ? cleanStr(val) : val)
-  .pipe(z.string().regex(nameRegex, 'Solo se permiten letras y espacios').optional().nullable())
-
 // Validación de año para fechas (no puede ser mayor al actual)
 const yearMsg = `La fecha no puede ser posterior a la actual`
 const notFutureYear = (val: string | null | undefined) => {
@@ -86,7 +82,7 @@ const notFutureYear = (val: string | null | undefined) => {
     const [year, month, day] = val.split('-').map(Number)
     const inputDate = new Date(year, month - 1, day)
     const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    today.setHours(23, 59, 59, 999) // Permitir hasta el final del día de hoy
     return inputDate <= today
   }
   
@@ -94,13 +90,15 @@ const notFutureYear = (val: string | null | undefined) => {
   if (isNaN(date.getTime())) return true
   
   const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  today.setHours(23, 59, 59, 999)
   
   const inputDate = new Date(date)
-  inputDate.setHours(0, 0, 0, 0)
-  
   return inputDate <= today
 }
+
+const zApellidoOpcionalSchema = z.string().optional().nullable()
+  .transform(val => val ? cleanStr(val) : val)
+  .pipe(z.string().regex(nameRegex, 'Solo se permiten letras y espacios').optional().nullable())
 
 // Esquema base para Usuarios (campos comunes) - Objeto puro para poder extenderlo
 const baseUserObject = z.object({
