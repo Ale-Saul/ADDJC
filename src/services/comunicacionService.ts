@@ -115,7 +115,10 @@ export const comunicacionService = {
     if (filtros?.solo_activas !== false) query = query.eq('activo', true)
     if (filtros?.solo_destacadas) query = query.eq('es_destacada', true)
     if (filtros?.categoria) query = query.eq('categoria', filtros.categoria)
-    if (filtros?.audiencia) query = query.contains('audiencia', [filtros.audiencia])
+    // Audiencia: mostrar noticias para el rol específico O para "todos"
+    if (filtros?.audiencia && filtros.audiencia !== 'todos') {
+      query = query.or(`audiencia.cs.{${filtros.audiencia}},audiencia.cs.{todos}`)
+    }
     if (filtros?.fecha_referencia) {
       query = query
         .lte('fecha_inicio', filtros.fecha_referencia)

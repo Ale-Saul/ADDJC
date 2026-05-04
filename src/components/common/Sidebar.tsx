@@ -34,6 +34,10 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
 import ChecklistIcon from '@mui/icons-material/Checklist'
 import InsightsIcon from '@mui/icons-material/Insights'
 import ManageSearchIcon from '@mui/icons-material/ManageSearch'
+import CampaignIcon from '@mui/icons-material/Campaign'
+import AnnouncementIcon from '@mui/icons-material/Announcement'
+import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone'
+import EditNoteIcon from '@mui/icons-material/EditNote'
 import { useAuth } from '@/contexts/AuthContext'
 import { ROL } from '@/constants/roles'
 
@@ -203,19 +207,45 @@ export default function Sidebar() {
   const tesoreriaItems = menuItems.filter(item => item.group === 'tesoreria' && hasAccess(item.allowedRoles))
   const showTesoreriaMenu = tesoreriaItems.length > 0
 
+  const comunicacionItems = [
+    {
+      label: 'Noticias',
+      path: '/comunicacion',
+      icon: <AnnouncementIcon />,
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.SENSEI, ROL.JUDOKA, ROL.ARBITRO],
+    },
+    {
+      label: 'Notificaciones',
+      path: '/comunicacion/notificaciones',
+      icon: <NotificationsNoneIcon />,
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.SENSEI, ROL.JUDOKA, ROL.ARBITRO],
+    },
+    {
+      label: 'Publicar',
+      path: '/comunicacion/admin',
+      icon: <EditNoteIcon />,
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.SENSEI],
+    },
+  ]
+
+  const visibleComunicacionItems = comunicacionItems.filter(item => hasAccess(item.allowedRoles))
+  const showComunicacionMenu = visibleComunicacionItems.length > 0
+
   const visibleAfiliadosItems = afiliadosItems.filter(item => hasAccess(item.allowedRoles))
   const showAfiliadosMenu = visibleAfiliadosItems.length > 0
   
   // Para las expansiones (pueden venir de estados)
   const [openAsociacion, setOpenAsociacion] = useState(false)
   const [openTesoreria, setOpenTesoreria] = useState(false)
+  const [openComunicacion, setOpenComunicacion] = useState(false)
 
   // Obtener todas las rutas para isActive
   const allMenuPaths = [
     ...asistenciaItems.map(item => item.path),
     ...asociacionItems.map(item => item.path),
     ...tesoreriaItems.map(item => item.path),
-    ...afiliadosItems.map(item => item.path)
+    ...afiliadosItems.map(item => item.path),
+    ...comunicacionItems.map(item => item.path),
   ]
 
   // Evitar renderizar hasta que esté montado en el cliente
@@ -406,6 +436,64 @@ export default function Sidebar() {
                           '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.16)' },
                           '& .MuiListItemIcon-root': { color: theme.palette.text.primary }
                         }
+                      }}
+                    >
+                      <ListItemIcon sx={{ color: 'inherit', minWidth: 32 }}>
+                        {item.icon}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={item.label}
+                        primaryTypographyProps={{ fontSize: '0.85rem' }}
+                      />
+                    </ListItemButton>
+                  </ListItem>
+                ))}
+              </List>
+            </Collapse>
+          </>
+        )}
+
+        {/* Menú Comunicación */}
+        {showComunicacionMenu && (
+          <>
+            <Divider sx={{ my: 0.5 }} />
+            <ListItem disablePadding sx={{ mb: 0.5 }}>
+              <ListItemButton
+                onClick={() => setOpenComunicacion(!openComunicacion)}
+                sx={{
+                  py: 1,
+                  minHeight: 40,
+                  '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.08)' },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 36 }}>
+                  <CampaignIcon />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Comunicación"
+                  primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 600 }}
+                />
+                {openComunicacion ? <ExpandLess /> : <ExpandMore />}
+              </ListItemButton>
+            </ListItem>
+            <Collapse in={openComunicacion} timeout="auto" unmountOnExit>
+              <List component="div" disablePadding>
+                {visibleComunicacionItems.map((item) => (
+                  <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
+                    <ListItemButton
+                      selected={isActive(item.path, allMenuPaths)}
+                      onClick={() => router.push(item.path)}
+                      sx={{
+                        pl: 3.5,
+                        py: 0.75,
+                        minHeight: 36,
+                        '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.08)' },
+                        '&.Mui-selected': {
+                          backgroundColor: 'rgba(0, 0, 0, 0.12)',
+                          color: theme.palette.text.primary,
+                          '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.16)' },
+                          '& .MuiListItemIcon-root': { color: theme.palette.text.primary },
+                        },
                       }}
                     >
                       <ListItemIcon sx={{ color: 'inherit', minWidth: 32 }}>

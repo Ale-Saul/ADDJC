@@ -1,0 +1,241 @@
+'use client'
+
+import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  Box,
+  Typography,
+  Paper,
+  Stack,
+  Chip,
+  IconButton,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Snackbar,
+  Alert,
+  Divider,
+  Button,
+  Skeleton,
+} from '@mui/material'
+import AddIcon from '@mui/icons-material/Add'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import AnnouncementIcon from '@mui/icons-material/Announcement'
+import { useAuth } from '@/contexts/AuthContext'
+import { comunicacionController } from '@/controllers/comunicacionController'
+import { COMUNICACION_QUERY_KEYS } from '@/constants/comunicacion'
+import {
+  useNoticiasByClub,
+  useCreateNoticia,
+  useDeleteNoticia,
+} from '@/hooks/useNoticias'
+import NuevaNoticiaForm from '@/components/comunicacion/NuevaNoticiaForm'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { CATEGORIA_LABELS, CATEGORIA_COLOR, AUDIENCIA_LABELS } from '@/constants/comunicacion'
+import type { NoticiaCreate, Noticia } from '@/models/comunicacion'
+import { formatters } from '@/utils/formatters'
+import { ROL } from '@/constants/roles'
+
+export default function AdminComunicacionPage() {
+  const { user } = useAuth()
+  const clubId = user?.club_id ?? ''
+  const [openForm, setOpenForm] = useState(false)
+  const [snackbar, setSnackbar] = useState<{ msg: string; severity: 'success' | 'error' } | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+
+  const queryClient = useQueryClient()
+  const { data: noticias = [], isLoading } = useNoticiasByClub(clubId, { solo_activas: false })
+  const crearMutation = useCreateNoticia(clubId)
+  const eliminarMutation = useDeleteNoticia(clubId)
+
+  const toggleActivoMutation = useMutation({
+    mutationFn: ({ id, activo }: { id: string; activo: boolean }) =>
+      comunicacionController.updateNoticia(id, { activo }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: COMUNICACION_QUERY_KEYS.noticias() })
+    },
+  })
+
+  const handleCrear = async (payload: NoticiaCreate) => {
+    const res = await crearMutation.mutateAsync(payload)
+    if (res.success) {
+      setOpenForm(false)
+      setSnackbar({ msg: 'Noticia publicada exitosamente', severity: 'success' })
+      return { success: true }
+    }
+    return { success: false, error: res.error }
+  }
+
+  const handleToggleActivo = async (noticia: Noticia) => {
+    const res = await toggleActivoMutation.mutateAsync({ id: noticia.id, activo: !noticia.activo })
+    if (res.success) {
+      setSnackbar({
+        msg: noticia.activo ? 'Noticia ocultada' : 'Noticia activada',
+        severity: 'success',
+      })
+    }
+  }
+
+  const handleEliminar = async (id: string) => {
+    if (confirmDelete !== id) {
+      setConfirmDelete(id)
+      return
+    }
+    const res = await eliminarMutation.mutateAsync(id)
+    setConfirmDelete(null)
+    if (res.success) {
+      setSnackbar({ msg: 'Noticia eliminada', severity: 'success' })
+    } else {
+      setSnackbar({ msg: res.error ?? 'Error al eliminar', severity: 'error' })
+    }
+  }
+
+  return (
+    <Box>
+      <PageHeader
+        title="Gestión de Noticias"
+        actionLabel="Nueva noticia"
+        actionIcon={<AddIcon />}
+        onAction={() => setOpenForm(true)}
+      />
+
+      {/* Lista de noticias */}
+      {isLoading ? (
+        <Stack spacing={1.5}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} variant="rectangular" height={88} sx={{ borderRadius: 2 }} />
+          ))}
+        </Stack>
+      ) : noticias.length === 0 ? (
+        <Paper
+          variant="outlined"
+          sx={{ py: 8, textAlign: 'center', borderRadius: 2, borderStyle: 'dashed' }}
+        >
+          <AnnouncementIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1.5 }} />
+          <Typography variant="body1" color="text.secondary">
+            No has publicado ninguna noticia aún
+          </Typography>
+          <Button
+            variant="outlined"
+            startIcon={<AddIcon />}
+            sx={{ mt: 2 }}
+            onClick={() => setOpenForm(true)}
+          >
+            Crear primera noticia
+          </Button>
+        </Paper>
+      ) : (
+        <Paper variant="outlined" sx={{ borderRadius: 2 }}>
+          {noticias.map((noticia, idx) => (
+            <Box key={noticia.id}>
+              {idx > 0 && <Divider />}
+              <Box
+                sx={{
+                  px: 2.5,
+                  py: 2,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 2,
+                  opacity: noticia.activo ? 1 : 0.55,
+                  transition: 'opacity 150ms ease',
+                }}
+              >
+                {/* Contenido */}
+                <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                  <Stack direction="row" spacing={0.75} flexWrap="wrap" sx={{ mb: 0.5 }}>
+                    <Chip
+                      label={CATEGORIA_LABELS[noticia.categoria]}
+                      size="small"
+                      color={CATEGORIA_COLOR[noticia.categoria]}
+                      sx={{ fontSize: '0.7rem', height: 20 }}
+                    />
+                    {!noticia.activo && (
+                      <Chip label="Oculta" size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 20 }} />
+                    )}
+                    {noticia.es_destacada && (
+                      <Chip label="Destacada" size="small" color="warning" variant="outlined" sx={{ fontSize: '0.7rem', height: 20 }} />
+                    )}
+                    {noticia.audiencia.map(aud => (
+                      <Chip key={aud} label={AUDIENCIA_LABELS[aud]} size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 20 }} />
+                    ))}
+                  </Stack>
+                  <Typography variant="body1" fontWeight={600} noWrap>
+                    {noticia.titulo}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {formatters.formatDate(noticia.fecha_inicio)}
+                    {noticia.fecha_fin && ` – ${formatters.formatDate(noticia.fecha_fin)}`}
+                    {noticia.nombre_autor && ` · ${noticia.nombre_autor}`}
+                  </Typography>
+                </Box>
+
+                {/* Acciones */}
+                <Stack direction="row" spacing={0.5} flexShrink={0}>
+                  <Tooltip title={noticia.activo ? 'Ocultar' : 'Mostrar'}>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleToggleActivo(noticia)}
+                      aria-label={noticia.activo ? 'Ocultar noticia' : 'Mostrar noticia'}
+                      sx={{ minWidth: 36, minHeight: 36 }}
+                    >
+                      {noticia.activo
+                        ? <VisibilityOffIcon fontSize="small" />
+                        : <VisibilityIcon fontSize="small" />
+                      }
+                    </IconButton>
+                  </Tooltip>
+
+                  <Tooltip title={confirmDelete === noticia.id ? 'Confirmar eliminación' : 'Eliminar'}>
+                    <IconButton
+                      size="small"
+                      color={confirmDelete === noticia.id ? 'error' : 'default'}
+                      onClick={() => handleEliminar(noticia.id)}
+                      onBlur={() => setConfirmDelete(null)}
+                      aria-label="Eliminar noticia"
+                      sx={{ minWidth: 36, minHeight: 36 }}
+                    >
+                      <DeleteOutlineIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
+              </Box>
+            </Box>
+          ))}
+        </Paper>
+      )}
+
+      {/* Dialog: Nueva noticia */}
+      <Dialog open={openForm} onClose={() => setOpenForm(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Nueva noticia</DialogTitle>
+        <Divider />
+        <DialogContent>
+          <NuevaNoticiaForm
+            autorId={user?.id ?? ''}
+            clubId={clubId || undefined}
+            onSuccess={handleCrear}
+            onCancel={() => setOpenForm(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Snackbar feedback */}
+      <Snackbar
+        open={!!snackbar}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          severity={snackbar?.severity}
+          variant="filled"
+          onClose={() => setSnackbar(null)}
+        >
+          {snackbar?.msg}
+        </Alert>
+      </Snackbar>
+    </Box>
+  )
+}
