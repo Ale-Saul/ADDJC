@@ -27,7 +27,12 @@ import KpiCard from '@/components/asistencia/stats/KpiCard'
 import HistorialTable from '@/components/asistencia/stats/HistorialTable'
 import HistogramIcon from '@mui/icons-material/Histogram' // Just keeping imports matching
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import 'dayjs/locale/es'
 import dayjs from 'dayjs'
+
+dayjs.locale('es')
 
 function getColorByPct(pct: number): 'success' | 'warning' | 'error' {
   if (pct >= 80) return 'success'
@@ -35,17 +40,18 @@ function getColorByPct(pct: number): 'success' | 'warning' | 'error' {
   return 'error'
 }
 
+const HOY = dayjs().format('YYYY-MM-DD')
+const HACE_UN_MES = dayjs().subtract(1, 'month').format('YYYY-MM-DD')
+
 export default function MiAsistenciaPage() {
   const { user } = useAuth()
   const judokaId = user?.judoka_id ?? ''
 
-  const [fechaInicio, setFechaInicio] = useState('')
-  const [fechaFin, setFechaFin] = useState('')
-  const hayFiltros = fechaInicio !== '' || fechaFin !== ''
+  const [fechaInicio, setFechaInicio] = useState(HACE_UN_MES)
+  const [fechaFin, setFechaFin] = useState(HOY)
+  const hayFiltros = fechaInicio !== HACE_UN_MES || fechaFin !== HOY
 
-  const filtros = hayFiltros
-    ? { fecha_inicio: fechaInicio || undefined, fecha_fin: fechaFin || undefined }
-    : undefined
+  const filtros = { fecha_inicio: fechaInicio || undefined, fecha_fin: fechaFin || undefined }
 
   const statsQuery = useStatsJudoka(judokaId, filtros)
   const historialQuery = useHistorialJudoka(judokaId, filtros)
@@ -56,8 +62,9 @@ export default function MiAsistenciaPage() {
 
   return (
     <ProtectedRoute allowedRoles={[ROL.JUDOKA]}>
-      <Box>
-        {/* ── Header ── */}
+      <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
+        <Box>
+          {/* ── Header ── */}
         <Stack direction="row" alignItems="center" spacing={1.5} mb={4}>
           <InsightsIcon sx={{ fontSize: 36, color: 'primary.main' }} />
           <Box>
@@ -91,7 +98,7 @@ export default function MiAsistenciaPage() {
                 label="Limpiar"
                 size="small"
                 icon={<ClearIcon />}
-                onClick={() => { setFechaInicio(''); setFechaFin('') }}
+                onClick={() => { setFechaInicio(HACE_UN_MES); setFechaFin(HOY) }}
                 variant="outlined"
                 clickable
                 sx={{ cursor: 'pointer' }}
@@ -200,6 +207,7 @@ export default function MiAsistenciaPage() {
           </Box>
         )}
       </Box>
-    </ProtectedRoute>
+    </LocalizationProvider>
+  </ProtectedRoute>
   )
 }

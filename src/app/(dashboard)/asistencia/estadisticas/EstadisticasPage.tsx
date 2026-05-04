@@ -43,7 +43,7 @@ import { useForm } from 'react-hook-form'
 import dayjs from 'dayjs'
 
 const HOY = dayjs().format('YYYY-MM-DD')
-const HACE_30 = dayjs().subtract(30, 'day').format('YYYY-MM-DD')
+const HACE_UN_MES = dayjs().subtract(1, 'month').format('YYYY-MM-DD')
 
 function getColorByPct(pct: number): 'success' | 'warning' | 'error' | 'primary' {
   if (pct >= 80) return 'success'
@@ -60,14 +60,14 @@ export default function EstadisticasPage() {
 
   const { control, setValue } = useForm({
     defaultValues: {
-      fecha_inicio: isEncargado || isAdmin ? HACE_30 : '',
-      fecha_fin: isEncargado || isAdmin ? HOY : '',
+      fecha_inicio: HACE_UN_MES,
+      fecha_fin: HOY,
     }
   })
 
   // Los encargados/admin tienen fechas requeridas; senseis las fechas son opcionales
-  const [fechaInicio, setFechaInicio] = useState(isEncargado || isAdmin ? HACE_30 : '')
-  const [fechaFin, setFechaFin] = useState(isEncargado || isAdmin ? HOY : '')
+  const [fechaInicio, setFechaInicio] = useState(HACE_UN_MES)
+  const [fechaFin, setFechaFin] = useState(HOY)
   const senseiId = user?.sensei_id ?? ''
   const clubId = user?.club_id ?? ''
   const [vistaDesglose, setVistaDesglose] = useState<'sensei' | 'judoka'>('sensei')
@@ -78,7 +78,7 @@ export default function EstadisticasPage() {
     ? { fecha_inicio: fechaInicio || undefined, fecha_fin: fechaFin || undefined }
     : undefined
 
-  const filtrosEncargado = { fecha_inicio: fechaInicio || HACE_30, fecha_fin: fechaFin || HOY }
+  const filtrosEncargado = { fecha_inicio: fechaInicio || HACE_UN_MES, fecha_fin: fechaFin || HOY }
 
   // ── Sensei: stats por estudiante ──
   const senseiStatsQuery = useStatsBySensei(

@@ -29,6 +29,8 @@ interface MovimientosTableProps {
   onEditar?: (movimiento: MovimientoFinanciero) => void
   onAnular?: (id: string) => void
   onAgregar?: () => void
+  currentPage?: number
+  itemsPerPage?: number
 }
 
 export default function MovimientosTable({
@@ -36,6 +38,8 @@ export default function MovimientosTable({
   onEditar,
   onAnular,
   onAgregar,
+  currentPage = 1,
+  itemsPerPage = 10,
 }: MovimientosTableProps) {
   const soloLectura = !onEditar && !onAnular
   const formatCurrency = (amount: number) => {
@@ -120,6 +124,7 @@ export default function MovimientosTable({
           <Table>
             <TableHead>
               <TableRow>
+                <TableCell align="center">N°</TableCell>
                 <TableCell>Fecha</TableCell>
                 <TableCell>Tipo</TableCell>
                 <TableCell>Categoría</TableCell>
@@ -131,7 +136,7 @@ export default function MovimientosTable({
               </TableRow>
             </TableHead>
             <TableBody>
-              {movimientos.map((movimiento) => {
+              {movimientos.map((movimiento, index) => {
                 const isAnulado = movimiento.estado === ESTADO_MOVIMIENTO.ANULADO
                 return (
                 <TableRow
@@ -139,6 +144,11 @@ export default function MovimientosTable({
                   hover={!isAnulado}
                   sx={isAnulado ? { opacity: 0.55, bgcolor: 'action.hover' } : undefined}
                 >
+                  <TableCell align="center">
+                    <Typography variant="body2" color="text.secondary">
+                      {(currentPage - 1) * itemsPerPage + index + 1}
+                    </Typography>
+                  </TableCell>
                   <TableCell>
                     {formatters.formatDateTime(movimiento.created_at)}
                   </TableCell>

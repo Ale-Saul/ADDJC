@@ -103,40 +103,39 @@ export default function Sidebar() {
 
   const menuItems = [
     {
-      label: 'Inicio',
-      path: '/',
-      icon: <HomeIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.SENSEI, ROL.ENCARGADO, ROL.ARBITRO, ROL.JUDOKA] // Todos los roles
-    },
-    {
-      label: 'Miembros de la Asociación',
+      label: 'Miembros',
       path: '/asociacion',
       icon: <AdminPanelSettingsIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION] // Admin y asociación
-    },
-    {
-      label: 'Pagos y Cuotas',
-      path: '/pagos',
-      icon: <PaymentIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ENCARGADO] // Admin y encargados
-    },
-    {
-      label: 'Reportes',
-      path: '/reportes',
-      icon: <AssessmentIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ENCARGADO] // Admin y encargados
-    },
-    {
-      label: 'Reportes Asociación',
-      path: '/reportes/asociacion',
-      icon: <AssessmentIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION] // Admin y asociación
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION],
+      group: 'asociacion'
     },
     {
       label: 'Contabilidad',
       path: '/contabilidad',
       icon: <AccountBalanceIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO] // Admin, asociación y encargados
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO],
+      group: 'asociacion'
+    },
+    {
+      label: 'Reportes',
+      path: '/reportes/asociacion',
+      icon: <AssessmentIcon />,
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION],
+      group: 'asociacion'
+    },
+    {
+      label: 'Pagos y Cuotas',
+      path: '/pagos',
+      icon: <PaymentIcon />,
+      allowedRoles: [ROL.ADMIN, ROL.ENCARGADO],
+      group: 'tesoreria'
+    },
+    {
+      label: 'Reportes',
+      path: '/reportes',
+      icon: <AssessmentIcon />,
+      allowedRoles: [ROL.ADMIN, ROL.ENCARGADO],
+      group: 'tesoreria'
     }
   ]
 
@@ -172,7 +171,7 @@ export default function Sidebar() {
       label: 'Clubes',
       path: '/clubes',
       icon: <BusinessIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.JUDOKA, ROL.SENSEI, ROL.ENCARGADO, ROL.ARBITRO] // Admin, asociación, judokas, senseis, encargados y árbitros (solo lectura)
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.JUDOKA, ROL.SENSEI, ROL.ENCARGADO, ROL.ARBITRO]
     },
     {
       label: 'Árbitros',
@@ -184,33 +183,39 @@ export default function Sidebar() {
       label: 'Senseis',
       path: '/senseis',
       icon: <SchoolIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.SENSEI, ROL.JUDOKA] // Admin, asociación, encargados, senseis y judokas (solo lectura)
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.SENSEI, ROL.JUDOKA]
     },
     {
       label: 'Judokas',
       path: '/judokas',
       icon: <SportsKabaddiIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.SENSEI, ROL.JUDOKA, ROL.ENCARGADO] // Todos excepto árbitros
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.SENSEI, ROL.JUDOKA, ROL.ENCARGADO]
     }
   ]
 
-  // Filtrar items del menú según los permisos del usuario
-  const visibleMenuItems = menuItems.filter(item => hasAccess(item.allowedRoles))
-
-  // Filtrar items de asistencia según permisos del usuario
+  // Filtrar y agrupar items
   const visibleAsistenciaItems = asistenciaItems.filter(item => hasAccess(item.allowedRoles))
   const showAsistenciaMenu = visibleAsistenciaItems.length > 0
 
-  // Filtrar items de afiliados según los permisos del usuario
+  const asociacionItems = menuItems.filter(item => item.group === 'asociacion' && hasAccess(item.allowedRoles))
+  const showAsociacionMenu = asociacionItems.length > 0
+
+  const tesoreriaItems = menuItems.filter(item => item.group === 'tesoreria' && hasAccess(item.allowedRoles))
+  const showTesoreriaMenu = tesoreriaItems.length > 0
+
   const visibleAfiliadosItems = afiliadosItems.filter(item => hasAccess(item.allowedRoles))
-  
-  // Solo mostrar el menú "Afiliados" si hay al menos un item visible
   const showAfiliadosMenu = visibleAfiliadosItems.length > 0
   
-  // Obtener todas las rutas del menú para la función isActive
+  // Para las expansiones (pueden venir de estados)
+  const [openAsociacion, setOpenAsociacion] = useState(false)
+  const [openTesoreria, setOpenTesoreria] = useState(false)
+
+  // Obtener todas las rutas para isActive
   const allMenuPaths = [
-    ...visibleMenuItems.map(item => item.path),
-    ...visibleAsistenciaItems.map(item => item.path)
+    ...asistenciaItems.map(item => item.path),
+    ...asociacionItems.map(item => item.path),
+    ...tesoreriaItems.map(item => item.path),
+    ...afiliadosItems.map(item => item.path)
   ]
 
   // Evitar renderizar hasta que esté montado en el cliente
@@ -244,46 +249,9 @@ export default function Sidebar() {
       </Box>
       <Divider />
       <List sx={{ pt: 0.5, flexGrow: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-        {/* Inicio */}
-        {visibleMenuItems.map((item) => (
-          <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
-            <ListItemButton
-              selected={isActive(item.path, allMenuPaths)}
-              onClick={() => router.push(item.path)}
-              sx={{
-                py: 1,
-                minHeight: 40,
-                '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.08)'
-                },
-                '&.Mui-selected': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.12)',
-                  color: theme.palette.text.primary,
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.16)'
-                  },
-                  '& .MuiListItemIcon-root': {
-                    color: theme.palette.text.primary
-                  }
-                }
-              }}
-            >
-              <ListItemIcon sx={{ color: 'inherit', minWidth: 36 }}>
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText 
-                primary={item.label} 
-                primaryTypographyProps={{ fontSize: '0.9rem' }}
-              />
-            </ListItemButton>
-          </ListItem>
-        ))}
-
         {/* Menú Asistencia */}
         {showAsistenciaMenu && (
           <>
-            <Divider sx={{ my: 0.5 }} />
-
             <ListItem disablePadding sx={{ mb: 0.5 }}>
               <ListItemButton
                 onClick={handleAsistenciaClick}
@@ -298,7 +266,7 @@ export default function Sidebar() {
                 </ListItemIcon>
                 <ListItemText
                   primary="Asistencia"
-                  primaryTypographyProps={{ fontSize: '0.9rem' }}
+                  primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 600 }}
                 />
                 {openAsistencia ? <ExpandLess /> : <ExpandMore />}
               </ListItemButton>
@@ -307,6 +275,122 @@ export default function Sidebar() {
             <Collapse in={openAsistencia} timeout="auto" unmountOnExit>
               <List component="div" disablePadding>
                 {visibleAsistenciaItems.map((item) => (
+                  <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
+                    <ListItemButton
+                      selected={isActive(item.path, allMenuPaths)}
+                      onClick={() => router.push(item.path)}
+                      sx={{
+                        pl: 3.5,
+                        py: 0.75,
+                        minHeight: 36,
+                        '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.08)' },
+                        '&.Mui-selected': {
+                          backgroundColor: 'rgba(0, 0, 0, 0.12)',
+                          color: theme.palette.text.primary,
+                          '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.16)' },
+                          '& .MuiListItemIcon-root': { color: theme.palette.text.primary }
+                        }
+                      }}
+                    >
+                      <ListItemIcon sx={{ color: 'inherit', minWidth: 32 }}>
+                        {item.icon}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={item.label}
+                        primaryTypographyProps={{ fontSize: '0.85rem' }}
+                      />
+                    </ListItemButton>
+                  </ListItem>
+                ))}
+              </List>
+            </Collapse>
+          </>
+        )}
+
+        {/* Menú Asociación */}
+        {showAsociacionMenu && (
+          <>
+            <Divider sx={{ my: 0.5 }} />
+            <ListItem disablePadding sx={{ mb: 0.5 }}>
+              <ListItemButton
+                onClick={() => setOpenAsociacion(!openAsociacion)}
+                sx={{
+                  py: 1,
+                  minHeight: 40,
+                  '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.08)' }
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 36 }}>
+                  <AdminPanelSettingsIcon />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Asociación"
+                  primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 600 }}
+                />
+                {openAsociacion ? <ExpandLess /> : <ExpandMore />}
+              </ListItemButton>
+            </ListItem>
+            <Collapse in={openAsociacion} timeout="auto" unmountOnExit>
+              <List component="div" disablePadding>
+                {asociacionItems.map((item) => (
+                  <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
+                    <ListItemButton
+                      selected={isActive(item.path, allMenuPaths)}
+                      onClick={() => router.push(item.path)}
+                      sx={{
+                        pl: 3.5,
+                        py: 0.75,
+                        minHeight: 36,
+                        '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.08)' },
+                        '&.Mui-selected': {
+                          backgroundColor: 'rgba(0, 0, 0, 0.12)',
+                          color: theme.palette.text.primary,
+                          '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.16)' },
+                          '& .MuiListItemIcon-root': { color: theme.palette.text.primary }
+                        }
+                      }}
+                    >
+                      <ListItemIcon sx={{ color: 'inherit', minWidth: 32 }}>
+                        {item.icon}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={item.label}
+                        primaryTypographyProps={{ fontSize: '0.85rem' }}
+                      />
+                    </ListItemButton>
+                  </ListItem>
+                ))}
+              </List>
+            </Collapse>
+          </>
+        )}
+
+        {/* Menú Tesorería */}
+        {showTesoreriaMenu && (
+          <>
+            <Divider sx={{ my: 0.5 }} />
+            <ListItem disablePadding sx={{ mb: 0.5 }}>
+              <ListItemButton
+                onClick={() => setOpenTesoreria(!openTesoreria)}
+                sx={{
+                  py: 1,
+                  minHeight: 40,
+                  '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.08)' }
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 36 }}>
+                  <PaymentIcon />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Tesorería"
+                  primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 600 }}
+                />
+                {openTesoreria ? <ExpandLess /> : <ExpandMore />}
+              </ListItemButton>
+            </ListItem>
+            <Collapse in={openTesoreria} timeout="auto" unmountOnExit>
+              <List component="div" disablePadding>
+                {tesoreriaItems.map((item) => (
                   <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
                     <ListItemButton
                       selected={isActive(item.path, allMenuPaths)}
@@ -361,7 +445,7 @@ export default function Sidebar() {
                 </ListItemIcon>
                 <ListItemText 
                   primary="Afiliados" 
-                  primaryTypographyProps={{ fontSize: '0.9rem' }}
+                  primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 600 }}
                 />
                 {openAfiliados ? <ExpandLess /> : <ExpandMore />}
               </ListItemButton>

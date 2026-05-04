@@ -50,6 +50,7 @@ import PagosStats from '@/components/pagos/PagosStats'
 import { useDialog } from '@/hooks/useDialog'
 import { CATEGORIES } from '@/constants/globales'
 import { usePagosManager } from '@/hooks/usePagosManager'
+import Pagination from '@/components/common/Pagination'
 
 export default function PagosPage() {
   const { user } = useAuth()
@@ -62,7 +63,13 @@ export default function PagosPage() {
     searchTerm,
     setSearchTerm,
     filters,
-    refreshAll
+    refreshAll,
+    page,
+    setPage,
+    itemsPerPage,
+    setItemsPerPage,
+    totalPages,
+    paginatedJudokas
   } = usePagosManager(user)
 
   // Diálogos
@@ -305,7 +312,7 @@ export default function PagosPage() {
                           sx={{ '&:hover': { cursor: 'pointer' } }}
                         />
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', py: 1.5 }}>N°</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', py: 1.5, width: '60px' }}>N°</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Judoka</TableCell>
                       {isAdmin && <TableCell sx={{ fontWeight: 'bold' }}>Club</TableCell>}
                       <TableCell sx={{ fontWeight: 'bold' }}>Categoría / Cinturón</TableCell>
@@ -314,8 +321,9 @@ export default function PagosPage() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {judokas.map((judoka, index) => {
+                    {paginatedJudokas.map((judoka, index) => {
                       const status = judokasStatus[judoka.id] || 'al_dia'
+                      const globalIndex = (page - 1) * itemsPerPage + index + 1
                       const rowColor = status === 'vencido' 
                         ? 'rgba(211, 47, 47, 0.08)' // Rojo suave
                         : status === 'pendiente'
@@ -337,7 +345,7 @@ export default function PagosPage() {
                               inputProps={{ 'aria-label': `Seleccionar ${judoka.nombres} ${judoka.apellidos}` }}
                             />
                           </TableCell>
-                          <TableCell sx={{ py: 1.5 }}>{index + 1}</TableCell>
+                          <TableCell sx={{ py: 1.5 }}>{globalIndex}</TableCell>
                           <TableCell>
                             <Typography variant="body2" fontWeight="500">
                               {judoka.nombres} {judoka.apellidos}
@@ -388,6 +396,19 @@ export default function PagosPage() {
                     })}
                   </TableBody>
                 </Table>
+                
+                {totalPages > 1 && (
+                  <Box sx={{ p: 2, borderTop: '1px solid #eee' }}>
+                    <Pagination
+                      currentPage={page}
+                      totalPages={totalPages}
+                      onPageChange={setPage}
+                      itemsPerPage={itemsPerPage}
+                      onItemsPerPageChange={setItemsPerPage}
+                      totalItems={judokas.length}
+                    />
+                  </Box>
+                )}
               </TableContainer>
             )}
           </>
