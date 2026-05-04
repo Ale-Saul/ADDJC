@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import {
   Box,
   Typography,
@@ -34,6 +35,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { NOTIF_TIPO_LABELS, NOTIF_TIPO_COLOR } from '@/constants/comunicacion'
 import type { Notificacion, ComunicacionNotifTipo } from '@/models/comunicacion'
 import { formatters } from '@/utils/formatters'
+import Pagination from '@/components/common/Pagination'
 
 const NOTIF_TIPO_ICON: Record<ComunicacionNotifTipo, React.ReactNode> = {
   pago: <PaymentIcon />,
@@ -51,8 +53,16 @@ export default function NotificacionesPage() {
   const { data: notificaciones = [], isLoading } = useNotificacionesByUsuario(usuarioId)
   const marcarLeida = useMarcarComoLeida(usuarioId)
   const marcarTodas = useMarcarTodasLeidas(usuarioId)
+  const [page, setPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
 
   const noLeidas = notificaciones.filter(n => !n.leido).length
+  const totalPages = Math.ceil(notificaciones.length / itemsPerPage)
+  const currentPage = Math.min(page, totalPages || 1)
+  const notificacionesPaginadas = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage
+    return notificaciones.slice(start, start + itemsPerPage)
+  }, [notificaciones, currentPage, itemsPerPage])
 
   const handleClickNotif = (notif: Notificacion) => {
     if (!notif.leido && notif.prioridad !== 'alta') {
@@ -116,7 +126,7 @@ export default function NotificacionesPage() {
           </Box>
         ) : (
           <List disablePadding>
-            {notificaciones.map((notif, idx) => (
+            {notificacionesPaginadas.map((notif, idx) => (
               <Box key={notif.id}>
                 {idx > 0 && <Divider />}
                 <ListItem
@@ -143,6 +153,7 @@ export default function NotificacionesPage() {
                   </ListItemIcon>
 
                   <ListItemText
+                    disableTypography
                     primary={
                       <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                         <Typography
@@ -170,16 +181,17 @@ export default function NotificacionesPage() {
                       </Stack>
                     }
                     secondary={
-                      <Box sx={{ mt: 0.5 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+                      <Box component="span" sx={{ mt: 0.5, display: 'block' }}>
+                        <Typography component="span" variant="body2" color="text.secondary" sx={{ lineHeight: 1.5, display: 'block' }}>
                           {notif.mensaje}
                         </Typography>
-                        <Typography variant="caption" color="text.disabled" display="block" sx={{ mt: 0.5 }}>
+                        <Typography component="span" variant="caption" color="text.disabled" display="block" sx={{ mt: 0.5 }}>
                           {formatters.formatDate(notif.created_at, 'long')}
                           {notif.leido_at && ` · Leída el ${formatters.formatDate(notif.leido_at)}`}
                         </Typography>
                         {notif.link_accion && (
                           <Typography
+                            component="span"
                             variant="caption"
                             color="primary.main"
                             sx={{ mt: 0.5, display: 'block', fontWeight: 500 }}
@@ -211,6 +223,18 @@ export default function NotificacionesPage() {
           </List>
         )}
       </Paper>
+
+      {!isLoading && notificaciones.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={notificaciones.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setPage}
+          onItemsPerPageChange={setItemsPerPage}
+          itemsPerPageOptions={[10, 20, 50]}
+        />
+      )}
     </Box>
   )
 }

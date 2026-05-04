@@ -24,7 +24,7 @@ export default function Layout({ children }: LayoutProps) {
           display: 'flex',
           flexDirection: 'column',
           width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
-          ml: { md: `${DRAWER_WIDTH}px` },
+          minWidth: 0,
         }}
       >
         {/* TopBar */}

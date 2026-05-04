@@ -191,6 +191,7 @@ export default function NotificationBell({ usuarioId }: Props) {
                       {NOTIF_TIPO_ICON[notif.tipo]}
                     </ListItemIcon>
                     <ListItemText
+                      disableTypography
                       primary={
                         <Typography
                           variant="body2"
@@ -201,11 +202,11 @@ export default function NotificationBell({ usuarioId }: Props) {
                         </Typography>
                       }
                       secondary={
-                        <Box>
-                          <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.25 }}>
+                        <Box component="span" sx={{ display: 'block' }}>
+                          <Typography component="span" variant="caption" color="text.secondary" display="block" sx={{ mt: 0.25 }}>
                             {notif.mensaje}
                           </Typography>
-                          <Typography variant="caption" color="text.disabled" display="block" sx={{ mt: 0.5 }}>
+                          <Typography component="span" variant="caption" color="text.disabled" display="block" sx={{ mt: 0.5 }}>
                             {formatters.formatDate(notif.created_at, 'long')}
                           </Typography>
                         </Box>

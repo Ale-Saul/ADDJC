@@ -23,22 +23,23 @@ export function useNoticiasByClub(
   })
 }
 
-export function useNoticiasDestacadas(clubId?: string) {
+export function useNoticiasDestacadas(clubId?: string, audiencia?: ComunicacionAudiencia) {
   return useQuery({
-    queryKey: COMUNICACION_QUERY_KEYS.noticiasDestacadas(clubId),
-    queryFn: () => comunicacionController.getNoticiasDestacadas(clubId),
+    queryKey: [...COMUNICACION_QUERY_KEYS.noticiasDestacadas(clubId), audiencia ?? 'todos'],
+    queryFn: () => comunicacionController.getNoticiasDestacadas(clubId, audiencia),
     select: res => res.data ?? [],
-    staleTime: 5 * 60 * 1000, // 5 min — las destacadas no cambian con frecuencia
+    staleTime: 5 * 60 * 1000,
   })
 }
 
 export function useNoticiasParaUsuario(
   audiencia: ComunicacionAudiencia,
-  clubId?: string
+  clubId?: string,
+  rol?: string
 ) {
   return useQuery({
-    queryKey: [...COMUNICACION_QUERY_KEYS.noticias(), 'usuario', audiencia, clubId ?? 'none'],
-    queryFn: () => comunicacionController.getNoticiasParaUsuario(audiencia, clubId),
+    queryKey: [...COMUNICACION_QUERY_KEYS.noticias(), 'usuario', audiencia, clubId ?? 'none', rol ?? 'none'],
+    queryFn: () => comunicacionController.getNoticiasParaUsuario(audiencia, clubId, rol),
     enabled: !!audiencia,
     select: res => res.data ?? [],
   })

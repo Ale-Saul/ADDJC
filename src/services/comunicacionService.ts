@@ -92,6 +92,13 @@ function mapNotificacionRow(row: Record<string, unknown>): Notificacion {
   }
 }
 
+function isUniqueViolation(error: unknown): boolean {
+  return typeof error === 'object'
+    && error !== null
+    && 'code' in error
+    && (error as { code?: string }).code === '23505'
+}
+
 // ─── Noticias ─────────────────────────────────────────────────────────────────
 
 export const comunicacionService = {
@@ -110,14 +117,34 @@ export const comunicacionService = {
     let query = supabase
       .from('comunicacion_noticias')
       .select(SELECT_NOTICIA_BASE)
-      .eq('club_id', clubId)
+
+    // Si clubId es 'global', buscamos noticias de la asociación (club_id IS NULL)
+    // OJO: Para el panel de administración, esto debe devolver TODAS las noticias sin club_id
+    if (clubId === 'global') {
+      query = query.is('club_id', null)
+    } else {
+      // Para un club específico, incluimos las del club O las globales
+      // Pero solo si NO estamos en el panel de administración (donde solo_activas es false)
+      if (filtros?.solo_activas === false) {
+        query = query.eq('club_id', clubId)
+      } else {
+        query = query.or(`club_id.eq.${clubId},club_id.is.null`)
+      }
+    }
 
     if (filtros?.solo_activas !== false) query = query.eq('activo', true)
     if (filtros?.solo_destacadas) query = query.eq('es_destacada', true)
     if (filtros?.categoria) query = query.eq('categoria', filtros.categoria)
+    
     // Audiencia: mostrar noticias para el rol específico O para "todos"
     if (filtros?.audiencia && filtros.audiencia !== 'todos') {
-      query = query.or(`audiencia.cs.{${filtros.audiencia}},audiencia.cs.{todos}`)
+      // Si el rol es ENCARGADO, también debe ver noticias para SENSEIS
+      // Si el rol es SENSEI, también debe ver noticias para ENCARGADOS
+      if (filtros.audiencia === 'senseis' || filtros.audiencia === 'encargados') {
+        query = query.or(`audiencia.cs.{senseis},audiencia.cs.{encargados},audiencia.cs.{todos}`)
+      } else {
+        query = query.or(`audiencia.cs.{${filtros.audiencia}},audiencia.cs.{todos}`)
+      }
     }
     if (filtros?.fecha_referencia) {
       query = query
@@ -135,7 +162,7 @@ export const comunicacionService = {
     return (data ?? []).map(row => mapNoticiaRow(row as Record<string, unknown>))
   },
 
-  async getNoticiasDestacadas(clubId?: string): Promise<Noticia[]> {
+  async getNoticiasDestacadas(clubId?: string, audiencia?: ComunicacionAudiencia): Promise<Noticia[]> {
     const supabase = createClient()
     const hoy = new Date().toISOString().split('T')[0]
 
@@ -149,6 +176,15 @@ export const comunicacionService = {
 
     if (clubId) {
       query = query.or(`club_id.eq.${clubId},club_id.is.null`)
+    }
+
+    // Filtrar por audiencia del usuario (igual que en getNoticiasByClub)
+    if (audiencia && audiencia !== 'todos') {
+      if (audiencia === 'senseis' || audiencia === 'encargados') {
+        query = query.or(`audiencia.cs.{senseis},audiencia.cs.{encargados},audiencia.cs.{todos}`)
+      } else {
+        query = query.or(`audiencia.cs.{${audiencia}},audiencia.cs.{todos}`)
+      }
     }
 
     const { data, error } = await query.order('created_at', { ascending: false }).limit(3)
@@ -215,7 +251,7 @@ export const comunicacionService = {
     const supabase = createClient()
     const { error } = await supabase
       .from('comunicacion_noticias')
-      .update({ activo: false, updated_at: new Date().toISOString() })
+      .delete()
       .eq('id', id)
 
     if (error) {
@@ -273,6 +309,15 @@ export const comunicacionService = {
       .single()
 
     if (error) {
+      if (isUniqueViolation(error) && payload.origen_id && payload.origen_modulo) {
+        const existente = await comunicacionService.getNotificacionByOrigen(
+          payload.usuario_id,
+          payload.origen_id,
+          payload.origen_modulo
+        )
+        if (existente) return existente
+      }
+
       console.error('Error en comunicacionService.createNotificacion:', error)
       throw error
     }
@@ -293,6 +338,34 @@ export const comunicacionService = {
     }
   },
 
+  // ─── Storage ─────────────────────────────────────────────────────────────
+
+  /**
+   * Sube una imagen al bucket noticias-imagenes y retorna la URL pública.
+   * El archivo se nombra con un timestamp + nombre original para evitar colisiones.
+   */
+  async uploadImagenNoticia(file: File): Promise<string> {
+    const supabase = createClient()
+    const extension = file.name.split('.').pop() ?? 'jpg'
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`
+    const path = `portadas/${filename}`
+
+    const { error } = await supabase.storage
+      .from('noticias-imagenes')
+      .upload(path, file, { contentType: file.type, upsert: false })
+
+    if (error) {
+      console.error('Error en comunicacionService.uploadImagenNoticia:', error)
+      throw error
+    }
+
+    const { data } = supabase.storage
+      .from('noticias-imagenes')
+      .getPublicUrl(path)
+
+    return data.publicUrl
+  },
+
   async marcarTodasLeidas(usuarioId: string): Promise<void> {
     const supabase = createClient()
     const { error } = await supabase
@@ -305,5 +378,49 @@ export const comunicacionService = {
       console.error('Error en comunicacionService.marcarTodasLeidas:', error)
       throw error
     }
+  },
+
+  /**
+   * Verifica si ya existe una notificación para el origen indicado.
+   * Evita duplicar alertas automáticas de vencimiento o creación de pago.
+   */
+  async existeNotificacionOrigen(usuarioId: string, origenId: string, origenModulo: string): Promise<boolean> {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('comunicacion_notificaciones')
+      .select('id')
+      .eq('usuario_id', usuarioId)
+      .eq('origen_id', origenId)
+      .eq('origen_modulo', origenModulo)
+      .eq('activo', true)
+      .limit(1)
+
+    if (error) return false
+    return (data?.length ?? 0) > 0
+  },
+
+  async getNotificacionByOrigen(
+    usuarioId: string,
+    origenId: string,
+    origenModulo: string
+  ): Promise<Notificacion | null> {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('comunicacion_notificaciones')
+      .select(SELECT_NOTIFICACION_BASE)
+      .eq('usuario_id', usuarioId)
+      .eq('origen_id', origenId)
+      .eq('origen_modulo', origenModulo)
+      .eq('activo', true)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    if (error) {
+      console.error('Error en comunicacionService.getNotificacionByOrigen:', error)
+      throw error
+    }
+
+    return data ? mapNotificacionRow(data as Record<string, unknown>) : null
   },
 }

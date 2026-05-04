@@ -46,10 +46,10 @@ export default function ComunicacionPage() {
 
   const audiencia = ROL_AUDIENCIA[user?.rol ?? ''] ?? 'todos'
   const clubId = user?.club_id ?? undefined
-  const puedePublicar = [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.SENSEI].includes(user?.rol as string)
+  const puedePublicar = [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO].includes(user?.rol as string)
 
-  const { data: destacadas = [], isLoading: loadingDestacadas } = useNoticiasDestacadas(clubId)
-  const { data: noticias = [], isLoading: loadingNoticias } = useNoticiasParaUsuario(audiencia, clubId)
+  const { data: destacadas = [], isLoading: loadingDestacadas } = useNoticiasDestacadas(clubId, audiencia)
+  const { data: noticias = [], isLoading: loadingNoticias } = useNoticiasParaUsuario(audiencia, clubId, user?.rol)
 
   const noticiasFiltradas = filtroCategoria === 'todas'
     ? noticias
@@ -59,12 +59,7 @@ export default function ComunicacionPage() {
 
   return (
     <Box>
-      <PageHeader
-        title="Comunicación"
-        actionLabel={puedePublicar ? 'Publicar noticia' : undefined}
-        actionIcon={<AddIcon />}
-        onAction={puedePublicar ? () => router.push('/comunicacion/admin') : undefined}
-      />
+      <PageHeader title="Comunicación" />
 
       {/* Noticias destacadas */}
       {(loadingDestacadas || destacadas.length > 0) && (

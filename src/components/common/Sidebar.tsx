@@ -135,6 +135,13 @@ export default function Sidebar() {
       group: 'tesoreria'
     },
     {
+      label: 'Mis Pagos',
+      path: '/pagos/pendientes',
+      icon: <PaymentIcon />,
+      allowedRoles: [ROL.JUDOKA],
+      group: 'tesoreria'
+    },
+    {
       label: 'Reportes',
       path: '/reportes',
       icon: <AssessmentIcon />,
@@ -224,7 +231,7 @@ export default function Sidebar() {
       label: 'Publicar',
       path: '/comunicacion/admin',
       icon: <EditNoteIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.SENSEI],
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO],
     },
   ]
 

@@ -31,6 +31,14 @@ export function usePagosManager(user: any) {
 
   useEffect(() => { refreshPagos() }, [refreshPagos])
 
+  // Verificar pagos próximos a vencer al cargar la página (solo una vez por sesión)
+  useEffect(() => {
+    const clubId = user?.club_id
+    if (!clubId) return
+    pagoController.checkPagosProximosAVencer(clubId).catch(() => { /* silencioso */ })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.club_id])
+
   // Estados para filtros
   const [showFilters, setShowFilters] = useState(false)
   const [senseiFilter, setSenseiFilter] = useState<string>('all')
