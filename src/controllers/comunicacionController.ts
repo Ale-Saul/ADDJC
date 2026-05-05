@@ -4,6 +4,7 @@ import {
   createNoticiaSchema,
   updateNoticiaSchema,
   createNotificacionSchema,
+  enviarNotificacionManualSchema,
   filtroNoticiaSchema,
 } from '@/schemas/comunicacionSchema'
 import {
@@ -12,9 +13,54 @@ import {
   Notificacion,
   NotificacionCreate,
   NotificacionContador,
+  NotificacionDestinatario,
   ComunicacionAudiencia,
+  ComunicacionCategoria,
 } from '@/models/comunicacion'
 import { ApiResponse } from '@/types/globales'
+import { ROL } from '@/constants/roles'
+
+type NoticiaControllerRow = {
+  id: string
+  club_id: string | null
+  autor_id: string
+  titulo: string
+  contenido: string
+  categoria: ComunicacionCategoria
+  imagen_url: string | null
+  es_destacada: boolean
+  audiencia: ComunicacionAudiencia[]
+  fecha_inicio: string
+  fecha_fin: string | null
+  activo: boolean
+  created_at: string
+  updated_at: string
+  usuarios: { nombre?: string | null; apellido_paterno?: string | null } | null
+  clubes: { nombre_club?: string | null } | null
+}
+
+function mapNoticiaControllerRow(row: NoticiaControllerRow): Noticia {
+  return {
+    id: row.id,
+    club_id: row.club_id,
+    autor_id: row.autor_id,
+    titulo: row.titulo,
+    contenido: row.contenido,
+    categoria: row.categoria,
+    imagen_url: row.imagen_url,
+    es_destacada: row.es_destacada,
+    audiencia: row.audiencia,
+    fecha_inicio: row.fecha_inicio,
+    fecha_fin: row.fecha_fin,
+    activo: row.activo,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    nombre_autor: row.usuarios
+      ? [row.usuarios.nombre, row.usuarios.apellido_paterno].filter(Boolean).join(' ')
+      : undefined,
+    nombre_club: row.clubes?.nombre_club ?? null,
+  }
+}
 
 const SELECT_NOTICIA_BASE = `
   id,
@@ -46,8 +92,8 @@ export const comunicacionController = {
   async getNoticiasByClub(
     clubId: string,
     filtros?: {
-      categoria?: string
-      audiencia?: string
+      categoria?: ComunicacionCategoria
+      audiencia?: ComunicacionAudiencia
       solo_destacadas?: boolean
       solo_activas?: boolean
       fecha_referencia?: string
@@ -63,8 +109,8 @@ export const comunicacionController = {
       }
 
       const data = await comunicacionService.getNoticiasByClub(clubId, {
-        categoria: filtros?.categoria as any,
-        audiencia: filtros?.audiencia as any,
+        categoria: filtros?.categoria,
+        audiencia: filtros?.audiencia,
         solo_destacadas: filtros?.solo_destacadas,
         solo_activas: filtros?.solo_activas ?? true,
         fecha_referencia: filtros?.fecha_referencia,
@@ -105,17 +151,11 @@ export const comunicacionController = {
 
         if (error) throw error
         
-        const mappedData = (data ?? []).map((row: any) => {
-          const autor = row.usuarios as { nombre?: string; apellido_paterno?: string } | null
-          const club = row.clubes as { nombre_club?: string } | null
-          return {
-            ...row,
-            nombre_autor: autor ? [autor.nombre, autor.apellido_paterno].filter(Boolean).join(' ') : undefined,
-            nombre_club: club?.nombre_club ?? null,
-          }
-        })
+        const mappedData = (data ?? []).map(row =>
+          mapNoticiaControllerRow(row as unknown as NoticiaControllerRow)
+        )
 
-        return { success: true, data: mappedData as Noticia[] }
+        return { success: true, data: mappedData }
       }
 
       if (clubId) {
@@ -140,7 +180,7 @@ export const comunicacionController = {
       // Sin club_id y no es asociación: solo noticias globales (club_id IS NULL)
       const supabase = createClient()
       
-      let query = supabase
+      const query = supabase
         .from('comunicacion_noticias')
         .select(SELECT_NOTICIA_BASE)
         .is('club_id', null)
@@ -152,16 +192,9 @@ export const comunicacionController = {
 
       if (error) throw error
       
-      const mappedData = (data ?? []).map((row: any) => {
-        const autor = row.usuarios as { nombre?: string; apellido_paterno?: string } | null
-        const club = row.clubes as { nombre_club?: string } | null
-        return {
-          ...row,
-          nombre_autor: autor ? [autor.nombre, autor.apellido_paterno].filter(Boolean).join(' ') : undefined,
-          nombre_club: club?.nombre_club ?? null,
-          audiencia: row.audiencia as string[]
-        }
-      })
+      const mappedData = (data ?? []).map(row =>
+        mapNoticiaControllerRow(row as unknown as NoticiaControllerRow)
+      )
 
       // Filtrar por audiencia en JS
       const filtered = mappedData.filter(n => {
@@ -172,7 +205,7 @@ export const comunicacionController = {
         return n.audiencia.includes(usuarioAudiencia)
       })
 
-      return { success: true, data: filtered as Noticia[] }
+      return { success: true, data: filtered }
     } catch (err) {
       console.error('Error en comunicacionController.getNoticiasParaUsuario:', err)
       return { success: false, error: 'Error al obtener las noticias' }
@@ -386,6 +419,89 @@ export const comunicacionController = {
     } catch (err) {
       console.error('Error en comunicacionController.getContadorNoLeidas:', err)
       return { success: false, error: 'Error al obtener el contador de notificaciones' }
+    }
+  },
+
+  async getDestinatariosNotificacion(
+    remitenteRol: string,
+    remitenteClubId?: string | null,
+    search?: string
+  ): Promise<ApiResponse<NotificacionDestinatario[]>> {
+    try {
+      if (remitenteRol === ROL.ASOCIACION) {
+        const data = await comunicacionService.getDestinatariosParaAsociacion(search)
+        return { success: true, data }
+      }
+
+      if (remitenteRol === ROL.ENCARGADO) {
+        if (!remitenteClubId) {
+          return { success: false, error: 'El encargado no tiene un club asignado' }
+        }
+
+        const data = await comunicacionService.getDestinatariosByClub(remitenteClubId, search)
+        return { success: true, data }
+      }
+
+      return { success: false, error: 'No tienes permisos para buscar destinatarios' }
+    } catch (err) {
+      console.error('Error en comunicacionController.getDestinatariosNotificacion:', err)
+      return { success: false, error: 'Error al obtener destinatarios' }
+    }
+  },
+
+  async enviarNotificacionManual(payload: {
+    remitente_id: string
+    remitente_rol: string
+    remitente_club_id?: string | null
+    destinatario_id: string
+    titulo: string
+    mensaje: string
+  }): Promise<ApiResponse<Notificacion>> {
+    try {
+      const normalizado = {
+        ...payload,
+        titulo: payload.titulo.replace(/\s+/g, ' ').trim(),
+        mensaje: payload.mensaje.replace(/\s+/g, ' ').trim(),
+      }
+
+      const parsed = enviarNotificacionManualSchema.safeParse(normalizado)
+      if (!parsed.success) {
+        return { success: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos' }
+      }
+
+      const destinatario = await comunicacionService.getDestinatarioActivoById(parsed.data.destinatario_id)
+      if (!destinatario) {
+        return { success: false, error: 'El destinatario no existe o está inactivo' }
+      }
+
+      if (parsed.data.remitente_rol === ROL.ENCARGADO) {
+        if (!parsed.data.remitente_club_id) {
+          return { success: false, error: 'El encargado no tiene un club asignado' }
+        }
+
+        const perteneceAlClub = await comunicacionService.usuarioPerteneceAClub(
+          parsed.data.destinatario_id,
+          parsed.data.remitente_club_id
+        )
+
+        if (!perteneceAlClub) {
+          return { success: false, error: 'Solo puedes notificar a usuarios de tu club' }
+        }
+      }
+
+      return comunicacionController.enviarNotificacion({
+        usuario_id: parsed.data.destinatario_id,
+        titulo: parsed.data.titulo,
+        mensaje: parsed.data.mensaje,
+        tipo: 'info',
+        prioridad: 'normal',
+        link_accion: '/comunicacion/notificaciones',
+        origen_modulo: null,
+        origen_id: null,
+      })
+    } catch (err) {
+      console.error('Error en comunicacionController.enviarNotificacionManual:', err)
+      return { success: false, error: 'Error al enviar la notificación' }
     }
   },
 

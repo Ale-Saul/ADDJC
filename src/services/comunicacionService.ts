@@ -6,9 +6,11 @@ import {
   Notificacion,
   NotificacionCreate,
   NotificacionContador,
+  NotificacionDestinatario,
   ComunicacionAudiencia,
   ComunicacionCategoria,
 } from '@/models/comunicacion'
+import { ROL, type UserRole } from '@/constants/roles'
 
 // ─── Columnas explícitas (anti over-fetching) ────────────────────────────────
 
@@ -97,6 +99,73 @@ function isUniqueViolation(error: unknown): boolean {
     && error !== null
     && 'code' in error
     && (error as { code?: string }).code === '23505'
+}
+
+type UsuarioDestinatarioRow = {
+  id: string
+  correo: string | null
+  nombre: string | null
+  apellido_paterno: string | null
+  apellido_materno: string | null
+  rol: UserRole
+  activo?: boolean | null
+}
+
+type PerfilClubRow = {
+  club_id: string | null
+  usuarios: UsuarioDestinatarioRow | UsuarioDestinatarioRow[] | null
+  clubes?: { nombre_club?: string | null } | { nombre_club?: string | null }[] | null
+}
+
+function getSingleJoin<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null
+  return value ?? null
+}
+
+function getNombreCompleto(usuario: UsuarioDestinatarioRow): string {
+  return [
+    usuario.nombre,
+    usuario.apellido_paterno,
+    usuario.apellido_materno,
+  ].filter(Boolean).join(' ').trim() || usuario.correo || 'Usuario sin nombre'
+}
+
+function mapDestinatarioUsuario(
+  usuario: UsuarioDestinatarioRow,
+  clubId: string | null = null,
+  clubNombre: string | null = null
+): NotificacionDestinatario {
+  return {
+    id: usuario.id,
+    nombre_completo: getNombreCompleto(usuario),
+    email: usuario.correo ?? '',
+    rol: usuario.rol,
+    club_id: clubId,
+    club_nombre: clubNombre,
+  }
+}
+
+function normalizeSearchTerm(search?: string): string {
+  return (search ?? '').replace(/[%,()]/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function filterDestinatariosBySearch(
+  destinatarios: NotificacionDestinatario[],
+  search?: string
+): NotificacionDestinatario[] {
+  const term = normalizeSearchTerm(search).toLowerCase()
+  if (!term) return destinatarios
+
+  return destinatarios.filter(destinatario => {
+    const searchable = [
+      destinatario.nombre_completo,
+      destinatario.email,
+      destinatario.rol,
+      destinatario.club_nombre ?? '',
+    ].join(' ').toLowerCase()
+
+    return searchable.includes(term)
+  })
 }
 
 // ─── Noticias ─────────────────────────────────────────────────────────────────
@@ -298,6 +367,129 @@ export const comunicacionService = {
       total_no_leidas: rows.length,
       tiene_alta_prioridad: rows.some(r => r.prioridad === 'alta'),
     }
+  },
+
+  async getDestinatariosParaAsociacion(search?: string): Promise<NotificacionDestinatario[]> {
+    const supabase = createClient()
+    const term = normalizeSearchTerm(search)
+
+    let query = supabase
+      .from('usuarios')
+      .select('id, correo, nombre, apellido_paterno, apellido_materno, rol')
+      .eq('activo', true)
+      .order('nombre', { ascending: true })
+      .limit(80)
+
+    if (term.length >= 2) {
+      query = query.or(
+        `nombre.ilike.%${term}%,apellido_paterno.ilike.%${term}%,apellido_materno.ilike.%${term}%,correo.ilike.%${term}%`
+      )
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Error en comunicacionService.getDestinatariosParaAsociacion:', error)
+      throw error
+    }
+
+    return (data ?? []).map(row => mapDestinatarioUsuario(row as UsuarioDestinatarioRow))
+  },
+
+  async getDestinatariosByClub(clubId: string, search?: string): Promise<NotificacionDestinatario[]> {
+    const supabase = createClient()
+    const [judokasRes, senseisRes] = await Promise.all([
+      supabase
+        .from('judokas')
+        .select('club_id, usuarios:usuario_id(id, correo, nombre, apellido_paterno, apellido_materno, rol, activo), clubes:club_id(nombre_club)')
+        .eq('club_id', clubId),
+      supabase
+        .from('senseis')
+        .select('club_id, usuarios:usuario_id(id, correo, nombre, apellido_paterno, apellido_materno, rol, activo), clubes:club_id(nombre_club)')
+        .eq('club_id', clubId),
+    ])
+
+    if (judokasRes.error) {
+      console.error('Error en comunicacionService.getDestinatariosByClub judokas:', judokasRes.error)
+      throw judokasRes.error
+    }
+
+    if (senseisRes.error) {
+      console.error('Error en comunicacionService.getDestinatariosByClub senseis:', senseisRes.error)
+      throw senseisRes.error
+    }
+
+    const rows = [
+      ...((judokasRes.data ?? []) as PerfilClubRow[]),
+      ...((senseisRes.data ?? []) as PerfilClubRow[]),
+    ]
+
+    const destinatariosMap = new Map<string, NotificacionDestinatario>()
+
+    rows.forEach(row => {
+      const usuario = getSingleJoin(row.usuarios)
+      if (!usuario || usuario.activo === false || usuario.rol === ROL.ASOCIACION || usuario.rol === ROL.ADMIN) return
+
+      const club = getSingleJoin(row.clubes)
+      destinatariosMap.set(
+        usuario.id,
+        mapDestinatarioUsuario(usuario, row.club_id, club?.nombre_club ?? null)
+      )
+    })
+
+    return filterDestinatariosBySearch(
+      Array.from(destinatariosMap.values()).sort((a, b) =>
+        a.nombre_completo.localeCompare(b.nombre_completo, 'es')
+      ),
+      search
+    ).slice(0, 80)
+  },
+
+  async getDestinatarioActivoById(usuarioId: string): Promise<NotificacionDestinatario | null> {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('id, correo, nombre, apellido_paterno, apellido_materno, rol')
+      .eq('id', usuarioId)
+      .eq('activo', true)
+      .maybeSingle()
+
+    if (error) {
+      console.error('Error en comunicacionService.getDestinatarioActivoById:', error)
+      throw error
+    }
+
+    return data ? mapDestinatarioUsuario(data as UsuarioDestinatarioRow) : null
+  },
+
+  async usuarioPerteneceAClub(usuarioId: string, clubId: string): Promise<boolean> {
+    const supabase = createClient()
+    const [judokaRes, senseiRes] = await Promise.all([
+      supabase
+        .from('judokas')
+        .select('id')
+        .eq('usuario_id', usuarioId)
+        .eq('club_id', clubId)
+        .limit(1),
+      supabase
+        .from('senseis')
+        .select('id')
+        .eq('usuario_id', usuarioId)
+        .eq('club_id', clubId)
+        .limit(1),
+    ])
+
+    if (judokaRes.error) {
+      console.error('Error en comunicacionService.usuarioPerteneceAClub judokas:', judokaRes.error)
+      throw judokaRes.error
+    }
+
+    if (senseiRes.error) {
+      console.error('Error en comunicacionService.usuarioPerteneceAClub senseis:', senseiRes.error)
+      throw senseiRes.error
+    }
+
+    return (judokaRes.data?.length ?? 0) > 0 || (senseiRes.data?.length ?? 0) > 0
   },
 
   async createNotificacion(payload: NotificacionCreate): Promise<Notificacion> {

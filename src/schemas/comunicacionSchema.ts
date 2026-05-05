@@ -113,3 +113,22 @@ export const createNotificacionSchema = z.object({
   origen_modulo: z.string().max(50).nullable().optional(),
   origen_id: z.string().uuid().nullable().optional(),
 })
+
+export const enviarNotificacionManualSchema = z.object({
+  remitente_id: z.string().uuid('ID de remitente inválido'),
+  remitente_rol: z.enum(['asociacion', 'encargado'], {
+    error: 'Rol no autorizado para enviar notificaciones directas',
+  }),
+  remitente_club_id: z.string().uuid('ID de club inválido').nullable().optional(),
+  destinatario_id: z.string().uuid('Debe seleccionar un destinatario válido'),
+  titulo: z
+    .string()
+    .min(3, 'El asunto debe tener al menos 3 caracteres')
+    .max(150, 'El asunto no puede exceder 150 caracteres')
+    .refine(v => !/\s{2,}/.test(v), { message: 'No se permiten espacios consecutivos' }),
+  mensaje: z
+    .string()
+    .min(5, 'El mensaje debe tener al menos 5 caracteres')
+    .max(500, 'El mensaje no puede exceder 500 caracteres')
+    .refine(v => !/\s{2,}/.test(v), { message: 'No se permiten espacios consecutivos' }),
+})

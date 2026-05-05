@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Box,
   Typography,
@@ -12,11 +12,17 @@ import {
   Divider,
   Chip,
   Button,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Alert,
+  Snackbar,
   Skeleton,
   Stack,
-  IconButton,
   Tooltip,
 } from '@mui/material'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import dayjs from 'dayjs'
 import PaymentIcon from '@mui/icons-material/Payment'
 import SchoolIcon from '@mui/icons-material/School'
 import ChecklistIcon from '@mui/icons-material/Checklist'
@@ -24,6 +30,8 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents'
 import InfoIcon from '@mui/icons-material/Info'
 import DoneAllIcon from '@mui/icons-material/DoneAll'
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone'
+import SendIcon from '@mui/icons-material/Send'
+import FilterListIcon from '@mui/icons-material/FilterList'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import {
@@ -36,6 +44,25 @@ import { NOTIF_TIPO_LABELS, NOTIF_TIPO_COLOR } from '@/constants/comunicacion'
 import type { Notificacion, ComunicacionNotifTipo } from '@/models/comunicacion'
 import { formatters } from '@/utils/formatters'
 import Pagination from '@/components/common/Pagination'
+import EnviarNotificacionManualForm from '@/components/comunicacion/EnviarNotificacionManualForm'
+import { ROL } from '@/constants/roles'
+
+function toYmd(iso: string): string {
+  return iso.slice(0, 10)
+}
+
+function crearRangoNotificacionesDefault(): { desde: string; hasta: string } {
+  const hoy = dayjs()
+  return {
+    desde: hoy.subtract(1, 'month').format('YYYY-MM-DD'),
+    hasta: hoy.format('YYYY-MM-DD'),
+  }
+}
+
+function notifEnRango(n: Notificacion, desde: string, hasta: string): boolean {
+  const d = toYmd(n.created_at)
+  return d >= desde && d <= hasta
+}
 
 const NOTIF_TIPO_ICON: Record<ComunicacionNotifTipo, React.ReactNode> = {
   pago: <PaymentIcon />,
@@ -55,14 +82,30 @@ export default function NotificacionesPage() {
   const marcarTodas = useMarcarTodasLeidas(usuarioId)
   const [page, setPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [openEnviar, setOpenEnviar] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [fechaDesde, setFechaDesde] = useState(() => crearRangoNotificacionesDefault().desde)
+  const [fechaHasta, setFechaHasta] = useState(() => crearRangoNotificacionesDefault().hasta)
+  const remitenteRol = user?.rol === ROL.ASOCIACION || user?.rol === ROL.ENCARGADO ? user.rol : null
 
-  const noLeidas = notificaciones.filter(n => !n.leido).length
-  const totalPages = Math.ceil(notificaciones.length / itemsPerPage)
+  const hoy = dayjs()
+
+  const notificacionesFiltradas = useMemo(
+    () => notificaciones.filter(n => notifEnRango(n, fechaDesde, fechaHasta)),
+    [notificaciones, fechaDesde, fechaHasta],
+  )
+
+  useEffect(() => {
+    setPage(1)
+  }, [fechaDesde, fechaHasta])
+
+  const noLeidas = notificacionesFiltradas.filter(n => !n.leido).length
+  const totalPages = Math.ceil(notificacionesFiltradas.length / itemsPerPage)
   const currentPage = Math.min(page, totalPages || 1)
   const notificacionesPaginadas = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage
-    return notificaciones.slice(start, start + itemsPerPage)
-  }, [notificaciones, currentPage, itemsPerPage])
+    return notificacionesFiltradas.slice(start, start + itemsPerPage)
+  }, [notificacionesFiltradas, currentPage, itemsPerPage])
 
   const handleClickNotif = (notif: Notificacion) => {
     if (!notif.leido && notif.prioridad !== 'alta') {
@@ -75,7 +118,67 @@ export default function NotificacionesPage() {
 
   return (
     <Box>
-      <PageHeader title="Mis Notificaciones" />
+      <PageHeader
+        title="Mis Notificaciones"
+        actionLabel={remitenteRol ? 'Enviar notificación' : undefined}
+        actionIcon={<SendIcon />}
+        onAction={remitenteRol ? () => setOpenEnviar(true) : undefined}
+      />
+
+      <Paper variant="outlined" sx={{ p: 2, mb: 2, borderRadius: 2 }}>
+        <Stack spacing={2}>
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+            <FilterListIcon color="action" fontSize="small" />
+            <Typography variant="subtitle2" fontWeight={700}>
+              Filtrar por fecha de la notificación
+            </Typography>
+          </Stack>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+              gap: 2,
+              alignItems: 'center',
+            }}
+          >
+            <DatePicker
+              label="Desde"
+              format="DD/MM/YYYY"
+              value={fechaDesde ? dayjs(fechaDesde) : null}
+              onChange={(newValue) =>
+                setFechaDesde(newValue ? newValue.format('YYYY-MM-DD') : crearRangoNotificacionesDefault().desde)
+              }
+              maxDate={fechaHasta ? dayjs(fechaHasta) : hoy}
+              slotProps={{
+                textField: {
+                  size: 'small',
+                  fullWidth: true,
+                  InputLabelProps: { shrink: true },
+                },
+              }}
+            />
+            <DatePicker
+              label="Hasta"
+              format="DD/MM/YYYY"
+              value={fechaHasta ? dayjs(fechaHasta) : null}
+              onChange={(newValue) =>
+                setFechaHasta(
+                  newValue ? newValue.format('YYYY-MM-DD') : crearRangoNotificacionesDefault().hasta,
+                )
+              }
+              minDate={fechaDesde ? dayjs(fechaDesde) : undefined}
+              maxDate={hoy}
+              slotProps={{
+                textField: {
+                  size: 'small',
+                  fullWidth: true,
+                  InputLabelProps: { shrink: true },
+                },
+              }}
+            />
+          </Box>
+        </Stack>
+      </Paper>
 
       {/* Resumen */}
       {noLeidas > 0 && (
@@ -122,6 +225,16 @@ export default function NotificacionesPage() {
             </Typography>
             <Typography variant="body2" color="text.disabled" sx={{ mt: 0.5 }}>
               Aquí aparecerán tus alertas de pagos, exámenes y logros
+            </Typography>
+          </Box>
+        ) : notificacionesFiltradas.length === 0 ? (
+          <Box sx={{ py: 8, textAlign: 'center' }}>
+            <NotificationsNoneIcon sx={{ fontSize: 56, color: 'text.disabled', mb: 1.5 }} />
+            <Typography variant="body1" color="text.secondary">
+              Nada en este período
+            </Typography>
+            <Typography variant="body2" color="text.disabled" sx={{ mt: 0.5 }}>
+              Ampliá el rango de fechas para ver notificaciones anteriores
             </Typography>
           </Box>
         ) : (
@@ -224,17 +337,51 @@ export default function NotificacionesPage() {
         )}
       </Paper>
 
-      {!isLoading && notificaciones.length > 0 && (
+      {!isLoading && notificacionesFiltradas.length > 0 && (
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
-          totalItems={notificaciones.length}
+          totalItems={notificacionesFiltradas.length}
           itemsPerPage={itemsPerPage}
           onPageChange={setPage}
           onItemsPerPageChange={setItemsPerPage}
           itemsPerPageOptions={[10, 20, 50]}
         />
       )}
+
+      <Dialog
+        open={openEnviar}
+        onClose={() => setOpenEnviar(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Enviar notificación directa</DialogTitle>
+        <DialogContent dividers>
+          {user && remitenteRol && (
+            <EnviarNotificacionManualForm
+              remitenteId={user.id}
+              remitenteRol={remitenteRol}
+              remitenteClubId={user.club_id}
+              onCancel={() => setOpenEnviar(false)}
+              onSuccess={() => {
+                setOpenEnviar(false)
+                setSuccessMessage('Notificación enviada correctamente')
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Snackbar
+        open={!!successMessage}
+        autoHideDuration={3500}
+        onClose={() => setSuccessMessage(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSuccessMessage(null)} severity="success" variant="filled">
+          {successMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }

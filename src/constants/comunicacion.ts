@@ -14,6 +14,8 @@ export const COMUNICACION_QUERY_KEYS = {
   notificaciones: () => [...COMUNICACION_QUERY_KEYS.all, 'notificaciones'] as const,
   notificacionesByUsuario: (usuarioId: string) => [...COMUNICACION_QUERY_KEYS.notificaciones(), usuarioId] as const,
   notificacionesContador: (usuarioId: string) => [...COMUNICACION_QUERY_KEYS.notificaciones(), 'contador', usuarioId] as const,
+  notificacionesDestinatarios: (rol: string, clubId?: string | null, search?: string) =>
+    [...COMUNICACION_QUERY_KEYS.notificaciones(), 'destinatarios', rol, clubId ?? 'sin-club', search ?? ''] as const,
 } as const
 
 /** Labels para las categorías de noticias */

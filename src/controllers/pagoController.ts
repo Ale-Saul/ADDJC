@@ -187,6 +187,34 @@ export const pagoController = {
   },
 
   /**
+   * Obtener historial de pagos resueltos de un usuario judoka.
+   */
+  async getPagosHistorialByUsuario(usuarioId: string): Promise<ApiResponse<Pago[]>> {
+    if (!usuarioId) {
+      return { success: false, error: 'ID de usuario requerido' }
+    }
+
+    const judokaResult = await pagoService.getJudokaIdByUsuario(usuarioId)
+    if (!judokaResult.success || !judokaResult.data) {
+      return { success: false, error: 'No se encontró el perfil de judoka asociado al usuario' }
+    }
+
+    const pagosResult = await pagoService.getByJudoka(judokaResult.data)
+    if (!pagosResult.success) return pagosResult
+
+    const estadosResueltos = new Set<string>([
+      ESTADO_PAGO.PAGADO,
+      ESTADO_PAGO.CANCELADO,
+      ESTADO_PAGO.REEMBOLSADO,
+      'pago',
+      'completado',
+    ])
+    const historial = (pagosResult.data ?? []).filter(pago => estadosResueltos.has(pago.estado))
+
+    return { success: true, data: historial }
+  },
+
+  /**
    * Verifica los pagos pendientes que vencen mañana para el club indicado
    * y envía notificaciones de alerta a los judokas que aún no las recibieron.
    * Se llama al cargar la página de Pagos para alertas proactivas.

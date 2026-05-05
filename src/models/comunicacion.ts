@@ -3,6 +3,8 @@
  * Reflejan 1:1 las tablas de Supabase (snake_case).
  */
 
+import type { UserRole } from '@/constants/roles'
+
 // ─── ENUMs ────────────────────────────────────────────────────────────────────
 
 export type ComunicacionCategoria = 'evento' | 'institucional' | 'logro'
@@ -76,4 +78,14 @@ export type NotificacionCreate = Omit<Notificacion,
 export interface NotificacionContador {
   total_no_leidas: number
   tiene_alta_prioridad: boolean
+}
+
+/** Usuario disponible para envío manual de notificaciones */
+export interface NotificacionDestinatario {
+  id: string
+  nombre_completo: string
+  email: string
+  rol: UserRole
+  club_id: string | null
+  club_nombre?: string | null
 }
