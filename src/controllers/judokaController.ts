@@ -70,8 +70,8 @@ export const judokaController = {
       return { success: false, error: pesoValidation.error.issues[0]?.message ?? 'Error de validación' }
     }
 
-    // Generar contraseña automática basada en el carnet
-    const autoPassword = generarPasswordInicial(judokaData.ci || '')
+    // Generar contraseña automática basada en el carnet y extensión
+    const autoPassword = generarPasswordInicial(judokaData.ci || '', judokaData.ci_extension)
 
     // Por defecto, el judoka se crea como activo
     const judokaToCreate: JudokaCreate = {

@@ -31,6 +31,14 @@ export function usePagosManager(user: any) {
 
   useEffect(() => { refreshPagos() }, [refreshPagos])
 
+  // Verificar pagos próximos a vencer al cargar la página (solo una vez por sesión)
+  useEffect(() => {
+    const clubId = user?.club_id
+    if (!clubId) return
+    pagoController.checkPagosProximosAVencer(clubId).catch(() => { /* silencioso */ })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.club_id])
+
   // Estados para filtros
   const [showFilters, setShowFilters] = useState(false)
   const [senseiFilter, setSenseiFilter] = useState<string>('all')
@@ -161,6 +169,26 @@ export function usePagosManager(user: any) {
     await Promise.all([refreshJudokas(), refreshPagos()])
   }, [refreshJudokas, refreshPagos])
 
+  // Paginación
+  const [page, setPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+
+  const totalPages = useMemo(() => {
+    return Math.ceil(filteredJudokas.length / itemsPerPage)
+  }, [filteredJudokas.length, itemsPerPage])
+
+  const paginatedJudokas = useMemo(() => {
+    return filteredJudokas.slice(
+      (page - 1) * itemsPerPage,
+      page * itemsPerPage
+    )
+  }, [filteredJudokas, page, itemsPerPage])
+
+  // Resetear a página 1 cuando los filtros cambian
+  useEffect(() => {
+    setPage(1)
+  }, [searchTerm, senseiFilter, categoriaFilter, clubFilter, statusFilter])
+
   return {
     isAdmin,
     judokas: filteredJudokas,
@@ -184,6 +212,12 @@ export function usePagosManager(user: any) {
       senseisList,
       clearFilters
     },
-    refreshAll
+    refreshAll,
+    page: page || 1,
+    setPage,
+    itemsPerPage: itemsPerPage || 10,
+    setItemsPerPage,
+    totalPages: totalPages || 0,
+    paginatedJudokas
   }
 }

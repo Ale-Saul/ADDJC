@@ -1,8 +1,10 @@
 import { pagoService } from '@/services/pagoService'
 import { Pago, PagoCreate, PagoUpdate } from '@/models/pago'
 import { ApiResponse } from '@/types/globales'
-import { TIPO_DESCUENTO } from '@/constants/pagos'
+import { ESTADO_PAGO, TIPO_DESCUENTO } from '@/constants/pagos'
 import { createPagoSchema, updatePagoSchema } from '@/schemas/pagoSchema'
+import { comunicacionController } from '@/controllers/comunicacionController'
+import { comunicacionService } from '@/services/comunicacionService'
 
 export const pagoController = {
   /**
@@ -127,7 +129,121 @@ export const pagoController = {
     }
     validatedData.monto_final = montoFinal
 
-    return await pagoService.create(validatedData)
+    const result = await pagoService.create(validatedData)
+
+    if (result.success && result.data) {
+      const pago = result.data
+      const judokaResult = await pagoService.getUsuarioIdByJudoka(pago.judoka_id)
+      if (judokaResult.success && judokaResult.data) {
+        const fechaFormateada = new Date(pago.fecha_vencimiento).toLocaleDateString('es-BO', {
+          day: '2-digit', month: 'long', year: 'numeric',
+        })
+        const notifResult = await comunicacionController.enviarNotificacion({
+          usuario_id: judokaResult.data,
+          titulo: `Nuevo pago registrado: ${pago.concepto}`,
+          mensaje: `Se registró un pago de Bs. ${pago.monto_final} por "${pago.concepto}". Fecha límite de pago: ${fechaFormateada}.`,
+          tipo: 'pago',
+          prioridad: 'normal',
+          link_accion: '/pagos/pendientes',
+          origen_modulo: 'tesoreria_pago_creacion',
+          origen_id: pago.id,
+        })
+
+        if (!notifResult.success) {
+          console.error('No se pudo notificar el nuevo pago:', notifResult.error)
+        }
+      }
+    }
+
+    return result
+  },
+
+  /**
+   * Obtener pagos pendientes de un usuario judoka.
+   */
+  async getPagosPendientesByUsuario(usuarioId: string): Promise<ApiResponse<Pago[]>> {
+    if (!usuarioId) {
+      return { success: false, error: 'ID de usuario requerido' }
+    }
+
+    const judokaResult = await pagoService.getJudokaIdByUsuario(usuarioId)
+    if (!judokaResult.success || !judokaResult.data) {
+      return { success: false, error: 'No se encontró el perfil de judoka asociado al usuario' }
+    }
+
+    const pagosResult = await pagoService.getByJudoka(judokaResult.data)
+    if (!pagosResult.success) return pagosResult
+
+    const estadosResueltos = new Set<string>([
+      ESTADO_PAGO.PAGADO,
+      ESTADO_PAGO.CANCELADO,
+      ESTADO_PAGO.REEMBOLSADO,
+      'pago',
+      'completado',
+    ])
+    const pendientes = (pagosResult.data ?? []).filter(pago => !estadosResueltos.has(pago.estado))
+
+    return { success: true, data: pendientes }
+  },
+
+  /**
+   * Obtener historial de pagos resueltos de un usuario judoka.
+   */
+  async getPagosHistorialByUsuario(usuarioId: string): Promise<ApiResponse<Pago[]>> {
+    if (!usuarioId) {
+      return { success: false, error: 'ID de usuario requerido' }
+    }
+
+    const judokaResult = await pagoService.getJudokaIdByUsuario(usuarioId)
+    if (!judokaResult.success || !judokaResult.data) {
+      return { success: false, error: 'No se encontró el perfil de judoka asociado al usuario' }
+    }
+
+    const pagosResult = await pagoService.getByJudoka(judokaResult.data)
+    if (!pagosResult.success) return pagosResult
+
+    const estadosResueltos = new Set<string>([
+      ESTADO_PAGO.PAGADO,
+      ESTADO_PAGO.CANCELADO,
+      ESTADO_PAGO.REEMBOLSADO,
+      'pago',
+      'completado',
+    ])
+    const historial = (pagosResult.data ?? []).filter(pago => estadosResueltos.has(pago.estado))
+
+    return { success: true, data: historial }
+  },
+
+  /**
+   * Verifica los pagos pendientes que vencen mañana para el club indicado
+   * y envía notificaciones de alerta a los judokas que aún no las recibieron.
+   * Se llama al cargar la página de Pagos para alertas proactivas.
+   */
+  async checkPagosProximosAVencer(clubId: string): Promise<void> {
+    if (!clubId) return
+
+    const pagosResult = await pagoService.getPagosProximosAVencer(clubId)
+    if (!pagosResult.success || !pagosResult.data?.length) return
+
+    for (const pago of pagosResult.data) {
+      const judokaResult = await pagoService.getUsuarioIdByJudoka(pago.judoka_id)
+      if (!judokaResult.success || !judokaResult.data) continue
+
+      const usuarioId = judokaResult.data
+      const yaNotificado = await comunicacionService.existeNotificacionOrigen(
+        usuarioId, pago.id, 'tesoreria_pago_vencimiento'
+      )
+      if (yaNotificado) continue
+
+      const fechaFormateada = new Date(pago.fecha_vencimiento).toLocaleDateString('es-BO', {
+        day: '2-digit', month: 'long', year: 'numeric',
+      })
+      comunicacionController.notificarPagoPendiente(usuarioId, {
+        monto: pago.monto_final,
+        vencimiento: fechaFormateada,
+        pagoId: pago.id,
+      }).catch(() => { /* notificación no crítica */ })
+    }
   },
 
   /**
@@ -192,7 +308,35 @@ export const pagoController = {
       }
     }
 
-    return await pagoService.update(id, pagoData)
+    const result = await pagoService.update(id, pagoData)
+
+    const estadosPagados = new Set<string>([ESTADO_PAGO.PAGADO, 'pago', 'completado'])
+    const estabaPagado = estadosPagados.has(existingPago.estado)
+    const quedoPagado = result.success && result.data ? estadosPagados.has(result.data.estado) : false
+
+    if (result.success && result.data && !estabaPagado && quedoPagado) {
+      const pago = result.data
+      const judokaResult = await pagoService.getUsuarioIdByJudoka(pago.judoka_id)
+
+      if (judokaResult.success && judokaResult.data) {
+        const notifResult = await comunicacionController.enviarNotificacion({
+          usuario_id: judokaResult.data,
+          titulo: `Pago confirmado: ${pago.concepto}`,
+          mensaje: `Se confirmó tu pago de Bs. ${pago.monto_final} por "${pago.concepto}". Gracias por mantener tus pagos al día.`,
+          tipo: 'pago',
+          prioridad: 'normal',
+          link_accion: '/pagos/pendientes',
+          origen_modulo: 'tesoreria_pago_confirmacion',
+          origen_id: pago.id,
+        })
+
+        if (!notifResult.success) {
+          console.error('No se pudo notificar la confirmación de pago:', notifResult.error)
+        }
+      }
+    }
+
+    return result
   },
 
   /**

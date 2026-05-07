@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState, useEffect, useMemo } from 'react'
 import { Judoka } from '@/models/judoka'
 import { judokaController } from '@/controllers/judokaController'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -13,11 +13,16 @@ export function useJudokaList(options: {
   initialSearch?: string
   singleSenseiMode?: boolean
 }) {
+  const [initialOrder, setInitialOrder] = useState<string[] | null>(null)
+
   const filterFn = useCallback((j: Judoka, filters: Record<string, string>, search: string) => {
     const normalizedSearch = search.toLowerCase()
     
     const matchCategoria = filters.categoria === 'all' || j.categoria === filters.categoria
     const matchCinturon = filters.cinturon === 'all' || j.cinturon_actual === filters.cinturon
+    
+    // El filtro de estado solo actúa si el usuario lo selecciona explícitamente en el dropdown.
+    // No filtramos por estado automáticamente para evitar que las filas desaparezcan o salten al desactivarlas.
     const matchEstado = filters.estado === 'all' || (filters.estado === 'activo' ? j.activo : !j.activo)
     
     const matchSearch = Boolean(!normalizedSearch || 
@@ -25,7 +30,7 @@ export function useJudokaList(options: {
       j.apellidos?.toLowerCase().includes(normalizedSearch) ||
       j.ci?.toLowerCase().includes(normalizedSearch))
 
-    return matchCategoria && matchCinturon && matchEstado && matchSearch
+    return Boolean(matchCategoria && matchCinturon && matchEstado && matchSearch)
   }, [])
 
   const entityList = useEntityList<Judoka>({
@@ -81,6 +86,73 @@ export function useJudokaList(options: {
     initialSearch: options.initialSearch || ''
   })
 
+  // Estabilizar el orden inicial para evitar saltos al cambiar el estado
+  useEffect(() => {
+    // Solo capturamos el orden si tenemos items y NO tenemos un orden previo.
+    // Una vez capturado, no se toca hasta que la página se reinicie o cambie el club/entrenador.
+    if (entityList.items.length > 0 && initialOrder === null) {
+      const sortedIds = [...entityList.items]
+        .sort((a, b) => {
+          // 1. Prioridad por estado (activos primero)
+          const aActivo = a.activo ?? true;
+          const bActivo = b.activo ?? true;
+          if (aActivo !== bActivo) return aActivo ? -1 : 1;
+          
+          // 2. Prioridad por pertenencia a club (los que tienen club van primero)
+          const aHasClub = !!a.club_id;
+          const bHasClub = !!b.club_id;
+          if (aHasClub !== bHasClub) return aHasClub ? -1 : 1;
+
+          // 3. Orden alfabético por nombre completo
+          const nombreA = `${a.nombres || ''} ${a.apellidos || ''}`.trim().toLowerCase();
+          const nombreB = `${b.nombres || ''} ${b.apellidos || ''}`.trim().toLowerCase();
+          return nombreA.localeCompare(nombreB, 'es', { sensitivity: 'base' });
+        })
+        .map(item => item.id);
+      setInitialOrder(sortedIds);
+    }
+  }, [entityList.items, initialOrder]);
+
+  // Si los datos desaparecen por completo, permitimos recalcular el orden en la siguiente carga
+  useEffect(() => {
+    if (entityList.items.length === 0 && !options.judokasProp) {
+      setInitialOrder(null);
+    }
+  }, [entityList.items.length, options.judokasProp]);
+
+  // El orden solo se reinicia si cambias de contexto (ej. cambias de club) para mantener la consistencia
+  const dependenciesKey = `${options.clubId || 'all'}-${options.entrenadorId || 'all'}`;
+  useEffect(() => {
+    setInitialOrder(null);
+  }, [dependenciesKey]);
+
+  // Obtener data con orden diferido (basado en el orden capturado al cargar)
+  const filteredData = useMemo(() => {
+    if (!initialOrder) {
+      return [...entityList.filteredData].sort((a, b) => {
+        const aActivo = a.activo ?? true;
+        const bActivo = b.activo ?? true;
+        if (aActivo !== bActivo) return aActivo ? -1 : 1;
+        
+        const aHasClub = !!a.club_id;
+        const bHasClub = !!b.club_id;
+        if (aHasClub !== bHasClub) return aHasClub ? -1 : 1;
+
+        const nombreA = `${a.nombres || ''} ${a.apellidos || ''}`.trim().toLowerCase();
+        const nombreB = `${b.nombres || ''} ${b.apellidos || ''}`.trim().toLowerCase();
+        return nombreA.localeCompare(nombreB, 'es', { sensitivity: 'base' });
+      });
+    }
+
+    const orderMap = new Map(initialOrder.map((id, index) => [id, index]));
+    
+    return [...entityList.filteredData].sort((a, b) => {
+      const indexA = orderMap.get(a.id) ?? 999;
+      const indexB = orderMap.get(b.id) ?? 999;
+      return indexA - indexB;
+    });
+  }, [entityList.filteredData, initialOrder]);
+
   return {
     judokas: entityList.items,
     loading: entityList.state.loading,
@@ -90,7 +162,7 @@ export function useJudokaList(options: {
     toggleStatus: entityList.toggleStatus,
     updateLocalJudoka: entityList.updateLocalItem,
     deleteLocalJudoka: entityList.deleteLocalItem,
-    filteredData: entityList.filteredData,
+    filteredData,
     state: {
       ...entityList.state,
       categoriaFilter: entityList.state.filters.categoria || 'all',

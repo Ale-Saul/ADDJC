@@ -63,7 +63,7 @@ export default function JudokaList({
   entrenadorId,
   senseiId,
   searchTerm: externalSearchTerm = '',
-  initialItemsPerPage = 10,
+  itemsPerPage: initialItemsPerPage = 10,
   showUnassigned = false,
   readOnly = false,
   singleSenseiMode = false
@@ -94,7 +94,7 @@ export default function JudokaList({
   })
 
   const [page, setPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [itemsPerPage, setItemsPerPage] = useState(initialItemsPerPage)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const handleAfiliar = async (judoka: Judoka) => {
@@ -167,58 +167,12 @@ export default function JudokaList({
     }
   }
 
-  const [initialOrder, setInitialOrder] = useState<string[]>([])
-
-  useEffect(() => {
-    if (initialOrder.length === 0 && filteredData.length > 0) {
-      setInitialOrder(filteredData.map(j => j.id))
-    }
-  }, [filteredData, initialOrder.length])
-
   const paginatedData = useMemo(() => {
-    // Si estamos en la vista de Sensei (tenemos senseiId), respetamos el orden de llegada
-    if (senseiId) {
-      return filteredData.slice(
-        (page - 1) * itemsPerPage,
-        page * itemsPerPage
-      )
-    }
-
-    // Lógica para mantener orden estable durante la sesión (evitar saltos bruscos)
-    let finalOrder = [...filteredData]
-    if (initialOrder.length > 0) {
-      finalOrder.sort((a, b) => {
-        const idxA = initialOrder.indexOf(a.id)
-        const idxB = initialOrder.indexOf(b.id)
-        if (idxA !== -1 && idxB !== -1) return idxA - idxB
-        if (idxA === -1 && idxB !== -1) return 1
-        if (idxA !== -1 && idxB === -1) return -1
-        
-        // Fallback lógica de negocio si son nuevos
-        if (a.activo && !b.activo) return -1
-        if (!a.activo && b.activo) return 1
-        if (a.club_id && !b.club_id) return -1
-        if (!a.club_id && b.club_id) return 1
-        return (a.nombres || '').localeCompare(b.nombres || '')
-      })
-    } else {
-      // Orden inicial (primera carga)
-      finalOrder.sort((a, b) => {
-        if (a.activo && !b.activo) return -1
-        if (!a.activo && b.activo) return 1
-        if (a.club_id && !b.club_id) return -1
-        if (!a.club_id && b.club_id) return 1
-        const nombreA = (a.nombres || '').trim().toLowerCase()
-        const nombreB = (b.nombres || '').trim().toLowerCase()
-        return nombreA.localeCompare(nombreB)
-      })
-    }
-
-    return finalOrder.slice(
+    return filteredData.slice(
       (page - 1) * itemsPerPage,
       page * itemsPerPage
     )
-  }, [filteredData, page, itemsPerPage, senseiId, initialOrder])
+  }, [filteredData, page, itemsPerPage])
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage)
 
@@ -363,9 +317,9 @@ export default function JudokaList({
         label: 'Contacto',
         render: (j: Judoka) => (
           <Box>
-            <Typography variant="body2">{j.email || '-'}</Typography>
+            <Typography variant="body2">{j.numero_celular || '-'}</Typography>
             <Typography variant="caption" color="text.secondary">
-              {j.numero_celular || 'Sin celular'}
+              WhatsApp
             </Typography>
           </Box>
         ),
@@ -481,52 +435,50 @@ export default function JudokaList({
 
   return (
     <>
-      {!readOnly && (
-        <SearchBar
-          value={state.globalFilter}
-          onChange={setGlobalFilter}
-          placeholder="Buscar por nombre, carnet o categoría..."
-          onToggleFilters={toggleShowFilters}
-          showFilters={state.showFilters}
-        >
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={4}>
-              <FilterSelect
-                label="Categoría"
-                value={state.categoriaFilter}
-                onChange={(e) => setFilter('categoria', e.target.value)}
-                options={[
-                  { value: 'all', label: 'Todas las categorías' },
-                  ...CATEGORIES.map(c => ({ value: c, label: c }))
-                ]}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <FilterSelect
-                label="Cinturón"
-                value={state.cinturonFilter}
-                onChange={(e) => setFilter('cinturon', e.target.value)}
-                options={[
-                  { value: 'all', label: 'Todos los cinturones' },
-                  ...BELT_COLORS.map(c => ({ value: c, label: c }))
-                ]}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <FilterSelect
-                label="Estado"
-                value={state.estadoFilter}
-                onChange={(e) => setFilter('estado', e.target.value)}
-                options={[
-                  { value: 'all', label: 'Todos los estados' },
-                  { value: 'activo', label: 'Solo Activos' },
-                  { value: 'inactivo', label: 'Solo Inactivos' }
-                ]}
-              />
-            </Grid>
+      <SearchBar
+        value={state.globalFilter}
+        onChange={setGlobalFilter}
+        placeholder="Buscar por nombre, carnet o categoría..."
+        onToggleFilters={toggleShowFilters}
+        showFilters={state.showFilters}
+      >
+        <Grid container spacing={2}>
+          <Grid container item xs={12} sm={4}>
+            <FilterSelect
+              label="Categoría"
+              value={state.categoriaFilter}
+              onChange={(e) => setFilter('categoria', e.target.value)}
+              options={[
+                { value: 'all', label: 'Todas las categorías' },
+                ...CATEGORIES.map(c => ({ value: c, label: c }))
+              ]}
+            />
           </Grid>
-        </SearchBar>
-      )}
+          <Grid container item xs={12} sm={4}>
+            <FilterSelect
+              label="Cinturón"
+              value={state.cinturonFilter}
+              onChange={(e) => setFilter('cinturon', e.target.value)}
+              options={[
+                { value: 'all', label: 'Todos los cinturones' },
+                ...BELT_COLORS.map(c => ({ value: c, label: c }))
+              ]}
+            />
+          </Grid>
+          <Grid container item xs={12} sm={4}>
+            <FilterSelect
+              label="Estado"
+              value={state.estadoFilter}
+              onChange={(e) => setFilter('estado', e.target.value)}
+              options={[
+                { value: 'all', label: 'Todos los estados' },
+                { value: 'activo', label: 'Solo Activos' },
+                { value: 'inactivo', label: 'Solo Inactivos' }
+              ]}
+            />
+          </Grid>
+        </Grid>
+      </SearchBar>
       
       <DataTable<Judoka>
         columns={columns}
