@@ -86,7 +86,7 @@ export default function EnviarNotificacionManualForm({
   }
 
   return (
-    <Stack component="form" spacing={2.5} onSubmit={handleSubmit(onSubmit)}>
+    <Stack component="form" spacing={2.5} onSubmit={handleSubmit(onSubmit)} role="form">
       {submitError && <Alert severity="error">{submitError}</Alert>}
 
       {remitenteRol === ROL.ENCARGADO && !remitenteClubId && (

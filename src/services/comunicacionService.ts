@@ -381,7 +381,7 @@ export const comunicacionService = {
       .limit(80)
 
     if (term.length >= 2) {
-      query = query.or(
+      query = (query as any).or(
         `nombre.ilike.%${term}%,apellido_paterno.ilike.%${term}%,apellido_materno.ilike.%${term}%,correo.ilike.%${term}%`
       )
     }
@@ -398,21 +398,20 @@ export const comunicacionService = {
 
   async getDestinatariosByClub(clubId: string, search?: string): Promise<NotificacionDestinatario[]> {
     const supabase = createClient()
-    const [judokasRes, senseisRes] = await Promise.all([
-      supabase
-        .from('judokas')
-        .select('club_id, usuarios:usuario_id(id, correo, nombre, apellido_paterno, apellido_materno, rol, activo), clubes:club_id(nombre_club)')
-        .eq('club_id', clubId),
-      supabase
-        .from('senseis')
-        .select('club_id, usuarios:usuario_id(id, correo, nombre, apellido_paterno, apellido_materno, rol, activo), clubes:club_id(nombre_club)')
-        .eq('club_id', clubId),
-    ])
+    const judokasRes = await supabase
+      .from('judokas')
+      .select('club_id, usuarios:usuario_id(id, correo, nombre, apellido_paterno, apellido_materno, rol, activo), clubes:club_id(nombre_club)')
+      .eq('club_id', clubId)
 
     if (judokasRes.error) {
       console.error('Error en comunicacionService.getDestinatariosByClub judokas:', judokasRes.error)
       throw judokasRes.error
     }
+
+    const senseisRes = await supabase
+      .from('senseis')
+      .select('club_id, usuarios:usuario_id(id, correo, nombre, apellido_paterno, apellido_materno, rol, activo), clubes:club_id(nombre_club)')
+      .eq('club_id', clubId)
 
     if (senseisRes.error) {
       console.error('Error en comunicacionService.getDestinatariosByClub senseis:', senseisRes.error)
@@ -464,25 +463,24 @@ export const comunicacionService = {
 
   async usuarioPerteneceAClub(usuarioId: string, clubId: string): Promise<boolean> {
     const supabase = createClient()
-    const [judokaRes, senseiRes] = await Promise.all([
-      supabase
-        .from('judokas')
-        .select('id')
-        .eq('usuario_id', usuarioId)
-        .eq('club_id', clubId)
-        .limit(1),
-      supabase
-        .from('senseis')
-        .select('id')
-        .eq('usuario_id', usuarioId)
-        .eq('club_id', clubId)
-        .limit(1),
-    ])
+    const judokaRes = await supabase
+      .from('judokas')
+      .select('id')
+      .eq('usuario_id', usuarioId)
+      .eq('club_id', clubId)
+      .limit(1)
 
     if (judokaRes.error) {
       console.error('Error en comunicacionService.usuarioPerteneceAClub judokas:', judokaRes.error)
       throw judokaRes.error
     }
+
+    const senseiRes = await supabase
+      .from('senseis')
+      .select('id')
+      .eq('usuario_id', usuarioId)
+      .eq('club_id', clubId)
+      .limit(1)
 
     if (senseiRes.error) {
       console.error('Error en comunicacionService.usuarioPerteneceAClub senseis:', senseiRes.error)
@@ -560,15 +558,15 @@ export const comunicacionService = {
 
   async marcarTodasLeidas(usuarioId: string): Promise<void> {
     const supabase = createClient()
-    const { error } = await supabase
+    const res = await supabase
       .from('comunicacion_notificaciones')
       .update({ leido: true, leido_at: new Date().toISOString() })
       .eq('usuario_id', usuarioId)
       .eq('leido', false)
 
-    if (error) {
-      console.error('Error en comunicacionService.marcarTodasLeidas:', error)
-      throw error
+    if (res.error) {
+      console.error('Error en comunicacionService.marcarTodasLeidas:', res.error)
+      throw res.error
     }
   },
 
