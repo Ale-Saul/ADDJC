@@ -5,6 +5,10 @@ import { useAuth } from '@/contexts/AuthContext'
 import { ROL } from '@/constants/roles'
 import { useSesionesByClub, useSesionesBySensei, useCrearSesion, useEliminarSesion } from './useAsistenciaSesiones'
 import { AsistenciaSesion, AsistenciaSesionCreate } from '@/models/asistencia'
+import dayjs from 'dayjs'
+
+const HOY = dayjs().format('YYYY-MM-DD')
+const HACE_UN_MES = dayjs().subtract(1, 'month').format('YYYY-MM-DD')
 
 /**
  * Centraliza toda la lógica de estado y datos de la pantalla
@@ -32,8 +36,8 @@ export function useAsistenciaPage() {
   const fetchError = isSensei ? senseiQuery.error?.message : clubQuery.error?.message
 
   // --- Filtros ---
-  const [filtroFechaInicio, setFiltroFechaInicio] = useState('')
-  const [filtroFechaFin, setFiltroFechaFin] = useState('')
+  const [filtroFechaInicio, setFiltroFechaInicio] = useState(HACE_UN_MES)
+  const [filtroFechaFin, setFiltroFechaFin] = useState(HOY)
   const [filtroSenseiId, setFiltroSenseiId] = useState('all')
 
   const sesionesVisibles = useMemo(() => {
@@ -55,8 +59,8 @@ export function useAsistenciaPage() {
   }, [sesiones])
 
   const limpiarFiltros = () => {
-    setFiltroFechaInicio('')
-    setFiltroFechaFin('')
+    setFiltroFechaInicio(HACE_UN_MES)
+    setFiltroFechaFin(HOY)
     setFiltroSenseiId('all')
   }
 

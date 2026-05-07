@@ -304,52 +304,50 @@ export default function SenseiList({
         <Typography color="error">{error}</Typography>
       ) : (
         <>
-          {!readOnly && (
-            <SearchBar
-              value={state.globalFilter}
-              onChange={(val) => dispatch({ type: 'SET_GLOBAL_FILTER', payload: val })}
-              placeholder="Buscar por nombre, carnet, especialidad..."
-              onToggleFilters={() => dispatch({ type: 'TOGGLE_SHOW_FILTERS' })}
-              showFilters={state.showFilters}
-            >
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={4}>
-                  <FilterSelect
-                    label="Grado Dan"
-                    value={state.gradoDanFilter}
-                    onChange={(e) => dispatch({ type: 'SET_GRADO_DAN_FILTER', payload: e.target.value })}
-                    options={[
-                      { value: 'all', label: 'Todos los grados' },
-                      ...GRADOS_DAN.map(g => ({ value: g, label: g }))
-                    ]}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <FilterSelect
-                    label="Especialidad"
-                    value={state.especialidadFilter}
-                    onChange={(e) => dispatch({ type: 'SET_ESPECIALIDAD_FILTER', payload: e.target.value })}
-                    options={[
-                      { value: 'all', label: 'Todas las especialidades' },
-                      ...ESPECIALIDADES_SENSEI.map(e => ({ value: e, label: e }))
-                    ]}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <FilterSelect
-                    label="Estado"
-                    value={state.estadoFilter}
-                    onChange={(e) => dispatch({ type: 'SET_ESTADO_FILTER', payload: e.target.value })}
-                    options={[
-                      { value: 'all', label: 'Todos los estados' },
-                      { value: 'activo', label: 'Solo Activos' },
-                      { value: 'inactivo', label: 'Solo Inactivos' }
-                    ]}
-                  />
-                </Grid>
+          <SearchBar
+            value={state.globalFilter}
+            onChange={(val) => dispatch({ type: 'SET_GLOBAL_FILTER', payload: val })}
+            placeholder="Buscar por nombre, carnet, especialidad..."
+            onToggleFilters={() => dispatch({ type: 'TOGGLE_SHOW_FILTERS' })}
+            showFilters={state.showFilters}
+          >
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={4}>
+                <FilterSelect
+                  label="Grado Dan"
+                  value={state.gradoDanFilter}
+                  onChange={(e) => dispatch({ type: 'SET_GRADO_DAN_FILTER', payload: e.target.value })}
+                  options={[
+                    { value: 'all', label: 'Todos los grados' },
+                    ...GRADOS_DAN.map(g => ({ value: g, label: g }))
+                  ]}
+                />
               </Grid>
-            </SearchBar>
-          )}
+              <Grid item xs={12} sm={4}>
+                <FilterSelect
+                  label="Especialidad"
+                  value={state.especialidadFilter}
+                  onChange={(e) => dispatch({ type: 'SET_ESPECIALIDAD_FILTER', payload: e.target.value })}
+                  options={[
+                    { value: 'all', label: 'Todas las especialidades' },
+                    ...ESPECIALIDADES_SENSEI.map(e => ({ value: e, label: e }))
+                  ]}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <FilterSelect
+                  label="Estado"
+                  value={state.estadoFilter}
+                  onChange={(e) => dispatch({ type: 'SET_ESTADO_FILTER', payload: e.target.value })}
+                  options={[
+                    { value: 'all', label: 'Todos los estados' },
+                    { value: 'activo', label: 'Solo Activos' },
+                    { value: 'inactivo', label: 'Solo Inactivos' }
+                  ]}
+                />
+              </Grid>
+            </Grid>
+          </SearchBar>
 
           <DataTable
             data={paginatedData}
@@ -364,7 +362,7 @@ export default function SenseiList({
         <Pagination
           currentPage={page}
           totalPages={totalPages}
-          totalItems={filteredData.length}
+          totalItems={localFilteredData.length}
           itemsPerPage={itemsPerPage}
           onPageChange={setPage}
           onItemsPerPageChange={setItemsPerPage}

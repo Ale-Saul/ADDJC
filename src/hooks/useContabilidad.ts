@@ -138,6 +138,26 @@ export function useContabilidad() {
     await cargarDatos()
   }
 
+  // Paginación
+  const [page, setPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+
+  const totalPages = useMemo(() => {
+    return Math.ceil(movimientosFiltrados.length / itemsPerPage)
+  }, [movimientosFiltrados.length, itemsPerPage])
+
+  const paginatedData = useMemo(() => {
+    return movimientosFiltrados.slice(
+      (page - 1) * itemsPerPage,
+      page * itemsPerPage
+    )
+  }, [movimientosFiltrados, page, itemsPerPage])
+
+  // Resetear a página 1 cuando los filtros cambian
+  useEffect(() => {
+    setPage(1)
+  }, [fechaInicio, fechaFin, tipoFiltro, categoriaFiltro])
+
   return {
     movimientos,
     clubes,
@@ -161,6 +181,12 @@ export function useContabilidad() {
     handleAgregarMovimiento,
     handleEditarMovimiento,
     handleAnularMovimiento,
-    handleGuardarMovimiento
+    handleGuardarMovimiento,
+    page,
+    setPage,
+    itemsPerPage,
+    setItemsPerPage,
+    totalPages,
+    paginatedData
   }
 }

@@ -40,7 +40,7 @@ export const asociacionController = {
 
     const miembroToCreate: MiembroAsociacionCreate = {
       ...miembroData,
-      password: miembroData.password || Math.random().toString(36).slice(-8)
+      password: miembroData.password || generarPasswordInicial(miembroData.ci || '', miembroData.ci_extension)
     }
 
     return await asociacionService.create(miembroToCreate)

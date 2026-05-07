@@ -34,7 +34,7 @@ export const arbitroController = {
     }
 
     // Generar contraseña automática basada en el carnet
-    const autoPassword = generarPasswordInicial(arbitroData.ci || '')
+    const autoPassword = generarPasswordInicial(arbitroData.ci || '', arbitroData.ci_extension)
 
     // Por defecto, el árbitro se crea como activo
     const arbitroToCreate: ArbitroCreate = {

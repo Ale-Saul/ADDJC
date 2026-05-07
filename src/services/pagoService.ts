@@ -177,6 +177,79 @@ export const pagoService = {
   },
 
   /**
+   * Obtiene el usuario_id asociado a un judoka.
+   * Necesario para enviar notificaciones personales.
+   */
+  async getUsuarioIdByJudoka(judokaId: string): Promise<ApiResponse<string>> {
+    try {
+      const client = createClient()
+      const { data, error } = await client
+        .from('judokas')
+        .select('usuario_id')
+        .eq('id', judokaId)
+        .single()
+
+      if (error) throw error
+
+      return { success: true, data: data.usuario_id }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+      return { success: false, error: errorMessage }
+    }
+  },
+
+  /**
+   * Obtiene el judoka_id asociado a un usuario.
+   * Útil para vistas personales del rol judoka.
+   */
+  async getJudokaIdByUsuario(usuarioId: string): Promise<ApiResponse<string>> {
+    try {
+      const client = createClient()
+      const { data, error } = await client
+        .from('judokas')
+        .select('id')
+        .eq('usuario_id', usuarioId)
+        .single()
+
+      if (error) throw error
+
+      return { success: true, data: data.id }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+      return { success: false, error: errorMessage }
+    }
+  },
+
+  /**
+   * Obtiene los pagos pendientes que vencen exactamente mañana para un club.
+   * Usado para disparar alertas proactivas de vencimiento.
+   */
+  async getPagosProximosAVencer(clubId: string): Promise<ApiResponse<Pago[]>> {
+    try {
+      const client = createClient()
+
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      const tomorrowStr = tomorrow.toISOString().split('T')[0]
+
+      const { data, error } = await client
+        .from('pagos')
+        .select(PAGO_COLUMNS)
+        .eq('club_id', clubId)
+        .eq('estado', 'pendiente')
+        .eq('fecha_vencimiento', tomorrowStr)
+        .eq('activo', true)
+
+      if (error) throw error
+
+      return { success: true, data: data || [] }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+      return { success: false, error: errorMessage }
+    }
+  },
+
+  /**
    * Restaurar un pago (marcar como activo)
    */
   async restore(id: string): Promise<ApiResponse<Pago>> {

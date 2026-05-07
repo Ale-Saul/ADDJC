@@ -25,6 +25,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import BalanceCards from '@/components/contabilidad/BalanceCards'
 import MovimientosTable from '@/components/contabilidad/MovimientosTable'
 import { MovimientoFormDialog } from '@/components/contabilidad/MovimientoFormDialog'
+import Pagination from '@/components/common/Pagination'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { formatters } from '@/utils/formatters'
@@ -63,7 +64,13 @@ export default function ContabilidadPage() {
     handleAgregarMovimiento,
     handleEditarMovimiento,
     handleAnularMovimiento,
-    handleGuardarMovimiento
+    handleGuardarMovimiento,
+    page,
+    setPage,
+    itemsPerPage,
+    setItemsPerPage,
+    totalPages,
+    paginatedData
   } = useContabilidad()
 
   const exportarPDF = () => {
@@ -324,11 +331,22 @@ export default function ContabilidadPage() {
 
               {/* Tabla de Movimientos */}
               <MovimientosTable
-                movimientos={movimientosFiltrados}
+                movimientos={paginatedData}
                 onEditar={canManage ? handleEditarMovimiento : undefined}
                 onAnular={canManage ? handleAnularMovimiento : undefined}
                 onAgregar={canManage ? handleAgregarMovimiento : undefined}
               />
+
+              <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+                <Pagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  totalItems={movimientosFiltrados.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setPage}
+                  onItemsPerPageChange={setItemsPerPage}
+                />
+              </Box>
             </>
           )}
 

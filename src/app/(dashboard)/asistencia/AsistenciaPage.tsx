@@ -30,6 +30,13 @@ import { ROL } from '@/constants/roles'
 import { useAsistenciaPage } from '@/hooks/useAsistenciaPage'
 import SesionCard from '@/components/asistencia/SesionCard'
 import NuevaSesionForm from '@/components/asistencia/NuevaSesionForm'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import 'dayjs/locale/es'
+import dayjs from 'dayjs'
+
+dayjs.locale('es')
 
 export default function AsistenciaPage() {
   const {
@@ -60,8 +67,9 @@ export default function AsistenciaPage() {
 
   return (
     <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.SENSEI, ROL.ENCARGADO]}>
-      <Box>
-        {/* ── Header ── */}
+      <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
+        <Box>
+          {/* ── Header ── */}
         <Box
           sx={{
             display: 'flex',
@@ -140,23 +148,34 @@ export default function AsistenciaPage() {
               gap: 2,
               alignItems: 'center',
             }}>
-              <TextField
+              <DatePicker
                 label="Desde"
-                type="date"
-                size="small"
-                fullWidth
-                value={filtros.fechaInicio}
-                onChange={e => filtros.setFechaInicio(e.target.value)}
-                InputLabelProps={{ shrink: true }}
+                format="DD/MM/YYYY"
+                value={filtros.fechaInicio ? dayjs(filtros.fechaInicio) : null}
+                onChange={(newValue) => filtros.setFechaInicio(newValue ? newValue.format('YYYY-MM-DD') : '')}
+                maxDate={filtros.fechaFin ? dayjs(filtros.fechaFin) : dayjs()}
+                slotProps={{ 
+                  textField: { 
+                    size: 'small', 
+                    fullWidth: true,
+                    InputLabelProps: { shrink: true }
+                  } 
+                }}
               />
-              <TextField
+              <DatePicker
                 label="Hasta"
-                type="date"
-                size="small"
-                fullWidth
-                value={filtros.fechaFin}
-                onChange={e => filtros.setFechaFin(e.target.value)}
-                InputLabelProps={{ shrink: true }}
+                format="DD/MM/YYYY"
+                value={filtros.fechaFin ? dayjs(filtros.fechaFin) : null}
+                onChange={(newValue) => filtros.setFechaFin(newValue ? newValue.format('YYYY-MM-DD') : '')}
+                minDate={filtros.fechaInicio ? dayjs(filtros.fechaInicio) : undefined}
+                maxDate={dayjs()}
+                slotProps={{ 
+                  textField: { 
+                    size: 'small', 
+                    fullWidth: true,
+                    InputLabelProps: { shrink: true }
+                  } 
+                }}
               />
               {filtros.senseiOptions.length > 0 && (
                 <FormControl size="small" fullWidth>
@@ -317,6 +336,7 @@ export default function AsistenciaPage() {
           </Alert>
         </Snackbar>
       </Box>
+      </LocalizationProvider>
     </ProtectedRoute>
   )
 }
