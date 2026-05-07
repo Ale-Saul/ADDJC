@@ -46,14 +46,14 @@ export function usePagoMasivoManager({ judokas, onSuccess }: { judokas: Judoka[]
     let final = isNaN(base) ? 0 : base
 
     if (watchTieneDescuento) {
-      if (watchTipoDescuento === TIPO_DESCUENTO.PORCENTAJE && watchDescuentoPorcentaje !== null) {
+      if (watchTipoDescuento === TIPO_DESCUENTO.PORCENTAJE && watchDescuentoPorcentaje !== null && watchDescuentoPorcentaje !== undefined) {
         const pct = typeof watchDescuentoPorcentaje === 'string' ? parseFloat(watchDescuentoPorcentaje) : watchDescuentoPorcentaje
-        if (!isNaN(pct)) {
+        if (typeof pct === 'number' && !isNaN(pct)) {
           final = final - (final * pct / 100)
         }
-      } else if (watchTipoDescuento === TIPO_DESCUENTO.MONTO_FIJO && watchDescuentoMonto !== null) {
+      } else if (watchTipoDescuento === TIPO_DESCUENTO.MONTO_FIJO && watchDescuentoMonto !== null && watchDescuentoMonto !== undefined) {
         const descMonto = typeof watchDescuentoMonto === 'string' ? parseFloat(watchDescuentoMonto.replace(',', '.')) : watchDescuentoMonto
-        if (!isNaN(descMonto)) {
+        if (typeof descMonto === 'number' && !isNaN(descMonto)) {
           final = final - descMonto
         }
       }

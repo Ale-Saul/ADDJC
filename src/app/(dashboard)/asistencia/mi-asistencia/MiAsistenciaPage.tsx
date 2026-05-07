@@ -25,7 +25,7 @@ import { useStatsJudoka } from '@/hooks/useAsistenciaStats'
 import { useHistorialJudoka } from '@/hooks/useAsistenciaDetalle'
 import KpiCard from '@/components/asistencia/stats/KpiCard'
 import HistorialTable from '@/components/asistencia/stats/HistorialTable'
-import HistogramIcon from '@mui/icons-material/Histogram' // Just keeping imports matching
+import BarChartIcon from '@mui/icons-material/BarChart'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'

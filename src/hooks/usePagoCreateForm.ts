@@ -34,7 +34,20 @@ const uiPagoSchema = z.object({
   razon_descuento: z.string().optional().nullable(),
 })
 
-export type PagoCreateFormValues = z.infer<typeof uiPagoSchema>
+export type PagoCreateFormValues = {
+  judoka_id: string
+  club_id: string
+  tipo_pago: string
+  concepto: string
+  descripcion?: string | null
+  monto_base: number
+  fecha_vencimiento: string
+  tiene_descuento: boolean
+  tipo_descuento?: string | null
+  descuento_porcentaje?: number | null
+  descuento_monto?: number | null
+  razon_descuento?: string | null
+}
 
 export function usePagoCreateForm(judokaId: string, clubId: string | undefined, userId: string | undefined, onSuccess?: () => void) {
   const [loading, setLoading] = useState(false)
@@ -43,7 +56,7 @@ export function usePagoCreateForm(judokaId: string, clubId: string | undefined, 
   const [montoFinal, setMontoFinal] = useState(0)
 
   const form = useForm<PagoCreateFormValues>({
-    resolver: zodResolver(uiPagoSchema),
+    resolver: zodResolver(uiPagoSchema) as any,
     mode: 'onTouched',
       defaultValues: {
         judoka_id: judokaId,

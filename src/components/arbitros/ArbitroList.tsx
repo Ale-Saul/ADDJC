@@ -202,7 +202,7 @@ export default function ArbitroList({
         showFilters={state.showFilters}
       >
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <FilterSelect
               label="Nivel de Arbitraje"
               value={state.nivelFilter}
@@ -213,7 +213,7 @@ export default function ArbitroList({
               ]}
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <FilterSelect
               label="Estado"
               value={state.estadoFilter}
@@ -250,6 +250,7 @@ export default function ArbitroList({
     </Box>
   )
 }
+
 
 
 

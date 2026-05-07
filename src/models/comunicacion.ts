@@ -45,10 +45,7 @@ export type NoticiaCreate = Omit<Noticia,
 >
 
 /** Payload para actualizar una noticia */
-export type NoticiaUpdate = Partial<Pick<Noticia,
-  'club_id' | 'titulo' | 'contenido' | 'categoria' | 'imagen_url' | 'es_destacada' |
-  'audiencia' | 'fecha_inicio' | 'fecha_fin' | 'activo'
->>
+export type NoticiaUpdate = Partial<NoticiaCreate> & { activo?: boolean }
 
 // ─── Notificaciones ───────────────────────────────────────────────────────────
 

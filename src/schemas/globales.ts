@@ -135,7 +135,7 @@ export const judokaSchema = baseUserObject.extend({
   entrenador_id: z.string().nullable().optional(),
   categoria: z.string().nullable().optional(),
   cinturon_actual: z.string().nullable().optional(),
-  activo: z.boolean().default(true),
+  activo: z.boolean(),
   password: z.string().optional(),
 }).refine(validateApellidos, apellidosErrorConfig)
 
@@ -147,7 +147,7 @@ export const senseiSchema = baseUserObject.extend({
   grado_dan: z.string().nullable().optional(),
   especialidad: z.string().nullable().optional(),
   certificacion_id: z.string().nullable().optional(),
-  activo: z.boolean().default(true),
+  activo: z.boolean(),
   password: z.string().optional(),
 }).refine(validateApellidos, apellidosErrorConfig)
 
@@ -157,7 +157,7 @@ export const senseiSchema = baseUserObject.extend({
 export const arbitroSchema = baseUserObject.extend({
   nivel_arbitraje: z.string().nullable().optional(),
   certificacion_id: z.string().nullable().optional(),
-  activo: z.boolean().default(true),
+  activo: z.boolean(),
   password: z.string().optional(),
 }).refine(validateApellidos, apellidosErrorConfig)
 
@@ -175,16 +175,13 @@ export const clubSchema = z.object({
     ),
   provincia: z.string().min(1, 'El municipio es requerido'),
   direccion: z.string()
-    .transform(val => val ? cleanStr(val) : val)
-    .pipe(
-      z.string()
-        .max(500, 'La dirección no puede exceder 500 caracteres')
-        .optional()
-        .nullable()
-    ),
+    .max(500, 'La dirección no puede exceder 500 caracteres')
+    .optional()
+    .nullable()
+    .transform(val => val ? cleanStr(val) : val),
   telefono_contacto: telefonoClubSchema.optional(),
   director_tecnico_id: z.string().nullable().optional(),
-  activo: z.boolean().default(true),
+  activo: z.boolean(),
   // Campos para nuevo director (opcionales en el esquema base, validados en el controller)
   new_nombres: z.string().optional().nullable(),
   new_apellido_paterno: z.string().optional().nullable(),
@@ -215,7 +212,7 @@ export const clubSchema = z.object({
 export const miembroAsociacionSchema = baseUserObject.extend({
   cargo: z.string().nullable().optional(),
   fecha_ingreso: z.string().nullable().optional().refine(notFutureYear, { message: yearMsg }),
-  activo: z.boolean().default(true),
+  activo: z.boolean(),
   password: z.string().optional(),
 }).refine(validateApellidos, apellidosErrorConfig)
 
@@ -303,13 +300,10 @@ export const clubControllerCreateSchema = z.object({
         .regex(/^[A-Za-zÁÉÍÓÚÜáéíóúüÑñ0-9\s]+$/, 'Solo se permiten letras, números y espacios')
     ),
   direccion: z.string()
-    .transform(val => val ? cleanStr(val) : val)
-    .pipe(
-      z.string()
-        .max(500, 'La dirección no puede exceder 500 caracteres')
-        .optional()
-        .nullable()
-    ),
+    .max(500, 'La dirección no puede exceder 500 caracteres')
+    .optional()
+    .nullable()
+    .transform(val => val ? cleanStr(val) : val),
   telefono_contacto: z.string()
     .max(20, 'El teléfono no puede exceder 20 caracteres')
     .optional()
@@ -329,14 +323,11 @@ export const clubControllerUpdateSchema = z.object({
         .regex(/^[A-Za-zÁÉÍÓÚÜáéíóúüÑñ0-9\s]+$/, 'Solo se permiten letras, números y espacios')
         .optional()
     ),
-  direccion: z.string().optional()
-    .transform(val => val ? cleanStr(val) : val)
-    .pipe(
-      z.string()
-        .max(500, 'La dirección no puede exceder 500 caracteres')
-        .optional()
-        .nullable()
-    ),
+  direccion: z.string()
+    .max(500, 'La dirección no puede exceder 500 caracteres')
+    .optional()
+    .nullable()
+    .transform((val: string | null | undefined) => val ? cleanStr(val) : val),
   telefono_contacto: z.string()
     .max(20, 'El teléfono no puede exceder 20 caracteres')
     .optional()

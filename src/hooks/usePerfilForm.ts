@@ -48,7 +48,7 @@ export function usePerfilForm(user: User | null, refreshUser: () => Promise<void
       const response = await authController.updateProfile(user.id, {
         nombres: data.nombres,
         apellido_paterno: data.primer_apellido,
-        apellido_materno: data.segundo_apellido,
+        apellido_materno: data.segundo_apellido || undefined,
       })
 
       if (response.success) {

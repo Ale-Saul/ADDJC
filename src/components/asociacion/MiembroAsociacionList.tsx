@@ -184,7 +184,7 @@ export default function MiembroAsociacionList({ onEdit, onDelete, refreshTrigger
         showFilters={showFilters}
       >
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <FilterSelect
               label="Filtrar por Cargo"
               value={filters.cargo || 'all'}
@@ -195,7 +195,7 @@ export default function MiembroAsociacionList({ onEdit, onDelete, refreshTrigger
               ]}
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <FilterSelect
               label="Filtrar por Estado"
               value={filters.estado || 'all'}
@@ -228,3 +228,4 @@ export default function MiembroAsociacionList({ onEdit, onDelete, refreshTrigger
     </Box>
   )
 }
+

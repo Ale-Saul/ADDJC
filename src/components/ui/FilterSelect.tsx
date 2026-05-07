@@ -11,7 +11,7 @@ import {
   SelectChangeEvent
 } from '@mui/material'
 
-export type Option = {
+export type FilterOption = {
   value: string | number
   label: string
 }
@@ -20,7 +20,7 @@ export interface FilterSelectProps extends Omit<SelectProps, 'onChange' | 'value
   label?: string
   value: string | number
   onChange: (event: SelectChangeEvent<any>) => void
-  options: Option[]
+  options: FilterOption[]
   helperText?: string
   error?: boolean
 }

@@ -58,8 +58,8 @@ export default function AdminComunicacionPage() {
   
   // Si es Asociación o Encargado, permitimos ver noticias globales (donde club_id es null)
   // Pero el Encargado solo debería ver las que ÉL creó si son globales.
-  const { data: noticiasClub = [], isLoading: loadingClub } = useNoticiasByClub(clubId, { solo_activas: false })
-  const { data: noticiasGlobales = [], isLoading: loadingGlobal } = useNoticiasByClub('global', { solo_activas: false })
+  const { data: noticiasClub = [], isLoading: loadingClub } = useNoticiasByClub(clubId!)
+  const { data: noticiasGlobales = [], isLoading: loadingGlobal } = useNoticiasByClub('global')
   
   const isLoading = loadingClub || loadingGlobal
 

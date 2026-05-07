@@ -38,13 +38,13 @@ export function useEditarPagoForm(pago: Pago, onSuccess?: () => void) {
 
   // Calcular monto final
   useEffect(() => {
-    let final = watchMontoBase || 0
+    let final = Number(watchMontoBase) || 0
 
     if (watchTieneDescuento) {
       if (watchTipoDescuento === TIPO_DESCUENTO.PORCENTAJE && watchDescuentoPorcentaje) {
-        final = final - (final * watchDescuentoPorcentaje / 100)
+        final = final - (final * (Number(watchDescuentoPorcentaje) || 0) / 100)
       } else if (watchTipoDescuento === TIPO_DESCUENTO.MONTO_FIJO && watchDescuentoMonto) {
-        final = final - watchDescuentoMonto
+        final = final - (Number(watchDescuentoMonto) || 0)
       }
     }
 

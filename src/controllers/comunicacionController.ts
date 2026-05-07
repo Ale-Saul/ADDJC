@@ -10,6 +10,7 @@ import {
 import {
   Noticia,
   NoticiaCreate,
+  NoticiaUpdate,
   Notificacion,
   NotificacionCreate,
   NotificacionContador,
@@ -365,7 +366,7 @@ export const comunicacionController = {
     await Promise.allSettled(promesas)
   },
 
-  async updateNoticia(id: string, payload: Partial<NoticiaCreate>): Promise<ApiResponse<Noticia>> {
+  async updateNoticia(id: string, payload: NoticiaUpdate): Promise<ApiResponse<Noticia>> {
     try {
       if (!id) return { success: false, error: 'ID de noticia requerido' }
 

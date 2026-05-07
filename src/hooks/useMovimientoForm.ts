@@ -17,8 +17,8 @@ const movimientoSchema = z.object({
     .transform(val => typeof val === 'string' ? parseFloat(val.replace(',', '.')) : val)
     .pipe(z.number().positive('El monto debe ser mayor a 0')),
   fecha: z.string().min(1, 'La fecha es requerida'),
-  origenClubId: z.string().optional().nullable(),
-  origenEntidad: z.string().optional().nullable(),
+  origenClubId: z.string().nullable().optional(),
+  origenEntidad: z.string().nullable().optional(),
 }).refine(data => {
   if ((data.categoria === 'donacion_club' || data.categoria === 'pago_club') && !data.origenClubId) {
     return false;
@@ -37,7 +37,16 @@ const movimientoSchema = z.object({
   path: ["origenEntidad"]
 });
 
-export type MovimientoFormValues = z.infer<typeof movimientoSchema>
+export type MovimientoFormValues = {
+  tipo: 'ingreso' | 'egreso'
+  categoria: string
+  concepto: string
+  descripcion?: string | null
+  monto: number
+  fecha: string
+  origenClubId?: string | null
+  origenEntidad?: string | null
+}
 
 export function useMovimientoForm(movimiento: MovimientoFinanciero | null, onClose: () => void, onSave: () => void) {
   const { user } = useAuth()
@@ -50,7 +59,7 @@ export function useMovimientoForm(movimiento: MovimientoFinanciero | null, onClo
   const [comprobanteNombre, setComprobanteNombre] = useState('')
 
   const form = useForm<MovimientoFormValues>({
-    resolver: zodResolver(movimientoSchema),
+    resolver: zodResolver(movimientoSchema) as any,
     mode: 'onTouched',
     defaultValues: {
       tipo: 'ingreso',
@@ -184,8 +193,8 @@ export function useMovimientoForm(movimiento: MovimientoFinanciero | null, onClo
         fecha: data.fecha ? `${data.fecha}T${new Date().toLocaleTimeString('en-GB')}` : new Date().toISOString(),
         origen_club_id: data.origenClubId || undefined,
         origen_entidad: data.origenEntidad?.trim() || undefined,
-        comprobante_url: finalComprobanteUrl || null,
-        comprobante_nombre: finalComprobanteNombre || null,
+        comprobante_url: finalComprobanteUrl || undefined,
+        comprobante_nombre: finalComprobanteNombre || undefined,
         estado: 'registrado'
       }
 

@@ -311,7 +311,6 @@ export default function NuevaNoticiaForm({ autorId, clubId, rolUsuario, noticia,
             name="fecha_fin"
             control={control}
             label="Fecha de fin (opcional)"
-            minDate={dayjs()}
           />
         </Stack>
 

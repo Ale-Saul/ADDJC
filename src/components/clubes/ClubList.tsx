@@ -217,7 +217,7 @@ export default function ClubList({ onEdit, onDelete, onViewJudokas, onViewDocume
         showFilters={state.showFilters}
       >
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <FilterSelect
               label="Provincia"
               value={state.filters.municipio || 'all'}
@@ -243,7 +243,7 @@ export default function ClubList({ onEdit, onDelete, onViewJudokas, onViewDocume
               ]}
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <FilterSelect
               label="Estado"
               value={state.filters.estado || 'all'}

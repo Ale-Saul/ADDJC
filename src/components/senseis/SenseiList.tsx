@@ -312,7 +312,7 @@ export default function SenseiList({
             showFilters={state.showFilters}
           >
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <FilterSelect
                   label="Grado Dan"
                   value={state.gradoDanFilter}
@@ -323,7 +323,7 @@ export default function SenseiList({
                   ]}
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <FilterSelect
                   label="Especialidad"
                   value={state.especialidadFilter}
@@ -334,7 +334,7 @@ export default function SenseiList({
                   ]}
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <FilterSelect
                   label="Estado"
                   value={state.estadoFilter}
@@ -373,6 +373,7 @@ export default function SenseiList({
     </>
   )
 }
+
 
 
 

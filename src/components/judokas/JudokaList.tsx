@@ -443,7 +443,7 @@ export default function JudokaList({
         showFilters={state.showFilters}
       >
         <Grid container spacing={2}>
-          <Grid container item xs={12} sm={4}>
+          <Grid size={{ xs: 12, sm: 4 }}>
             <FilterSelect
               label="Categoría"
               value={state.categoriaFilter}
@@ -454,7 +454,7 @@ export default function JudokaList({
               ]}
             />
           </Grid>
-          <Grid container item xs={12} sm={4}>
+          <Grid size={{ xs: 12, sm: 4 }}>
             <FilterSelect
               label="Cinturón"
               value={state.cinturonFilter}
@@ -465,7 +465,7 @@ export default function JudokaList({
               ]}
             />
           </Grid>
-          <Grid container item xs={12} sm={4}>
+          <Grid size={{ xs: 12, sm: 4 }}>
             <FilterSelect
               label="Estado"
               value={state.estadoFilter}
@@ -513,3 +513,4 @@ export default function JudokaList({
     </>
   )
 }
+

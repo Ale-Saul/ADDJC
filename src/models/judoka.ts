@@ -14,6 +14,7 @@ export interface Judoka {
   ci_extension?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   avatar_url?: string | null
+  email?: string | null
   activo: boolean
   peso_competitivo: number | null
   cinturon_actual: string | null

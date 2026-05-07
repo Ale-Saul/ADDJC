@@ -23,7 +23,8 @@ import { FormProvider, useWatch } from 'react-hook-form'
 import { MovimientoFinanciero } from '@/models/movimientoFinanciero'
 import { useClubes } from '@/hooks/useClubes'
 import { FormInput, FormSelect } from '@/components/ui'
-import { useMovimientoForm } from '@/hooks/useMovimientoForm'
+import { useMovimientoForm, MovimientoFormValues } from '@/hooks/useMovimientoForm'
+import { SubmitHandler } from 'react-hook-form'
 
 interface MovimientoFormDialogProps {
   open: boolean
@@ -70,6 +71,8 @@ export const MovimientoFormDialog: React.FC<MovimientoFormDialogProps> = ({
     onSubmit
   } = useMovimientoForm(movimiento, onClose, onSave)
 
+  const { form: typedForm } = useMovimientoForm(movimiento, onClose, onSave) as { form: any }
+
   const { clubes } = useClubes()
 
   const tipo = useWatch({ control: form.control, name: 'tipo' })
@@ -101,7 +104,7 @@ export const MovimientoFormDialog: React.FC<MovimientoFormDialogProps> = ({
       </DialogTitle>
       
       <FormProvider {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        <form onSubmit={form.handleSubmit(onSubmit as any)}>
           <DialogContent>
             {error && (
               <Alert severity="error" sx={{ mb: 2 }}>

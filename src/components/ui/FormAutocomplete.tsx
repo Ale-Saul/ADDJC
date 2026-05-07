@@ -4,7 +4,7 @@ import React from 'react'
 import { Controller, Control } from 'react-hook-form'
 import { Autocomplete, TextField } from '@mui/material'
 
-export type Option = {
+export type AutocompleteOption = {
   value: string | number
   label: string
 }
@@ -13,12 +13,13 @@ export type FormAutocompleteProps = {
   name: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   control: Control<any>
-  options: Option[]
+  options: AutocompleteOption[]
   label?: string
   fullWidth?: boolean
   helperText?: string
   disabled?: boolean
   required?: boolean
+  onChange?: (event: any, value: AutocompleteOption | null) => void
 }
 
 export function FormAutocomplete({
@@ -30,6 +31,7 @@ export function FormAutocomplete({
   helperText,
   disabled = false,
   required = false,
+  onChange: customOnChange,
 }: FormAutocompleteProps) {
   return (
     <Controller
@@ -43,8 +45,11 @@ export function FormAutocomplete({
             options={options}
             getOptionLabel={(option) => option.label}
             value={selectedOption}
-            onChange={(_, newValue) => {
+            onChange={(event, newValue) => {
               onChange(newValue ? newValue.value : '')
+              if (customOnChange) {
+                customOnChange(event, newValue)
+              }
             }}
             fullWidth={fullWidth}
             disabled={disabled}

@@ -76,7 +76,10 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
   }, [judokasQuery.judokas, sesionFecha])
 
   // Mutation para guardar
-  const guardarMutation = useRegistrarAsistencia(user?.sensei_id, user?.club_id)
+  const guardarMutation = useRegistrarAsistencia(
+    user?.sensei_id || undefined, 
+    user?.club_id || undefined
+  )
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false, message: '', severity: 'success',

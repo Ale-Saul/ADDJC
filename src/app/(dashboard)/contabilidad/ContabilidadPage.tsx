@@ -354,7 +354,6 @@ export default function ContabilidadPage() {
           <MovimientoFormDialog
             open={openDialog}
             movimiento={editingMovimiento}
-            clubes={clubes}
             onClose={() => setOpenDialog(false)}
             onSave={handleGuardarMovimiento}
           />

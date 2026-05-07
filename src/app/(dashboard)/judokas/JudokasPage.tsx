@@ -110,9 +110,9 @@ export default function JudokasPage() {
           <Typography>Cargando información del judoka...</Typography>
         ) : (
           <JudokaList
-            clubId={clubId}
-            entrenadorId={entrenadorId}
-            senseiId={senseiId}
+            clubId={clubId ?? undefined}
+            entrenadorId={entrenadorId ?? undefined}
+            senseiId={senseiId ?? undefined}
             refreshTrigger={refreshTrigger}
             onEdit={isJudoka ? undefined : handleEdit}
             onDelete={isJudoka ? undefined : handleDelete}

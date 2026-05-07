@@ -41,11 +41,10 @@ export const createNoticiaSchema = z.object({
     .refine(v => !/\s{2,}/.test(v), { message: 'No se permiten espacios consecutivos' }),
   categoria: categoriaSchema,
   imagen_url: z.string().url('URL de imagen inválida').nullable().optional(),
-  es_destacada: z.boolean().default(false),
+  es_destacada: z.boolean(),
   audiencia: z
     .array(audienciaSchema)
-    .min(1, 'Debe seleccionar al menos una audiencia')
-    .default(['todos']),
+    .min(1, 'Debe seleccionar al menos una audiencia'),
   fecha_inicio: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de fecha inválido (YYYY-MM-DD)'),
   fecha_fin: z
     .string()

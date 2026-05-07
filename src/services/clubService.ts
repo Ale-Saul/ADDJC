@@ -48,7 +48,7 @@ export const clubService = {
       if (error) throw error
 
       const mappedData = (data || []).map(club => {
-        const dt = club.director_tecnico
+        const dt = club.director_tecnico as any
         const u = dt?.usuarios
         return {
           ...club,
@@ -83,7 +83,7 @@ export const clubService = {
 
       if (error) throw error
 
-      const dt = data.director_tecnico
+      const dt = data.director_tecnico as any
       const u = dt?.usuarios
       const mapped = {
         ...data,

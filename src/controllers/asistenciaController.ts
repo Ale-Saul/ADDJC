@@ -403,7 +403,10 @@ export const asistenciaController = {
       success: true,
       data: {
         club_id: clubId,
-        periodo: filtros,
+        periodo: {
+          fecha_inicio: filtros?.fecha_inicio || '',
+          fecha_fin: filtros?.fecha_fin || ''
+        },
         stats_globales: {
           total_sesiones: globalTotal,
           promedio_asistencia: Number(globalPromedio.toFixed(2))

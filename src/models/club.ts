@@ -9,6 +9,13 @@ export interface Club {
   created_at: string
   updated_at: string
   documentos?: ClubDocumento[]
+  director_tecnico?: {
+    id: string
+    nombres: string
+    apellidos: string
+    ci: string | null
+    ci_extension: string | null
+  } | null
 }
 
 export interface ClubDocumento {

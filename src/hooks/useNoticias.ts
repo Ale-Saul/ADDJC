@@ -3,15 +3,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { comunicacionController } from '@/controllers/comunicacionController'
 import { COMUNICACION_QUERY_KEYS } from '@/constants/comunicacion'
-import type { NoticiaCreate, ComunicacionAudiencia } from '@/models/comunicacion'
+import type { NoticiaCreate, ComunicacionAudiencia, ComunicacionCategoria } from '@/models/comunicacion'
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
 export function useNoticiasByClub(
   clubId: string,
   filtros?: {
-    categoria?: string
-    audiencia?: string
+    categoria?: ComunicacionCategoria
+    audiencia?: ComunicacionAudiencia
     solo_destacadas?: boolean
   }
 ) {

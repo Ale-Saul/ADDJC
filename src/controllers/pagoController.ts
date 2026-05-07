@@ -76,13 +76,13 @@ export const pagoController = {
 
     const pagos = response.data || []
     const totalRecaudado = pagos
-      .filter(p => p.estado === 'pago' || p.estado === 'completado')
+      .filter(p => p.estado === 'pagado' || (p.estado as string) === 'completado')
       .reduce((sum, p) => sum + (p.monto_final || 0), 0)
 
     const reporte = {
       totalRecaudado,
       cantidadPagos: pagos.length,
-      pagosCompletados: pagos.filter(p => p.estado === 'pago' || p.estado === 'completado').length,
+      pagosCompletados: pagos.filter(p => p.estado === 'pagado' || (p.estado as string) === 'completado').length,
       pagosPendientes: pagos.filter(p => p.estado === 'pendiente').length
     }
 
@@ -263,7 +263,7 @@ export const pagoController = {
     const existingPago = existingResult.data
 
     // R2 - Inmutabilidad: No editar si ya está pagado
-    if (existingPago.estado === 'pago' || existingPago.estado === 'completado') {
+    if (existingPago.estado === 'pagado' || (existingPago.estado as string) === 'completado') {
       if (pagoData.monto_final !== undefined || pagoData.monto_base !== undefined) {
         return { success: false, error: 'Un pago completado está bloqueado para edición de montos' }
       }

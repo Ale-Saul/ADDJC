@@ -55,13 +55,13 @@ export const judokaController = {
     }
 
     // Validar peso_competitivo
-    if (typeof judokaData.peso_competitivo === 'string' && judokaData.peso_competitivo.trim() !== '') {
-      const numPeso = parseFloat(judokaData.peso_competitivo)
+    if (typeof judokaData.peso_competitivo === 'string' && (judokaData.peso_competitivo as string).trim() !== '') {
+      const numPeso = parseFloat(judokaData.peso_competitivo as string)
       if (isNaN(numPeso)) {
         return { success: false, error: 'El peso debe ser un número válido' }
       }
       judokaData.peso_competitivo = numPeso
-    } else if (judokaData.peso_competitivo === '') {
+    } else if ((judokaData.peso_competitivo as unknown) === '') {
       judokaData.peso_competitivo = null
     }
 
@@ -107,13 +107,13 @@ export const judokaController = {
     }
 
     // Validar peso_competitivo
-    if (typeof judokaData.peso_competitivo === 'string' && judokaData.peso_competitivo.trim() !== '') {
-      const numPeso = parseFloat(judokaData.peso_competitivo)
+    if (typeof judokaData.peso_competitivo === 'string' && (judokaData.peso_competitivo as string).trim() !== '') {
+      const numPeso = parseFloat(judokaData.peso_competitivo as string)
       if (isNaN(numPeso)) {
         return { success: false, error: 'El peso debe ser un número válido' }
       }
       judokaData.peso_competitivo = numPeso
-    } else if (judokaData.peso_competitivo === '') {
+    } else if ((judokaData.peso_competitivo as unknown) === '') {
       judokaData.peso_competitivo = null
     }
 

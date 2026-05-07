@@ -5,9 +5,7 @@ import { z } from 'zod'
  */
 
 // Estado de asistencia
-export const estadoAsistenciaSchema = z.enum(['presente', 'ausente'], {
-  errorMap: () => ({ message: 'Estado de asistencia inválido (presente/ausente)' }),
-})
+export const estadoAsistenciaSchema = z.enum(['presente', 'ausente'])
 
 /**
  * Esquema para crear una sesión de asistencia
