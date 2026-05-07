@@ -44,7 +44,7 @@ export const senseiController = {
     }
 
     // Generar contraseña automática basada en el carnet
-    const autoPassword = generarPasswordInicial(senseiData.ci || '')
+    const autoPassword = generarPasswordInicial(senseiData.ci || '', senseiData.ci_extension)
 
     // Por defecto, el sensei se crea como activo
     const senseiToCreate: SenseiCreate = {

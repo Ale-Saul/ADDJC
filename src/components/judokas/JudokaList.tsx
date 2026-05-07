@@ -435,52 +435,50 @@ export default function JudokaList({
 
   return (
     <>
-      {!readOnly && (
-        <SearchBar
-          value={state.globalFilter}
-          onChange={setGlobalFilter}
-          placeholder="Buscar por nombre, carnet o categoría..."
-          onToggleFilters={toggleShowFilters}
-          showFilters={state.showFilters}
-        >
-          <Grid container spacing={2}>
-            <Grid container item xs={12} sm={4}>
-              <FilterSelect
-                label="Categoría"
-                value={state.categoriaFilter}
-                onChange={(e) => setFilter('categoria', e.target.value)}
-                options={[
-                  { value: 'all', label: 'Todas las categorías' },
-                  ...CATEGORIES.map(c => ({ value: c, label: c }))
-                ]}
-              />
-            </Grid>
-            <Grid container item xs={12} sm={4}>
-              <FilterSelect
-                label="Cinturón"
-                value={state.cinturonFilter}
-                onChange={(e) => setFilter('cinturon', e.target.value)}
-                options={[
-                  { value: 'all', label: 'Todos los cinturones' },
-                  ...BELT_COLORS.map(c => ({ value: c, label: c }))
-                ]}
-              />
-            </Grid>
-            <Grid container item xs={12} sm={4}>
-              <FilterSelect
-                label="Estado"
-                value={state.estadoFilter}
-                onChange={(e) => setFilter('estado', e.target.value)}
-                options={[
-                  { value: 'all', label: 'Todos los estados' },
-                  { value: 'activo', label: 'Solo Activos' },
-                  { value: 'inactivo', label: 'Solo Inactivos' }
-                ]}
-              />
-            </Grid>
+      <SearchBar
+        value={state.globalFilter}
+        onChange={setGlobalFilter}
+        placeholder="Buscar por nombre, carnet o categoría..."
+        onToggleFilters={toggleShowFilters}
+        showFilters={state.showFilters}
+      >
+        <Grid container spacing={2}>
+          <Grid container item xs={12} sm={4}>
+            <FilterSelect
+              label="Categoría"
+              value={state.categoriaFilter}
+              onChange={(e) => setFilter('categoria', e.target.value)}
+              options={[
+                { value: 'all', label: 'Todas las categorías' },
+                ...CATEGORIES.map(c => ({ value: c, label: c }))
+              ]}
+            />
           </Grid>
-        </SearchBar>
-      )}
+          <Grid container item xs={12} sm={4}>
+            <FilterSelect
+              label="Cinturón"
+              value={state.cinturonFilter}
+              onChange={(e) => setFilter('cinturon', e.target.value)}
+              options={[
+                { value: 'all', label: 'Todos los cinturones' },
+                ...BELT_COLORS.map(c => ({ value: c, label: c }))
+              ]}
+            />
+          </Grid>
+          <Grid container item xs={12} sm={4}>
+            <FilterSelect
+              label="Estado"
+              value={state.estadoFilter}
+              onChange={(e) => setFilter('estado', e.target.value)}
+              options={[
+                { value: 'all', label: 'Todos los estados' },
+                { value: 'activo', label: 'Solo Activos' },
+                { value: 'inactivo', label: 'Solo Inactivos' }
+              ]}
+            />
+          </Grid>
+        </Grid>
+      </SearchBar>
       
       <DataTable<Judoka>
         columns={columns}

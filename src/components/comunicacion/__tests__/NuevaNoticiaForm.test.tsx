@@ -83,6 +83,7 @@ describe('NuevaNoticiaForm', () => {
       expect(screen.getByText(/Para mi club/i)).toBeInTheDocument()
       expect(screen.getByText(/Noticia Global \(Todos los clubes\)/i)).toBeInTheDocument()
     })
+    expect(screen.queryByRole('checkbox', { name: /árbitros/i })).not.toBeInTheDocument()
   })
 
   it('la opcion todos debe excluir a las especificas y viceversa', async () => {

@@ -23,10 +23,10 @@ export function useNoticiasByClub(
   })
 }
 
-export function useNoticiasDestacadas(clubId?: string, audiencia?: ComunicacionAudiencia) {
+export function useNoticiasDestacadas(clubId?: string, audiencia?: ComunicacionAudiencia, rol?: string) {
   return useQuery({
-    queryKey: [...COMUNICACION_QUERY_KEYS.noticiasDestacadas(clubId), audiencia ?? 'todos'],
-    queryFn: () => comunicacionController.getNoticiasDestacadas(clubId, audiencia),
+    queryKey: [...COMUNICACION_QUERY_KEYS.noticiasDestacadas(clubId), audiencia ?? 'todos', rol ?? 'none'],
+    queryFn: () => comunicacionController.getNoticiasDestacadas(clubId, audiencia, rol),
     select: res => res.data ?? [],
     staleTime: 5 * 60 * 1000,
   })

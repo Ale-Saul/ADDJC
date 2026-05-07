@@ -121,29 +121,9 @@ export const certificacionService = {
   },
 
   /**
-   * Eliminar una certificación (soft delete)
+   * Eliminar una certificación (Eliminación física)
    */
   async delete(id: string): Promise<ApiResponse<void>> {
-    try {
-      const client = createClient()
-      const { error } = await client
-        .from('certificaciones')
-        .update({ activo: false, updated_at: new Date().toISOString() })
-        .eq('id', id)
-
-      if (error) throw error
-
-      return { success: true }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      return { success: false, error: errorMessage }
-    }
-  },
-
-  /**
-   * Eliminar permanentemente una certificación
-   */
-  async deletePermanent(id: string): Promise<ApiResponse<void>> {
     try {
       const client = createClient()
       const { error } = await client

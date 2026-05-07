@@ -46,7 +46,7 @@ export type NoticiaCreate = Omit<Noticia,
 
 /** Payload para actualizar una noticia */
 export type NoticiaUpdate = Partial<Pick<Noticia,
-  'titulo' | 'contenido' | 'categoria' | 'imagen_url' | 'es_destacada' |
+  'club_id' | 'titulo' | 'contenido' | 'categoria' | 'imagen_url' | 'es_destacada' |
   'audiencia' | 'fecha_inicio' | 'fecha_fin' | 'activo'
 >>
 

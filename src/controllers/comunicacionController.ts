@@ -62,6 +62,18 @@ function mapNoticiaControllerRow(row: NoticiaControllerRow): Noticia {
   }
 }
 
+/** Audiencia efectiva del usuario en el feed (coincide con filtrado en servicio + refuerzo JS). */
+function noticiaVisibleParaAudienciaUsuario(
+  n: Noticia,
+  usuarioAudiencia: ComunicacionAudiencia,
+): boolean {
+  if (n.audiencia.includes('todos')) return true
+  if (usuarioAudiencia === 'senseis' || usuarioAudiencia === 'encargados') {
+    return n.audiencia.includes('senseis') || n.audiencia.includes('encargados')
+  }
+  return n.audiencia.includes(usuarioAudiencia)
+}
+
 const SELECT_NOTICIA_BASE = `
   id,
   club_id,
@@ -137,8 +149,10 @@ export const comunicacionController = {
     try {
       const hoy = new Date().toISOString().split('T')[0]
 
-      // Si es rol ASOCIACION, solo ve noticias globales (club_id IS NULL)
-      if (rol === 'asociacion') {
+      /** Árbitros y asociación no deben ver noticias ligadas a un club (p. ej. “Para mi club”). */
+      const soloFeedGlobal = rol === ROL.ASOCIACION || rol === ROL.ARBITRO
+
+      if (soloFeedGlobal) {
         const supabase = createClient()
         const { data, error } = await supabase
           .from('comunicacion_noticias')
@@ -150,12 +164,18 @@ export const comunicacionController = {
           .order('created_at', { ascending: false })
 
         if (error) throw error
-        
+
         const mappedData = (data ?? []).map(row =>
           mapNoticiaControllerRow(row as unknown as NoticiaControllerRow)
         )
 
-        return { success: true, data: mappedData }
+        // Asociación: todas las globales (ámbito institucional). Árbitro: respeta audiencia.
+        if (rol === ROL.ASOCIACION) {
+          return { success: true, data: mappedData }
+        }
+
+        const filtered = mappedData.filter(n => noticiaVisibleParaAudienciaUsuario(n, usuarioAudiencia))
+        return { success: true, data: filtered }
       }
 
       if (clubId) {
@@ -164,22 +184,15 @@ export const comunicacionController = {
           solo_activas: true,
           fecha_referencia: hoy,
         })
-        
-        // Filtrar por audiencia en JS para asegurar cumplimiento estricto
-        const filtered = data.filter(n => {
-          if (n.audiencia.includes('todos')) return true
-          if (usuarioAudiencia === 'senseis' || usuarioAudiencia === 'encargados') {
-            return n.audiencia.includes('senseis') || n.audiencia.includes('encargados')
-          }
-          return n.audiencia.includes(usuarioAudiencia)
-        })
+
+        const filtered = data.filter(n => noticiaVisibleParaAudienciaUsuario(n, usuarioAudiencia))
 
         return { success: true, data: filtered }
       }
 
-      // Sin club_id y no es asociación: solo noticias globales (club_id IS NULL)
+      // Sin club_id: solo noticias globales (club_id IS NULL)
       const supabase = createClient()
-      
+
       const query = supabase
         .from('comunicacion_noticias')
         .select(SELECT_NOTICIA_BASE)
@@ -191,19 +204,12 @@ export const comunicacionController = {
       const { data, error } = await query.order('created_at', { ascending: false })
 
       if (error) throw error
-      
+
       const mappedData = (data ?? []).map(row =>
         mapNoticiaControllerRow(row as unknown as NoticiaControllerRow)
       )
 
-      // Filtrar por audiencia en JS
-      const filtered = mappedData.filter(n => {
-        if (n.audiencia.includes('todos')) return true
-        if (usuarioAudiencia === 'senseis' || usuarioAudiencia === 'encargados') {
-          return n.audiencia.includes('senseis') || n.audiencia.includes('encargados')
-        }
-        return n.audiencia.includes(usuarioAudiencia)
-      })
+      const filtered = mappedData.filter(n => noticiaVisibleParaAudienciaUsuario(n, usuarioAudiencia))
 
       return { success: true, data: filtered }
     } catch (err) {
@@ -212,9 +218,16 @@ export const comunicacionController = {
     }
   },
 
-  async getNoticiasDestacadas(clubId?: string, audiencia?: ComunicacionAudiencia): Promise<ApiResponse<Noticia[]>> {
+  async getNoticiasDestacadas(
+    clubId?: string,
+    audiencia?: ComunicacionAudiencia,
+    rol?: string,
+  ): Promise<ApiResponse<Noticia[]>> {
     try {
-      const data = await comunicacionService.getNoticiasDestacadas(clubId, audiencia)
+      const soloGlobal = rol === ROL.ASOCIACION || rol === ROL.ARBITRO
+      const data = await comunicacionService.getNoticiasDestacadas(clubId, audiencia, {
+        soloNoticiasGlobales: soloGlobal,
+      })
       return { success: true, data }
     } catch (err) {
       console.error('Error en comunicacionController.getNoticiasDestacadas:', err)
@@ -371,10 +384,13 @@ export const comunicacionController = {
       // 1. Se marcó como destacada ahora (y antes no lo era)
       // 2. O si ya era destacada pero se cambió la audiencia
       const seMarcoDestacada = parsed.data.es_destacada === true && actual.es_destacada === false
-      const cambioAudiencia = parsed.data.audiencia !== undefined && 
+      const cambioAudiencia = parsed.data.audiencia !== undefined &&
                              JSON.stringify(parsed.data.audiencia) !== JSON.stringify(actual.audiencia)
-      
-      if (seMarcoDestacada || (data.es_destacada && cambioAudiencia)) {
+      const cambioClub =
+        parsed.data.club_id !== undefined &&
+        (parsed.data.club_id ?? null) !== (actual.club_id ?? null)
+
+      if (seMarcoDestacada || (data.es_destacada && (cambioAudiencia || cambioClub))) {
         comunicacionController.notificarNoticiaDestacada(data).catch(err => 
           console.error('Error al notificar noticia destacada en update:', err)
         )

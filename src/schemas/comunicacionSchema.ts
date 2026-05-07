@@ -64,6 +64,7 @@ export const createNoticiaSchema = z.object({
 
 /** Schema para actualizar una noticia */
 export const updateNoticiaSchema = z.object({
+  club_id: z.string().uuid('ID de club inválido').nullable().optional(),
   titulo: z
     .string()
     .min(3, 'El título debe tener al menos 3 caracteres')

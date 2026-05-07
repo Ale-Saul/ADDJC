@@ -47,6 +47,7 @@ const CATEGORIAS: { value: ComunicacionCategoria; label: string }[] = [
  * - "Encargados" no se muestra como opción independiente.
  * - "Senseis" internamente guarda ['senseis', 'encargados'].
  * - "Para mi club" (solo Encargados) es el alias visual de 'todos'.
+ * - "Árbitros" solo Asociación / Admin (no encargados de club).
  */
 type AudienciaOpcion = {
   /** valor que aparece en el checkbox (puede diferir del valor DB) */
@@ -54,15 +55,23 @@ type AudienciaOpcion = {
   label: string
 }
 
+function audienciaPermitidaEncargado(audiencia: ComunicacionAudiencia[] | undefined): ComunicacionAudiencia[] {
+  const base = audiencia ?? ['todos']
+  const sinArbitros = base.filter(a => a !== 'arbitros')
+  return sinArbitros.length > 0 ? sinArbitros : ['todos']
+}
+
 function getAudienciaOpciones(rol?: string): (AudienciaOpcion & { esGlobal?: boolean })[] {
   const opciones: (AudienciaOpcion & { esGlobal?: boolean })[] = [
     { id: 'todos', label: rol === ROL.ENCARGADO ? 'Para mi club' : 'Todos' },
     { id: 'judokas', label: 'Judokas' },
     { id: 'senseis', label: 'Senseis' },
-    { id: 'arbitros', label: 'Árbitros' },
   ]
 
-  // Si es Encargado, añadir la opción de noticia global (sin club_id)
+  if (rol !== ROL.ENCARGADO) {
+    opciones.push({ id: 'arbitros', label: 'Árbitros' })
+  }
+
   if (rol === ROL.ENCARGADO) {
     opciones.push({ id: 'todos', label: 'Noticia Global (Todos los clubes)', esGlobal: true })
   }
@@ -103,7 +112,10 @@ export default function NuevaNoticiaForm({ autorId, clubId, rolUsuario, noticia,
       categoria: noticia?.categoria ?? 'institucional',
       imagen_url: noticia?.imagen_url ?? null,
       es_destacada: noticia?.es_destacada ?? false,
-      audiencia: noticia?.audiencia ?? ['todos'],
+      audiencia:
+        rolUsuario === ROL.ENCARGADO
+          ? audienciaPermitidaEncargado(noticia?.audiencia)
+          : (noticia?.audiencia ?? ['todos']),
       fecha_inicio: noticia?.fecha_inicio ?? dayjs().format('YYYY-MM-DD'),
       fecha_fin: noticia?.fecha_fin ?? null,
     },
@@ -150,8 +162,14 @@ export default function NuevaNoticiaForm({ autorId, clubId, rolUsuario, noticia,
       }
     }
 
+    const audienciaFinal =
+      rolUsuario === ROL.ENCARGADO
+        ? audienciaPermitidaEncargado(values.audiencia)
+        : values.audiencia
+
     const payload: NoticiaCreate = {
       ...values,
+      audiencia: audienciaFinal,
       titulo: values.titulo.replace(/\s+/g, ' ').trim(),
       contenido: values.contenido.replace(/\s+/g, ' ').trim(),
       club_id: values.club_id ?? null,

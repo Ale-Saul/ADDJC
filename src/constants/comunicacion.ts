@@ -34,6 +34,17 @@ export const AUDIENCIA_LABELS: Record<ComunicacionAudiencia, string> = {
   encargados: 'Encargados',
 } as const
 
+/**
+ * Etiqueta para chips/listados: `audiencia: ['todos']` aplica a todo el mundo objetivo,
+ * pero el alcance real depende de `club_id` (null = todos los clubes, con UUID = solo ese club).
+ */
+export function labelAudienciaEnNoticia(aud: ComunicacionAudiencia, clubId: string | null): string {
+  if (aud === 'todos') {
+    return clubId ? 'Mi club' : 'Todos los clubes'
+  }
+  return AUDIENCIA_LABELS[aud]
+}
+
 /** Labels para los tipos de notificación */
 export const NOTIF_TIPO_LABELS: Record<ComunicacionNotifTipo, string> = {
   pago: 'Pago',

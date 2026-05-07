@@ -231,7 +231,11 @@ export const comunicacionService = {
     return (data ?? []).map(row => mapNoticiaRow(row as Record<string, unknown>))
   },
 
-  async getNoticiasDestacadas(clubId?: string, audiencia?: ComunicacionAudiencia): Promise<Noticia[]> {
+  async getNoticiasDestacadas(
+    clubId?: string,
+    audiencia?: ComunicacionAudiencia,
+    opciones?: { soloNoticiasGlobales?: boolean },
+  ): Promise<Noticia[]> {
     const supabase = createClient()
     const hoy = new Date().toISOString().split('T')[0]
 
@@ -243,7 +247,9 @@ export const comunicacionService = {
       .lte('fecha_inicio', hoy)
       .or(`fecha_fin.is.null,fecha_fin.gte.${hoy}`)
 
-    if (clubId) {
+    if (opciones?.soloNoticiasGlobales) {
+      query = query.is('club_id', null)
+    } else if (clubId) {
       query = query.or(`club_id.eq.${clubId},club_id.is.null`)
     }
 

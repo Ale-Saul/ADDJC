@@ -194,41 +194,39 @@ export default function ArbitroList({
 
   return (
     <Box>
-      {!readOnly && (
-        <SearchBar
-          value={state.globalFilter}
-          onChange={(val) => dispatch({ type: 'SET_GLOBAL_FILTER', payload: val })}
-          placeholder="Buscar por nombre, carnet, nivel..."
-          onToggleFilters={() => dispatch({ type: 'TOGGLE_SHOW_FILTERS' })}
-          showFilters={state.showFilters}
-        >
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <FilterSelect
-                label="Nivel de Arbitraje"
-                value={state.nivelFilter}
-                onChange={(e) => dispatch({ type: 'SET_NIVEL_FILTER', payload: e.target.value })}
-                options={[
-                  { value: 'all', label: 'Todos los niveles' },
-                  ...NIVELES_ARBITRAJE.map(n => ({ value: n, label: n }))
-                ]}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FilterSelect
-                label="Estado"
-                value={state.estadoFilter}
-                onChange={(e) => dispatch({ type: 'SET_ESTADO_FILTER', payload: e.target.value })}
-                options={[
-                  { value: 'all', label: 'Todos los estados' },
-                  { value: 'activo', label: 'Solo Activos' },
-                  { value: 'inactivo', label: 'Solo Inactivos' }
-                ]}
-              />
-            </Grid>
+      <SearchBar
+        value={state.globalFilter}
+        onChange={(val) => dispatch({ type: 'SET_GLOBAL_FILTER', payload: val })}
+        placeholder="Buscar por nombre, carnet, nivel..."
+        onToggleFilters={() => dispatch({ type: 'TOGGLE_SHOW_FILTERS' })}
+        showFilters={state.showFilters}
+      >
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <FilterSelect
+              label="Nivel de Arbitraje"
+              value={state.nivelFilter}
+              onChange={(e) => dispatch({ type: 'SET_NIVEL_FILTER', payload: e.target.value })}
+              options={[
+                { value: 'all', label: 'Todos los niveles' },
+                ...NIVELES_ARBITRAJE.map(n => ({ value: n, label: n }))
+              ]}
+            />
           </Grid>
-        </SearchBar>
-      )}
+          <Grid item xs={12} sm={6}>
+            <FilterSelect
+              label="Estado"
+              value={state.estadoFilter}
+              onChange={(e) => dispatch({ type: 'SET_ESTADO_FILTER', payload: e.target.value })}
+              options={[
+                { value: 'all', label: 'Todos los estados' },
+                { value: 'activo', label: 'Solo Activos' },
+                { value: 'inactivo', label: 'Solo Inactivos' }
+              ]}
+            />
+          </Grid>
+        </Grid>
+      </SearchBar>
 
       <DataTable 
         data={currentArbitros} 

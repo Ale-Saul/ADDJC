@@ -71,7 +71,7 @@ export const certificacionController = {
   },
 
   /**
-   * Eliminar una certificación (soft delete)
+   * Eliminar una certificación (Eliminación física)
    */
   async deleteCertificacion(id: string): Promise<ApiResponse<void>> {
     if (!id) {
@@ -79,17 +79,6 @@ export const certificacionController = {
     }
 
     return await certificacionService.delete(id)
-  },
-
-  /**
-   * Eliminar permanentemente una certificación
-   */
-  async deleteCertificacionPermanent(id: string): Promise<ApiResponse<void>> {
-    if (!id) {
-      return { success: false, error: 'El ID de la certificación es requerido' }
-    }
-
-    return await certificacionService.deletePermanent(id)
   }
 }
 

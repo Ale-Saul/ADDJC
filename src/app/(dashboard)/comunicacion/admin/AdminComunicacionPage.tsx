@@ -36,7 +36,7 @@ import {
 } from '@/hooks/useNoticias'
 import NuevaNoticiaForm from '@/components/comunicacion/NuevaNoticiaForm'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { CATEGORIA_LABELS, CATEGORIA_COLOR, AUDIENCIA_LABELS } from '@/constants/comunicacion'
+import { CATEGORIA_LABELS, CATEGORIA_COLOR, labelAudienciaEnNoticia } from '@/constants/comunicacion'
 import type { NoticiaCreate, Noticia } from '@/models/comunicacion'
 import { formatters } from '@/utils/formatters'
 import { ROL } from '@/constants/roles'
@@ -210,7 +210,13 @@ export default function AdminComunicacionPage() {
                         <Chip label="Destacada" size="small" color="warning" variant="outlined" sx={{ fontSize: '0.7rem', height: 20 }} />
                       )}
                       {noticia.audiencia.map(aud => (
-                        <Chip key={aud} label={AUDIENCIA_LABELS[aud]} size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 20 }} />
+                        <Chip
+                          key={aud}
+                          label={labelAudienciaEnNoticia(aud, noticia.club_id)}
+                          size="small"
+                          variant="outlined"
+                          sx={{ fontSize: '0.65rem', height: 20 }}
+                        />
                       ))}
                     </Stack>
                     <Typography variant="body1" fontWeight={600} noWrap>
@@ -286,6 +292,7 @@ export default function AdminComunicacionPage() {
         <Divider />
         <DialogContent>
           <NuevaNoticiaForm
+            key={noticiaEdit?.id ?? 'nueva'}
             autorId={user?.id ?? ''}
             clubId={clubId || undefined}
             rolUsuario={user?.rol}
