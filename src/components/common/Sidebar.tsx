@@ -654,22 +654,45 @@ export default function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: bo
   )
 
   return (
-    <Drawer
-      variant="permanent"
-      sx={{
-        width: DRAWER_WIDTH,
-        flexShrink: 0,
-        '& .MuiDrawer-paper': {
+    <>
+      {/* Sidebar para móviles (Drawer temporal) */}
+      <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={onMobileClose}
+        ModalProps={{
+          keepMounted: true, // Mejora el rendimiento al abrir en móviles
+        }}
+        sx={{
+          display: { xs: 'block', lg: 'none' },
+          '& .MuiDrawer-paper': { 
+            width: DRAWER_WIDTH, 
+            boxSizing: 'border-box' 
+          },
+        }}
+      >
+        {drawerContent}
+      </Drawer>
+
+      {/* Sidebar para pantallas grandes (Drawer permanente) */}
+      <Drawer
+        variant="permanent"
+        sx={{
+          display: { xs: 'none', lg: 'block' },
           width: DRAWER_WIDTH,
-          boxSizing: 'border-box',
-          position: 'fixed',
-          height: '100vh',
-          overflow: 'hidden'
-        }
-      }}
-    >
-      {drawerContent}
-    </Drawer>
+          flexShrink: 0,
+          '& .MuiDrawer-paper': {
+            width: DRAWER_WIDTH,
+            boxSizing: 'border-box',
+            position: 'fixed',
+            height: '100vh',
+            overflow: 'hidden'
+          }
+        }}
+      >
+        {drawerContent}
+      </Drawer>
+    </>
   )
 }
 
