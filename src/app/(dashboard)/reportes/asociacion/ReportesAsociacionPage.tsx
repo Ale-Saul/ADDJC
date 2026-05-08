@@ -368,21 +368,41 @@ export default function ReportesAsociacionPage() {
     <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION]}>
         <Box>
           {/* Header */}
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+          <Box 
+            display="flex" 
+            flexDirection={{ xs: 'column', md: 'row' }}
+            justifyContent="space-between" 
+            alignItems={{ xs: 'flex-start', md: 'center' }} 
+            mb={4}
+            gap={2}
+          >
             <Box display="flex" alignItems="center" gap={2}>
               <AssessmentIcon sx={{ fontSize: 40, color: 'primary.main' }} />
-              <Typography variant="h4" component="h1">
+              <Typography 
+                variant="h4" 
+                component="h1"
+                sx={{ fontSize: { xs: '1.75rem', md: '2.125rem' } }}
+              >
                 Reportes Consolidados - Asociación
               </Typography>
             </Box>
-            <Box display="flex" gap={2}>
+            <Box 
+              display="flex" 
+              gap={2}
+              width={{ xs: '100%', md: 'auto' }}
+              flexDirection={{ xs: 'column', sm: 'row' }}
+            >
               <Button
                 variant="contained"
                 color="error"
                 startIcon={<DownloadIcon />}
                 onClick={exportarPDF}
                 disabled={resumenesPorClub.length === 0}
-                sx={{ minHeight: '44px', textTransform: 'none' }}
+                sx={{ 
+                  minHeight: '44px', 
+                  textTransform: 'none',
+                  flexGrow: { xs: 1, md: 0 }
+                }}
               >
                 Exportar a PDF
               </Button>
@@ -392,7 +412,11 @@ export default function ReportesAsociacionPage() {
                 startIcon={<DownloadIcon />}
                 onClick={exportarExcel}
                 disabled={resumenesPorClub.length === 0}
-                sx={{ minHeight: '44px', textTransform: 'none' }}
+                sx={{ 
+                  minHeight: '44px', 
+                  textTransform: 'none',
+                  flexGrow: { xs: 1, md: 0 }
+                }}
               >
                 Exportar a Excel
               </Button>
