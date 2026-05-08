@@ -78,12 +78,14 @@ export default function Layout({ children }: LayoutProps) {
           component="main"
           sx={{
             flexGrow: 1,
-            p: 3,
+            p: { xs: 2, sm: 3 },
             backgroundColor: (theme) =>
               theme.palette.mode === 'light' ? '#f5f5f5' : theme.palette.background.default,
+            minHeight: 'calc(100vh - 64px)',
+            width: '100%'
           }}
         >
-          <Container maxWidth="xl">
+          <Container maxWidth="xl" sx={{ px: { xs: 1, sm: 2 } }}>
             {children}
           </Container>
         </Box>
