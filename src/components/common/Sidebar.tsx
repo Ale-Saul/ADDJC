@@ -43,7 +43,7 @@ import { ROL } from '@/constants/roles'
 
 const DRAWER_WIDTH = 280
 
-export default function Sidebar() {
+export default function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: boolean, onMobileClose?: () => void }) {
   const router = useRouter()
   const pathname = usePathname()
   const theme = useTheme()
@@ -54,8 +54,15 @@ export default function Sidebar() {
 
   useEffect(() => {
     setMounted(true)
-    // El menú Afiliados comienza cerrado por defecto
   }, [])
+
+  // Cerrar el Drawer móvil cuando cambia la ruta
+  useEffect(() => {
+    if (onMobileClose) {
+      onMobileClose()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
 
   const handleAfiliadosClick = () => {
     setOpenAfiliados(!openAfiliados)
@@ -255,30 +262,15 @@ export default function Sidebar() {
     ...comunicacionItems.map(item => item.path),
   ]
 
-  // Evitar renderizar hasta que esté montado en el cliente
+  // Evitar renderizar hasta que esté montado en el cliente para evitar hidratación incorrecta
   if (!mounted) {
     return (
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: DRAWER_WIDTH,
-          flexShrink: 0,
-          '& .MuiDrawer-paper': {
-            width: DRAWER_WIDTH,
-            boxSizing: 'border-box',
-            position: 'fixed',
-            height: '100vh',
-            overflow: 'hidden'
-          }
-        }}
-      >
-        <Box sx={{ width: DRAWER_WIDTH, height: '100%' }} />
-      </Drawer>
+      <Box sx={{ width: { md: DRAWER_WIDTH } }} />
     )
   }
 
   const drawerContent = (
-    <Box sx={{ width: DRAWER_WIDTH, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <Box sx={{ p: 1.5, backgroundColor: theme.palette.primary.main, color: 'white', flexShrink: 0 }}>
         <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
           Asociación de Judo
