@@ -1,6 +1,8 @@
 'use client'
 
-import { Box, Container, AppBar, Toolbar, Typography } from '@mui/material'
+import { useState } from 'react'
+import { Box, AppBar, Toolbar, Typography, IconButton, Container } from '@mui/material'
+import MenuIcon from '@mui/icons-material/Menu'
 import Sidebar from './Sidebar'
 import NotificationBell from '@/components/comunicacion/NotificationBell'
 import { useAuth } from '@/contexts/AuthContext'
@@ -13,10 +15,15 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const { user } = useAuth()
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen)
+  }
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar />
+      <Sidebar mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
 
       <Box
         sx={{
@@ -36,14 +43,28 @@ export default function Layout({ children }: LayoutProps) {
             borderBottom: 1,
             borderColor: 'divider',
             color: 'text.primary',
+            zIndex: (theme) => theme.zIndex.drawer - 1,
           }}
         >
-          <Toolbar variant="dense" sx={{ justifyContent: 'space-between', minHeight: 48 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-              {user?.club_nombre
-                ? `Club ${user.club_nombre}`
-                : 'Asociación Departamental de Judo'}
-            </Typography>
+          <Toolbar variant="dense" sx={{ justifyContent: 'space-between', minHeight: 48, px: { xs: 1, sm: 2 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <IconButton
+                color="inherit"
+                aria-label="open drawer"
+                edge="start"
+                onClick={handleDrawerToggle}
+                sx={{ mr: 1, display: { md: 'none' } }}
+              >
+                <MenuIcon />
+              </IconButton>
+              
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem' }, fontWeight: 500 }}>
+                {user?.club_nombre
+                  ? `Club ${user.club_nombre}`
+                  : 'Asociación Departamental de Judo'}
+              </Typography>
+            </Box>
+            
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               {user?.id && (
                 <NotificationBell usuarioId={user.id} />
