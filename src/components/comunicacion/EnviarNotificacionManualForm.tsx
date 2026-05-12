@@ -23,12 +23,13 @@ import type { NotificacionDestinatario } from '@/models/comunicacion'
 import { formatTextoInput } from '@/utils/formatters'
 
 type FormValues = z.infer<typeof enviarNotificacionManualSchema>
-type RolConEnvioManual = typeof ROL.ASOCIACION | typeof ROL.ENCARGADO
+type RolConEnvioManual = typeof ROL.ASOCIACION | typeof ROL.ENCARGADO | typeof ROL.SENSEI
 
 interface Props {
   remitenteId: string
   remitenteRol: RolConEnvioManual
   remitenteClubId?: string | null
+  remitenteSenseiId?: string | null
   onCancel: () => void
   onSuccess: () => void
 }
@@ -37,6 +38,7 @@ export default function EnviarNotificacionManualForm({
   remitenteId,
   remitenteRol,
   remitenteClubId,
+  remitenteSenseiId,
   onCancel,
   onSuccess,
 }: Props) {
@@ -47,7 +49,8 @@ export default function EnviarNotificacionManualForm({
   const { data: destinatarios = [], isLoading } = useDestinatariosNotificacion(
     remitenteRol,
     remitenteClubId,
-    search
+    search,
+    remitenteSenseiId
   )
 
   const {
@@ -73,9 +76,10 @@ export default function EnviarNotificacionManualForm({
     setSubmitError(null)
     const response = await enviarMutation.mutateAsync({
       ...values,
+      remitente_sensei_id: remitenteSenseiId,
       titulo: values.titulo.replace(/\s+/g, ' ').trim(),
       mensaje: values.mensaje.replace(/\s+/g, ' ').trim(),
-    })
+    } as any)
 
     if (!response.success) {
       setSubmitError(response.error ?? 'No se pudo enviar la notificación')

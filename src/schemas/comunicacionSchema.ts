@@ -116,7 +116,7 @@ export const createNotificacionSchema = z.object({
 
 export const enviarNotificacionManualSchema = z.object({
   remitente_id: z.string().uuid('ID de remitente inválido'),
-  remitente_rol: z.enum(['asociacion', 'encargado'], {
+  remitente_rol: z.enum(['asociacion', 'encargado', 'sensei'], {
     error: 'Rol no autorizado para enviar notificaciones directas',
   }),
   remitente_club_id: z.string().uuid('ID de club inválido').nullable().optional(),

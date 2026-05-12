@@ -34,23 +34,32 @@ export function useContadorNotificaciones(usuarioId: string) {
 export function useDestinatariosNotificacion(
   remitenteRol?: string,
   remitenteClubId?: string | null,
-  search?: string
+  search?: string,
+  remitenteSenseiId?: string | null
 ) {
-  const puedeBuscar = remitenteRol === ROL.ASOCIACION || remitenteRol === ROL.ENCARGADO
+  const puedeBuscar = 
+    remitenteRol === ROL.ASOCIACION || 
+    remitenteRol === ROL.ENCARGADO || 
+    remitenteRol === ROL.SENSEI
 
   return useQuery({
     queryKey: COMUNICACION_QUERY_KEYS.notificacionesDestinatarios(
       remitenteRol ?? '',
-      remitenteClubId,
+      remitenteClubId || remitenteSenseiId || '',
       search
     ),
     queryFn: () =>
       comunicacionController.getDestinatariosNotificacion(
         remitenteRol ?? '',
         remitenteClubId,
-        search
+        search,
+        remitenteSenseiId
       ),
-    enabled: puedeBuscar && (remitenteRol !== ROL.ENCARGADO || !!remitenteClubId),
+    enabled: puedeBuscar && (
+      remitenteRol === ROL.ASOCIACION || 
+      (remitenteRol === ROL.ENCARGADO && !!remitenteClubId) ||
+      (remitenteRol === ROL.SENSEI && !!remitenteSenseiId)
+    ),
     select: res => res.data ?? [],
   })
 }

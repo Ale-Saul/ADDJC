@@ -86,7 +86,11 @@ export default function NotificacionesPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [fechaDesde, setFechaDesde] = useState(() => crearRangoNotificacionesDefault().desde)
   const [fechaHasta, setFechaHasta] = useState(() => crearRangoNotificacionesDefault().hasta)
-  const remitenteRol = user?.rol === ROL.ASOCIACION || user?.rol === ROL.ENCARGADO ? user.rol : null
+  
+  const remitenteRol =
+    user?.rol === ROL.ASOCIACION || user?.rol === ROL.ENCARGADO || user?.rol === ROL.SENSEI
+      ? user.rol
+      : null
 
   const hoy = dayjs()
 
@@ -362,6 +366,7 @@ export default function NotificacionesPage() {
               remitenteId={user.id}
               remitenteRol={remitenteRol}
               remitenteClubId={user.club_id}
+              remitenteSenseiId={user.sensei_id}
               onCancel={() => setOpenEnviar(false)}
               onSuccess={() => {
                 setOpenEnviar(false)

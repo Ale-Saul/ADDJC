@@ -462,7 +462,8 @@ export const comunicacionController = {
   async getDestinatariosNotificacion(
     remitenteRol: string,
     remitenteClubId?: string | null,
-    search?: string
+    search?: string,
+    remitenteSenseiId?: string | null
   ): Promise<ApiResponse<NotificacionDestinatario[]>> {
     try {
       if (remitenteRol === ROL.ASOCIACION) {
@@ -476,6 +477,15 @@ export const comunicacionController = {
         }
 
         const data = await comunicacionService.getDestinatariosByClub(remitenteClubId, search)
+        return { success: true, data }
+      }
+
+      if (remitenteRol === ROL.SENSEI) {
+        if (!remitenteSenseiId) {
+          return { success: false, error: 'El sensei no posee ID de maestro' }
+        }
+
+        const data = await comunicacionService.getDestinatariosBySensei(remitenteSenseiId, search)
         return { success: true, data }
       }
 
@@ -523,6 +533,24 @@ export const comunicacionController = {
 
         if (!perteneceAlClub) {
           return { success: false, error: 'Solo puedes notificar a usuarios de tu club' }
+        }
+      }
+
+      if (parsed.data.remitente_rol === ROL.SENSEI) {
+        const payloadSensei = payload as any
+        const senseiIdToUse = payloadSensei.remitente_sensei_id
+
+        if (!senseiIdToUse) {
+          return { success: false, error: 'Identificador de sensei no proporcionado' }
+        }
+
+        const esSuAlumno = await comunicacionService.judokaPerteneceASensei(
+          parsed.data.destinatario_id,
+          senseiIdToUse
+        )
+
+        if (!esSuAlumno) {
+          return { success: false, error: 'Solo puedes notificar a tus propios alumnos' }
         }
       }
 

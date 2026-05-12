@@ -450,6 +450,33 @@ export const comunicacionService = {
     ).slice(0, 80)
   },
 
+  async getDestinatariosBySensei(senseiId: string, search?: string): Promise<NotificacionDestinatario[]> {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('judokas')
+      .select('club_id, usuarios:usuario_id(id, correo, nombre, apellido_paterno, apellido_materno, rol, activo), clubes:club_id(nombre_club)')
+      .eq('entrenador_id', senseiId)
+
+    if (error) {
+      console.error('Error en comunicacionService.getDestinatariosBySensei:', error)
+      throw error
+    }
+
+    const destinatarios: NotificacionDestinatario[] = (data ?? [])
+      .map(row => {
+        const usuario = getSingleJoin(row.usuarios)
+        if (!usuario || usuario.activo === false) return null
+        const club = getSingleJoin(row.clubes)
+        return mapDestinatarioUsuario(usuario, row.club_id, club?.nombre_club ?? null)
+      })
+      .filter((u): u is NotificacionDestinatario => u !== null)
+
+    return filterDestinatariosBySearch(
+      destinatarios.sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo, 'es')),
+      search
+    ).slice(0, 80)
+  },
+
   async getDestinatarioActivoById(usuarioId: string): Promise<NotificacionDestinatario | null> {
     const supabase = createClient()
     const { data, error } = await supabase
@@ -494,6 +521,23 @@ export const comunicacionService = {
     }
 
     return (judokaRes.data?.length ?? 0) > 0 || (senseiRes.data?.length ?? 0) > 0
+  },
+
+  async judokaPerteneceASensei(usuarioId: string, senseiId: string): Promise<boolean> {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('judokas')
+      .select('id')
+      .eq('usuario_id', usuarioId)
+      .eq('entrenador_id', senseiId)
+      .limit(1)
+
+    if (error) {
+      console.error('Error en comunicacionService.judokaPerteneceASensei:', error)
+      throw error
+    }
+
+    return (data?.length ?? 0) > 0
   },
 
   async createNotificacion(payload: NotificacionCreate): Promise<Notificacion> {
