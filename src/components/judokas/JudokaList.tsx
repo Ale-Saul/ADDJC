@@ -412,22 +412,23 @@ export default function JudokaList({
                 </IconButton>
               </Tooltip>
             )}
-            {!isEncargado && (
-              <IconButton
-                size="small"
-                color="error"
-                onClick={() => handleDeleteClick(j)}
-                title="Eliminar"
-              >
-                <DeleteIcon fontSize="small" />
-              </IconButton>
+            {!isEncargado && !isSensei && (
+              <Tooltip title="Eliminar">
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => handleDeleteClick(j)}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             )}
           </Box>
         )
       })
     }
     return cols
-  }, [onEdit, readOnly, showUnassigned, toggleStatus])
+  }, [onEdit, readOnly, showUnassigned, toggleStatus, isSensei, isEncargado, isAdminOrAsoc])
 
   if (error) {
     return <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
