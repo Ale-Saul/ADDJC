@@ -229,21 +229,25 @@ export async function POST(request: NextRequest) {
 
     // Enviar correo de bienvenida con credenciales
     if (email && password) {
-      const ciConExtension = body.ci ? (body.ci_extension ? `${body.ci}-${body.ci_extension}` : body.ci) : 'No especificado'
-      const emailHtml = getWelcomeEmailTemplate(nombresTrimmed, ciConExtension, password)
-      sendEmail({
-        to: email,
-        subject: 'Bienvenido a la Asociación de Judo - Credenciales de Acceso',
-        html: emailHtml
-      }).then(result => {
+      try {
+        const ciConExtension = body.ci ? (body.ci_extension ? `${body.ci}-${body.ci_extension}` : body.ci) : 'No especificado'
+        const emailHtml = getWelcomeEmailTemplate(nombresTrimmed, ciConExtension, password)
+        
+        // IMPORTANTE: En Vercel (Lambdas) debemos usar await
+        const result = await sendEmail({
+          to: email,
+          subject: 'Bienvenido a la Asociación de Judo - Credenciales de Acceso',
+          html: emailHtml
+        })
+
         if (!result.success) {
           console.error('Fallo al enviar correo de bienvenida:', result.error)
         } else {
           console.log('Correo de bienvenida enviado exitosamente a:', email)
         }
-      }).catch(err => {
+      } catch (err) {
         console.error('Error inesperado al enviar correo:', err)
-      })
+      }
     }
 
     return NextResponse.json({
