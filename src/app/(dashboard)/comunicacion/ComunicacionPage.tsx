@@ -48,8 +48,8 @@ export default function ComunicacionPage() {
   const clubId = user?.club_id ?? undefined
   const puedePublicar = [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO].includes(user?.rol as any)
 
-  const { data: destacadas = [], isLoading: loadingDestacadas } = useNoticiasDestacadas(clubId, audiencia, user?.rol)
-  const { data: noticias = [], isLoading: loadingNoticias } = useNoticiasParaUsuario(audiencia, clubId, user?.rol)
+  const { data: destacadas = [], isLoading: loadingDestacadas } = useNoticiasDestacadas(clubId, audiencia, user?.rol, user?.id)
+  const { data: noticias = [], isLoading: loadingNoticias } = useNoticiasParaUsuario(audiencia, clubId, user?.rol, user?.id)
 
   const noticiasFiltradas = filtroCategoria === 'todas'
     ? noticias

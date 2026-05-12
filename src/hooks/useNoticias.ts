@@ -23,10 +23,10 @@ export function useNoticiasByClub(
   })
 }
 
-export function useNoticiasDestacadas(clubId?: string, audiencia?: ComunicacionAudiencia, rol?: string) {
+export function useNoticiasDestacadas(clubId?: string, audiencia?: ComunicacionAudiencia, rol?: string, usuarioId?: string) {
   return useQuery({
-    queryKey: [...COMUNICACION_QUERY_KEYS.noticiasDestacadas(clubId), audiencia ?? 'todos', rol ?? 'none'],
-    queryFn: () => comunicacionController.getNoticiasDestacadas(clubId, audiencia, rol),
+    queryKey: [...COMUNICACION_QUERY_KEYS.noticiasDestacadas(clubId), audiencia ?? 'todos', rol ?? 'none', usuarioId ?? 'none'],
+    queryFn: () => comunicacionController.getNoticiasDestacadas(clubId, audiencia, rol, usuarioId),
     select: res => res.data ?? [],
     staleTime: 5 * 60 * 1000,
   })
@@ -35,11 +35,12 @@ export function useNoticiasDestacadas(clubId?: string, audiencia?: ComunicacionA
 export function useNoticiasParaUsuario(
   audiencia: ComunicacionAudiencia,
   clubId?: string,
-  rol?: string
+  rol?: string,
+  usuarioId?: string
 ) {
   return useQuery({
-    queryKey: [...COMUNICACION_QUERY_KEYS.noticias(), 'usuario', audiencia, clubId ?? 'none', rol ?? 'none'],
-    queryFn: () => comunicacionController.getNoticiasParaUsuario(audiencia, clubId, rol),
+    queryKey: [...COMUNICACION_QUERY_KEYS.noticias(), 'usuario', audiencia, clubId ?? 'none', rol ?? 'none', usuarioId ?? 'none'],
+    queryFn: () => comunicacionController.getNoticiasParaUsuario(audiencia, clubId, rol, usuarioId),
     enabled: !!audiencia,
     select: res => res.data ?? [],
   })

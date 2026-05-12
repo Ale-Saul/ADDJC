@@ -67,7 +67,11 @@ function mapNoticiaControllerRow(row: NoticiaControllerRow): Noticia {
 function noticiaVisibleParaAudienciaUsuario(
   n: Noticia,
   usuarioAudiencia: ComunicacionAudiencia,
+  usuarioId?: string
 ): boolean {
+  // Siempre visible para el autor
+  if (usuarioId && n.autor_id === usuarioId) return true
+
   if (n.audiencia.includes('todos')) return true
   if (usuarioAudiencia === 'senseis' || usuarioAudiencia === 'encargados') {
     return n.audiencia.includes('senseis') || n.audiencia.includes('encargados')
@@ -145,7 +149,8 @@ export const comunicacionController = {
   async getNoticiasParaUsuario(
     usuarioAudiencia: ComunicacionAudiencia,
     clubId?: string,
-    rol?: string
+    rol?: string,
+    usuarioId?: string
   ): Promise<ApiResponse<Noticia[]>> {
     try {
       const hoy = new Date().toISOString().split('T')[0]
@@ -175,18 +180,24 @@ export const comunicacionController = {
           return { success: true, data: mappedData }
         }
 
-        const filtered = mappedData.filter(n => noticiaVisibleParaAudienciaUsuario(n, usuarioAudiencia))
+        const filtered = mappedData.filter(n =>
+          noticiaVisibleParaAudienciaUsuario(n, usuarioAudiencia, usuarioId)
+        )
         return { success: true, data: filtered }
       }
 
       if (clubId) {
         const data = await comunicacionService.getNoticiasByClub(clubId, {
-          audiencia: usuarioAudiencia,
+          // Si pedimos audiencia específica al service, este filtra en SQL.
+          // Para que el autor vea su propia noticia aunque no sea la audiencia, 
+          // quitamos el filtro del service y filtramos nosotros en JS.
           solo_activas: true,
           fecha_referencia: hoy,
         })
 
-        const filtered = data.filter(n => noticiaVisibleParaAudienciaUsuario(n, usuarioAudiencia))
+        const filtered = data.filter(n =>
+          noticiaVisibleParaAudienciaUsuario(n, usuarioAudiencia, usuarioId)
+        )
 
         return { success: true, data: filtered }
       }
@@ -210,7 +221,9 @@ export const comunicacionController = {
         mapNoticiaControllerRow(row as unknown as NoticiaControllerRow)
       )
 
-      const filtered = mappedData.filter(n => noticiaVisibleParaAudienciaUsuario(n, usuarioAudiencia))
+      const filtered = mappedData.filter(n =>
+        noticiaVisibleParaAudienciaUsuario(n, usuarioAudiencia, usuarioId)
+      )
 
       return { success: true, data: filtered }
     } catch (err) {
@@ -223,13 +236,20 @@ export const comunicacionController = {
     clubId?: string,
     audiencia?: ComunicacionAudiencia,
     rol?: string,
+    usuarioId?: string
   ): Promise<ApiResponse<Noticia[]>> {
     try {
       const soloGlobal = rol === ROL.ASOCIACION || rol === ROL.ARBITRO
-      const data = await comunicacionService.getNoticiasDestacadas(clubId, audiencia, {
+      const data = await comunicacionService.getNoticiasDestacadas(clubId, undefined, {
         soloNoticiasGlobales: soloGlobal,
       })
-      return { success: true, data }
+
+      // Filtramos en JS para permitir que el autor vea su propia noticia destacada
+      const filtered = audiencia
+        ? data.filter(n => noticiaVisibleParaAudienciaUsuario(n, audiencia, usuarioId))
+        : data
+
+      return { success: true, data: filtered }
     } catch (err) {
       console.error('Error en comunicacionController.getNoticiasDestacadas:', err)
       return { success: false, error: 'Error al obtener noticias destacadas' }
