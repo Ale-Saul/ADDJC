@@ -52,6 +52,7 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
       cargo: miembro?.cargo || '',
       fecha_ingreso: miembro?.fecha_ingreso || null,
       password: '',
+      activo: miembro?.activo ?? true,
     },
   })
 
