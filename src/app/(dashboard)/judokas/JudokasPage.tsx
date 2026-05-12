@@ -47,8 +47,7 @@ export default function JudokasPage() {
   const senseiId = isSensei ? user?.sensei_id : undefined
 
   const handleRefresh = () => {
-    // No incrementamos el trigger para evitar saltos en la tabla
-    // El cache de React Query se encargará de mostrar los cambios
+    setRefreshTrigger(prev => prev + 1)
   }
 
   const handleCreateSuccess = () => {

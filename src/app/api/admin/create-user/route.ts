@@ -228,8 +228,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Enviar correo de bienvenida con credenciales
-    if (ciBody && password) {
-      const ciConExtension = body.ci_extension ? `${ciBody}-${body.ci_extension}` : ciBody
+    if (email && password) {
+      const ciConExtension = body.ci ? (body.ci_extension ? `${body.ci}-${body.ci_extension}` : body.ci) : 'No especificado'
       const emailHtml = getWelcomeEmailTemplate(nombresTrimmed, ciConExtension, password)
       sendEmail({
         to: email,
@@ -238,6 +238,8 @@ export async function POST(request: NextRequest) {
       }).then(result => {
         if (!result.success) {
           console.error('Fallo al enviar correo de bienvenida:', result.error)
+        } else {
+          console.log('Correo de bienvenida enviado exitosamente a:', email)
         }
       }).catch(err => {
         console.error('Error inesperado al enviar correo:', err)
