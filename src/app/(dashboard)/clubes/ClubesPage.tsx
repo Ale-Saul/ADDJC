@@ -14,10 +14,13 @@ import { clubController } from '@/controllers/clubController'
 import { useDialog } from '@/hooks/useDialog'
 import { useAuth } from '@/contexts/AuthContext'
 import { ROL } from '@/constants/roles'
+import { useRouter } from 'next/navigation'
 
 export default function ClubesPage() {
   const { user } = useAuth()
+  const router = useRouter()
   const isReadOnly = user?.rol === ROL.JUDOKA || user?.rol === ROL.SENSEI || user?.rol === ROL.ENCARGADO || user?.rol === ROL.ARBITRO
+  const isAdminOrAsoc = user?.rol === ROL.ADMIN || user?.rol === ROL.ASOCIACION
   const createDialog = useDialog()
   const editDialog = useDialog()
   const deleteDialog = useDialog()
@@ -97,6 +100,10 @@ export default function ClubesPage() {
     }
   }
 
+  const handleViewMiembros = (club: Club) => {
+    router.push(`/clubes/${club.id}/miembros`)
+  }
+
   return (
     <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.JUDOKA, ROL.SENSEI, ROL.ENCARGADO, ROL.ARBITRO]}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
@@ -117,6 +124,7 @@ export default function ClubesPage() {
         <ClubList
           onEdit={isReadOnly ? (user?.rol === ROL.ENCARGADO ? handleView : undefined) : handleEdit}
           onDelete={isReadOnly ? undefined : handleDelete}
+          onViewMiembros={isAdminOrAsoc ? handleViewMiembros : undefined}
           onViewDocumentos={handleViewDocumentos}
           refreshTrigger={refreshTrigger}
           readOnly={isReadOnly}

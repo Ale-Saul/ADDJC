@@ -14,6 +14,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun'
 import DescriptionIcon from '@mui/icons-material/Description'
+import PeopleIcon from '@mui/icons-material/People'
 import { Club } from '@/models/club'
 import { clubController } from '@/controllers/clubController'
 import { useClubList } from '@/hooks/useClubList'
@@ -27,12 +28,13 @@ interface ClubListProps {
   onEdit?: (club: Club) => void
   onDelete?: (club: Club) => void
   onViewJudokas?: (club: Club) => void
+  onViewMiembros?: (club: Club) => void
   onViewDocumentos?: (club: Club) => void
   refreshTrigger?: number
   readOnly?: boolean
 }
 
-export default function ClubList({ onEdit, onDelete, onViewJudokas, onViewDocumentos, refreshTrigger = 0, readOnly = false }: ClubListProps) {
+export default function ClubList({ onEdit, onDelete, onViewJudokas, onViewMiembros, onViewDocumentos, refreshTrigger = 0, readOnly = false }: ClubListProps) {
   const { user } = useAuth()
   const isEncargado = user?.rol === ROL.ENCARGADO
   const isAdminOrAsoc = user?.rol === ROL.ADMIN || user?.rol === ROL.ASOCIACION
@@ -166,6 +168,14 @@ export default function ClubList({ onEdit, onDelete, onViewJudokas, onViewDocume
             </Tooltip>
           )}
 
+          {onViewMiembros && (
+            <Tooltip title="Ver Miembros">
+              <IconButton size="small" onClick={() => onViewMiembros(club)} color="info">
+                <PeopleIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+
           {onEdit && !isEncargado && (
             <Tooltip title="Editar">
               <IconButton size="small" onClick={() => onEdit(club)} color="primary">
@@ -184,18 +194,28 @@ export default function ClubList({ onEdit, onDelete, onViewJudokas, onViewDocume
         </Box>
       )
     })
-  } else if (onViewJudokas) {
+  } else if (onViewJudokas || onViewMiembros) {
      columns.push({
       id: 'acciones',
       label: 'Acciones',
       align: 'right',
       render: (club: Club) => (
         <Box display="flex" justifyContent="flex-end" gap={1}>          
-            <Tooltip title="Ver Judokas">
-              <IconButton size="small" onClick={() => onViewJudokas(club)} color="info">
-                <DirectionsRunIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            {onViewJudokas && (
+              <Tooltip title="Ver Judokas">
+                <IconButton size="small" onClick={() => onViewJudokas(club)} color="info">
+                  <DirectionsRunIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+            
+            {onViewMiembros && (
+              <Tooltip title="Ver Miembros">
+                <IconButton size="small" onClick={() => onViewMiembros(club)} color="info">
+                  <PeopleIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
         </Box>
       )
     })
