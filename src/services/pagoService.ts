@@ -221,23 +221,23 @@ export const pagoService = {
   },
 
   /**
-   * Obtiene los pagos pendientes que vencen exactamente mañana para un club.
+   * Obtiene los pagos pendientes que vencen exactamente en 7 días para un club.
    * Usado para disparar alertas proactivas de vencimiento.
    */
   async getPagosProximosAVencer(clubId: string): Promise<ApiResponse<Pago[]>> {
     try {
       const client = createClient()
 
-      const tomorrow = new Date()
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      const tomorrowStr = tomorrow.toISOString().split('T')[0]
+      const targetDate = new Date()
+      targetDate.setDate(targetDate.getDate() + 7)
+      const targetDateStr = targetDate.toISOString().split('T')[0]
 
       const { data, error } = await client
         .from('pagos')
         .select(PAGO_COLUMNS)
         .eq('club_id', clubId)
         .eq('estado', 'pendiente')
-        .eq('fecha_vencimiento', tomorrowStr)
+        .eq('fecha_vencimiento', targetDateStr)
         .eq('activo', true)
 
       if (error) throw error

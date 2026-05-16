@@ -215,7 +215,7 @@ export const pagoController = {
   },
 
   /**
-   * Verifica los pagos pendientes que vencen mañana para el club indicado
+   * Verifica los pagos pendientes que vencen en 7 días para el club indicado
    * y envía notificaciones de alerta a los judokas que aún no las recibieron.
    * Se llama al cargar la página de Pagos para alertas proactivas.
    */
