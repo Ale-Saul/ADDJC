@@ -12,6 +12,7 @@ import {
   Chip,
   Paper,
   Table,
+  Button,
   TableBody,
   TableCell,
   TableContainer,
@@ -26,6 +27,10 @@ import {
   MenuItem,
 } from '@mui/material'
 import InsightsIcon from '@mui/icons-material/Insights'
+import DownloadIcon from '@mui/icons-material/Download'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import { formatters } from '@/utils/formatters'
 import FilterListIcon from '@mui/icons-material/FilterList'
 import ClearIcon from '@mui/icons-material/Clear'
 import GroupIcon from '@mui/icons-material/Group'
@@ -120,21 +125,147 @@ export default function EstadisticasPage() {
     ? `${fechaInicio ? dayjs(fechaInicio).format('D MMM') : '—'} → ${fechaFin ? dayjs(fechaFin).format('D MMM YYYY') : 'hoy'}`
     : 'Todos los registros'
 
+  const exportarPDF = () => {
+    if (!reporte) return
+    const doc = new jsPDF()
+    
+    // Título
+    doc.setFontSize(18)
+    doc.text('Estadísticas de Asistencia', 14, 20)
+    
+    // Información del período
+    doc.setFontSize(11)
+    doc.text(`Período: ${fechaInicio ? formatters.formatDate(fechaInicio) : '--'} al ${fechaFin ? formatters.formatDate(fechaFin) : '--'}`, 14, 28)
+    doc.text(`Fecha de generación: ${formatters.formatDateTime(new Date(), true)}`, 14, 34)
+    doc.setFontSize(9)
+    doc.text(`Generado por: ${user ? `${user.nombres} ${user.apellidos}` : 'Desconocido'}`, 14, 40)
+    doc.setFontSize(11)
+    
+    // Totales globales
+    doc.setFont('helvetica', 'bold')
+    doc.text(`Sesiones en el período: ${reporte.stats_globales.total_sesiones}`, 14, 48)
+    doc.text(`Promedio Asistencia del Club: ${reporte.stats_globales.promedio_asistencia.toFixed(2)}%`, 80, 48)
+    
+    doc.setFont('helvetica', 'normal')
+    
+    let yPos = 56
+
+    if (vistaDesglose === 'sensei' && reporte.stats_por_sensei.length > 0) {
+        doc.text('Desglose por Sensei:', 14, yPos)
+        yPos += 5
+        const body = reporte.stats_por_sensei
+            .filter(s => senseiFiltroDesglose === 'all' || s.sensei_id === senseiFiltroDesglose)
+            .map(s => [
+                s.nombre,
+                s.total_sesiones.toString(),
+                `${Math.round(s.promedio_asistencia)}%`
+            ])
+        
+        autoTable(doc, {
+            startY: yPos,
+            head: [['Sensei', 'Sesiones', '% Asistencia Promedio']],
+            body: body,
+            theme: 'grid',
+            headStyles: { fillColor: [25, 118, 210] }
+        })
+    } else if (vistaDesglose === 'judoka' && judokasClubQuery.data && judokasClubQuery.data.length > 0) {
+        doc.text('Desglose por Judoka:', 14, yPos)
+        yPos += 5
+        const body = judokasClubQuery.data.map(j => [
+            `${j.apellido_judoka} ${j.nombre_judoka}`,
+            j.presentes.toString(),
+            j.ausentes.toString(),
+            `${Math.round(j.porcentaje)}%`
+        ])
+
+        autoTable(doc, {
+            startY: yPos,
+            head: [['Judoka', 'Presentes', 'Ausentes', '% Asistencia']],
+            body: body,
+            theme: 'grid',
+            headStyles: { fillColor: [25, 118, 210] }
+        })
+    }
+
+    doc.save(`estadisticas_asistencia_${formatters.formatDate(new Date())}.pdf`)
+  }
+
+  const exportarExcel = () => {
+    if (!reporte) return
+    
+    let csv = `Estadisticas de Asistencia\n`
+    csv += `Periodo:,${fechaInicio ? fechaInicio : '--'} al ${fechaFin ? fechaFin : '--'}\n`
+    csv += `Sesiones Totales:,${reporte.stats_globales.total_sesiones}\n`
+    csv += `Promedio Asistencia:,${reporte.stats_globales.promedio_asistencia.toFixed(2)}%\n\n`
+
+    if (vistaDesglose === 'sensei') {
+        const data = reporte.stats_por_sensei
+            .filter(s => senseiFiltroDesglose === 'all' || s.sensei_id === senseiFiltroDesglose)
+        
+        csv += `Sensei,Sesiones,% Asistencia Promedio\n`
+        csv += data.map(s => `"${s.nombre}",${s.total_sesiones},${Math.round(s.promedio_asistencia)}%`).join('\n')
+    } else if (vistaDesglose === 'judoka' && judokasClubQuery.data) {
+        csv += `Judoka,Presentes,Ausentes,% Asistencia\n`
+        csv += judokasClubQuery.data.map(j => `"${j.apellido_judoka} ${j.nombre_judoka}",${j.presentes},${j.ausentes},${Math.round(j.porcentaje)}%`).join('\n')
+    }
+
+    const BOM = '\uFEFF'
+    const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `estadisticas_asistencia_${formatters.formatDate(new Date())}.csv`
+    link.click()
+  }
+
   return (
     <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.SENSEI, ROL.ENCARGADO]}>
       <Box>
         {/* ── Header ── */}
-        <Stack direction="row" alignItems="center" spacing={1.5} mb={4}>
-          <InsightsIcon sx={{ fontSize: 36, color: 'primary.main' }} />
-          <Box>
-            <Typography variant="h4" component="h1" fontWeight="bold">
-              Estadísticas de Asistencia
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {isSensei ? 'Rendimiento de tus estudiantes' : 'Reporte del club por período'}
-            </Typography>
-          </Box>
-        </Stack>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', md: 'row' }, 
+          justifyContent: 'space-between', 
+          alignItems: { xs: 'flex-start', md: 'center' }, 
+          gap: 2,
+          mb: 4 
+        }}>
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <InsightsIcon sx={{ fontSize: 36, color: 'primary.main' }} />
+            <Box>
+              <Typography variant="h4" component="h1" fontWeight="bold">
+                Estadísticas de Asistencia
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {isSensei ? 'Rendimiento de tus estudiantes' : 'Reporte del club por período'}
+              </Typography>
+            </Box>
+          </Stack>
+          
+          {(isEncargado || isAdmin) && reporte && (
+            <Box sx={{ display: 'flex', gap: 2, width: { xs: '100%', md: 'auto' } }}>
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<DownloadIcon />}
+                onClick={exportarPDF}
+                disabled={reporte.stats_por_sensei.length === 0 && (judokasClubQuery.data?.length ?? 0) === 0}
+                sx={{ minHeight: '44px', textTransform: 'none', flex: { xs: 1, md: 'none' } }}
+              >
+                Exportar a PDF
+              </Button>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<DownloadIcon />}
+                onClick={exportarExcel}
+                disabled={reporte.stats_por_sensei.length === 0 && (judokasClubQuery.data?.length ?? 0) === 0}
+                sx={{ minHeight: '44px', textTransform: 'none', flex: { xs: 1, md: 'none' } }}
+              >
+                Exportar a Excel
+              </Button>
+            </Box>
+          )}
+        </Box>
 
         {/* ── Filtros ── */}
         <Box
