@@ -192,21 +192,28 @@ export default function ContabilidadPage() {
     <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO]}>
         <Box sx={{ p: 3 }}>
           {/* Header */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', md: 'row' }, 
+            justifyContent: 'space-between', 
+            alignItems: { xs: 'flex-start', md: 'center' }, 
+            gap: 2,
+            mb: 3 
+          }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <AccountBalanceIcon sx={{ fontSize: 40, color: 'primary.main' }} />
               <Typography variant="h4" component="h1">
                 Contabilidad de la Asociación
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ display: 'flex', gap: 2, width: { xs: '100%', md: 'auto' } }}>
               <Button
                 variant="contained"
                 color="error"
                 startIcon={<DownloadIcon />}
                 onClick={exportarPDF}
                 disabled={movimientosFiltrados.length === 0}
-                sx={{ minHeight: '44px', textTransform: 'none' }}
+                sx={{ minHeight: '44px', textTransform: 'none', flex: { xs: 1, md: 'none' } }}
               >
                 Exportar a PDF
               </Button>
@@ -216,7 +223,7 @@ export default function ContabilidadPage() {
                 startIcon={<DownloadIcon />}
                 onClick={exportarExcel}
                 disabled={movimientosFiltrados.length === 0}
-                sx={{ minHeight: '44px', textTransform: 'none' }}
+                sx={{ minHeight: '44px', textTransform: 'none', flex: { xs: 1, md: 'none' } }}
               >
                 Exportar a Excel
               </Button>

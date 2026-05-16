@@ -67,7 +67,15 @@ export default function AsistenciaPage() {
 
   return (
     <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.SENSEI, ROL.ENCARGADO]}>
-      <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
+      <LocalizationProvider 
+        dateAdapter={AdapterDayjs} 
+        adapterLocale="es"
+        localeText={{
+          datePickerToolbarTitle: 'Seleccionar fecha',
+          cancelButtonLabel: 'Cancelar',
+          okButtonLabel: 'Confirmar'
+        }}
+      >
         <Box>
           {/* ── Header ── */}
         <Box

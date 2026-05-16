@@ -62,7 +62,15 @@ export default function MiAsistenciaPage() {
 
   return (
     <ProtectedRoute allowedRoles={[ROL.JUDOKA]}>
-      <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
+      <LocalizationProvider 
+        dateAdapter={AdapterDayjs} 
+        adapterLocale="es"
+        localeText={{
+          datePickerToolbarTitle: 'Seleccionar fecha',
+          cancelButtonLabel: 'Cancelar',
+          okButtonLabel: 'Confirmar'
+        }}
+      >
         <Box>
           {/* ── Header ── */}
         <Stack direction="row" alignItems="center" spacing={1.5} mb={4}>

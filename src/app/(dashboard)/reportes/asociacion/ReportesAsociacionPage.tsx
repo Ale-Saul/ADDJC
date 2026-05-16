@@ -368,21 +368,28 @@ export default function ReportesAsociacionPage() {
     <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION]}>
         <Box>
           {/* Header */}
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', md: 'row' }, 
+            justifyContent: 'space-between', 
+            alignItems: { xs: 'flex-start', md: 'center' }, 
+            gap: 2,
+            mb: 4 
+          }}>
             <Box display="flex" alignItems="center" gap={2}>
               <AssessmentIcon sx={{ fontSize: 40, color: 'primary.main' }} />
               <Typography variant="h4" component="h1">
                 Reportes Consolidados - Asociación
               </Typography>
             </Box>
-            <Box display="flex" gap={2}>
+            <Box sx={{ display: 'flex', gap: 2, width: { xs: '100%', md: 'auto' } }}>
               <Button
                 variant="contained"
                 color="error"
                 startIcon={<DownloadIcon />}
                 onClick={exportarPDF}
                 disabled={resumenesPorClub.length === 0}
-                sx={{ minHeight: '44px', textTransform: 'none' }}
+                sx={{ minHeight: '44px', textTransform: 'none', flex: { xs: 1, md: 'none' } }}
               >
                 Exportar a PDF
               </Button>
@@ -392,7 +399,7 @@ export default function ReportesAsociacionPage() {
                 startIcon={<DownloadIcon />}
                 onClick={exportarExcel}
                 disabled={resumenesPorClub.length === 0}
-                sx={{ minHeight: '44px', textTransform: 'none' }}
+                sx={{ minHeight: '44px', textTransform: 'none', flex: { xs: 1, md: 'none' } }}
               >
                 Exportar a Excel
               </Button>

@@ -17,7 +17,15 @@ export default function ThemeRegistry({ children }: { children: React.ReactNode 
   return (
     <AppRouterCacheProvider>
       <ThemeProvider theme={theme}>
-        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
+        <LocalizationProvider 
+          dateAdapter={AdapterDayjs} 
+          adapterLocale="es"
+          localeText={{
+            datePickerToolbarTitle: 'Seleccionar fecha',
+            cancelButtonLabel: 'Cancelar',
+            okButtonLabel: 'Confirmar'
+          }}
+        >
           <CssBaseline />
           {children}
         </LocalizationProvider>
