@@ -21,6 +21,8 @@ export interface Judoka {
   categoria?: string | null
   nombre_entrenador?: string
   nombre_club?: string
+  updated_by?: string | null
+  modificado_por_nombre?: string
   created_at: string
   updated_at: string
 }
@@ -44,6 +46,7 @@ export interface JudokaCreate {
   cinturon_actual?: string | null
   avatar_url?: string | null
   activo?: boolean
+  updated_by?: string | null
 }
 
 export interface JudokaUpdate {
@@ -62,5 +65,6 @@ export interface JudokaUpdate {
   cinturon_actual?: string | null
   avatar_url?: string | null
   activo?: boolean
+  updated_by?: string | null
 }
 

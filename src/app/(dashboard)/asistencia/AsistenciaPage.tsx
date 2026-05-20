@@ -317,13 +317,15 @@ export default function AsistenciaPage() {
             Nueva sesión de clase
           </DialogTitle>
           <DialogContent>
-            <NuevaSesionForm
-              clubId={clubId}
-              senseiId={senseiId}
-              createdBy={user?.id ?? ''}
-              onSuccess={handleCrearSesion}
-              onCancel={dialog.cerrar}
-            />
+            {dialog.open && (
+              <NuevaSesionForm
+                clubId={clubId}
+                senseiId={senseiId}
+                createdBy={user?.id ?? ''}
+                onSuccess={handleCrearSesion}
+                onCancel={dialog.cerrar}
+              />
+            )}
           </DialogContent>
         </Dialog>
 

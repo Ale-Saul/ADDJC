@@ -13,15 +13,19 @@ import {
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
+import InfoIcon from '@mui/icons-material/Info'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
 dayjs.locale('es')
 import { MiembroAsociacion } from '@/models/asociacion'
 import { DataTable, SearchBar, FilterSelect } from '@/components/ui'
 import Pagination from '@/components/common/Pagination'
+import AuditModal from '@/components/common/AuditModal'
 import { useMiembroAsociacionList } from '@/hooks/useMiembroAsociacionList'
 import { Column } from '@/components/ui/DataTable'
 import { CARGOS_ASOCIACION } from '@/constants/globales'
+import { useAuth } from '@/contexts/AuthContext'
+import { ROL } from '@/constants/roles'
 
 interface Props {
   onEdit: (miembro: MiembroAsociacion) => void
@@ -37,8 +41,12 @@ export default function MiembroAsociacionList({ onEdit, onDelete, refreshTrigger
     dispatch,
   } = useMiembroAsociacionList('', refreshTrigger)
 
+  const { user } = useAuth()
+  const isAdminOrAsoc = user?.rol === ROL.ADMIN || user?.rol === ROL.ASOCIACION
+
   const [page, setPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [auditItem, setAuditItem] = useState<any>(null)
 
   const paginatedData = filteredData.slice(
     (page - 1) * itemsPerPage,
@@ -161,6 +169,17 @@ export default function MiembroAsociacionList({ onEdit, onDelete, refreshTrigger
               <DeleteIcon fontSize="small" />
             </IconButton>
           </Tooltip>
+          {isAdminOrAsoc && (
+            <Tooltip title="Ver Auditoría">
+              <IconButton
+                size="small"
+                onClick={() => setAuditItem(row)}
+                color="info"
+              >
+                <InfoIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
         </Stack>
       ),
     }
@@ -224,6 +243,15 @@ export default function MiembroAsociacionList({ onEdit, onDelete, refreshTrigger
         itemsPerPage={itemsPerPage}
         onPageChange={setPage}
         onItemsPerPageChange={setItemsPerPage}
+      />
+
+      <AuditModal
+        open={!!auditItem}
+        onClose={() => setAuditItem(null)}
+        updatedAt={auditItem?.updated_at}
+        createdAt={auditItem?.created_at}
+        updatedByNombre={auditItem?.modificado_por_nombre}
+        entityName="Miembro de Asociación"
       />
     </Box>
   )

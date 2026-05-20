@@ -37,7 +37,7 @@ function stateReducer(state: State, action: Action): State {
 export interface UseEntityListOptions<T> {
   queryKey: string[]
   fetchItems: () => Promise<{ success: boolean; data?: T[]; error?: string }>
-  updateItemStatus?: (id: string, activo: boolean) => Promise<{ success: boolean; error?: string }>
+  updateItemStatus?: (id: string, activo: boolean) => Promise<{ success: boolean; error?: string; data?: T }>
   filterFn: (item: T, filters: Record<string, string>, globalSearch: string) => boolean
   initialFilters?: Record<string, string>
   initialSearch?: string
@@ -87,17 +87,29 @@ export function useEntityList<T extends BaseEntity>({
       if (!updateItemStatus) throw new Error('No status update function provided')
       const response = await updateItemStatus(id, isActive)
       if (!response.success) throw new Error(response.error || 'Error desconocido')
-      return { id, isActive }
+      return { id, isActive, data: response.data }
     },
     onMutate: async ({ id, isActive }) => {
       await queryClient.cancelQueries({ queryKey: stableQueryKey })
       const previousItems = queryClient.getQueryData<T[]>(stableQueryKey) || []
       queryClient.setQueryData<T[]>(stableQueryKey, old => {
         if (!old) return old
-        return old.map(item => item.id === id ? { ...item, activo: isActive } : item)
+        return old.map(item => item.id === id ? { 
+          ...item, 
+          activo: isActive,
+          updated_at: new Date().toISOString() 
+        } : item)
       })
 
       return { previousItems, stableQueryKey }
+    },
+    onSuccess: (result) => {
+      if (result.data) {
+        queryClient.setQueryData<T[]>(stableQueryKey, old => {
+          if (!old) return old
+          return old.map(item => item.id === result.id ? { ...item, ...result.data } : item)
+        })
+      }
     },
     onError: (err, { id }, context) => {
       if (context?.previousItems && context?.stableQueryKey) {

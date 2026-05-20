@@ -181,6 +181,22 @@ export const clubSchema = z.object({
     .transform(val => val ? cleanStr(val) : val),
   telefono_contacto: telefonoClubSchema.optional(),
   director_tecnico_id: z.string().nullable().optional(),
+  horario_inicio: z
+    .string()
+    .nullable()
+    .optional()
+    .transform(val => (val === '' || val === undefined ? null : val))
+    .refine(val => val === null || /^([01]\d|2[0-3]):([0-5]\d)$/.test(val), {
+      message: 'Formato de hora inválido (HH:MM)',
+    }),
+  horario_fin: z
+    .string()
+    .nullable()
+    .optional()
+    .transform(val => (val === '' || val === undefined ? null : val))
+    .refine(val => val === null || /^([01]\d|2[0-3]):([0-5]\d)$/.test(val), {
+      message: 'Formato de hora inválido (HH:MM)',
+    }),
   activo: z.boolean(),
   // Campos para nuevo director (opcionales en el esquema base, validados en el controller)
   new_nombres: z.string().optional().nullable(),
@@ -203,6 +219,13 @@ export const clubSchema = z.object({
   }
   if (data.new_apellido_paterno === '' && data.new_apellido_materno === '') {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Al menos un apellido es requerido', path: ['new_apellido_paterno'] });
+  }
+  if (data.horario_inicio && data.horario_fin && data.horario_fin <= data.horario_inicio) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'La hora de fin debe ser posterior a la hora de inicio',
+      path: ['horario_fin'],
+    });
   }
 })
 

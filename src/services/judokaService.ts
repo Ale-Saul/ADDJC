@@ -1,9 +1,9 @@
 import { createClient } from '@/lib/supabase/client'
 import { Judoka, JudokaCreate, JudokaUpdate } from '@/models/judoka'
 import { ApiResponse } from '@/types/globales'
-import { userService } from './userService'
+import { userService, getUsersNamesByIds } from './userService'
 
-const selectJudokasWithUsuario = 'id, usuario_id, club_id, entrenador_id, activo, peso_competitivo, cinturon_actual, categoria, created_at, updated_at, usuarios:usuario_id(id, nombre, apellido_paterno, apellido_materno, avatar_url, correo, fecha_nacimiento, numero_celular, ci, ci_extension, genero, activo), senseis:entrenador_id(usuarios:usuario_id(nombre, apellido_paterno, apellido_materno)), clubes:club_id(nombre_club)'
+const selectJudokasWithUsuario = 'id, usuario_id, club_id, entrenador_id, activo, peso_competitivo, cinturon_actual, categoria, created_at, updated_at, usuarios:usuario_id(id, nombre, apellido_paterno, apellido_materno, avatar_url, correo, fecha_nacimiento, numero_celular, ci, ci_extension, genero, activo, updated_by), senseis:entrenador_id(usuarios:usuario_id(nombre, apellido_paterno, apellido_materno)), clubes:club_id(nombre_club)'
 
 function mapJudokaRow(row: any): Judoka {
   const u = row.usuarios
@@ -33,7 +33,21 @@ function mapJudokaRow(row: any): Judoka {
     avatar_url: u?.avatar_url ?? null,
     nombre_entrenador: nombreEntrenador,
     nombre_club: nombreClub,
+    updated_by: u?.updated_by ?? null,
+    modificado_por_nombre: undefined
   }
+}
+
+async function populateEditors(judokas: Judoka[]): Promise<Judoka[]> {
+  if (!judokas.length) return judokas
+  const editorIds = Array.from(new Set(judokas.map(j => j.updated_by).filter(Boolean))) as string[]
+  if (editorIds.length === 0) return judokas
+  
+  const editorMap = await getUsersNamesByIds(editorIds)
+  return judokas.map(j => ({
+    ...j,
+    modificado_por_nombre: j.updated_by ? (editorMap[j.updated_by] || 'Sistema / Desconocido') : undefined
+  }))
 }
 
 export const judokaService = {
@@ -48,6 +62,8 @@ export const judokaService = {
       if (error) throw error
 
       let mapped = (data || []).map(mapJudokaRow)
+      mapped = await populateEditors(mapped)
+
       if (!includeInactive) {
         mapped = mapped.filter(j => j.activo)
       }
@@ -67,7 +83,8 @@ export const judokaService = {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return { success: true, data: (data || []).map(mapJudokaRow) }
+      const mapped = await populateEditors((data || []).map(mapJudokaRow))
+      return { success: true, data: mapped }
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
     }
@@ -83,7 +100,8 @@ export const judokaService = {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return { success: true, data: (data || []).map(mapJudokaRow) }
+      const mapped = await populateEditors((data || []).map(mapJudokaRow))
+      return { success: true, data: mapped }
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
     }
@@ -99,13 +117,16 @@ export const judokaService = {
         .single()
 
       if (error) throw error
-      return { success: true, data: data ? mapJudokaRow(data) : data }
+      if (!data) return { success: true, data: data }
+      
+      const mapped = await populateEditors([mapJudokaRow(data)])
+      return { success: true, data: mapped[0] }
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
     }
   },
 
-  async create(judoka: JudokaCreate): Promise<ApiResponse<Judoka>> {
+  async create(judoka: JudokaCreate, updated_by?: string): Promise<ApiResponse<Judoka>> {
     try {
       let userId = judoka.usuario_id
       if (!userId || userId === 'temp-user-id') {
@@ -133,6 +154,7 @@ export const judokaService = {
       const userUpdate: Record<string, unknown> = {}
       if (judoka.avatar_url) userUpdate.avatar_url = judoka.avatar_url
       if (judoka.activo !== undefined) userUpdate.activo = judoka.activo
+      if (updated_by) userUpdate.updated_by = updated_by
       if (Object.keys(userUpdate).length > 0) {
         await client.from('usuarios').update(userUpdate).eq('id', userId)
       }
@@ -146,13 +168,13 @@ export const judokaService = {
   async update(id: string, judoka: JudokaUpdate): Promise<ApiResponse<Judoka>> {
     try {
       const client = createClient()
-      const { email, nombres, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url, ...judokaPayload } = judoka as any
+      const { email, nombres, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url, updated_by, ...judokaPayload } = judoka as any
       
       const { data: current, error: getError } = await client.from('judokas').select('usuario_id').eq('id', id).single()
       if (getError || !current) throw new Error('Judoka no encontrado')
 
       const judokaFields = ['club_id', 'entrenador_id', 'categoria', 'peso_competitivo', 'cinturon_actual']
-      const judokaUpdate: Record<string, any> = {}
+      const judokaUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
       judokaFields.forEach(f => {
         if (judokaPayload[f] !== undefined) judokaUpdate[f] = judokaPayload[f]
       })
@@ -174,6 +196,7 @@ export const judokaService = {
       if (genero !== undefined) userUpdate.genero = genero
       if (activo !== undefined) userUpdate.activo = activo
       if (avatar_url !== undefined) userUpdate.avatar_url = avatar_url
+      if (updated_by !== undefined) userUpdate.updated_by = updated_by
       
       if (Object.keys(userUpdate).length > 1) {
         const { error } = await client.from('usuarios').update(userUpdate).eq('id', current.usuario_id)

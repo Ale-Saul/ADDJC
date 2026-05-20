@@ -10,9 +10,15 @@ import {
   Typography,
   Button,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Divider,
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
+import InfoIcon from '@mui/icons-material/Info'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import AddLinkIcon from '@mui/icons-material/AddLink'
 import LinkOffIcon from '@mui/icons-material/LinkOff'
@@ -20,6 +26,7 @@ import { Judoka } from '@/models/judoka'
 import { DataTable, SearchBar, FilterSelect } from '@/components/ui'
 import ConfirmDialog from '@/components/common/ConfirmDialog'
 import Pagination from '@/components/common/Pagination'
+import AuditModal from '@/components/common/AuditModal'
 import { judokaController } from '@/controllers/judokaController'
 import { useJudokaList } from '@/hooks/useJudokaList'
 import { CATEGORIES, BELT_COLORS } from '@/constants/globales'
@@ -177,6 +184,7 @@ export default function JudokaList({
   const totalPages = Math.ceil(filteredData.length / itemsPerPage)
 
   const [pendingDelete, setPendingDelete] = useState<Judoka | null>(null)
+  const [auditItem, setAuditItem] = useState<Judoka | null>(null)
   const [confirmLoading, setConfirmLoading] = useState(false)
 
   const isLoading = isLoadingProp !== undefined ? isLoadingProp : loading
@@ -187,6 +195,10 @@ export default function JudokaList({
     } else {
       setPendingDelete(judoka)
     }
+  }
+
+  const handleAuditClick = (judoka: Judoka) => {
+    setAuditItem(judoka)
   }
 
   const handleConfirmDelete = async () => {
@@ -358,42 +370,45 @@ export default function JudokaList({
       cols.push({
         id: 'activo',
         label: 'Estado',
-        render: (j: Judoka) => (
-          <Tooltip title={isAdminOrAsoc ? (j.activo ? 'Desactivar' : 'Activar') : (j.activo ? 'Activo' : 'Inactivo')}>
-            <span>
-              <Switch
-                checked={!!j.activo}
-                onChange={() => isAdminOrAsoc && toggleStatus(j.id, !!j.activo)}
-                size="medium"
-                disabled={!isAdminOrAsoc}
-                sx={{
-                  '& .MuiSwitch-switchBase.Mui-checked': {
-                    color: '#4caf50',
-                    '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.08)' },
-                  },
-                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                    backgroundColor: '#4caf50',
-                  },
-                  '& .MuiSwitch-switchBase': {
-                    color: '#f44336',
-                    '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.08)' },
-                  },
-                  '& .MuiSwitch-switchBase + .MuiSwitch-track': {
-                    backgroundColor: '#f44336',
-                  },
-                  '& .MuiSwitch-switchBase.Mui-disabled': {
-                    color: (j.activo ? '#4caf50' : '#f44336') + ' !important',
-                    opacity: '1 !important'
-                  },
-                  '& .MuiSwitch-switchBase.Mui-disabled + .MuiSwitch-track': {
-                    backgroundColor: (j.activo ? '#4caf50' : '#f44336') + ' !important',
-                    opacity: '0.5 !important'
-                  }
-                }}
-              />
-            </span>
-          </Tooltip>
-        )
+        render: (j: Judoka) => {
+          const canChangeStatus = isAdminOrAsoc || isEncargado;
+          return (
+            <Tooltip title={canChangeStatus ? (j.activo ? 'Desactivar' : 'Activar') : (j.activo ? 'Activo' : 'Inactivo')}>
+              <span>
+                <Switch
+                  checked={!!j.activo}
+                  onChange={() => canChangeStatus && toggleStatus(j.id, !!j.activo)}
+                  size="medium"
+                  disabled={!canChangeStatus}
+                  sx={{
+                    '& .MuiSwitch-switchBase.Mui-checked': {
+                      color: '#4caf50',
+                      '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.08)' },
+                    },
+                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                      backgroundColor: '#4caf50',
+                    },
+                    '& .MuiSwitch-switchBase': {
+                      color: '#f44336',
+                      '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.08)' },
+                    },
+                    '& .MuiSwitch-switchBase + .MuiSwitch-track': {
+                      backgroundColor: '#f44336',
+                    },
+                    '& .MuiSwitch-switchBase.Mui-disabled': {
+                      color: (j.activo ? '#4caf50' : '#f44336') + ' !important',
+                      opacity: '1 !important'
+                    },
+                    '& .MuiSwitch-switchBase.Mui-disabled + .MuiSwitch-track': {
+                      backgroundColor: (j.activo ? '#4caf50' : '#f44336') + ' !important',
+                      opacity: '0.5 !important'
+                    }
+                  }}
+                />
+              </span>
+            </Tooltip>
+          );
+        }
       })
 
       cols.push({
@@ -420,6 +435,17 @@ export default function JudokaList({
                   onClick={() => handleDeleteClick(j)}
                 >
                   <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+            {(isAdminOrAsoc || isEncargado) && (
+              <Tooltip title="Ver Auditoría">
+                <IconButton
+                  size="small"
+                  color="info"
+                  onClick={() => handleAuditClick(j)}
+                >
+                  <InfoIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             )}
@@ -511,6 +537,15 @@ export default function JudokaList({
           loading={confirmLoading}
         />
       )}
+
+      <AuditModal
+        open={!!auditItem}
+        onClose={() => setAuditItem(null)}
+        updatedAt={auditItem?.updated_at}
+        createdAt={auditItem?.created_at}
+        updatedByNombre={auditItem?.modificado_por_nombre}
+        entityName="Judoka"
+      />
     </>
   )
 }

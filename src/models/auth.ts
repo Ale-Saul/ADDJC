@@ -39,6 +39,8 @@ export interface User {
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   activo: boolean
   debe_cambiar_password?: boolean 
+  updated_by?: string | null
+  modificado_por_nombre?: string
   created_at?: string
   updated_at?: string
 }

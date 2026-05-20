@@ -91,16 +91,21 @@ export function useSenseiForm(sensei?: Sensei | null, user?: User, onSuccess?: (
         genero: data.genero || null,
         grado_dan: data.grado_dan || null,
         especialidad: data.especialidad || null,
+        updated_by: user?.id || null,
       }
 
       let response
       if (sensei) {
-        response = await senseiController.updateSensei(sensei.id, payload as SenseiUpdate)
+        response = await senseiController.updateSensei(sensei.id, {
+          ...(payload as SenseiUpdate),
+          updated_by: user?.id
+        } as any)
       } else {
         const createData: SenseiCreate = {
           ...(payload as SenseiCreate),
           usuario_id: 'temp-user-id',
-        }
+          updated_by: user?.id
+        } as any
         response = await senseiController.createSensei(createData)
       }
 
@@ -118,7 +123,7 @@ export function useSenseiForm(sensei?: Sensei | null, user?: User, onSuccess?: (
       setError(err instanceof Error ? err.message : 'Error inesperado')
       setLoading(false)
     }
-  }, [sensei, onSuccess])
+  }, [sensei, onSuccess, user])
 
   return {
     form,

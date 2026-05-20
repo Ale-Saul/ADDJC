@@ -49,7 +49,7 @@ export const arbitroController = {
   /**
    * Actualizar un árbitro
    */
-  async updateArbitro(id: string, arbitroData: ArbitroUpdate): Promise<ApiResponse<Arbitro>> {
+  async updateArbitro(id: string, arbitroData: ArbitroUpdate & { updated_by?: string }): Promise<ApiResponse<Arbitro>> {
     if (!id) {
       return { success: false, error: 'ID del árbitro es requerido' }
     }

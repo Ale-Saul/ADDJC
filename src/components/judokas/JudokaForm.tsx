@@ -93,13 +93,20 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         genero: data.genero || null,
         categoria: data.categoria || null,
         cinturon_actual: data.cinturon_actual || null,
+        updated_by: user?.id || null
       }
 
       let response
       if (judoka) {
-        response = await judokaController.updateJudoka(judoka.id, payload as JudokaUpdate)
+        response = await judokaController.updateJudoka(judoka.id, {
+          ...(payload as JudokaUpdate),
+          updated_by: user?.id
+        })
       } else {
-        response = await judokaController.createJudoka(payload as JudokaCreate)
+        response = await judokaController.createJudoka({
+          ...(payload as JudokaCreate),
+          updated_by: user?.id
+        }, user?.id)
       }
 
       if (response.success) {

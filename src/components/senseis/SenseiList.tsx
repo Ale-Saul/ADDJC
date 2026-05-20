@@ -1,16 +1,34 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Box, Typography, Switch, IconButton, Tooltip, Chip, Grid, Stack, Button, CircularProgress } from '@mui/material'
+import { 
+  Box, 
+  Typography, 
+  Switch, 
+  IconButton, 
+  Tooltip, 
+  Chip, 
+  Grid, 
+  Stack, 
+  Button, 
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Divider,
+} from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import BadgeIcon from '@mui/icons-material/Badge'
+import InfoIcon from '@mui/icons-material/Info'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import AddLinkIcon from '@mui/icons-material/AddLink'
 import LinkOffIcon from '@mui/icons-material/LinkOff'
 import { Sensei } from '@/models/sensei'
 import { useSenseiList } from '@/hooks/useSenseiList'
 import Pagination from '@/components/common/Pagination'
+import AuditModal from '@/components/common/AuditModal'
 import { DataTable, Column, SearchBar, FilterSelect } from '@/components/ui'
 import ConfirmDialog from '@/components/common/ConfirmDialog'
 import { ESPECIALIDADES_SENSEI, GRADOS_DAN } from '@/constants/globales'
@@ -48,6 +66,7 @@ export default function SenseiList({
   const [page, setPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [auditItem, setAuditItem] = useState<Sensei | null>(null)
 
   const handleToggleClick = (sensei: Sensei) => {
     if (readOnly) return
@@ -263,6 +282,13 @@ export default function SenseiList({
               </IconButton>
             </Tooltip>
           )}
+          {isAdminOrAsoc && (
+            <Tooltip title="Ver Auditoría">
+              <IconButton size="small" color="info" onClick={() => setAuditItem(s)}>
+                <InfoIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
         </Stack>
       )
     })
@@ -369,7 +395,14 @@ export default function SenseiList({
         />
       </Box>
 
-      
+      <AuditModal
+        open={!!auditItem}
+        onClose={() => setAuditItem(null)}
+        updatedAt={auditItem?.updated_at}
+        createdAt={auditItem?.created_at}
+        updatedByNombre={auditItem?.modificado_por_nombre}
+        entityName="Sensei"
+      />
     </>
   )
 }

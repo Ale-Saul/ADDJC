@@ -15,6 +15,8 @@ export interface MiembroAsociacion extends User {
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   fecha_ingreso?: string | null
   cargo?: string | null
+  created_at?: string
+  updated_at?: string
 }
 
 export interface MiembroAsociacionCreate {
@@ -31,6 +33,7 @@ export interface MiembroAsociacionCreate {
   fecha_ingreso?: string | null
   cargo?: string | null
   activo?: boolean
+  updated_by?: string | null
 }
 
 export interface MiembroAsociacionUpdate {
@@ -46,5 +49,6 @@ export interface MiembroAsociacionUpdate {
   fecha_ingreso?: string | null
   cargo?: string | null
   activo?: boolean
+  updated_by?: string | null
 }
 

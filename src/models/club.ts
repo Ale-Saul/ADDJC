@@ -6,6 +6,8 @@ export interface Club {
   telefono_contacto: string | null
   director_tecnico_id: string | null
   activo: boolean
+  horario_inicio?: string | null
+  horario_fin?: string | null
   created_at: string
   updated_at: string
   documentos?: ClubDocumento[]
@@ -33,6 +35,8 @@ export interface ClubCreate {
   direccion?: string | null
   telefono_contacto?: string | null
   director_tecnico_id?: string | null
+  horario_inicio?: string | null
+  horario_fin?: string | null
   activo?: boolean
 }
 
@@ -42,6 +46,8 @@ export interface ClubUpdate {
   direccion?: string | null
   telefono_contacto?: string | null
   director_tecnico_id?: string | null
+  horario_inicio?: string | null
+  horario_fin?: string | null
   activo?: boolean
 }
 

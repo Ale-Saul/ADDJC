@@ -1,9 +1,9 @@
 import { createClient } from '@/lib/supabase/client'
 import { Arbitro, ArbitroCreate, ArbitroUpdate } from '@/models/arbitro'
 import { ApiResponse } from '@/types/globales'
-import { userService } from './userService'
+import { userService, getUsersNamesByIds } from './userService'
 
-const selectArbitrosWithUsuario = 'id, usuario_id, nivel_arbitraje, created_at, updated_at, usuarios:usuario_id(id, nombre, apellido_paterno, apellido_materno, avatar_url, correo, fecha_nacimiento, numero_celular, ci, ci_extension, genero, activo)'
+const selectArbitrosWithUsuario = 'id, usuario_id, nivel_arbitraje, created_at, updated_at, usuarios:usuario_id(id, nombre, apellido_paterno, apellido_materno, avatar_url, correo, fecha_nacimiento, numero_celular, ci, ci_extension, genero, activo, updated_by)'
 
 function mapArbitroRow(row: any, certsCountMap: Record<string, number>): Arbitro {
   const u = row.usuarios
@@ -33,7 +33,20 @@ function mapArbitroRow(row: any, certsCountMap: Record<string, number>): Arbitro
     certificacion: null,
     certificacion_id: null,
     total_certificaciones,
+    updated_by: u?.updated_by ?? null,
   }
+}
+
+async function populateEditors(arbitros: Arbitro[]): Promise<Arbitro[]> {
+  if (!arbitros.length) return arbitros
+  const editorIds = Array.from(new Set(arbitros.map(a => a.updated_by).filter(Boolean))) as string[]
+  if (editorIds.length === 0) return arbitros
+  
+  const editorMap = await getUsersNamesByIds(editorIds)
+  return arbitros.map(a => ({
+    ...a,
+    modificado_por_nombre: a.updated_by ? (editorMap[a.updated_by] || 'Sistema / Desconocido') : undefined
+  }))
 }
 
 export const arbitroService = {
@@ -64,7 +77,8 @@ export const arbitroService = {
         })
       }
 
-      const mapped = (arbitros || []).map(row => mapArbitroRow(row, certsCountMap))
+      let mapped = (arbitros || []).map(row => mapArbitroRow(row, certsCountMap))
+      mapped = await populateEditors(mapped)
       
       if (!includeInactive) {
         return { success: true, data: mapped.filter(a => a.activo) }
@@ -94,8 +108,9 @@ export const arbitroService = {
         .eq('usuario_id', data.usuario_id)
         .eq('activo', true)
 
-      const mapped = mapArbitroRow(data, { [data.usuario_id]: count || 0 })
-      return { success: true, data: mapped }
+      const mappedData = mapArbitroRow(data, { [data.usuario_id]: count || 0 })
+      const [final] = await populateEditors([mappedData])
+      return { success: true, data: final }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       return { success: false, error: errorMessage }
@@ -141,10 +156,12 @@ export const arbitroService = {
 
       if (error) throw error
 
-      const userUpdate: Record<string, any> = {}
+      const userUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
       if (arbitro.avatar_url) userUpdate.avatar_url = arbitro.avatar_url
       if (arbitro.activo !== undefined) userUpdate.activo = arbitro.activo
-      if (Object.keys(userUpdate).length > 0) {
+      if (arbitro.updated_by) userUpdate.updated_by = arbitro.updated_by
+
+      if (Object.keys(userUpdate).length > 1) {
         await client.from('usuarios').update(userUpdate).eq('id', usuarioId)
       }
 
@@ -164,7 +181,7 @@ export const arbitroService = {
       if (getError || !current) throw new Error('Árbitro no encontrado')
 
       const arbitroFields = ['nivel_arbitraje']
-      const arbitroUpdate: Record<string, any> = {}
+      const arbitroUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
       arbitroFields.forEach(f => {
         if (updatePayload[f] !== undefined) arbitroUpdate[f] = updatePayload[f]
       })
@@ -186,6 +203,7 @@ export const arbitroService = {
       if (genero !== undefined) userUpdate.genero = genero
       if (activo !== undefined) userUpdate.activo = activo
       if (avatar_url !== undefined) userUpdate.avatar_url = avatar_url
+      if (arbitro.updated_by !== undefined) userUpdate.updated_by = arbitro.updated_by
       
       if (Object.keys(userUpdate).length > 1) {
         const { error } = await client.from('usuarios').update(userUpdate).eq('id', current.usuario_id)

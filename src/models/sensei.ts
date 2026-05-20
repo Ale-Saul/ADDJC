@@ -23,6 +23,8 @@ export interface Sensei {
   total_certificaciones?: number
   created_at: string
   updated_at: string
+  updated_by?: string | null
+  modificado_por_nombre?: string
 }
 
 export interface SenseiCreate {
@@ -44,6 +46,7 @@ export interface SenseiCreate {
   avatar_url?: string | null
   activo?: boolean
   isEncargado?: boolean
+  updated_by?: string | null
 }
 
 export interface SenseiUpdate {
@@ -62,5 +65,6 @@ export interface SenseiUpdate {
   especialidad?: string | null
   avatar_url?: string | null
   activo?: boolean
+  updated_by?: string | null
 }
 

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Alert, Box, Button, Dialog, DialogContent, DialogTitle, Snackbar, Typography } from '@mui/material'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import AddIcon from '@mui/icons-material/Add'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import ConfirmDialog from '@/components/common/ConfirmDialog'
@@ -23,16 +24,19 @@ export default function ArbitrosPage() {
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
   const isReadOnly = user?.rol === ROL.SENSEI || user?.rol === ROL.ENCARGADO || user?.rol === ROL.ARBITRO
 
   const handleCreateSuccess = () => {
     createDialog.close()
+    queryClient.invalidateQueries({ queryKey: ['arbitros'] })
     setRefreshTrigger(prev => prev + 1)
   }
 
   const handleEditSuccess = () => {
     editDialog.close()
+    queryClient.invalidateQueries({ queryKey: ['arbitros'] })
     setRefreshTrigger(prev => prev + 1)
   }
 

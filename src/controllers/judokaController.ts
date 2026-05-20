@@ -48,7 +48,7 @@ export const judokaController = {
   /**
    * Crear un nuevo judoka
    */
-  async createJudoka(judokaData: JudokaCreate): Promise<ApiResponse<Judoka>> {
+  async createJudoka(judokaData: JudokaCreate, updated_by?: string): Promise<ApiResponse<Judoka>> {
     const namesValidation = personNamesCreateSchema.safeParse(judokaData)
     if (!namesValidation.success) {
       return { success: false, error: namesValidation.error.issues[0]?.message ?? 'Error de validación' }
@@ -80,7 +80,7 @@ export const judokaController = {
       activo: judokaData.activo !== undefined ? judokaData.activo : true
     }
 
-    return await judokaService.create(judokaToCreate)
+    return await judokaService.create(judokaToCreate, updated_by)
   },
 
   /**

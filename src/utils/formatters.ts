@@ -292,6 +292,22 @@ export function formatHoraInput(raw: string): string {
   return h + ':' + m;
 }
 
+/** Convierte time de BD (ej. 08:00:00) a HH:MM para inputs con formatHoraInput */
+export function formatHoraDbToInput(value: string | null | undefined): string | null {
+  if (!value) return null
+  const match = String(value).trim().match(/^(\d{1,2}):(\d{2})/)
+  if (!match) return null
+  return `${match[1].padStart(2, '0')}:${match[2]}`
+}
+
+/** Normaliza HH:MM para guardar en columna time; vacío → null */
+export function normalizeHoraForDb(value: string | null | undefined): string | null {
+  const trimmed = value?.trim()
+  if (!trimmed) return null
+  if (/^([01]\d|2[0-3]):([0-5]\d)$/.test(trimmed)) return trimmed
+  return formatHoraDbToInput(trimmed)
+}
+
 export function formatNameWithNumbersInput(value: string): string {
   if (!value) return '';
   // Permitir letras, acentos, Ñ, números y espacios. Eliminar otros caracteres especiales.

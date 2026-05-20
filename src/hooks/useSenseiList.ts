@@ -2,8 +2,10 @@ import { useCallback, useState, useEffect, useMemo } from 'react'
 import { Sensei } from '@/models/sensei'
 import { senseiController } from '@/controllers/senseiController'
 import { useEntityList } from './useEntityList'
+import { useAuth } from './useAuth'
 
 export function useSenseiList(initialSearch: string = '', refreshTrigger: number = 0, clubId?: string) {
+  const { user } = useAuth()
   const [initialOrder, setInitialOrder] = useState<string[] | null>(null)
 
   const filterFn = useCallback((s: Sensei, filters: Record<string, string>, search: string) => {
@@ -42,8 +44,12 @@ export function useSenseiList(initialSearch: string = '', refreshTrigger: number
       return await senseiController.getAllSenseis(true)
     },
     updateItemStatus: async (id, activo) => {
-      const resp = await senseiController.updateSensei(id, { activo })
-      return { success: resp.success, error: resp.error }
+      const resp = await senseiController.updateSensei(id, { 
+        activo,
+        updated_by: user?.id 
+      } as any)
+      // Asegurar que devolvemos el objeto sensei completo con el nombre del editor resuelto
+      return { success: resp.success, error: resp.error, data: resp.data }
     },
     filterFn,
     initialFilters: { gradoDan: 'all', especialidad: 'all', estado: 'all' },

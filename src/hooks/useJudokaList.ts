@@ -2,6 +2,7 @@ import { useCallback, useState, useEffect, useMemo } from 'react'
 import { Judoka } from '@/models/judoka'
 import { judokaController } from '@/controllers/judokaController'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/contexts/AuthContext'
 
 import { useEntityList } from './useEntityList'
 
@@ -14,6 +15,7 @@ export function useJudokaList(options: {
   singleSenseiMode?: boolean
 }) {
   const [initialOrder, setInitialOrder] = useState<string[] | null>(null)
+  const { user } = useAuth()
 
   const filterFn = useCallback((j: Judoka, filters: Record<string, string>, search: string) => {
     const normalizedSearch = search.toLowerCase()
@@ -78,8 +80,12 @@ export function useJudokaList(options: {
       return await judokaController.getAllJudokas(true)
     },
     updateItemStatus: async (id, activo) => {
-      const resp = await judokaController.updateJudoka(id, { activo })
-      return { success: resp.success, error: resp.error }
+      const resp = await judokaController.updateJudoka(id, { 
+        activo, 
+        updated_by: user?.id 
+      })
+      // Aseguramos que devolvemos el objeto judoka completo con el nombre del editor resuelto
+      return { success: resp.success, error: resp.error, data: resp.data }
     },
     filterFn,
     initialFilters: { categoria: 'all', cinturon: 'all', estado: 'all' },

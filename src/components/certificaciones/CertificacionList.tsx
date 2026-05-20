@@ -168,7 +168,7 @@ export default function CertificacionList({
             <Switch 
               checked={!!isActive} 
               onChange={handleToggle}
-              size="small"
+              size="medium"
               sx={{
                 '& .MuiSwitch-switchBase.Mui-checked': {
                   color: '#4caf50',
@@ -188,6 +188,14 @@ export default function CertificacionList({
                 '& .MuiSwitch-switchBase + .MuiSwitch-track': {
                   backgroundColor: '#f44336',
                 },
+                '& .MuiSwitch-switchBase.Mui-disabled': {
+                  color: (isActive ? '#4caf50' : '#f44336') + ' !important',
+                  opacity: '1 !important'
+                },
+                '& .MuiSwitch-switchBase.Mui-disabled + .MuiSwitch-track': {
+                  backgroundColor: (isActive ? '#4caf50' : '#f44336') + ' !important',
+                  opacity: '0.5 !important'
+                }
               }}
               inputProps={{ 'aria-label': isActive ? 'Desactivar certificación' : 'Activar certificación' }}
             />

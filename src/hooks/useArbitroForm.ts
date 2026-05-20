@@ -6,8 +6,10 @@ import { Arbitro, ArbitroCreate, ArbitroUpdate } from '@/models/arbitro'
 import { arbitroController } from '@/controllers/arbitroController'
 import { arbitroSchema } from '@/schemas/globales'
 import { formatters } from '@/utils/formatters'
+import { useAuth } from './useAuth'
 
 export function useArbitroForm(arbitro?: Arbitro | null, onSuccess?: () => void) {
+  const { user } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -71,12 +73,16 @@ export function useArbitroForm(arbitro?: Arbitro | null, onSuccess?: () => void)
 
       let response
       if (arbitro) {
-        response = await arbitroController.updateArbitro(arbitro.id, payload as ArbitroUpdate)
+        response = await arbitroController.updateArbitro(arbitro.id, {
+          ...(payload as ArbitroUpdate),
+          updated_by: user?.id
+        } as any)
       } else {
         const createData: ArbitroCreate = {
           ...(payload as ArbitroCreate),
           usuario_id: 'temp-user-id',
-        }
+          updated_by: user?.id
+        } as any
         response = await arbitroController.createArbitro(createData)
       }
 
@@ -94,7 +100,7 @@ export function useArbitroForm(arbitro?: Arbitro | null, onSuccess?: () => void)
       setError(err instanceof Error ? err.message : 'Error inesperado')
       setLoading(false)
     }
-  }, [arbitro, onSuccess])
+  }, [arbitro, onSuccess, user])
 
   return {
     form,

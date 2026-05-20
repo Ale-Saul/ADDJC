@@ -7,6 +7,7 @@ import { senseiController } from '@/controllers/senseiController'
 import { clubController } from '@/controllers/clubController'
 import { Club, ClubCreate } from '@/models/club'
 import { Sensei, SenseiCreate } from '@/models/sensei'
+import { formatHoraDbToInput, normalizeHoraForDb } from '@/utils/formatters'
 
 type State = {
   senseis: Sensei[]
@@ -81,12 +82,14 @@ export function useClubForm({ club, onSuccess, filesCount = 0 }: UseClubFormProp
   } = useForm({
     resolver: zodResolver(clubSchema),
     mode: 'onTouched',
-    reValidateMode: 'onChange',
+    reValidateMode: 'onBlur',
     defaultValues: {
       nombre_club: '',
       provincia: '',
       direccion: '',
       telefono_contacto: '',
+      horario_inicio: null as string | null,
+      horario_fin: null as string | null,
       director_tecnico_id: null as string | null,
       activo: true,
       new_nombres: undefined,
@@ -166,6 +169,8 @@ export function useClubForm({ club, onSuccess, filesCount = 0 }: UseClubFormProp
         provincia: club.provincia || '',
         direccion: club.direccion || '',
         telefono_contacto: club.telefono_contacto || '',
+        horario_inicio: formatHoraDbToInput(club.horario_inicio),
+        horario_fin: formatHoraDbToInput(club.horario_fin),
         director_tecnico_id: club.director_tecnico_id || null,
         activo: club.activo,
         new_nombres: undefined,
@@ -245,6 +250,8 @@ export function useClubForm({ club, onSuccess, filesCount = 0 }: UseClubFormProp
         ...data, 
         nombre_club: data.nombre_club.trim().replace(/\s+/g, ' '),
         direccion: data.direccion?.trim().replace(/\s+/g, ' ') || null,
+        horario_inicio: normalizeHoraForDb(data.horario_inicio),
+        horario_fin: normalizeHoraForDb(data.horario_fin),
         director_tecnico_id: directorTecnicoId 
       } as ClubCreate
       

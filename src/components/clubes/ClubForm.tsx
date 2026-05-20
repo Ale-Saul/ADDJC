@@ -19,11 +19,18 @@ import DescriptionIcon from '@mui/icons-material/Description'
 import { Club } from '@/models/club'
 import { MUNICIPIOS, CI_EXTENSIONS } from '@/constants/globales'
 import { useClubForm } from '@/hooks/useClubForm'
-import { formatters, formatCIInput, formatCIExtensionInput, formatNameInput, formatCelularInput, formatNameWithNumbersInput } from '@/utils/formatters'
+import { formatters, formatCIInput, formatCIExtensionInput, formatNameInput, formatCelularInput, formatNameWithNumbersInput, formatHoraInput } from '@/utils/formatters'
 import { FormInput, FormSelect, FormAutocomplete } from '@/components/ui'
 import { storageService } from '@/services/storageService'
 import { clubController } from '@/controllers/clubController'
 import { useAuth } from '@/contexts/AuthContext'
+
+/** Cada celda del grid estira el control al 100% del ancho (evita huecos entre columnas). */
+const gridFieldCellSx = {
+  display: 'flex',
+  minWidth: 0,
+  '& > *': { width: '100%', flex: 1 },
+} as const
 
 interface ClubFormProps {
   club?: Club
@@ -150,7 +157,37 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
             />
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }} sx={gridFieldCellSx}>
+          <FormInput
+            name="horario_inicio"
+            label="Hora inicio"
+            control={control}
+            disabled={submitting}
+            formatValue={formatHoraInput}
+            inputProps={{
+              maxLength: 5,
+              inputMode: 'numeric',
+              autoComplete: 'off',
+            }}
+          />
+        </Grid>
+
+        <Grid size={{ xs: 12, sm: 6 }} sx={gridFieldCellSx}>
+          <FormInput
+            name="horario_fin"
+            label="Hora fin"
+            control={control}
+            disabled={submitting}
+            formatValue={formatHoraInput}
+            inputProps={{
+              maxLength: 5,
+              inputMode: 'numeric',
+              autoComplete: 'off',
+            }}
+          />
+        </Grid>
+
+        <Grid size={{ xs: 12, sm: 6 }} sx={gridFieldCellSx}>
           <FormInput
             name="telefono_contacto"
             label="Teléfono de Contacto"
@@ -170,7 +207,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
           />
         </Grid>
         
-        <Grid size={{ xs: 12, sm: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }} sx={gridFieldCellSx}>
           <FormAutocomplete
             name="director_tecnico_id"
             label="Director Técnico (Sensei/Encargado)"

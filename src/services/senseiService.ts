@@ -1,9 +1,9 @@
 import { createClient } from '@/lib/supabase/client'
 import { Sensei, SenseiCreate, SenseiUpdate } from '@/models/sensei'
 import { ApiResponse } from '@/types/globales'
-import { userService } from './userService'
+import { userService, getUsersNamesByIds } from './userService'
 
-const SENSEI_WITH_USER_COLUMNS = 'id, club_id, usuario_id, grado_dan, especialidad, created_at, updated_at, usuarios:usuario_id(id, nombre, apellido_paterno, apellido_materno, avatar_url, correo, fecha_nacimiento, numero_celular, ci, ci_extension, genero, activo), clubes:club_id(id, nombre_club)'
+const SENSEI_WITH_USER_COLUMNS = 'id, club_id, usuario_id, grado_dan, especialidad, created_at, updated_at, usuarios:usuario_id(id, nombre, apellido_paterno, apellido_materno, avatar_url, correo, fecha_nacimiento, numero_celular, ci, ci_extension, genero, activo, updated_by), clubes:club_id(id, nombre_club)'
 
 function mapSenseiRow(row: any, certsCountMap: Record<string, number>): Sensei {
   const u = row.usuarios
@@ -29,6 +29,8 @@ function mapSenseiRow(row: any, certsCountMap: Record<string, number>): Sensei {
     genero: u?.genero ?? null,
     activo: u?.activo ?? true,
     avatar_url: u?.avatar_url ?? null,
+    updated_by: u?.updated_by ?? null,
+    modificado_por_nombre: undefined,
     certificacion: null,
     certificacion_id: null,
     total_certificaciones,
@@ -66,6 +68,16 @@ export const senseiService = {
       }
 
       let mapped = (senseis || []).map(row => mapSenseiRow(row, certsCountMap))
+
+      // 3. Obtener nombres de quienes modificaron
+      const editorIds = Array.from(new Set(mapped.map(s => s.updated_by).filter(Boolean))) as string[]
+      if (editorIds.length > 0) {
+        const editorMap = await getUsersNamesByIds(editorIds)
+        mapped = mapped.map(s => ({
+          ...s,
+          modificado_por_nombre: s.updated_by ? (editorMap[s.updated_by] || 'Sistema') : undefined
+        }))
+      }
       
       if (!includeInactive) {
         mapped = mapped.filter(s => s.activo)
@@ -95,7 +107,18 @@ export const senseiService = {
         certs.forEach(c => { if (c.usuario_id) certsCountMap[c.usuario_id] = (certsCountMap[c.usuario_id] || 0) + 1 })
       }
 
-      const mapped = (senseis || []).map(row => mapSenseiRow(row, certsCountMap))
+      let mapped = (senseis || []).map(row => mapSenseiRow(row, certsCountMap))
+
+      // Obtener nombres de los editores
+      const editorIds = Array.from(new Set(mapped.map(s => s.updated_by).filter(Boolean))) as string[]
+      if (editorIds.length > 0) {
+        const editorMap = await getUsersNamesByIds(editorIds)
+        mapped = mapped.map(s => ({
+          ...s,
+          modificado_por_nombre: s.updated_by ? (editorMap[s.updated_by] || 'Sistema') : undefined
+        }))
+      }
+
       return { success: true, data: mapped }
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
@@ -115,6 +138,13 @@ export const senseiService = {
 
       const { count } = await client.from('certificaciones').select('*', { count: 'exact', head: true }).eq('usuario_id', data.usuario_id).eq('activo', true)
       const mapped = mapSenseiRow(data, { [data.usuario_id]: count || 0 })
+
+      // Obtener nombre del editor si existe
+      if (mapped.updated_by) {
+        const editorMap = await getUsersNamesByIds([mapped.updated_by])
+        mapped.modificado_por_nombre = editorMap[mapped.updated_by] || 'Sistema'
+      }
+
       return { success: true, data: mapped }
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' }
@@ -127,8 +157,8 @@ export const senseiService = {
       if (!userId || userId === 'temp-user-id') {
         if (!sensei.email || !sensei.password) return { success: false, error: 'Email y contraseña requeridos' }
         const userResult = sensei.isEncargado
-          ? await userService.createEncargadoUser(sensei.nombres, sensei.apellido_paterno, sensei.apellido_materno, sensei.email!, sensei.password!, sensei.club_id || undefined, sensei.fecha_nacimiento, sensei.numero_celular, sensei.genero, sensei.ci, (sensei as any).ci_extension)
-          : await userService.createSenseiUser(sensei.nombres, sensei.apellido_paterno, sensei.apellido_materno, sensei.email!, sensei.password!, sensei.fecha_nacimiento, sensei.numero_celular, sensei.genero, sensei.ci, (sensei as any).ci_extension)
+          ? await userService.createEncargadoUser(sensei.nombres, sensei.apellido_paterno, sensei.apellido_materno, sensei.email!, sensei.password!, sensei.club_id || undefined, sensei.fecha_nacimiento, sensei.numero_celular, sensei.genero, sensei.ci)
+          : await userService.createSenseiUser(sensei.nombres, sensei.apellido_paterno, sensei.apellido_materno, sensei.email!, sensei.password!, sensei.fecha_nacimiento, sensei.numero_celular, sensei.genero, sensei.ci)
         
         if (!userResult.success || !userResult.data) return { success: false, error: userResult.error || 'Error al crear usuario' }
         userId = userResult.data.usuarioId
@@ -148,10 +178,12 @@ export const senseiService = {
 
       if (error) throw error
 
-      const userUpdate: Record<string, any> = {}
+      const userUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
       if (sensei.avatar_url) userUpdate.avatar_url = sensei.avatar_url
       if (sensei.activo !== undefined) userUpdate.activo = sensei.activo
-      if (Object.keys(userUpdate).length > 0) {
+      if (sensei.updated_by) userUpdate.updated_by = sensei.updated_by
+      
+      if (Object.keys(userUpdate).length > 1) {
         await client.from('usuarios').update(userUpdate).eq('id', userId)
       }
 
@@ -171,7 +203,7 @@ export const senseiService = {
 
       // 1. Actualizar tabla 'senseis' solo si hay datos específicos
       const senseiFields = ['club_id', 'grado_dan', 'especialidad']
-      const senseiUpdate: Record<string, any> = {}
+      const senseiUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
       senseiFields.forEach(f => {
         if (senseiPayload[f] !== undefined) senseiUpdate[f] = senseiPayload[f]
       })
@@ -194,6 +226,7 @@ export const senseiService = {
       if (genero !== undefined) userUpdate.genero = genero
       if (activo !== undefined) userUpdate.activo = activo
       if (avatar_url !== undefined) userUpdate.avatar_url = avatar_url
+      if (sensei.updated_by !== undefined) userUpdate.updated_by = sensei.updated_by
       
       if (Object.keys(userUpdate).length > 1) {
         const { error } = await client.from('usuarios').update(userUpdate).eq('id', current.usuario_id)

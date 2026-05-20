@@ -328,12 +328,17 @@ export default function NuevaNoticiaForm({ autorId, clubId, rolUsuario, noticia,
                   // Lógica para determinar si el checkbox está marcado
                   let isChecked = false
                   if (opcion.id === 'todos') {
-                    if (opcion.esGlobal) {
-                      // "Noticia Global" está marcado si club_id es null
-                      isChecked = currentClubId === null
+                    if (rolUsuario === ROL.ENCARGADO) {
+                      if (opcion.esGlobal) {
+                        // "Noticia Global" está marcado si club_id es null
+                        isChecked = currentClubId === null
+                      } else {
+                        // "Para mi club" está marcado si club_id tiene valor Y audiencia incluye 'todos'
+                        isChecked = currentClubId !== null && (field.value?.includes('todos') ?? false)
+                      }
                     } else {
-                      // "Para mi club" está marcado si club_id tiene valor Y audiencia incluye 'todos'
-                      isChecked = currentClubId !== null && (field.value?.includes('todos') ?? false)
+                      // Para otros roles (Asociación/Admin), 'todos' es simplemente si está en el array
+                      isChecked = field.value?.includes('todos') ?? false
                     }
                   } else if (opcion.id === 'senseis') {
                     isChecked = field.value?.includes('senseis') ?? false
@@ -352,26 +357,35 @@ export default function NuevaNoticiaForm({ autorId, clubId, rolUsuario, noticia,
                           onChange={e => {
                             const current = field.value ?? []
                             if (e.target.checked) {
-                              if (opcion.esGlobal) {
-                                // Al elegir Global, quitamos club_id y ponemos audiencia 'todos'
-                                setValue('club_id', null)
-                                field.onChange(['todos'])
-                              } else if (opcion.id === 'todos') {
-                                // Al elegir "Para mi club", restauramos clubId original y ponemos audiencia 'todos'
-                                // IMPORTANTE: clubId es el ID del club del encargado pasado por props
-                                setValue('club_id', clubId ?? null)
-                                field.onChange(['todos'])
-                              } else if (opcion.id === 'senseis') {
-                                // Senseis incluye automáticamente encargados
-                                const sinTodos = current.filter(a => a !== 'todos')
-                                const nuevo = Array.from(new Set([...sinTodos, 'senseis', 'encargados']))
-                                field.onChange(nuevo)
-                                // Si estaba en global, al elegir algo específico vuelve a ser de su club
-                                if (currentClubId === null && clubId) setValue('club_id', clubId)
+                              if (rolUsuario === ROL.ENCARGADO) {
+                                if (opcion.esGlobal) {
+                                  // Al elegir Global, quitamos club_id y ponemos audiencia 'todos'
+                                  setValue('club_id', null)
+                                  field.onChange(['todos'])
+                                } else if (opcion.id === 'todos') {
+                                  // Al elegir "Para mi club", restauramos clubId original y ponemos audiencia 'todos'
+                                  // IMPORTANTE: clubId es el ID del club del encargado pasado por props
+                                  setValue('club_id', clubId ?? null)
+                                  field.onChange(['todos'])
+                                } else if (opcion.id === 'senseis') {
+                                  // Senseis incluye automáticamente encargados
+                                  const sinTodos = current.filter(a => a !== 'todos')
+                                  const nuevo = Array.from(new Set([...sinTodos, 'senseis', 'encargados']))
+                                  field.onChange(nuevo)
+                                  // Si estaba en global, al elegir algo específico vuelve a ser de su club
+                                  if (currentClubId === null && clubId) setValue('club_id', clubId)
+                                } else {
+                                  field.onChange([...current.filter(a => a !== 'todos'), opcion.id])
+                                  // Si estaba en global, al elegir algo específico vuelve a ser de su club
+                                  if (currentClubId === null && clubId) setValue('club_id', clubId)
+                                }
                               } else {
-                                field.onChange([...current.filter(a => a !== 'todos'), opcion.id])
-                                // Si estaba en global, al elegir algo específico vuelve a ser de su club
-                                if (currentClubId === null && clubId) setValue('club_id', clubId)
+                                // Lógica para Asociación / Admin
+                                if (opcion.id === 'todos') {
+                                  field.onChange(['todos'])
+                                } else {
+                                  field.onChange([...current.filter(a => a !== 'todos'), opcion.id])
+                                }
                               }
                             } else {
                               if (opcion.id === 'senseis') {

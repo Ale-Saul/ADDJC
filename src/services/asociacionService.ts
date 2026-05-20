@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { MiembroAsociacion, MiembroAsociacionCreate, MiembroAsociacionUpdate } from '@/models/asociacion'
 import { ApiResponse } from '@/types/globales'
-import { userService } from './userService'
+import { userService, getUsersNamesByIds } from './userService'
 
 // Función helper para crear usuarios usando Admin API
 // Removed local helper in favor of userService
@@ -16,7 +16,7 @@ export const asociacionService = {
       const client = createClient()
       let query = client
         .from('usuarios')
-        .select('id, correo, nombre, apellido_paterno, apellido_materno, rol, avatar_url, fecha_nacimiento, numero_celular, ci, ci_extension, genero, activo, debe_cambiar_password, created_at, updated_at, asociacion(cargo, fecha_ingreso)')
+        .select('id, correo, nombre, apellido_paterno, apellido_materno, rol, avatar_url, fecha_nacimiento, numero_celular, ci, ci_extension, genero, activo, debe_cambiar_password, created_at, updated_at, updated_by, asociacion(cargo, fecha_ingreso)')
         .eq('rol', 'asociacion')
         .order('created_at', { ascending: false })
 
@@ -28,11 +28,12 @@ export const asociacionService = {
 
       if (error) throw error
 
-      type UsuarioRow = { id: string; correo?: string; nombre?: string; apellido_paterno?: string; apellido_materno?: string; fecha_nacimiento?: string; numero_celular?: string; ci?: string; ci_extension?: string; genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir'; club_id?: string | null; activo?: boolean; created_at: string; updated_at: string; asociacion?: { cargo?: string, fecha_ingreso?: string }[] | { cargo?: string, fecha_ingreso?: string } }
-      const miembros: MiembroAsociacion[] = (data || []).map((u: UsuarioRow) => {
+      type UsuarioRow = { id: string; correo?: string; nombre?: string; apellido_paterno?: string; apellido_materno?: string; fecha_nacimiento?: string; numero_celular?: string; ci?: string; ci_extension?: string; genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir'; club_id?: string | null; activo?: boolean; created_at: string; updated_at: string; updated_by?: string | null; asociacion?: { cargo?: string, fecha_ingreso?: string }[] | { cargo?: string, fecha_ingreso?: string } }
+      let miembros: MiembroAsociacion[] = (data || []).map((u: UsuarioRow) => {
         const asoc = Array.isArray(u.asociacion) ? u.asociacion[0] : u.asociacion
         const cargo = asoc?.cargo
         const fechaIngreso = asoc?.fecha_ingreso
+
         return {
           id: u.id,
           email: u.correo || '',
@@ -50,10 +51,22 @@ export const asociacionService = {
           activo: u.activo ?? true,
           created_at: u.created_at,
           updated_at: u.updated_at,
-          cargo: cargo ?? null,
-          fecha_ingreso: fechaIngreso ?? null,
+          updated_by: u.updated_by || null,
+          modificado_por_nombre: undefined,
+          fecha_ingreso: fechaIngreso || null,
+          cargo: cargo || null,
         }
       })
+
+      // Obtener nombres de los editores
+      const editorIds = Array.from(new Set(miembros.map(m => m.updated_by).filter(Boolean))) as string[]
+      if (editorIds.length > 0) {
+        const editorMap = await getUsersNamesByIds(editorIds)
+        miembros = miembros.map(m => ({
+          ...m,
+          modificado_por_nombre: m.updated_by ? (editorMap[m.updated_by] || 'Sistema') : undefined
+        }))
+      }
 
       return { success: true, data: miembros }
     } catch (error) {
@@ -70,7 +83,12 @@ export const asociacionService = {
       const client = createClient()
       const { data, error } = await client
         .from('usuarios')
-        .select('id, correo, nombre, apellido_paterno, apellido_materno, rol, avatar_url, fecha_nacimiento, numero_celular, ci, ci_extension, genero, activo, debe_cambiar_password, created_at, updated_at, asociacion(cargo, fecha_ingreso)')
+        .select(`
+          id, correo, nombre, apellido_paterno, apellido_materno, rol, avatar_url, 
+          fecha_nacimiento, numero_celular, ci, ci_extension, genero, activo, 
+          debe_cambiar_password, created_at, updated_at, updated_by,
+          asociacion(cargo, fecha_ingreso)
+        `)
         .eq('id', id)
         .eq('rol', 'asociacion')
         .single()
@@ -80,6 +98,7 @@ export const asociacionService = {
       const asoc = Array.isArray(data.asociacion) ? data.asociacion[0] : data.asociacion
       const cargo = asoc?.cargo
       const fechaIngreso = asoc?.fecha_ingreso
+
       const miembro: MiembroAsociacion = {
         id: data.id,
         email: data.correo || '',
@@ -97,8 +116,15 @@ export const asociacionService = {
         activo: data.activo ?? true,
         created_at: data.created_at,
         updated_at: data.updated_at,
+        updated_by: data.updated_by || null,
+        modificado_por_nombre: undefined,
         cargo: cargo ?? null,
         fecha_ingreso: fechaIngreso ?? null,
+      }
+
+      if (miembro.updated_by) {
+        const editorMap = await getUsersNamesByIds([miembro.updated_by])
+        miembro.modificado_por_nombre = editorMap[miembro.updated_by] || 'Sistema'
       }
 
       return { success: true, data: miembro }
@@ -161,7 +187,22 @@ export const asociacionService = {
   async update(id: string, miembro: MiembroAsociacionUpdate): Promise<ApiResponse<MiembroAsociacion>> {
     try {
       const client = createClient()
-      const updateData: { nombre?: string; apellido_paterno?: string; apellido_materno?: string; correo?: string; activo?: boolean; fecha_nacimiento?: string | null; numero_celular?: string | null; ci?: string | null; ci_extension?: string | null; genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null } = {}
+      const updateData: { 
+        nombre?: string; 
+        apellido_paterno?: string; 
+        apellido_materno?: string; 
+        correo?: string; 
+        activo?: boolean; 
+        fecha_nacimiento?: string | null; 
+        numero_celular?: string | null; 
+        ci?: string | null; 
+        ci_extension?: string | null; 
+        genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null;
+        updated_at?: string;
+        updated_by?: string | null;
+      } = {
+        updated_at: new Date().toISOString()
+      }
       if (miembro.nombres !== undefined) updateData.nombre = miembro.nombres
       if (miembro.apellido_paterno !== undefined) updateData.apellido_paterno = miembro.apellido_paterno
       if (miembro.apellido_materno !== undefined) updateData.apellido_materno = miembro.apellido_materno
@@ -172,6 +213,7 @@ export const asociacionService = {
       if (miembro.ci !== undefined) updateData.ci = miembro.ci
       if (miembro.ci_extension !== undefined) updateData.ci_extension = miembro.ci_extension
       if (miembro.genero !== undefined) updateData.genero = miembro.genero
+      if (miembro.updated_by !== undefined) updateData.updated_by = miembro.updated_by
 
       if (Object.keys(updateData).length > 0) {
         const { error } = await client

@@ -1,4 +1,5 @@
 import { ApiResponse } from '@/types/globales'
+import { createClient } from '@/lib/supabase/client'
 
 /**
  * Crear usuario usando Admin API (auto-confirmado)
@@ -46,24 +47,11 @@ async function createUserWithAdminAPI(
     const result = await response.json()
 
     if (!result.success) {
-      // Traducir errores comunes de Supabase Auth
-      let errorMessage = result.error || 'Error al crear usuario'
-      
-      if (errorMessage.includes('A user with this email address has already been registered')) {
-        errorMessage = 'Ya existe un usuario registrado con este correo electrónico'
-      } else if (errorMessage.includes('User already exists')) {
-        errorMessage = 'El usuario ya existe'
-      } else if (errorMessage.includes('Password should be at least 6 characters')) {
-        errorMessage = 'La contraseña debe tener al menos 6 caracteres'
-      } else if (errorMessage.includes('usuarios_ci_ci_extension_key') || errorMessage.includes('Carnet de Identidad')) {
-        errorMessage = errorMessage.includes('Carnet de Identidad') ? errorMessage : 'Ya existe un usuario registrado con este Carnet de Identidad y extensión'
-      }
-
       // Si hay detalles del error en el JSON, los mostramos
-      const detailedError = result.details ? `${errorMessage} (${result.details})` : errorMessage
+      const detailedError = result.details ? `${result.error} (${result.details})` : result.error
       return {
         success: false,
-        error: detailedError,
+        error: detailedError || 'Error al crear usuario',
       }
     }
 
@@ -93,7 +81,7 @@ export const userService = {
     apellido_paterno: string,
     apellido_materno: string,
     email: string,
-    password?: string,
+    password: string,
     fecha_nacimiento?: string | null,
     numero_celular?: string | null,
     genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null,
@@ -101,22 +89,11 @@ export const userService = {
     ci_extension?: string | null
   ): Promise<ApiResponse<{ userId: string; usuarioId?: string }>> {
     try {
-      // Validar email
-      if (!email) {
+      // Validar email y password
+      if (!email || !password) {
         return {
           success: false,
-          error: 'El email es requerido'
-        }
-      }
-
-      // Generar contraseña si no se proporciona
-      let finalPassword = password
-      if (!finalPassword && ci) {
-        finalPassword = `Judo.${ci}${ci_extension ? `-${ci_extension}` : ''}`
-      } else if (!finalPassword) {
-        return {
-          success: false,
-          error: 'La contraseña es requerida si no hay CI para generarla'
+          error: 'Email y contraseña son requeridos'
         }
       }
 
@@ -130,16 +107,16 @@ export const userService = {
       }
 
       // Validar longitud de contraseña
-      if (finalPassword.length < 6) {
+      if (password.length < 8) {
         return {
           success: false,
-          error: 'La contraseña debe tener al menos 6 caracteres'
+          error: 'La contraseña debe tener al menos 8 caracteres'
         }
       }
 
       // Crear en auth.users; el trigger crea la fila en tabla usuarios (nombre, apellidos, correo, fecha_nacimiento, rol).
       // usuarioId es el id de la fila en usuarios; se usa en arbitros.usuario_id (FK a usuarios.id).
-      const result = await createUserWithAdminAPI(email, finalPassword, nombres, apellido_paterno, apellido_materno, 'arbitro', fecha_nacimiento, numero_celular, genero, ci, ci_extension)
+      const result = await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'arbitro', fecha_nacimiento, numero_celular, genero, ci, ci_extension)
       if (!result.success) return result
       const usuarioId = result.data?.usuarioId ?? result.data?.userId
       return { success: true, data: { userId: result.data!.userId, usuarioId: usuarioId as string } }
@@ -158,7 +135,7 @@ export const userService = {
     apellido_paterno: string,
     apellido_materno: string,
     email: string,
-    password?: string,
+    password: string,
     fecha_nacimiento?: string | null,
     numero_celular?: string | null,
     genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null,
@@ -166,29 +143,17 @@ export const userService = {
     ci_extension?: string | null
   ): Promise<ApiResponse<{ userId: string; usuarioId?: string }>> {
     try {
-      if (!email) {
-        return { success: false, error: 'El email es requerido' }
+      if (!email || !password) {
+        return { success: false, error: 'Email y contraseña son requeridos' }
       }
-
-      // Generar contraseña si no se proporciona
-      let finalPassword = password
-      if (!finalPassword && ci) {
-        finalPassword = `Judo.${ci}${ci_extension ? `-${ci_extension}` : ''}`
-      } else if (!finalPassword) {
-        return {
-          success: false,
-          error: 'La contraseña es requerida si no hay CI para generarla'
-        }
-      }
-
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(email)) {
         return { success: false, error: 'El formato del email no es válido' }
       }
-      if (finalPassword.length < 6) {
-        return { success: false, error: 'La contraseña debe tener al menos 6 caracteres' }
+      if (password.length < 8) {
+        return { success: false, error: 'La contraseña debe tener al menos 8 caracteres' }
       }
-      const result = await createUserWithAdminAPI(email, finalPassword, nombres, apellido_paterno, apellido_materno, 'sensei', fecha_nacimiento, numero_celular, genero, ci, ci_extension)
+      const result = await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'sensei', fecha_nacimiento, numero_celular, genero, ci, ci_extension)
       if (!result.success) return result
       const usuarioId = result.data?.usuarioId ?? result.data?.userId
       return { success: true, data: { userId: result.data!.userId, usuarioId: usuarioId as string } }
@@ -207,7 +172,7 @@ export const userService = {
     apellido_paterno: string,
     apellido_materno: string,
     email: string,
-    password?: string,
+    password: string,
     clubId?: string,
     fecha_nacimiento?: string | null,
     numero_celular?: string | null,
@@ -216,33 +181,21 @@ export const userService = {
     ci_extension?: string | null
   ): Promise<ApiResponse<{ userId: string; usuarioId?: string }>> {
     try {
-      if (!email) {
-        return { success: false, error: 'El email es requerido' }
+      if (!email || !password) {
+        return { success: false, error: 'Email y contraseña son requeridos' }
       }
-
-      // Generar contraseña si no se proporciona
-      let finalPassword = password
-      if (!finalPassword && ci) {
-        finalPassword = `Judo.${ci}${ci_extension ? `-${ci_extension}` : ''}`
-      } else if (!finalPassword) {
-        return {
-          success: false,
-          error: 'La contraseña es requerida si no hay CI para generarla'
-        }
-      }
-
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(email)) {
         return { success: false, error: 'El formato del email no es válido' }
       }
-      if (finalPassword.length < 6) {
+      if (password.length < 8) {
         return {
           success: false,
-          error: 'La contraseña debe tener al menos 6 caracteres'
+          error: 'La contraseña debe tener al menos 8 caracteres'
         }
       }
 
-      const result = await createUserWithAdminAPI(email, finalPassword, nombres, apellido_paterno, apellido_materno, 'encargado', fecha_nacimiento, numero_celular, genero, ci, ci_extension)
+      const result = await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'encargado', fecha_nacimiento, numero_celular, genero, ci, ci_extension)
       if (!result.success) return result
       const usuarioId = result.data?.usuarioId ?? result.data?.userId
       return { success: true, data: { userId: result.data!.userId, usuarioId: usuarioId as string } }
@@ -278,14 +231,9 @@ export const userService = {
         const timestamp = Date.now()
         finalEmail = `${nombreLimpio}.${apellidoLimpio}.${timestamp}@judoka.local`
       }
-      
-      // Generar contraseña si no se proporciona
-      if (!finalPassword && ci) {
-        finalPassword = `Judo.${ci}${ci_extension ? `-${ci_extension}` : ''}`
-      } else if (!finalPassword) {
+      if (!finalPassword) {
         finalPassword = `Judoka${Date.now()}!`
       }
-
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(finalEmail)) {
         return { success: false, error: 'El formato del email no es válido' }
@@ -309,7 +257,7 @@ export const userService = {
     apellido_paterno: string,
     apellido_materno: string,
     email: string,
-    password?: string,
+    password: string,
     fecha_nacimiento?: string | null,
     numero_celular?: string | null,
     genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null,
@@ -317,29 +265,17 @@ export const userService = {
     ci_extension?: string | null
   ): Promise<ApiResponse<{ userId: string; usuarioId?: string }>> {
     try {
-      if (!email) {
-        return { success: false, error: 'El email es requerido' }
+      if (!email || !password) {
+        return { success: false, error: 'Email y contraseña son requeridos' }
       }
-
-      // Generar contraseña si no se proporciona
-      let finalPassword = password
-      if (!finalPassword && ci) {
-        finalPassword = `Judo.${ci}${ci_extension ? `-${ci_extension}` : ''}`
-      } else if (!finalPassword) {
-        return {
-          success: false,
-          error: 'La contraseña es requerida si no hay CI para generarla'
-        }
-      }
-
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(email)) {
         return { success: false, error: 'El formato del email no es válido' }
       }
-      if (finalPassword.length < 6) {
-        return { success: false, error: 'La contraseña debe tener al menos 6 caracteres' }
+      if (password.length < 8) {
+        return { success: false, error: 'La contraseña debe tener al menos 8 caracteres' }
       }
-      const result = await createUserWithAdminAPI(email, finalPassword, nombres, apellido_paterno, apellido_materno, 'asociacion', fecha_nacimiento, numero_celular, genero, ci, ci_extension)
+      const result = await createUserWithAdminAPI(email, password, nombres, apellido_paterno, apellido_materno, 'asociacion', fecha_nacimiento, numero_celular, genero, ci, ci_extension)
       if (!result.success) return result
       const usuarioId = result.data?.usuarioId ?? result.data?.userId
       return { success: true, data: { userId: result.data!.userId, usuarioId: usuarioId as string } }
@@ -349,6 +285,31 @@ export const userService = {
       return { success: false, error: errorMessage }
     }
   }
+}
+
+/**
+ * Obtiene un mapa de IDs de usuario a nombres completos
+ */
+export async function getUsersNamesByIds(ids: string[]): Promise<Record<string, string>> {
+  if (!ids.length) return {}
+  
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select('id, nombre, apellido_paterno, apellido_materno')
+    .in('id', ids)
+
+  if (error || !data) return {}
+
+  const nameMap: Record<string, string> = {}
+  data.forEach((u: any) => {
+    const fullName = [u.nombre, u.apellido_paterno, u.apellido_materno]
+      .filter(Boolean)
+      .join(' ')
+    nameMap[u.id] = fullName
+  })
+  
+  return nameMap
 }
 
 

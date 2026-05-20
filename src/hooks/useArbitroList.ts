@@ -2,8 +2,10 @@ import { useCallback, useState, useEffect, useMemo } from 'react'
 import { Arbitro } from '@/models/arbitro'
 import { arbitroController } from '@/controllers/arbitroController'
 import { useEntityList } from './useEntityList'
+import { useAuth } from './useAuth'
 
 export function useArbitroList(initialSearch: string = '', refreshTrigger: number = 0) {
+  const { user } = useAuth()
   const [initialOrder, setInitialOrder] = useState<string[] | null>(null)
 
   const filterFn = useCallback((a: Arbitro, filters: Record<string, string>, search: string) => {
@@ -23,8 +25,12 @@ export function useArbitroList(initialSearch: string = '', refreshTrigger: numbe
     queryKey: ['arbitros', refreshTrigger.toString()],
     fetchItems: async () => await arbitroController.getAllArbitros(true),
     updateItemStatus: async (id, activo) => {
-      const resp = await arbitroController.updateArbitro(id, { activo })
-      return { success: resp.success, error: resp.error }
+      const resp = await arbitroController.updateArbitro(id, { 
+        activo,
+        updated_by: user?.id 
+      } as any)
+      // Aseguramos que devolvemos el objeto arbitro completo con el nombre del editor resuelto
+      return { success: resp.success, error: resp.error, data: resp.data }
     },
     filterFn,
     initialFilters: { nivel: 'all', estado: 'all' },
@@ -50,10 +56,13 @@ export function useArbitroList(initialSearch: string = '', refreshTrigger: numbe
     }
   }, [entityList.items, initialOrder]);
 
-  // Si se presiona el botón de refrescar, resetear el orden para que se aplique el nuevo
+  // Remover la dependencia de refreshTrigger para evitar que se resetee el orden mágicamente
+  // a menos que los datos desaparezcan por completo
   useEffect(() => {
-    setInitialOrder(null);
-  }, [refreshTrigger]);
+    if (entityList.items.length === 0) {
+      setInitialOrder(null);
+    }
+  }, [entityList.items.length]);
 
   // Obtener data con orden diferido (basado en el orden capturado al cargar)
   const filteredData = useMemo(() => {

@@ -18,6 +18,7 @@ import { formatCIInput, formatCIExtensionInput, formatNameInput, formatCelularIn
 import { FormInput, FormAutocomplete, FormDatePicker } from '@/components/ui'
 import { CARGOS_ASOCIACION, GENDERS_LIST } from '@/constants/globales'
 import dayjs from 'dayjs'
+import { useAuth } from '@/hooks/useAuth'
 
 type MiembroAsociacionFormData = z.infer<typeof miembroAsociacionSchema>
 
@@ -28,6 +29,7 @@ interface Props {
 }
 
 export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: Props) {
+  const { user } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -69,9 +71,13 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
     setError(null)
 
     try {
+      const payload = {
+        ...data,
+        updated_by: user?.id
+      }
       const response = await (miembro
-        ? asociacionController.updateMiembro(miembro.id, data as unknown as MiembroAsociacionUpdate)
-        : asociacionController.createMiembro(data as unknown as MiembroAsociacionCreate))
+        ? asociacionController.updateMiembro(miembro.id, payload as unknown as MiembroAsociacionUpdate)
+        : asociacionController.createMiembro(payload as unknown as MiembroAsociacionCreate))
 
       if (response.success) {
         onSuccess()

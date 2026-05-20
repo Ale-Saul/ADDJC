@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -8,7 +9,8 @@ import { FormInput } from '@/components/ui/FormInput'
 import { FormDatePicker } from '@/components/ui/FormDatePicker'
 import { createSesionSchema } from '@/schemas/asistenciaSchema'
 import { AsistenciaSesionCreate } from '@/models/asistencia'
-import { formatHoraInput, formatTextoInput } from '@/utils/formatters'
+import { clubController } from '@/controllers/clubController'
+import { formatHoraInput, formatHoraDbToInput, formatTextoInput } from '@/utils/formatters'
 import dayjs from 'dayjs'
 
 type FormValues = z.infer<typeof createSesionSchema>
@@ -26,6 +28,7 @@ export default function NuevaSesionForm({ clubId, senseiId, createdBy, onSuccess
     control,
     handleSubmit,
     setError,
+    reset,
     formState: { errors, isSubmitting }
   } = useForm<FormValues>({
     resolver: zodResolver(createSesionSchema),
@@ -39,6 +42,33 @@ export default function NuevaSesionForm({ clubId, senseiId, createdBy, onSuccess
       notas: null,
     }
   })
+
+  useEffect(() => {
+    if (!clubId) return
+
+    let cancelled = false
+
+    const precargarHorarioClub = async () => {
+      const res = await clubController.getClubById(clubId)
+      if (cancelled || !res.success || !res.data) return
+
+      const horaInicio = formatHoraDbToInput(res.data.horario_inicio)
+      const horaFin = formatHoraDbToInput(res.data.horario_fin)
+      if (!horaInicio && !horaFin) return
+
+      reset((current) => ({
+        ...current,
+        hora_inicio: horaInicio ?? current.hora_inicio,
+        hora_fin: horaFin ?? current.hora_fin,
+      }))
+    }
+
+    void precargarHorarioClub()
+
+    return () => {
+      cancelled = true
+    }
+  }, [clubId, reset])
 
   const onSubmit = async (values: FormValues) => {
     // Normalizar espacios y recortar bordes en campos de texto libre

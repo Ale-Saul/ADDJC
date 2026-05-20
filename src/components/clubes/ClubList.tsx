@@ -17,12 +17,22 @@ import DescriptionIcon from '@mui/icons-material/Description'
 import PeopleIcon from '@mui/icons-material/People'
 import { Club } from '@/models/club'
 import { clubController } from '@/controllers/clubController'
+import { formatHoraDbToInput } from '@/utils/formatters'
 import { useClubList } from '@/hooks/useClubList'
 import ConfirmDialog from '@/components/common/ConfirmDialog'
 import Pagination from '@/components/common/Pagination'
 import { DataTable, Column, FilterSelect, SearchBar } from '@/components/ui'
 import { useAuth } from '@/contexts/AuthContext'
 import { ROL } from '@/constants/roles'
+
+function formatHorarioContacto(club: Club): string | null {
+  const inicio = formatHoraDbToInput(club.horario_inicio)
+  const fin = formatHoraDbToInput(club.horario_fin)
+  if (inicio && fin) return `${inicio}-${fin}`
+  if (inicio) return inicio
+  if (fin) return fin
+  return null
+}
 
 interface ClubListProps {
   onEdit?: (club: Club) => void
@@ -95,12 +105,22 @@ export default function ClubList({ onEdit, onDelete, onViewJudokas, onViewMiembr
     },
     {
       id: 'contacto',
-      label: 'Teléfono',
-      render: (club: Club) => (
-        <Typography variant="body2">
-          {club.telefono_contacto || 'Sin teléfono'}
-        </Typography>
-      )
+      label: 'Contacto',
+      render: (club: Club) => {
+        const horario = formatHorarioContacto(club)
+        return (
+          <Box>
+            <Typography variant="body2" fontWeight="medium">
+              {club.telefono_contacto || 'Sin teléfono'}
+            </Typography>
+            {horario && (
+              <Typography variant="caption" color="text.secondary" display="block">
+                {horario}
+              </Typography>
+            )}
+          </Box>
+        )
+      },
     },
     {
       id: 'estado',

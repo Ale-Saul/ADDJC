@@ -2,8 +2,10 @@ import { useCallback, useState, useMemo, useEffect } from 'react'
 import { MiembroAsociacion } from '@/models/asociacion'
 import { asociacionController } from '@/controllers/asociacionController'
 import { useEntityList } from './useEntityList'
+import { useAuth } from './useAuth'
 
 export function useMiembroAsociacionList(initialSearch: string = '', refreshTrigger: number = 0) {
+  const { user } = useAuth()
   const [initialOrder, setInitialOrder] = useState<string[] | null>(null)
 
   const filterFn = useCallback((m: MiembroAsociacion, filters: Record<string, string>, search: string) => {
@@ -24,8 +26,12 @@ export function useMiembroAsociacionList(initialSearch: string = '', refreshTrig
     queryKey: ['miembros-asociacion', refreshTrigger.toString()],
     fetchItems: async () => await asociacionController.getAllMiembros(true),
     updateItemStatus: async (id, activo) => {
-      const resp = await asociacionController.updateMiembro(id, { activo } as any)
-      return { success: resp.success, error: resp.error }
+      const resp = await asociacionController.updateMiembro(id, { 
+        activo,
+        updated_by: user?.id 
+      } as any)
+      // Asegurar que devolvemos el objeto completo con el nombre del editor resuelto
+      return { success: resp.success, error: resp.error, data: resp.data }
     },
     filterFn,
     initialFilters: { cargo: 'all', estado: 'all' },

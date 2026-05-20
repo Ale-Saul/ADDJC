@@ -19,6 +19,8 @@ export interface Arbitro {
   avatar_url?: string | null
   activo: boolean
   total_certificaciones?: number
+  updated_by?: string | null
+  modificado_por_nombre?: string
   created_at: string
   updated_at: string
 }
@@ -39,6 +41,7 @@ export interface ArbitroCreate {
   certificacion_id?: string | null
   avatar_url?: string | null
   activo?: boolean
+  updated_by?: string | null
 }
 
 export interface ArbitroUpdate {
@@ -55,5 +58,6 @@ export interface ArbitroUpdate {
   certificacion_id?: string | null
   avatar_url?: string | null
   activo?: boolean
+  updated_by?: string | null
 }
 
