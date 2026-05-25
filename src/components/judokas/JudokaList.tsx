@@ -366,7 +366,7 @@ export default function JudokaList({
       }
     ]
 
-    if (!readOnly || isEncargado) {
+    if (isAdminOrAsoc || isEncargado) {
       cols.push({
         id: 'activo',
         label: 'Estado',
@@ -410,7 +410,9 @@ export default function JudokaList({
           );
         }
       })
+    }
 
+    if (!readOnly || isEncargado) {
       cols.push({
         id: 'acciones',
         label: 'Acciones',

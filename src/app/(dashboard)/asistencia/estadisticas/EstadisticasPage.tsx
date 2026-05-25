@@ -171,7 +171,14 @@ export default function EstadisticasPage() {
     } else if (vistaDesglose === 'judoka' && judokasClubQuery.data && judokasClubQuery.data.length > 0) {
         doc.text('Desglose por Judoka:', 14, yPos)
         yPos += 5
-        const body = judokasClubQuery.data.map(j => [
+        
+        const sortedJudokas = [...judokasClubQuery.data].sort((a, b) => {
+            const nombreA = `${a.apellido_judoka || ''} ${a.nombre_judoka || ''}`.trim().toLowerCase()
+            const nombreB = `${b.apellido_judoka || ''} ${b.nombre_judoka || ''}`.trim().toLowerCase()
+            return nombreA.localeCompare(nombreB, 'es', { sensitivity: 'base' })
+        })
+
+        const body = sortedJudokas.map(j => [
             `${j.apellido_judoka} ${j.nombre_judoka}`,
             j.presentes.toString(),
             j.ausentes.toString(),
@@ -504,30 +511,38 @@ export default function EstadisticasPage() {
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {(judokasClubQuery.data ?? []).map(j => {
-                            const pct = Math.round(j.porcentaje)
-                            return (
-                              <TableRow key={j.judoka_id} sx={{ '&:last-child td': { border: 0 }, '&:hover': { bgcolor: 'action.hover' } }}>
-                                <TableCell>
-                                  <Typography variant="body2" fontWeight="500">
-                                    {j.apellido_judoka} {j.nombre_judoka}
-                                  </Typography>
-                                </TableCell>
-                                <TableCell align="center">
-                                  <Chip label={j.presentes} size="small" color="success" variant="outlined" />
-                                </TableCell>
-                                <TableCell align="center">
-                                  <Chip label={j.ausentes} size="small" color={j.ausentes === 0 ? 'default' : 'error'} variant="outlined" />
-                                </TableCell>
-                                <TableCell>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 140 }}>
-                                    <LinearProgress variant="determinate" value={pct} color={getColorByPct(pct) as 'success' | 'warning' | 'error' | 'primary'} sx={{ flex: 1, height: 8, borderRadius: 4 }} />
-                                    <Chip label={`${pct}%`} color={getColorByPct(pct) as 'success' | 'warning' | 'error' | 'primary'} size="small" variant="outlined" sx={{ minWidth: 54 }} />
-                                  </Box>
-                                </TableCell>
-                              </TableRow>
-                            )
-                          })}
+                          {(() => {
+                            const sortedJudokas = [...(judokasClubQuery.data ?? [])].sort((a, b) => {
+                              const nombreA = `${a.apellido_judoka || ''} ${a.nombre_judoka || ''}`.trim().toLowerCase()
+                              const nombreB = `${b.apellido_judoka || ''} ${b.nombre_judoka || ''}`.trim().toLowerCase()
+                              return nombreA.localeCompare(nombreB, 'es', { sensitivity: 'base' })
+                            })
+                            
+                            return sortedJudokas.map(j => {
+                              const pct = Math.round(j.porcentaje)
+                              return (
+                                <TableRow key={j.judoka_id} sx={{ '&:last-child td': { border: 0 }, '&:hover': { bgcolor: 'action.hover' } }}>
+                                  <TableCell>
+                                    <Typography variant="body2" fontWeight="500">
+                                      {j.apellido_judoka} {j.nombre_judoka}
+                                    </Typography>
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Chip label={j.presentes} size="small" color="success" variant="outlined" />
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Chip label={j.ausentes} size="small" color={j.ausentes === 0 ? 'default' : 'error'} variant="outlined" />
+                                  </TableCell>
+                                  <TableCell>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 140 }}>
+                                      <LinearProgress variant="determinate" value={pct} color={getColorByPct(pct) as 'success' | 'warning' | 'error' | 'primary'} sx={{ flex: 1, height: 8, borderRadius: 4 }} />
+                                      <Chip label={`${pct}%`} color={getColorByPct(pct) as 'success' | 'warning' | 'error' | 'primary'} size="small" variant="outlined" sx={{ minWidth: 54 }} />
+                                    </Box>
+                                  </TableCell>
+                                </TableRow>
+                              )
+                            })
+                          })()}
                         </TableBody>
                       </Table>
                     </TableContainer>

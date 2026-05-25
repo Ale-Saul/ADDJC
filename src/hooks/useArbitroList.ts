@@ -34,7 +34,8 @@ export function useArbitroList(initialSearch: string = '', refreshTrigger: numbe
     },
     filterFn,
     initialFilters: { nivel: 'all', estado: 'all' },
-    initialSearch
+    initialSearch,
+    enabled: !!user
   })
 
   // Estabilizar el orden inicial para evitar saltos al cambiar el estado

@@ -122,8 +122,8 @@ export default function SenseiList({
     {
       id: 'index',
       label: 'N°',
-      align: 'center',
-      render: (_, index) => (
+      align: 'center' as const,
+      render: (_: any, index?: number) => (
         <Typography variant="body2" color="text.secondary">
           {(page - 1) * itemsPerPage + (index ?? 0) + 1}
         </Typography>
@@ -202,7 +202,7 @@ export default function SenseiList({
     {
       id: 'estado',
       label: 'Estado',
-      align: 'center',
+      align: 'center' as const,
       render: (s: Sensei) => (
         <Tooltip title={isAdminOrAsoc ? (s.activo ? 'Desactivar' : 'Activar') : (s.activo ? 'Activo' : 'Inactivo')}>
           <span>
@@ -243,7 +243,7 @@ export default function SenseiList({
     {
       id: 'certificaciones',
       label: 'Certificaciones',
-      align: 'center',
+      align: 'center' as const,
       render: (s: Sensei) => (
         <Chip 
           label={s.total_certificaciones || 0} 
@@ -252,13 +252,21 @@ export default function SenseiList({
         />
       )
     }
-  ]
+  ].filter(col => {
+    if (col.id === 'estado') {
+      return isAdminOrAsoc
+    }
+    return true
+  })
+
+  // Agregamos la columna de acciones dinámicamente
+  const columnsWithActions = [...columns]
 
   if (!readOnly || isEncargado || isJudoka) {
-    columns.push({
+    columnsWithActions.push({
       id: 'acciones',
       label: 'Acciones',
-      align: 'right',
+      align: 'right' as const,
       render: (s: Sensei) => (
         <Stack direction="row" spacing={1} justifyContent="flex-end">
           {onCertificacion && (
@@ -293,10 +301,10 @@ export default function SenseiList({
       )
     })
   } else {
-    columns.push({
+    columnsWithActions.push({
       id: 'acciones',
       label: 'Acciones',
-      align: 'right',
+      align: 'right' as const,
       render: (s: Sensei) => (
         <Stack direction="row" spacing={1} justifyContent="flex-end">
           {onCertificacion && (
@@ -377,9 +385,10 @@ export default function SenseiList({
 
           <DataTable
             data={paginatedData}
-            columns={columns}
+            columns={columnsWithActions}
             isLoading={loading}
             keyExtractor={(s) => s.id}
+            emptyMessage="No se encontraron senseis"
           />
         </>
       )}

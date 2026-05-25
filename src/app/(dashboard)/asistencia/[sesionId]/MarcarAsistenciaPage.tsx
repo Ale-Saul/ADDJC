@@ -61,17 +61,27 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
     autoFetch: autoFetchJudokas,
   })
 
-  // Filtrar judokas inscritos antes o en la fecha de la sesión.
-  // Usamos la fecha LOCAL del judoka (no UTC) para evitar el desfase de zona horaria.
+  // Filtrar y ordenar judokas
   const sesionFecha = sesionQuery.data?.fecha
   const judokasElegibles = useMemo(() => {
-    if (!sesionFecha) return judokasQuery.judokas
-    return judokasQuery.judokas.filter(j => {
-      if (!j.created_at) return true
-      // Convertir created_at (UTC) a fecha local YYYY-MM-DD
-      const d = new Date(j.created_at)
-      const inscripcionLocal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      return inscripcionLocal <= sesionFecha
+    let filtered = judokasQuery.judokas
+    if (sesionFecha) {
+      filtered = judokasQuery.judokas.filter(j => {
+        if (!j.created_at) return true
+        const d = new Date(j.created_at)
+        const inscripcionLocal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        return inscripcionLocal <= sesionFecha
+      })
+    }
+
+    // Ordenar por apellidos (alfabético)
+    return [...filtered].sort((a, b) => {
+      const apellidoA = (a.apellidos || '').trim().toLowerCase()
+      const apellidoB = (b.apellidos || '').trim().toLowerCase()
+      if (apellidoA !== apellidoB) {
+        return apellidoA.localeCompare(apellidoB, 'es', { sensitivity: 'base' })
+      }
+      return (a.nombres || '').localeCompare(b.nombres || '', 'es', { sensitivity: 'base' })
     })
   }, [judokasQuery.judokas, sesionFecha])
 

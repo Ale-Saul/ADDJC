@@ -41,8 +41,17 @@ export function useJudokas(options: UseJudokasOptions = {}) {
     }
 
     if (response.success && response.data) {
-      setJudokas(response.data)
-      setFilteredJudokas(response.data)
+      // Ordenar alfabéticamente por apellido al cargar
+      const sorted = [...response.data].sort((a, b) => {
+        const apellidoA = (a.apellidos || '').trim().toLowerCase()
+        const apellidoB = (b.apellidos || '').trim().toLowerCase()
+        if (apellidoA !== apellidoB) {
+          return apellidoA.localeCompare(apellidoB, 'es', { sensitivity: 'base' })
+        }
+        return (a.nombres || '').localeCompare(b.nombres || '', 'es', { sensitivity: 'base' })
+      })
+      setJudokas(sorted)
+      setFilteredJudokas(sorted)
     } else {
       setError(response.error || 'Error al cargar judokas')
     }

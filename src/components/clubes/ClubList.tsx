@@ -63,8 +63,8 @@ export default function ClubList({ onEdit, onDelete, onViewJudokas, onViewMiembr
     {
       id: 'index',
       label: 'N°',
-      align: 'center',
-      render: (_, index) => (
+      align: 'center' as const,
+      render: (_: any, index?: number) => (
         <Typography variant="body2" color="text.secondary">
           {(page - 1) * itemsPerPage + (index ?? 0) + 1}
         </Typography>
@@ -125,7 +125,7 @@ export default function ClubList({ onEdit, onDelete, onViewJudokas, onViewMiembr
     {
       id: 'estado',
       label: 'Estado',
-      align: 'center',
+      align: 'center' as const,
       render: (club: Club) => (
         <Tooltip title={isAdminOrAsoc ? (club.activo ? 'Desactivar' : 'Activar') : (club.activo ? 'Activo' : 'Inactivo')}>
           <span>
@@ -163,7 +163,13 @@ export default function ClubList({ onEdit, onDelete, onViewJudokas, onViewMiembr
         </Tooltip>
       )
     }
-  ]
+  ].filter(col => {
+    // Solo mostrar la columna de estado para Admin o Asociación
+    if (col.id === 'estado') {
+      return isAdminOrAsoc
+    }
+    return true
+  })
 
   if (!readOnly || isEncargado) {
     columns.push({

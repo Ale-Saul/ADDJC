@@ -72,7 +72,7 @@ export default function ArbitroList({
             {a.nombres} {a.apellidos}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            CI: {a.ci || 'N/A'}
+            CI: {a.ci}{a.ci_extension ? `-${a.ci_extension}` : ''} {!a.ci && 'N/A'}
           </Typography>
         </Box>
       ),
@@ -216,7 +216,12 @@ export default function ArbitroList({
         </Stack>
       ),
     },
-  ] as Column<Arbitro>[]
+  ].filter((col) => {
+    if (col.id === 'estado') {
+      return isManagement
+    }
+    return true
+  }) as Column<Arbitro>[]
 
   const paginatedData = filteredData.slice(
     (page - 1) * itemsPerPage,

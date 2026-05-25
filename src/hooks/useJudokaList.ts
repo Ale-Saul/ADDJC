@@ -89,7 +89,8 @@ export function useJudokaList(options: {
     },
     filterFn,
     initialFilters: { categoria: 'all', cinturon: 'all', estado: 'all' },
-    initialSearch: options.initialSearch || ''
+    initialSearch: options.initialSearch || '',
+    enabled: !!user || !!options.judokasProp
   })
 
   // Estabilizar el orden inicial para evitar saltos al cambiar el estado
@@ -125,12 +126,6 @@ export function useJudokaList(options: {
       setInitialOrder(null);
     }
   }, [entityList.items.length, options.judokasProp]);
-
-  // El orden solo se reinicia si cambias de contexto (ej. cambias de club) para mantener la consistencia
-  const dependenciesKey = `${options.clubId || 'all'}-${options.entrenadorId || 'all'}`;
-  useEffect(() => {
-    setInitialOrder(null);
-  }, [dependenciesKey]);
 
   // Obtener data con orden diferido (basado en el orden capturado al cargar)
   const filteredData = useMemo(() => {

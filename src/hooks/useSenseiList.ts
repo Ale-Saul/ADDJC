@@ -3,6 +3,7 @@ import { Sensei } from '@/models/sensei'
 import { senseiController } from '@/controllers/senseiController'
 import { useEntityList } from './useEntityList'
 import { useAuth } from './useAuth'
+import { ROL } from '@/constants/roles'
 
 export function useSenseiList(initialSearch: string = '', refreshTrigger: number = 0, clubId?: string) {
   const { user } = useAuth()
@@ -23,7 +24,7 @@ export function useSenseiList(initialSearch: string = '', refreshTrigger: number
   }, [])
 
   const entityList = useEntityList<Sensei>({
-    queryKey: ['senseis', refreshTrigger.toString(), clubId || 'all'],
+    queryKey: ['senseis', refreshTrigger.toString(), clubId || 'all', user?.id || 'guest'],
     fetchItems: async () => {
       if (clubId) {
         const [clubResp, unassignedResp] = await Promise.all([
@@ -41,6 +42,16 @@ export function useSenseiList(initialSearch: string = '', refreshTrigger: number
         }
         return clubResp.success ? clubResp : unassignedResp
       }
+      
+      // Si no hay clubId pero el usuario es Sensei/Encargado/Judoka, no mostrar nada
+      if (user?.rol === ROL.SENSEI || user?.rol === ROL.ENCARGADO || user?.rol === ROL.JUDOKA) {
+        if (!clubId) {
+          console.log('Restricting access for user without clubId:', user?.rol)
+          return { success: true, data: [] }
+        }
+      }
+      
+      // Si es Admin o Asociación sin club específico, mostrar todos
       return await senseiController.getAllSenseis(true)
     },
     updateItemStatus: async (id, activo) => {
@@ -53,7 +64,8 @@ export function useSenseiList(initialSearch: string = '', refreshTrigger: number
     },
     filterFn,
     initialFilters: { gradoDan: 'all', especialidad: 'all', estado: 'all' },
-    initialSearch
+    initialSearch,
+    enabled: !!user
   })
 
   // Estabilizar el orden inicial para evitar saltos al cambiar el estado

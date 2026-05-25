@@ -137,23 +137,11 @@ export function usePagosManager(user: any) {
       filtered = filtered.filter(j => j.club_id === user?.club_id)
     }
 
+    // Ordenar alfabéticamente por nombre completo (nombres + apellidos)
     return filtered.sort((a, b) => {
-      const clubA = a.nombre_club || 'Z'
-      const clubB = b.nombre_club || 'Z'
-      const clubCompare = clubA.localeCompare(clubB)
-      if (clubCompare !== 0) return clubCompare
-
-      const senseiA = a.nombre_entrenador || 'Z'
-      const senseiB = b.nombre_entrenador || 'Z'
-      const senseiCompare = senseiA.localeCompare(senseiB)
-      if (senseiCompare !== 0) return senseiCompare
-
-      const beltA = a.cinturon_actual || 'Z'
-      const beltB = b.cinturon_actual || 'Z'
-      const beltCompare = beltA.localeCompare(beltB)
-      if (beltCompare !== 0) return beltCompare
-
-      return (a.nombres || '').localeCompare(b.nombres || '')
+      const nombreA = `${a.nombres || ''} ${a.apellidos || ''}`.trim().toLowerCase()
+      const nombreB = `${b.nombres || ''} ${b.apellidos || ''}`.trim().toLowerCase()
+      return nombreA.localeCompare(nombreB, 'es', { sensitivity: 'base' })
     })
   }, [rawJudokas, senseiFilter, categoriaFilter, clubFilter, statusFilter, isAdmin, judokasStatus, user?.club_id])
 

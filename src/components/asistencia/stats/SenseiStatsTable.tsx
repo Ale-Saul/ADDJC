@@ -37,8 +37,8 @@ function getLinearColor(pct: number): 'success' | 'warning' | 'error' {
 }
 
 export default function SenseiStatsTable({ stats }: Props) {
-  const [sortKey, setSortKey] = useState<SortKey>('porcentaje')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [sortKey, setSortKey] = useState<SortKey>('nombre')
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
 
   const handleSort = (key: SortKey) => {
     if (key === sortKey) {

@@ -33,12 +33,14 @@ export function useClubList(initialSearch: string = '', refreshTrigger: number =
     },
     filterFn,
     initialFilters: { municipio: 'all', estado: 'all' },
-    initialSearch
+    initialSearch,
+    enabled: !!user
   })
 
   // Estabilizar el orden inicial para evitar saltos al cambiar el estado
   useEffect(() => {
-    if (entityList.items.length > 0 && !initialOrder) {
+    // Si la lista ha cargado y el orden NO está establecido aún, lo fijamos.
+    if (!entityList.state.loading && entityList.items.length > 0 && initialOrder === null) {
       const sortedIds = [...entityList.items]
         .sort((a, b) => {
           // 1. Prioridad por estado (activos primero)
@@ -46,7 +48,7 @@ export function useClubList(initialSearch: string = '', refreshTrigger: number =
           const bActivo = b.activo ?? true;
           if (aActivo !== bActivo) return aActivo ? -1 : 1;
           
-          // 2. Orden alfabético por nombre del club (con localeCompare para manejar tildes/ñ)
+          // 2. Orden alfabético por nombre del club
           const nombreA = (a.nombre_club || '').trim().toLowerCase();
           const nombreB = (b.nombre_club || '').trim().toLowerCase();
           
@@ -55,7 +57,7 @@ export function useClubList(initialSearch: string = '', refreshTrigger: number =
         .map(item => item.id);
       setInitialOrder(sortedIds);
     }
-  }, [entityList.items, initialOrder]);
+  }, [entityList.items, initialOrder, entityList.state.loading]);
 
   // Si se presiona el botón de refrescar, resetear el orden para que se aplique el nuevo
   useEffect(() => {
@@ -64,25 +66,34 @@ export function useClubList(initialSearch: string = '', refreshTrigger: number =
 
   // Obtener data con orden diferido (basado en el orden capturado al cargar)
   const filteredData = useMemo(() => {
-    // Si no hay orden inicial capturado, servimos la data con el orden por defecto del filtrado
+    const dataToDisplay = [...entityList.filteredData];
+
     if (!initialOrder) {
-        return [...entityList.filteredData].sort((a, b) => {
-            const aActivo = a.activo ?? true;
-            const bActivo = b.activo ?? true;
-            if (aActivo !== bActivo) return aActivo ? -1 : 1;
-            
-            const nombreA = (a.nombre_club || '').trim().toLowerCase();
-            const nombreB = (b.nombre_club || '').trim().toLowerCase();
-            return nombreA.localeCompare(nombreB, 'es', { sensitivity: 'base' });
-        });
+      // Si aún no hay orden capturado, usamos el orden por defecto
+      return dataToDisplay.sort((a, b) => {
+        const aActivo = a.activo ?? true;
+        const bActivo = b.activo ?? true;
+        if (aActivo !== bActivo) return aActivo ? -1 : 1;
+
+        const nombreA = (a.nombre_club || '').trim().toLowerCase();
+        const nombreB = (b.nombre_club || '').trim().toLowerCase();
+        return nombreA.localeCompare(nombreB, 'es', { sensitivity: 'base' });
+      });
     }
 
+    // Usar el orden capturado
     const orderMap = new Map(initialOrder.map((id, index) => [id, index]));
     
-    return [...entityList.filteredData].sort((a, b) => {
-      const indexA = orderMap.get(a.id) ?? 999;
-      const indexB = orderMap.get(b.id) ?? 999;
-      return indexA - indexB;
+    return dataToDisplay.sort((a, b) => {
+      const indexA = orderMap.has(a.id) ? orderMap.get(a.id)! : 9999;
+      const indexB = orderMap.has(b.id) ? orderMap.get(b.id)! : 9999;
+      
+      if (indexA !== indexB) return indexA - indexB;
+
+      // Desempate para items nuevos
+      const nombreA = (a.nombre_club || '').trim().toLowerCase();
+      const nombreB = (b.nombre_club || '').trim().toLowerCase();
+      return nombreA.localeCompare(nombreB, 'es', { sensitivity: 'base' });
     });
   }, [entityList.filteredData, initialOrder]);
 

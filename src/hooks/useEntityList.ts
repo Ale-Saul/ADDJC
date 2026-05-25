@@ -41,6 +41,7 @@ export interface UseEntityListOptions<T> {
   filterFn: (item: T, filters: Record<string, string>, globalSearch: string) => boolean
   initialFilters?: Record<string, string>
   initialSearch?: string
+  enabled?: boolean
 }
 
 export function useEntityList<T extends BaseEntity>({
@@ -49,7 +50,8 @@ export function useEntityList<T extends BaseEntity>({
   updateItemStatus,
   filterFn,
   initialFilters = {},
-  initialSearch = ''
+  initialSearch = '',
+  enabled = true,
 }: UseEntityListOptions<T>) {
   const queryClient = useQueryClient()
   
@@ -63,7 +65,7 @@ export function useEntityList<T extends BaseEntity>({
     showFilters: false
   })
 
-  const { data: items = [], isLoading: loading, error: queryError } = useQuery({
+  const { data: items = [], isLoading: queryLoading, error: queryError, fetchStatus } = useQuery({
     queryKey: stableQueryKey,
     queryFn: async () => {
       const response = await fetchItems()
@@ -78,7 +80,12 @@ export function useEntityList<T extends BaseEntity>({
       })
     },
     staleTime: 0, // Desactivar caché para ver cambios inmediatos en desarrollo
+    enabled,
   })
+
+  // Consideramos "cargando" si la query está en true o si aún no está habilitada 
+  // (para evitar mostrar "no hay resultados" mientras esperamos al usuario/auth)
+  const loading = queryLoading || (fetchStatus === 'idle' && !enabled)
 
   const error = queryError ? (queryError instanceof Error ? queryError.message : String(queryError)) : null
 
