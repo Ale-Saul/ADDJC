@@ -42,16 +42,24 @@ export function useReportesAsociacion() {
     fecha.setMonth(fecha.getMonth() - 1)
     return fecha.toISOString().split('T')[0]
   })
-  const [fechaFin, setFechaFin] = useState(() => new Date().toISOString().split('T')[0])
+  const [fechaFin, setFechaFin] = useState(() => {
+    const fecha = new Date()
+    fecha.setMonth(fecha.getMonth() + 1)
+    return fecha.toISOString().split('T')[0]
+  })
   const [clubSeleccionado, setClubSeleccionado] = useState<string>('todos')
   const [vistaDetalle, setVistaDetalle] = useState<'club' | 'pagos' | 'judokas'>('club')
   const [showFilters, setShowFilters] = useState(false)
 
   const clearFilters = () => {
-    const fecha = new Date()
-    fecha.setMonth(fecha.getMonth() - 1)
-    setFechaInicio(fecha.toISOString().split('T')[0])
-    setFechaFin(new Date().toISOString().split('T')[0])
+    const fechaInicioDefault = new Date()
+    fechaInicioDefault.setMonth(fechaInicioDefault.getMonth() - 1)
+    
+    const fechaFinDefault = new Date()
+    fechaFinDefault.setMonth(fechaFinDefault.getMonth() + 1)
+
+    setFechaInicio(fechaInicioDefault.toISOString().split('T')[0])
+    setFechaFin(fechaFinDefault.toISOString().split('T')[0])
     setClubSeleccionado('todos')
     setVistaDetalle('club')
   }

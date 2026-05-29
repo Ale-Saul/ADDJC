@@ -56,6 +56,16 @@ export const formatters = {
   },
 
   /**
+   * Limpia espacios extra y capitaliza solo la primera letra de la cadena.
+   */
+  capitalizeSentence(text: string): string {
+    if (!text) return ''
+    const cleaned = text.replace(/\s{2,}/g, ' ').replace(/^\s+/, '')
+    if (cleaned.length === 0) return ''
+    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
+  },
+
+  /**
    * Formatea una fecha y hora con segundos
    */
   formatDateTime(date: string | Date, includeSeconds: boolean = false): string {

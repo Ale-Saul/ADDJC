@@ -19,9 +19,6 @@ export default function PagosStats({ pagos }: PagosStatsProps) {
     const hoy = new Date()
     hoy.setHours(0, 0, 0, 0)
 
-    // Obtener el primer día del mes actual
-    const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
-
     // Calcular estado real de cada pago considerando la fecha de vencimiento
     const pagosConEstadoReal = pagos.map(pago => {
       // SOLO si el pago está pendiente chequeamos si ya venció
@@ -63,7 +60,8 @@ export default function PagosStats({ pagos }: PagosStatsProps) {
       .filter(p => {
         if (p.estado !== ESTADO_PAGO.PAGADO || !p.fecha_pago) return false
         const fechaPago = new Date(p.fecha_pago)
-        return fechaPago >= inicioMes && fechaPago <= hoy
+        return fechaPago.getFullYear() === hoy.getFullYear() && 
+               fechaPago.getMonth() === hoy.getMonth()
       })
       .reduce((sum, p) => sum + p.monto_final, 0)
 

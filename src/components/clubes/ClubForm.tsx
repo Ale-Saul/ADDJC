@@ -131,7 +131,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
             control={control}
             disabled={submitting}
             required
-            formatValue={formatters.capitalizeWords}
+            formatValue={formatters.capitalizeSentence}
           />
         </Grid>
 
@@ -153,7 +153,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
               disabled={submitting}
               multiline
               rows={2}
-              formatValue={formatters.capitalizeWords}
+              formatValue={formatters.capitalizeSentence}
             />
         </Grid>
 
