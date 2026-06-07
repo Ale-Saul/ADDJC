@@ -121,7 +121,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: bo
       group: 'asociacion'
     },
     {
-      label: 'Contabilidad',
+      label: 'Finanzas',
       path: '/contabilidad',
       icon: <AccountBalanceIcon />,
       allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO],
