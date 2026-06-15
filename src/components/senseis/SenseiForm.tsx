@@ -61,7 +61,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
         <Grid size={{ xs: 12, sm: 4 }}>
           <FormInput
             name="ci_extension"
-            label="Extensión"
+            label="Complemento"
             control={control}
             disabled={loading}
             formatValue={formatCIExtensionInput}

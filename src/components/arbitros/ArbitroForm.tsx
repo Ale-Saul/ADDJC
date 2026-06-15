@@ -40,7 +40,7 @@ export default function ArbitroForm({ arbitro, onSuccess, onCancel }: ArbitroFor
         <Grid size={{ xs: 12, sm: 4 }}>
           <FormInput 
             name="ci_extension" 
-            label="Extensión" 
+            label="Complemento" 
             control={control} 
             disabled={loading}
             formatValue={formatCIExtensionInput}

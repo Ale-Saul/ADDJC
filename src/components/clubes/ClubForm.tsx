@@ -253,7 +253,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
             <Grid size={{ xs: 12, sm: 4 }}>
               <FormInput 
                 name="new_ci_extension" 
-                label="Extensión" 
+                label="Complemento" 
                 control={control} 
                 disabled={submitting} 
                 formatValue={formatCIExtensionInput}

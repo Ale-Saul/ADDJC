@@ -115,7 +115,7 @@ export default function MiembroAsociacionForm({ miembro, onSuccess, onCancel }: 
           <FormInput
             name="ci_extension"
             control={control}
-            label="Extensión"
+            label="Complemento"
             disabled={loading}
             formatValue={formatCIExtensionInput}
             inputProps={{ maxLength: 2 }}

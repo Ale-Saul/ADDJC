@@ -197,7 +197,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         <Grid size={{ xs: 12, sm: 4 }}>
           <FormInput 
             name="ci_extension" 
-            label="Extensión" 
+            label="Complemento" 
             control={control} 
             formatValue={formatCIExtensionInput}
             disabled={loading} 
