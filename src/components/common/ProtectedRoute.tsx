@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { Box, CircularProgress, Typography } from '@mui/material'
 import { useAuth } from '@/contexts/AuthContext'
 import { UserRole } from '@/constants/roles'
+import { hasRoleAccess } from '@/utils/roleAccess'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -18,8 +19,14 @@ export default function ProtectedRoute({
   allowedRoles,
 }: ProtectedRouteProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const { user, loading, isAuthenticated } = useAuth()
   const [mounted, setMounted] = useState(false)
+
+  const userHasAccess = user && (
+    !allowedRoles ||
+    hasRoleAccess(user, allowedRoles, pathname ?? undefined)
+  )
 
   // Evitar problemas de hidratación - solo renderizar en el cliente
   useEffect(() => {
@@ -46,13 +53,13 @@ export default function ProtectedRoute({
         return
       }
 
-      // Verificar roles permitidos
-      if (allowedRoles && user && !allowedRoles.includes(user.rol)) {
+      // Verificar roles permitidos (incluye multi-cargo)
+      if (allowedRoles && user && !hasRoleAccess(user, allowedRoles, pathname ?? undefined)) {
         router.push('/')
         return
       }
     }
-  }, [mounted, loading, isAuthenticated, user, requiredRole, allowedRoles, router])
+  }, [mounted, loading, isAuthenticated, user, requiredRole, allowedRoles, router, pathname])
 
   // No renderizar nada hasta que esté montado en el cliente
   if (!mounted) {
@@ -117,7 +124,7 @@ export default function ProtectedRoute({
     )
   }
 
-  if (allowedRoles && user && !allowedRoles.includes(user.rol)) {
+  if (allowedRoles && user && !userHasAccess) {
     return (
       <Box
         sx={{

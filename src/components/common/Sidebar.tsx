@@ -40,6 +40,7 @@ import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone'
 import EditNoteIcon from '@mui/icons-material/EditNote'
 import { useAuth } from '@/contexts/AuthContext'
 import { ROL } from '@/constants/roles'
+import { hasRoleAccess } from '@/utils/roleAccess'
 
 const DRAWER_WIDTH = 280
 
@@ -106,10 +107,9 @@ export default function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: bo
     return false
   }
 
-  // Función para verificar si el usuario tiene acceso a una ruta
-  const hasAccess = (allowedRoles: string[]) => {
+  const hasAccess = (allowedRoles: string[], path?: string) => {
     if (!user) return false
-    return allowedRoles.includes(user.rol)
+    return hasRoleAccess(user, allowedRoles as typeof ROL[keyof typeof ROL][], path)
   }
 
   const menuItems = [
@@ -212,13 +212,13 @@ export default function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: bo
   ]
 
   // Filtrar y agrupar items
-  const visibleAsistenciaItems = asistenciaItems.filter(item => hasAccess(item.allowedRoles))
+  const visibleAsistenciaItems = asistenciaItems.filter(item => hasAccess(item.allowedRoles, item.path))
   const showAsistenciaMenu = visibleAsistenciaItems.length > 0
 
-  const asociacionItems = menuItems.filter(item => item.group === 'asociacion' && hasAccess(item.allowedRoles))
+  const asociacionItems = menuItems.filter(item => item.group === 'asociacion' && hasAccess(item.allowedRoles, item.path))
   const showAsociacionMenu = asociacionItems.length > 0
 
-  const tesoreriaItems = menuItems.filter(item => item.group === 'tesoreria' && hasAccess(item.allowedRoles))
+  const tesoreriaItems = menuItems.filter(item => item.group === 'tesoreria' && hasAccess(item.allowedRoles, item.path))
   const showTesoreriaMenu = tesoreriaItems.length > 0
 
   const comunicacionItems = [
@@ -242,10 +242,10 @@ export default function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: bo
     },
   ]
 
-  const visibleComunicacionItems = comunicacionItems.filter(item => hasAccess(item.allowedRoles))
+  const visibleComunicacionItems = comunicacionItems.filter(item => hasAccess(item.allowedRoles, item.path))
   const showComunicacionMenu = visibleComunicacionItems.length > 0
 
-  const visibleAfiliadosItems = afiliadosItems.filter(item => hasAccess(item.allowedRoles))
+  const visibleAfiliadosItems = afiliadosItems.filter(item => hasAccess(item.allowedRoles, item.path))
   const showAfiliadosMenu = visibleAfiliadosItems.length > 0
   
   // Para las expansiones (pueden venir de estados)
@@ -616,6 +616,15 @@ export default function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: bo
                     sx={{ height: 18, fontSize: '0.65rem', cursor: 'pointer', alignSelf: 'flex-start' }}
                     color={user.rol === ROL.ADMIN || user.rol === ROL.ASOCIACION ? 'primary' : 'default'}
                   />
+                  {/* Badge de cargo operativo (multi-cargo) */}
+                  {user.sensei_id && (user.rol === ROL.ADMIN || user.rol === ROL.ASOCIACION) && (
+                    <Chip
+                      label={user.club_id_operativo ? `Sensei • ${user.club_nombre_operativo || 'Club asignado'}` : 'También: Sensei'}
+                      size="small"
+                      color="success"
+                      sx={{ height: 18, fontSize: '0.65rem', cursor: 'pointer', alignSelf: 'flex-start' }}
+                    />
+                  )}
                   {user.club_nombre && (user.rol === ROL.SENSEI || user.rol === ROL.ENCARGADO || user.rol === ROL.JUDOKA) && (
                     <Typography 
                       variant="caption" 

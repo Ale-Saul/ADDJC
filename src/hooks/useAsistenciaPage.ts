@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { ROL } from '@/constants/roles'
+import { getOperationalClubId, resolveAsistenciaView } from '@/utils/roleAccess'
 import { useSesionesByClub, useSesionesBySensei, useCrearSesion, useEliminarSesion } from './useAsistenciaSesiones'
 import { AsistenciaSesion, AsistenciaSesionCreate } from '@/models/asistencia'
 import dayjs from 'dayjs'
@@ -17,12 +17,13 @@ const HACE_UN_MES = dayjs().subtract(1, 'month').format('YYYY-MM-DD')
 export function useAsistenciaPage() {
   const { user } = useAuth()
 
-  const isSensei = user?.rol === ROL.SENSEI
-  const isEncargado = user?.rol === ROL.ENCARGADO
-  const isAdmin = user?.rol === ROL.ADMIN
+  const asistenciaView = resolveAsistenciaView(user)
+  const isSensei = asistenciaView === 'sensei'
+  const isEncargado = asistenciaView === 'encargado'
+  const isAdmin = asistenciaView === 'admin'
 
   const senseiId = user?.sensei_id ?? ''
-  const clubId = user?.club_id ?? ''
+  const clubId = getOperationalClubId(user) ?? ''
 
   // --- Consultas ---
   const clubQuery = useSesionesByClub(isEncargado || isAdmin ? clubId : '')

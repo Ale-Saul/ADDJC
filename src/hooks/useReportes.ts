@@ -7,6 +7,8 @@ import { Pago } from '@/models/pago'
 import { Judoka } from '@/models/judoka'
 import { Club } from '@/models/club'
 import { ESTADO_PAGO, TIPO_PAGO_LABELS } from '@/constants/pagos'
+import { ROL } from '@/constants/roles'
+import { getOperationalClubId } from '@/utils/roleAccess'
 
 export function useReportes() {
   const { user } = useAuth()
@@ -32,7 +34,8 @@ export function useReportes() {
   const [clubFiltro, setClubFiltro] = useState<string>('todos')
   const [showFilters, setShowFilters] = useState(false)
 
-  const isAdmin = user?.rol === 'admin'
+  const isAdmin = user?.rol === ROL.ADMIN
+  const operationalClubId = getOperationalClubId(user)
 
   // Obtener lista única de senseis de los judokas cargados
   const senseisList = useMemo(() => {
@@ -49,13 +52,13 @@ export function useReportes() {
         const [pagosResponse, judokasResponse, clubesResponse] = await Promise.all([
           isAdmin
             ? pagoController.getAllPagos()
-            : user?.club_id
-              ? pagoController.getPagosByClub(user.club_id)
+            : operationalClubId
+              ? pagoController.getPagosByClub(operationalClubId)
               : Promise.resolve({ success: true, data: [] }),
           isAdmin
             ? judokaController.getAllJudokas(true)
-            : user?.club_id
-              ? judokaController.getJudokasByClub(user.club_id)
+            : operationalClubId
+              ? judokaController.getJudokasByClub(operationalClubId)
               : Promise.resolve({ success: true, data: [] }),
           isAdmin
             ? clubController.getAllClubes()
@@ -79,7 +82,7 @@ export function useReportes() {
     }
 
     fetchData()
-  }, [user?.club_id, isAdmin])
+  }, [operationalClubId, isAdmin])
 
   // Calcular el estado real de un pago considerando la fecha de vencimiento
   const getEstadoReal = (pago: Pago): string => {

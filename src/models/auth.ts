@@ -32,6 +32,10 @@ export interface User {
   club_nombre?: string | null 
   sensei_id?: string | null 
   judoka_id?: string | null 
+  /** ID del club que administra operativamente (multi-cargo: admin/asociacion actuando como sensei/encargado) */
+  club_id_operativo?: string | null
+  /** Nombre del club operativo, para display en sidebar */
+  club_nombre_operativo?: string | null
   avatar_url?: string | null
   fecha_nacimiento?: string | null
   numero_celular?: string | null

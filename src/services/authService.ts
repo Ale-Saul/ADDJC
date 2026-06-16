@@ -71,6 +71,8 @@ export const authService = {
       let clubInfo = { club_id: null, club_nombre: null }
       let senseiId = null
       let judokaId = null
+      let clubIdOperativo: string | null = null
+      let clubNombreOperativo: string | null = null
       const userRole = profileData.rol || 'judoka'
 
       if (userRole === 'judoka') {
@@ -101,6 +103,19 @@ export const authService = {
             club_nombre: (senseiData.clubes as any)?.nombre_club || null
           }
         }
+      } else if (userRole === 'admin' || userRole === 'asociacion') {
+        // Vinculación silenciosa: buscar si este usuario directivo también es sensei en algún club
+        const { data: senseiData } = await supabaseWithSession
+          .from('senseis')
+          .select('id, club_id, clubes(nombre_club)')
+          .eq('usuario_id', profileData.id)
+          .maybeSingle()
+
+        if (senseiData) {
+          senseiId = senseiData.id
+          clubIdOperativo = senseiData.club_id
+          clubNombreOperativo = (senseiData.clubes as any)?.nombre_club || null
+        }
       }
 
       // Construir nombre completo
@@ -120,6 +135,8 @@ export const authService = {
         club_nombre: clubInfo.club_nombre || null,
         sensei_id: senseiId,
         judoka_id: judokaId,
+        club_id_operativo: clubIdOperativo,
+        club_nombre_operativo: clubNombreOperativo,
         avatar_url: profileData.avatar_url || null,
         fecha_nacimiento: profileData.fecha_nacimiento || null,
         numero_celular: profileData.numero_celular || null,
@@ -275,6 +292,8 @@ export const authService = {
       let clubInfo = { club_id: null, club_nombre: null }
       let senseiId = null
       let judokaId = null
+      let clubIdOperativo: string | null = null
+      let clubNombreOperativo: string | null = null
       const userRole = data.rol || 'judoka'
 
       if (userRole === 'judoka') {
@@ -325,6 +344,27 @@ export const authService = {
             }
           }
         }
+      } else if (userRole === 'admin' || userRole === 'asociacion') {
+        // Vinculación silenciosa: buscar si este usuario directivo también es sensei en algún club
+        const { data: senseiData } = await supabase
+          .from('senseis')
+          .select('id, club_id')
+          .eq('usuario_id', data.id)
+          .maybeSingle()
+
+        if (senseiData) {
+          senseiId = senseiData.id
+          clubIdOperativo = senseiData.club_id
+
+          if (senseiData.club_id) {
+            const { data: clubData } = await supabase
+              .from('clubes')
+              .select('nombre_club')
+              .eq('id', senseiData.club_id)
+              .single()
+            clubNombreOperativo = clubData?.nombre_club || null
+          }
+        }
       }
 
       // Construir nombre completo
@@ -344,6 +384,8 @@ export const authService = {
         club_nombre: clubInfo.club_nombre || null,
         sensei_id: senseiId,
         judoka_id: judokaId,
+        club_id_operativo: clubIdOperativo,
+        club_nombre_operativo: clubNombreOperativo,
         avatar_url: data.avatar_url || null,
         fecha_nacimiento: data.fecha_nacimiento || null,
         numero_celular: data.numero_celular || null,
@@ -513,6 +555,8 @@ export const authService = {
       let clubInfo = { club_id: null, club_nombre: null }
       let senseiId = null
       let judokaId = null
+      let clubIdOperativo: string | null = null
+      let clubNombreOperativo: string | null = null
       const userRole = updatedData.rol || 'judoka'
 
       if (userRole === 'judoka') {
@@ -563,6 +607,27 @@ export const authService = {
             }
           }
         }
+      } else if (userRole === 'admin' || userRole === 'asociacion') {
+        // Vinculación silenciosa: buscar si este usuario directivo también es sensei en algún club
+        const { data: senseiData } = await supabase
+          .from('senseis')
+          .select('id, club_id')
+          .eq('usuario_id', updatedData.id)
+          .maybeSingle()
+
+        if (senseiData) {
+          senseiId = senseiData.id
+          clubIdOperativo = senseiData.club_id
+
+          if (senseiData.club_id) {
+            const { data: clubData } = await supabase
+              .from('clubes')
+              .select('nombre_club')
+              .eq('id', senseiData.club_id)
+              .single()
+            clubNombreOperativo = clubData?.nombre_club || null
+          }
+        }
       }
 
       const nombreSolo = updatedData.nombre || ''
@@ -583,6 +648,8 @@ export const authService = {
           club_nombre: clubInfo.club_nombre || null,
           sensei_id: senseiId,
           judoka_id: judokaId,
+          club_id_operativo: clubIdOperativo,
+          club_nombre_operativo: clubNombreOperativo,
           avatar_url: updatedData.avatar_url || null,
           fecha_nacimiento: updatedData.fecha_nacimiento || null,
           numero_celular: updatedData.numero_celular || null,

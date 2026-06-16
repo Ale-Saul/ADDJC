@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Button, Grid, Alert, CircularProgress, Autocomplete, TextField } from '@mui/material'
+import { Box, Button, Grid, Alert, CircularProgress, Autocomplete, TextField, Chip } from '@mui/material'
 import { Controller } from 'react-hook-form'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
@@ -33,7 +33,9 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
     loading,
     clubes,
     loadingClubes,
-    onSubmit
+    onSubmit,
+    usuarioDirectivo,
+    buscandoCI,
   } = useSenseiForm(sensei, user || undefined, onSuccess)
 
   const { control, handleSubmit, formState: { errors }, trigger } = form
@@ -97,7 +99,41 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
             formatValue={formatNameInput}
           />
         </Grid>
-        {!sensei && (
+        {/* Aviso de vinculación silenciosa */}
+        {!sensei && usuarioDirectivo && (
+          <Grid size={{ xs: 12 }}>
+            <Alert 
+              severity="info"
+              icon={false}
+              sx={{ py: 1 }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                <strong>Vinculación silenciosa:</strong>
+                <span>
+                  El CI pertenece a <strong>{usuarioDirectivo.nombre}</strong>
+                </span>
+                <Chip
+                  label={usuarioDirectivo.rol === 'admin' ? 'Administrador' : 'Asociación'}
+                  size="small"
+                  color="primary"
+                  sx={{ height: 18, fontSize: '0.65rem' }}
+                />
+                <span>— se vinculará este usuario como Sensei sin crear una nueva cuenta.</span>
+              </Box>
+            </Alert>
+          </Grid>
+        )}
+        {buscandoCI && (
+          <Grid size={{ xs: 12 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary', fontSize: '0.8rem' }}>
+              <CircularProgress size={14} />
+              Verificando CI...
+            </Box>
+          </Grid>
+        )}
+
+        {/* Campo email: ocultar en vinculación silenciosa (el directivo ya tiene cuenta) */}
+        {!sensei && !usuarioDirectivo && (
           <Grid size={{ xs: 12 }}>
             <FormInput
               name="email"

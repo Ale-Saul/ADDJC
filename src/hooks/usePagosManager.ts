@@ -8,10 +8,13 @@ import { Club } from '@/models/club'
 import { CATEGORIES } from '@/constants/globales'
 import { ROL } from '@/constants/roles'
 import { ESTADO_PAGO } from '@/constants/pagos'
+import { User } from '@/models/auth'
+import { getOperationalClubId } from '@/utils/roleAccess'
 import dayjs from 'dayjs'
 
-export function usePagosManager(user: any) {
+export function usePagosManager(user: User | null | undefined) {
   const isAdmin = user?.rol === ROL.ADMIN
+  const operationalClubId = getOperationalClubId(user)
 
   // Estado de pagos
   const [pagos, setPagos] = useState<Pago[]>([])
@@ -19,25 +22,23 @@ export function usePagosManager(user: any) {
 
   const refreshPagos = useCallback(async () => {
     setLoadingPagos(true)
-    const clubId = user?.club_id
-    const response = clubId
-      ? await pagoController.getPagosByClub(clubId)
+    const response = operationalClubId && !isAdmin
+      ? await pagoController.getPagosByClub(operationalClubId)
       : await pagoController.getAllPagos(false)
     if (response.success && response.data) {
       setPagos(response.data)
     }
     setLoadingPagos(false)
-  }, [user?.club_id])
+  }, [operationalClubId, isAdmin])
 
   useEffect(() => { refreshPagos() }, [refreshPagos])
 
   // Verificar pagos próximos a vencer al cargar la página (solo una vez por sesión)
   useEffect(() => {
-    const clubId = user?.club_id
-    if (!clubId) return
-    pagoController.checkPagosProximosAVencer(clubId).catch(() => { /* silencioso */ })
+    if (!operationalClubId || isAdmin) return
+    pagoController.checkPagosProximosAVencer(operationalClubId).catch(() => { /* silencioso */ })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.club_id])
+  }, [operationalClubId, isAdmin])
 
   // Estados para filtros
   const [showFilters, setShowFilters] = useState(false)
@@ -54,7 +55,7 @@ export function usePagosManager(user: any) {
     searchTerm,
     setSearchTerm,
     refresh: refreshJudokas
-  } = useJudokas({ clubId: user?.club_id || undefined, autoFetch: true })
+  } = useJudokas({ clubId: operationalClubId || undefined, autoFetch: true })
 
   // Cargar clubes solo para admins
   useEffect(() => {
@@ -133,8 +134,8 @@ export function usePagosManager(user: any) {
 
     // Filtrar judokas que no tienen club (solo si no es admin y no se ha filtrado por club)
     // En pagos y cuotas solo deben aparecer los del club
-    if (!isAdmin) {
-      filtered = filtered.filter(j => j.club_id === user?.club_id)
+    if (!isAdmin && operationalClubId) {
+      filtered = filtered.filter(j => j.club_id === operationalClubId)
     }
 
     // Ordenar alfabéticamente por nombre completo (nombres + apellidos)
@@ -143,7 +144,7 @@ export function usePagosManager(user: any) {
       const nombreB = `${b.nombres || ''} ${b.apellidos || ''}`.trim().toLowerCase()
       return nombreA.localeCompare(nombreB, 'es', { sensitivity: 'base' })
     })
-  }, [rawJudokas, senseiFilter, categoriaFilter, clubFilter, statusFilter, isAdmin, judokasStatus, user?.club_id])
+  }, [rawJudokas, senseiFilter, categoriaFilter, clubFilter, statusFilter, isAdmin, judokasStatus, operationalClubId])
 
   const clearFilters = useCallback(() => {
     setSenseiFilter('all')

@@ -23,6 +23,7 @@ import { useRouter } from 'next/navigation'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import { ROL } from '@/constants/roles'
 import { useAuth } from '@/contexts/AuthContext'
+import { getOperationalClubId, resolveAsistenciaView } from '@/utils/roleAccess'
 import { useSesionById } from '@/hooks/useAsistenciaSesiones'
 import { useDetalleSesion, useRegistrarAsistencia } from '@/hooks/useAsistenciaDetalle'
 import { useJudokas } from '@/hooks/useJudokas'
@@ -41,9 +42,11 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
   const router = useRouter()
   const { user } = useAuth()
 
-  const isSensei = user?.rol === ROL.SENSEI
-  const isEncargado = user?.rol === ROL.ENCARGADO
-  const isAdmin = user?.rol === ROL.ADMIN
+  const asistenciaView = resolveAsistenciaView(user)
+  const isSensei = asistenciaView === 'sensei'
+  const isEncargado = asistenciaView === 'encargado'
+  const isAdmin = asistenciaView === 'admin'
+  const operationalClubId = getOperationalClubId(user)
 
   // Datos de la sesión
   const sesionQuery = useSesionById(sesionId)
@@ -88,7 +91,7 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
   // Mutation para guardar
   const guardarMutation = useRegistrarAsistencia(
     user?.sensei_id || undefined, 
-    user?.club_id || undefined
+    operationalClubId || undefined
   )
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -8,7 +8,14 @@ import { clubController } from '@/controllers/clubController'
 import { Club } from '@/models/club'
 import { User } from '@/models/auth'
 import { senseiSchema } from '@/schemas/globales'
-import { formatters } from '@/utils/formatters'
+import { createClient } from '@/lib/supabase/client'
+
+/** Información del usuario directivo detectado por CI (vinculación silenciosa) */
+export interface UsuarioDirectivoDetectado {
+  id: string
+  nombre: string
+  rol: 'admin' | 'asociacion'
+}
 
 export function useSenseiForm(sensei?: Sensei | null, user?: User, onSuccess?: () => void) {
   const [clubes, setClubes] = useState<Club[]>([])
@@ -16,6 +23,10 @@ export function useSenseiForm(sensei?: Sensei | null, user?: User, onSuccess?: (
   const [loadingClubes, setLoadingClubes] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  // Estado para la vinculación silenciosa
+  const [usuarioDirectivo, setUsuarioDirectivo] = useState<UsuarioDirectivoDetectado | null>(null)
+  const [buscandoCI, setBuscandoCI] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const form = useForm({
     resolver: zodResolver(senseiSchema),
@@ -38,7 +49,60 @@ export function useSenseiForm(sensei?: Sensei | null, user?: User, onSuccess?: (
     },
   })
 
-  const { reset } = form
+  const { reset, watch } = form
+  const ciValue = watch('ci')
+
+  // Lookup por CI: detectar si pertenece a un usuario directivo (admin/asociacion)
+  useEffect(() => {
+    // Solo buscar en modo creación (no edición de sensei existente)
+    if (sensei) return
+    // Solo si el CI tiene al menos 4 dígitos
+    if (!ciValue || ciValue.length < 4) {
+      setUsuarioDirectivo(null)
+      return
+    }
+
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+
+    debounceRef.current = setTimeout(async () => {
+      setBuscandoCI(true)
+      try {
+        const client = createClient()
+        const { data } = await client
+          .from('usuarios')
+          .select('id, nombre, apellido_paterno, apellido_materno, rol')
+          .eq('ci', ciValue)
+          .maybeSingle()
+
+        if (data && (data.rol === 'admin' || data.rol === 'asociacion')) {
+          setUsuarioDirectivo({
+            id: data.id,
+            nombre: [data.nombre, data.apellido_paterno, data.apellido_materno].filter(Boolean).join(' '),
+            rol: data.rol,
+          })
+          // Autocompletar nombres si el form está vacío
+          const formValues = form.getValues()
+          if (!formValues.nombres && data.nombre) {
+            form.setValue('nombres', data.nombre)
+          }
+          if (!formValues.apellido_paterno && data.apellido_paterno) {
+            form.setValue('apellido_paterno', data.apellido_paterno)
+          }
+          if (!formValues.apellido_materno && data.apellido_materno) {
+            form.setValue('apellido_materno', data.apellido_materno)
+          }
+        } else {
+          setUsuarioDirectivo(null)
+        }
+      } finally {
+        setBuscandoCI(false)
+      }
+    }, 500)
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [ciValue, sensei, form])
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -101,9 +165,13 @@ export function useSenseiForm(sensei?: Sensei | null, user?: User, onSuccess?: (
           updated_by: user?.id
         } as any)
       } else {
+        // Si se detectó un usuario directivo por CI, usar su ID (vinculación silenciosa)
+        // de lo contrario, usar 'temp-user-id' para que el servicio cree un nuevo usuario
+        const usuarioId = usuarioDirectivo ? usuarioDirectivo.id : 'temp-user-id'
+
         const createData: SenseiCreate = {
           ...(payload as SenseiCreate),
-          usuario_id: 'temp-user-id',
+          usuario_id: usuarioId,
           updated_by: user?.id
         } as any
         response = await senseiController.createSensei(createData)
@@ -123,7 +191,7 @@ export function useSenseiForm(sensei?: Sensei | null, user?: User, onSuccess?: (
       setError(err instanceof Error ? err.message : 'Error inesperado')
       setLoading(false)
     }
-  }, [sensei, onSuccess, user])
+  }, [sensei, onSuccess, user, usuarioDirectivo])
 
   return {
     form,
@@ -133,6 +201,9 @@ export function useSenseiForm(sensei?: Sensei | null, user?: User, onSuccess?: (
     error,
     success,
     setError,
-    onSubmit
+    onSubmit,
+    // Multi-cargo
+    usuarioDirectivo,
+    buscandoCI,
   }
 }

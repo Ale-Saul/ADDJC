@@ -38,12 +38,14 @@ export const senseiController = {
    * Crear un nuevo sensei
    */
   async createSensei(senseiData: SenseiCreate): Promise<ApiResponse<Sensei>> {
+    // La validación de nombre/apellido siempre aplica
     const validation = personNamesCreateSchema.safeParse(senseiData)
     if (!validation.success) {
       return { success: false, error: validation.error.issues[0]?.message ?? 'Error de validación' }
     }
 
     // Generar contraseña automática basada en el carnet
+    // (solo se usará si hay que crear un nuevo usuario; se ignora en vinculación silenciosa)
     const autoPassword = generarPasswordInicial(senseiData.ci || '', senseiData.ci_extension)
 
     // Por defecto, el sensei se crea como activo

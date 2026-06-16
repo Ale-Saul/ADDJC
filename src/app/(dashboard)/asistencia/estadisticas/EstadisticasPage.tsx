@@ -40,6 +40,7 @@ import SchoolIcon from '@mui/icons-material/School'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import { ROL } from '@/constants/roles'
 import { useAuth } from '@/contexts/AuthContext'
+import { getOperationalClubId, resolveAsistenciaView } from '@/utils/roleAccess'
 import { useStatsBySensei, useReporteClub, useStatsJudokasByClub } from '@/hooks/useAsistenciaStats'
 import KpiCard from '@/components/asistencia/stats/KpiCard'
 import SenseiStatsTable from '@/components/asistencia/stats/SenseiStatsTable'
@@ -59,9 +60,10 @@ function getColorByPct(pct: number): 'success' | 'warning' | 'error' | 'primary'
 
 export default function EstadisticasPage() {
   const { user } = useAuth()
-  const isSensei = user?.rol === ROL.SENSEI
-  const isEncargado = user?.rol === ROL.ENCARGADO
-  const isAdmin = user?.rol === ROL.ADMIN
+  const asistenciaView = resolveAsistenciaView(user)
+  const isSensei = asistenciaView === 'sensei'
+  const isEncargado = asistenciaView === 'encargado'
+  const isAdmin = asistenciaView === 'admin'
 
   const { control, setValue } = useForm({
     defaultValues: {
@@ -74,7 +76,7 @@ export default function EstadisticasPage() {
   const [fechaInicio, setFechaInicio] = useState(HACE_UN_MES)
   const [fechaFin, setFechaFin] = useState(HOY)
   const senseiId = user?.sensei_id ?? ''
-  const clubId = user?.club_id ?? ''
+  const clubId = getOperationalClubId(user) ?? ''
   const [vistaDesglose, setVistaDesglose] = useState<'sensei' | 'judoka'>('sensei')
   const [senseiFiltroDesglose, setSenseiFiltroDesglose] = useState<string>('all')
 

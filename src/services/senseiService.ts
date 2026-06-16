@@ -155,14 +155,45 @@ export const senseiService = {
     try {
       let userId = sensei.usuario_id
       if (!userId || userId === 'temp-user-id') {
-        if (!sensei.email || !sensei.password) return { success: false, error: 'Email y contraseña requeridos' }
-        const ciExtension = sensei.ci_extension?.trim() || null
-        const userResult = sensei.isEncargado
-          ? await userService.createEncargadoUser(sensei.nombres, sensei.apellido_paterno, sensei.apellido_materno, sensei.email!, sensei.password!, sensei.club_id || undefined, sensei.fecha_nacimiento, sensei.numero_celular, sensei.genero, sensei.ci, ciExtension)
-          : await userService.createSenseiUser(sensei.nombres, sensei.apellido_paterno, sensei.apellido_materno, sensei.email!, sensei.password!, sensei.fecha_nacimiento, sensei.numero_celular, sensei.genero, sensei.ci, ciExtension)
-        
-        if (!userResult.success || !userResult.data) return { success: false, error: userResult.error || 'Error al crear usuario' }
-        userId = userResult.data.usuarioId
+        // --- Vinculación Silenciosa ---
+        // Antes de crear un nuevo usuario, verificar si el CI ya pertenece a un
+        // usuario admin/asociacion. En ese caso, reutilizar su ID sin crear nueva cuenta.
+        if (sensei.ci) {
+          const client = createClient()
+          const { data: usuarioExistente } = await client
+            .from('usuarios')
+            .select('id, rol')
+            .eq('ci', sensei.ci)
+            .maybeSingle()
+
+          if (usuarioExistente && (usuarioExistente.rol === 'admin' || usuarioExistente.rol === 'asociacion')) {
+            // Verificar que no esté ya registrado como sensei
+            const { data: senseiExistente } = await client
+              .from('senseis')
+              .select('id')
+              .eq('usuario_id', usuarioExistente.id)
+              .maybeSingle()
+
+            if (senseiExistente) {
+              return { success: false, error: 'Este usuario ya está registrado como Sensei.' }
+            }
+
+            // Reutilizar el ID del usuario directivo (vinculación silenciosa)
+            userId = usuarioExistente.id
+          }
+        }
+
+        // Si no se encontró un usuario directivo existente, crear uno nuevo
+        if (!userId || userId === 'temp-user-id') {
+          if (!sensei.email || !sensei.password) return { success: false, error: 'Email y contraseña requeridos' }
+          const ciExtension = sensei.ci_extension?.trim() || null
+          const userResult = sensei.isEncargado
+            ? await userService.createEncargadoUser(sensei.nombres, sensei.apellido_paterno, sensei.apellido_materno, sensei.email!, sensei.password!, sensei.club_id || undefined, sensei.fecha_nacimiento, sensei.numero_celular, sensei.genero, sensei.ci, ciExtension)
+            : await userService.createSenseiUser(sensei.nombres, sensei.apellido_paterno, sensei.apellido_materno, sensei.email!, sensei.password!, sensei.fecha_nacimiento, sensei.numero_celular, sensei.genero, sensei.ci, ciExtension)
+          
+          if (!userResult.success || !userResult.data) return { success: false, error: userResult.error || 'Error al crear usuario' }
+          userId = userResult.data.usuarioId
+        }
       }
 
       const client = createClient()

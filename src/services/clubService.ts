@@ -142,20 +142,25 @@ export const clubService = {
           .single()
 
         if (senseiData?.usuario_id) {
-          // Actualizar usuarios (rol)
-          await client
+          // Verificar rol actual: no degradar a usuarios directivos (admin/asociacion)
+          const { data: usuarioData } = await client
             .from('usuarios')
-            .update({ 
-              rol: 'encargado'
-            })
+            .select('rol')
             .eq('id', senseiData.usuario_id)
+            .single()
+
+          if (usuarioData?.rol !== 'admin' && usuarioData?.rol !== 'asociacion') {
+            // Solo cambiar rol si NO es un usuario directivo (vinculación silenciosa)
+            await client
+              .from('usuarios')
+              .update({ rol: 'encargado' })
+              .eq('id', senseiData.usuario_id)
+          }
           
           // Actualizar también la tabla senseis para mantener sincronización y asignar club
           await client
             .from('senseis')
-            .update({ 
-              club_id: data.id
-            })
+            .update({ club_id: data.id })
             .eq('id', club.director_tecnico_id)
         }
       }
@@ -209,12 +214,19 @@ export const clubService = {
               .single()
 
             if (senseiAnteriorData?.usuario_id) {
-              await client
+              // Verificar si es un usuario directivo: si lo es, no tocar su rol
+              const { data: rolAnterior } = await client
                 .from('usuarios')
-                .update({ 
-                  rol: 'sensei'
-                })
+                .select('rol')
                 .eq('id', senseiAnteriorData.usuario_id)
+                .single()
+
+              if (rolAnterior?.rol !== 'admin' && rolAnterior?.rol !== 'asociacion') {
+                await client
+                  .from('usuarios')
+                  .update({ rol: 'sensei' })
+                  .eq('id', senseiAnteriorData.usuario_id)
+              }
             }
           }
 
@@ -228,20 +240,25 @@ export const clubService = {
               .single()
 
             if (senseiNuevoData?.usuario_id) {
-              // Actualizar usuarios
-              await client
+              // Verificar si es un usuario directivo: si lo es, no tocar su rol
+              const { data: rolNuevo } = await client
                 .from('usuarios')
-                .update({ 
-                  rol: 'encargado'
-                })
+                .select('rol')
                 .eq('id', senseiNuevoData.usuario_id)
+                .single()
+
+              if (rolNuevo?.rol !== 'admin' && rolNuevo?.rol !== 'asociacion') {
+                // Actualizar usuarios
+                await client
+                  .from('usuarios')
+                  .update({ rol: 'encargado' })
+                  .eq('id', senseiNuevoData.usuario_id)
+              }
               
               // Actualizar también la tabla senseis para mantener sincronización
               await client
                 .from('senseis')
-                .update({ 
-                  club_id: id
-                })
+                .update({ club_id: id })
                 .eq('id', directorNuevo)
             }
           }

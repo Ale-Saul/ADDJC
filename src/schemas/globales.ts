@@ -143,6 +143,9 @@ export const judokaSchema = baseUserObject.extend({
  * Esquema específico para Senseis
  */
 export const senseiSchema = baseUserObject.extend({
+  // En vinculación silenciosa el email no aplica (el usuario directivo ya tiene cuenta)
+  // Por eso se sobreescribe como opcional aquí
+  email: z.string().email('El formato del email no es válido').optional().or(z.literal('')),
   club_id: z.string().nullable().optional(),
   grado_dan: z.string().nullable().optional(),
   especialidad: z.string().nullable().optional(),
