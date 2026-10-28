@@ -11,7 +11,7 @@ export function getOperationalClubId(user: UserAccessInfo | null | undefined): s
   return user.club_id ?? user.club_id_operativo ?? null
 }
 
-/** Usuario que opera como sensei (rol directo o vinculación silenciosa) */
+/** Usuario que opera como entrenador (rol directo o vinculación silenciosa) */
 export function actsAsSensei(user: UserAccessInfo | null | undefined): boolean {
   if (!user) return false
   return user.rol === ROL.SENSEI || !!user.sensei_id
@@ -25,7 +25,7 @@ export function actsAsEncargado(user: UserAccessInfo | null | undefined): boolea
 
 /**
  * Determina el modo de vista para pantallas de asistencia.
- * Prioridad: admin > encargado (rol directo) > sensei (rol directo o multi-cargo).
+ * Prioridad: admin > encargado (rol directo) > entrenador (rol directo o multi-cargo).
  */
 export function resolveAsistenciaView(user: UserAccessInfo | null | undefined): AsistenciaViewMode | null {
   if (!user) return null

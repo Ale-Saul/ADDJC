@@ -36,7 +36,7 @@ const RazonDescuentoEnum = z.enum([
 
 // Schema para crear pago
 export const createPagoSchema = z.object({
-  judoka_id: z.string().min(1, 'El ID del judoka es requerido'),
+  judoka_id: z.string().min(1, 'El ID del futbolista es requerido'),
   club_id: z.string().min(1, 'El ID del club es requerido'),
   tipo_pago: TipoPagoEnum,
   concepto: z.string()

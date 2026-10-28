@@ -118,7 +118,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
                   color="primary"
                   sx={{ height: 18, fontSize: '0.65rem' }}
                 />
-                <span>— se vinculará este usuario como Sensei sin crear una nueva cuenta.</span>
+                <span>— se vinculará este usuario como Entrenador sin crear una nueva cuenta.</span>
               </Box>
             </Alert>
           </Grid>
@@ -255,7 +255,7 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
           variant="contained"
           disabled={loading}
         >
-          {loading ? <CircularProgress size={20} /> : sensei ? 'Actualizar Sensei' : 'Registrar Sensei'}
+          {loading ? <CircularProgress size={20} /> : sensei ? 'Actualizar Entrenador' : 'Registrar Entrenador'}
         </Button>
       </Box>
     </Box>

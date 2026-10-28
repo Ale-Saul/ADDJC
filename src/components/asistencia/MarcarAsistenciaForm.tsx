@@ -97,7 +97,7 @@ export default function MarcarAsistenciaForm({
       }))
 
     if (asistencias.length === 0) {
-      setError('Debes marcar al menos un judoka antes de guardar.')
+      setError('Debes marcar al menos un futbolista antes de guardar.')
       return
     }
 

@@ -16,8 +16,8 @@ export type UserRole = typeof ROL[keyof typeof ROL]
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Administrador',
   asociacion: 'Asociación',
-  sensei: 'Sensei',
+  sensei: 'Entrenador',
   encargado: 'Encargado',
   arbitro: 'Árbitro',
-  judoka: 'Judoka',
+  judoka: 'Futbolista',
 }

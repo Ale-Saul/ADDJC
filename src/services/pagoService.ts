@@ -113,7 +113,7 @@ export const pagoService = {
         
         if (error.message.includes('foreign key') || error.message.includes('violates foreign key')) {
           if (error.message.includes('judoka_id')) {
-            errorMessage = 'Error: El judoka no existe. Por favor, selecciona un judoka válido.'
+            errorMessage = 'Error: El futbolista no existe. Por favor, selecciona un futbolista válido.'
           } else if (error.message.includes('club_id')) {
             errorMessage = 'Error: El club no existe. Por favor, selecciona un club válido.'
           } else if (error.message.includes('creador_id')) {

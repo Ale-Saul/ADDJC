@@ -9,7 +9,7 @@ import { clubController } from '@/controllers/clubController'
 
 // Un pequeño schema adaptado a los strings del formulario
 const uiPagoSchema = z.object({
-  judoka_id: z.string().min(1, 'El ID del judoka es requerido'),
+  judoka_id: z.string().min(1, 'El ID del futbolista es requerido'),
   club_id: z.string().min(1, 'El ID del club es requerido'),
   tipo_pago: z.string().min(1, 'El tipo de pago es requerido'),
   concepto: z.string().min(3, 'El concepto debe tener al menos 3 caracteres'),

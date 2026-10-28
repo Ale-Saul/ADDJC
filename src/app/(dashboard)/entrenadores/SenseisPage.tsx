@@ -43,7 +43,7 @@ export default function SenseisPage() {
   }
 
   const handleCertificacion = (sensei: Sensei) => {
-    router.push(`/senseis/${sensei.id}/certificaciones`)
+    router.push(`/entrenadores/${sensei.id}/certificaciones`)
   }
 
   const handleDelete = (sensei: Sensei) => {
@@ -59,11 +59,11 @@ export default function SenseisPage() {
         deleteDialog.close()
         setRefreshTrigger(prev => prev + 1)
       } else {
-        setDeleteError(response.error || 'Error al eliminar sensei')
+        setDeleteError(response.error || 'Error al eliminar entrenador')
         deleteDialog.close()
       }
     } catch {
-      setDeleteError('Error inesperado al eliminar sensei')
+      setDeleteError('Error inesperado al eliminar entrenador')
       deleteDialog.close()
     } finally {
       setDeleteLoading(false)
@@ -74,7 +74,7 @@ export default function SenseisPage() {
     <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.SENSEI, ROL.JUDOKA]}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4" component="h1">
-            Gestión de Senseis
+            Gestión de Entrenadores
           </Typography>
           {!isReadOnly && (
           <Button
@@ -82,7 +82,7 @@ export default function SenseisPage() {
             startIcon={<AddIcon />}
             onClick={() => createDialog.open()}
           >
-            Nuevo Sensei
+            Nuevo Entrenador
           </Button>
           )}
         </Box>
@@ -99,7 +99,7 @@ export default function SenseisPage() {
 
         {/* Diálogo de Creación */}
         <Dialog open={createDialog.isOpen} onClose={createDialog.close} maxWidth="md" fullWidth>
-          <DialogTitle>Registrar Nuevo Sensei</DialogTitle>
+          <DialogTitle>Registrar Nuevo Entrenador</DialogTitle>
           <DialogContent>
             <SenseiForm
               onSuccess={handleCreateSuccess}
@@ -110,7 +110,7 @@ export default function SenseisPage() {
 
         {/* Diálogo de Edición */}
         <Dialog open={editDialog.isOpen} onClose={editDialog.close} maxWidth="md" fullWidth>
-          <DialogTitle>Editar Sensei</DialogTitle>
+          <DialogTitle>Editar Entrenador</DialogTitle>
           <DialogContent>
             {editDialog.data && (
               <SenseiForm

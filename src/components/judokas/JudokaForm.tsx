@@ -112,7 +112,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
       if (response.success) {
         onSuccess()
       } else {
-        setError(response.error || 'Error al guardar el judoka')
+        setError(response.error || 'Error al guardar el futbolista')
       }
     } catch (err: any) {
       setError(err.message || 'Error inesperado al guardar')
@@ -293,7 +293,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         <Grid size={{ xs: 12 }}>
           <FormAutocomplete
             name="entrenador_id"
-            label="Sensei / Entrenador"
+            label="Entrenador"
             control={control}
             options={senseis.map(s => ({ value: s.id, label: s.nombres + ' ' + (s.apellidos || '') }))}
             disabled={loading || loadingSenseis || !watchClubId || isSensei}
@@ -328,7 +328,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
           variant="contained" 
           disabled={loading}
         >
-          {loading ? <CircularProgress size={20} /> : judoka ? 'Actualizar Judoka' : 'Registrar Judoka'}
+          {loading ? <CircularProgress size={20} /> : judoka ? 'Actualizar Futbolista' : 'Registrar Futbolista'}
         </Button>
       </Box>
     </Box>

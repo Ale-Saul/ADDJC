@@ -52,7 +52,7 @@ export default function MiembrosClubPage({ clubId }: MiembrosClubPageProps) {
 
   // --- SENSEIS ---
   const handleEditSensei = (sensei: Sensei) => {
-    router.push(`/senseis/${sensei.id}/editar`)
+    router.push(`/entrenadores/${sensei.id}/editar`)
   }
 
   const handleDeleteSensei = (sensei: Sensei) => {
@@ -81,7 +81,7 @@ export default function MiembrosClubPage({ clubId }: MiembrosClubPageProps) {
 
   // --- JUDOKAS ---
   const handleEditJudoka = (judoka: Judoka) => {
-    router.push(`/judokas/${judoka.id}/editar`)
+    router.push(`/futbolistas/${judoka.id}/editar`)
   }
 
   const handleDeleteJudoka = (judoka: Judoka) => {
@@ -97,11 +97,11 @@ export default function MiembrosClubPage({ clubId }: MiembrosClubPageProps) {
         deleteJudokaDialog.close()
         setRefreshTrigger(prev => prev + 1)
       } else {
-        setDeleteError(response.error || 'Error al eliminar judoka')
+        setDeleteError(response.error || 'Error al eliminar futbolista')
         deleteJudokaDialog.close()
       }
     } catch {
-      setDeleteError('Error inesperado al eliminar judoka')
+      setDeleteError('Error inesperado al eliminar futbolista')
       deleteJudokaDialog.close()
     } finally {
       setDeleteLoading(false)
@@ -143,8 +143,8 @@ export default function MiembrosClubPage({ clubId }: MiembrosClubPageProps) {
           onChange={(_, newValue) => setTabIndex(newValue)} 
           aria-label="tabs miembros"
         >
-          <Tab label="Senseis" />
-          <Tab label="Judokas" />
+          <Tab label="Entrenadores" />
+          <Tab label="Futbolistas" />
         </Tabs>
       </Box>
 
@@ -171,7 +171,7 @@ export default function MiembrosClubPage({ clubId }: MiembrosClubPageProps) {
       {/* Dialogos de confirmación en miembros de club */}
       <ConfirmDialog
         open={deleteSenseiDialog.isOpen}
-        title="Eliminar Sensei"
+        title="Eliminar Entrenador"
         message={deleteSenseiDialog.data ? `¿Estás seguro de eliminar a ${deleteSenseiDialog.data.nombres} ${deleteSenseiDialog.data.apellidos}? Esta acción no se puede deshacer.` : ''}
         onConfirm={handleConfirmDeleteSensei}
         onClose={deleteSenseiDialog.close}
@@ -181,7 +181,7 @@ export default function MiembrosClubPage({ clubId }: MiembrosClubPageProps) {
 
       <ConfirmDialog
         open={deleteJudokaDialog.isOpen}
-        title="Eliminar Judoka"
+        title="Eliminar Futbolista"
         message={deleteJudokaDialog.data ? `¿Estás seguro de eliminar a ${deleteJudokaDialog.data.nombres} ${deleteJudokaDialog.data.apellidos}? Esta acción no se puede deshacer.` : ''}
         onConfirm={handleConfirmDeleteJudoka}
         onClose={deleteJudokaDialog.close}

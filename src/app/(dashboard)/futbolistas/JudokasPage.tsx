@@ -77,11 +77,11 @@ export default function JudokasPage() {
         deleteDialog.close()
         handleRefresh()
       } else {
-        setDeleteError(response.error || 'Error al eliminar judoka')
+        setDeleteError(response.error || 'Error al eliminar futbolista')
         deleteDialog.close()
       }
     } catch {
-      setDeleteError('Error inesperado al eliminar judoka')
+      setDeleteError('Error inesperado al eliminar futbolista')
       deleteDialog.close()
     } finally {
       setDeleteLoading(false)
@@ -92,7 +92,7 @@ export default function JudokasPage() {
     <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.SENSEI, ROL.ENCARGADO, ROL.JUDOKA]}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4" component="h1">
-            Gestión de Judokas
+            Gestión de Futbolistas
           </Typography>
           {!isJudoka && (
             <Button
@@ -100,13 +100,13 @@ export default function JudokasPage() {
               startIcon={<AddIcon />}
               onClick={() => createDialog.open()}
             >
-              Nuevo Judoka
+              Nuevo Futbolista
             </Button>
           )}
         </Box>
 
         {loadingJudokaInfo ? (
-          <Typography>Cargando información del judoka...</Typography>
+          <Typography>Cargando información del futbolista...</Typography>
         ) : (
           <JudokaList
             clubId={clubId ?? undefined}
@@ -123,7 +123,7 @@ export default function JudokasPage() {
 
         {/* Diálogo de Creación */}
         <Dialog open={createDialog.isOpen} onClose={createDialog.close} maxWidth="md" fullWidth>
-          <DialogTitle>Registrar Nuevo Judoka</DialogTitle>
+          <DialogTitle>Registrar Nuevo Futbolista</DialogTitle>
           <DialogContent>
             <JudokaForm
               onSuccess={handleCreateSuccess}
@@ -134,7 +134,7 @@ export default function JudokasPage() {
 
         {/* Diálogo de Edición */}
         <Dialog open={editDialog.isOpen} onClose={editDialog.close} maxWidth="md" fullWidth>
-          <DialogTitle>Editar Judoka</DialogTitle>
+          <DialogTitle>Editar Futbolista</DialogTitle>
           <DialogContent>
             {editDialog.data && (
               <JudokaForm

@@ -126,7 +126,7 @@ export default function PagosPage() {
             Gestión de Pagos y Cuotas
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Administra las cuotas mensuales y pagos de los judokas
+            Administra las cuotas mensuales y pagos de los futbolistas
           </Typography>
         </Box>
 
@@ -146,7 +146,7 @@ export default function PagosPage() {
                   <TextField
                     fullWidth
                     size="small"
-                    placeholder="Buscar judoka por nombre, carnet o club..."
+                    placeholder="Buscar futbolista por nombre, carnet o club..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     sx={{ flexGrow: 1, backgroundColor: 'white' }}
@@ -214,13 +214,13 @@ export default function PagosPage() {
                     )}
 
                     <FormControl size="small" sx={{ minWidth: 200, backgroundColor: 'white', flexGrow: { xs: 1, md: 0 } }}>
-                      <InputLabel>Sensei</InputLabel>
+                      <InputLabel>Entrenador</InputLabel>
                       <Select
                         value={filters.senseiFilter}
-                        label="Sensei"
+                        label="Entrenador"
                         onChange={(e) => filters.setSenseiFilter(e.target.value)}
                       >
-                        <MenuItem value="all">Todos los senseis</MenuItem>
+                        <MenuItem value="all">Todos los entrenadores</MenuItem>
                         {filters.senseisList.map(name => (
                           <MenuItem key={name} value={name}>{name}</MenuItem>
                         ))}
@@ -262,7 +262,7 @@ export default function PagosPage() {
             {judokas.length === 0 ? (
               <Paper sx={{ p: 5, textAlign: 'center', borderRadius: 2 }} variant="outlined">
                 <Typography color="text.secondary">
-                  No se encontraron judokas con los criterios de búsqueda seleccionados
+                  No se encontraron futbolistas con los criterios de búsqueda seleccionados
                 </Typography>
               </Paper>
             ) : (
@@ -270,7 +270,7 @@ export default function PagosPage() {
                 <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee' }}>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Typography variant="h6" fontWeight="bold">
-                      Lista de Judokas
+                      Lista de Futbolistas
                     </Typography>
                     {selectedIds.size > 0 && (
                       <Chip
@@ -279,7 +279,7 @@ export default function PagosPage() {
                         color="primary"
                         variant="outlined"
                         onDelete={() => setSelectedIds(new Set())}
-                        aria-label={`Limpiar selección de ${selectedIds.size} judokas`}
+                        aria-label={`Limpiar selección de ${selectedIds.size} futbolistas`}
                       />
                     )}
                   </Stack>
@@ -308,15 +308,15 @@ export default function PagosPage() {
                           checked={isAllSelected}
                           indeterminate={isIndeterminate}
                           onChange={toggleSelectAll}
-                          inputProps={{ 'aria-label': 'Seleccionar todos los judokas' }}
+                          inputProps={{ 'aria-label': 'Seleccionar todos los futbolistas' }}
                           sx={{ '&:hover': { cursor: 'pointer' } }}
                         />
                       </TableCell>
                       <TableCell sx={{ fontWeight: 'bold', py: 1.5, width: '60px' }}>N°</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Judoka</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Futbolista</TableCell>
                       {isAdmin && <TableCell sx={{ fontWeight: 'bold' }}>Club</TableCell>}
                       <TableCell sx={{ fontWeight: 'bold' }}>Categoría / Cinturón</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Sensei</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Entrenador</TableCell>
                       <TableCell align="center" sx={{ fontWeight: 'bold' }}>Acciones</TableCell>
                     </TableRow>
                   </TableHead>

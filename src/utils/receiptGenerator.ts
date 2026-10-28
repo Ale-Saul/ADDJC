@@ -50,7 +50,7 @@ export const generatePagoReceipt = (pagos: Pago | Pago[], judokaNombre: string, 
   doc.setFont('helvetica', 'normal')
   doc.text(usuarioGenerador || 'Sistema', infoX + 18, 43)
 
-  // --- Datos del Judoka ---
+  // --- Datos del Futbolista ---
   doc.setFillColor(245, 245, 245)
   doc.rect(margin, 48, pageWidth - (margin * 2), 10, 'F')
   

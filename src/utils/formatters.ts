@@ -173,10 +173,10 @@ export const formatters = {
     const roles: Record<string, string> = {
       admin: 'Administrador',
       asociacion: 'Asociación',
-      sensei: 'Sensei',
+      sensei: 'Entrenador',
       encargado: 'Encargado',
       arbitro: 'Árbitro',
-      judoka: 'Judoka',
+      judoka: 'Futbolista',
     }
     return roles[rol] || rol
   },

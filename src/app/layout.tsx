@@ -22,10 +22,14 @@ const openSans = Open_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Asociación de Judo",
-  description: "Sistema de gestión para asociación de judo",
+  title: "Koklub",
+  description: "Koklub - Sistema de gestión para clubes",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icon.png", type: "image/png" },
+    ],
+    apple: "/apple-icon.png",
   },
 };
 

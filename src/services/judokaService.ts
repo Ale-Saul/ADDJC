@@ -171,7 +171,7 @@ export const judokaService = {
       const { email, nombres, apellido_paterno, apellido_materno, fecha_nacimiento, numero_celular, ci, genero, activo, avatar_url, updated_by, ...judokaPayload } = judoka as any
       
       const { data: current, error: getError } = await client.from('judokas').select('usuario_id').eq('id', id).single()
-      if (getError || !current) throw new Error('Judoka no encontrado')
+      if (getError || !current) throw new Error('Futbolista no encontrado')
 
       const judokaFields = ['club_id', 'entrenador_id', 'categoria', 'peso_competitivo', 'cinturon_actual']
       const judokaUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
@@ -218,7 +218,7 @@ export const judokaService = {
     try {
       const client = createClient()
       const { data } = await client.from('judokas').select('usuario_id').eq('id', id).single()
-      if (!data) return { success: false, error: 'Judoka no encontrado' }
+      if (!data) return { success: false, error: 'Futbolista no encontrado' }
 
       const response = await fetch('/api/admin/delete-user', {
         method: 'POST',
@@ -237,7 +237,7 @@ export const judokaService = {
     try {
       const client = createClient()
       const { data } = await client.from('judokas').select('usuario_id').eq('id', id).single()
-      if (!data) throw new Error('Judoka no encontrado')
+      if (!data) throw new Error('Futbolista no encontrado')
 
       const { error } = await client.from('usuarios').update({ activo: true }).eq('id', data.usuario_id)
       if (error) throw error

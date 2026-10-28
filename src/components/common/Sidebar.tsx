@@ -24,6 +24,7 @@ import ExpandMore from '@mui/icons-material/ExpandMore'
 import GroupsIcon from '@mui/icons-material/Groups'
 import SportsKabaddiIcon from '@mui/icons-material/SportsKabaddi'
 import SchoolIcon from '@mui/icons-material/School'
+import SportsSoccerIcon from '@mui/icons-material/SportsSoccer'
 import GavelIcon from '@mui/icons-material/Gavel'
 import BusinessIcon from '@mui/icons-material/Business'
 import LogoutIcon from '@mui/icons-material/Logout'
@@ -82,10 +83,10 @@ export default function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: bo
     const labels: Record<string, string> = {
       [ROL.ADMIN]: 'Administrador',
       [ROL.ASOCIACION]: 'Asociación',
-      [ROL.SENSEI]: 'Sensei',
-      [ROL.ENCARGADO]: 'Encargado-Sensei',
+      [ROL.SENSEI]: 'Entrenador',
+      [ROL.ENCARGADO]: 'Encargado-Entrenador',
       [ROL.ARBITRO]: 'Árbitro',
-      [ROL.JUDOKA]: 'Judoka',
+      [ROL.JUDOKA]: 'Futbolista',
     }
     return labels[rol || ''] || rol || 'Usuario'
   }
@@ -177,7 +178,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: bo
       allowedRoles: [ROL.JUDOKA]
     },
     {
-      label: 'Consulta por Judoka',
+      label: 'Consulta por Futbolista',
       path: '/asistencia/consulta',
       icon: <ManageSearchIcon />,
       allowedRoles: [ROL.ADMIN, ROL.ASOCIACION]
@@ -198,15 +199,15 @@ export default function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: bo
       allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ARBITRO, ROL.SENSEI, ROL.ENCARGADO]
     },
     {
-      label: 'Senseis',
-      path: '/senseis',
+      label: 'Entrenadores',
+      path: '/entrenadores',
       icon: <SchoolIcon />,
       allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.SENSEI, ROL.JUDOKA]
     },
     {
-      label: 'Judokas',
-      path: '/judokas',
-      icon: <SportsKabaddiIcon />,
+      label: 'Futbolistas',
+      path: '/futbolistas',
+      icon: <SportsSoccerIcon />,
       allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.SENSEI, ROL.JUDOKA, ROL.ENCARGADO]
     }
   ]
@@ -271,10 +272,28 @@ export default function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: bo
 
   const drawerContent = (
     <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <Box sx={{ p: 1.5, backgroundColor: theme.palette.primary.main, color: 'white', flexShrink: 0 }}>
-        <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
-          Asociación de Judo
-        </Typography>
+      <Box
+        onClick={() => router.push('/')}
+        sx={{
+          p: 1.5,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'background.paper',
+          cursor: 'pointer',
+          flexShrink: 0,
+        }}
+      >
+        <Box
+          component="img"
+          src="/koklub-logo-trimmed.png"
+          alt="Koklub"
+          sx={{
+            height: 52,
+            width: 'auto',
+            objectFit: 'contain',
+          }}
+        />
       </Box>
       <Divider />
       <List sx={{ pt: 0.5, flexGrow: 1, overflowY: 'auto', overflowX: 'hidden' }}>
@@ -619,7 +638,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: bo
                   {/* Badge de cargo operativo (multi-cargo) */}
                   {user.sensei_id && (user.rol === ROL.ADMIN || user.rol === ROL.ASOCIACION) && (
                     <Chip
-                      label={user.club_id_operativo ? `Sensei • ${user.club_nombre_operativo || 'Club asignado'}` : 'También: Sensei'}
+                      label={user.club_id_operativo ? `Entrenador • ${user.club_nombre_operativo || 'Club asignado'}` : 'También: Entrenador'}
                       size="small"
                       color="success"
                       sx={{ height: 18, fontSize: '0.65rem', cursor: 'pointer', alignSelf: 'flex-start' }}

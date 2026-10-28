@@ -157,7 +157,7 @@ export default function MiAsistenciaPage() {
           </Alert>
         ) : !judokaId ? (
           <Alert severity="warning" sx={{ mb: 3 }}>
-            Tu perfil de judoka no está vinculado. Contacta al encargado de tu club.
+            Tu perfil de futbolista no está vinculado. Contacta al encargado de tu club.
           </Alert>
         ) : stats ? (
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2, mb: 4 }}>

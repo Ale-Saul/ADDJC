@@ -43,7 +43,7 @@ export default function SenseiCertificacionesPage({ params }: SenseiCertificacio
     if (response.success && response.data) {
       setSensei(response.data)
     } else {
-      setLoadError(response.error || 'Error al cargar el sensei')
+      setLoadError(response.error || 'Error al cargar el entrenador')
     }
     setLoadingSensei(false)
   }, [id])
@@ -98,7 +98,7 @@ export default function SenseiCertificacionesPage({ params }: SenseiCertificacio
           <>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
               <Box display="flex" alignItems="center" gap={2}>
-                <IconButton onClick={() => router.push('/senseis')}>
+                <IconButton onClick={() => router.push('/entrenadores')}>
                   <ArrowBackIcon />
                 </IconButton>
                 <Typography variant="h4" component="h1">

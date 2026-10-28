@@ -66,7 +66,7 @@ export default function ReportesPage() {
 
   const exportarExcel = () => {
     // Crear CSV
-    const headers = ['Fecha Creación', 'Judoka', 'Concepto', 'Tipo', 'Monto Base', 'Descuento', 'Monto Final', 'Estado', 'Fecha Vencimiento', 'Fecha Pago']
+    const headers = ['Fecha Creación', 'Futbolista', 'Concepto', 'Tipo', 'Monto Base', 'Descuento', 'Monto Final', 'Estado', 'Fecha Vencimiento', 'Fecha Pago']
     const rows = pagosFiltrados.map(p => [
       formatters.formatDate(p.created_at),
       getJudokaNombre(p.judoka_id),
@@ -163,7 +163,7 @@ export default function ReportesPage() {
     ])
 
     autoTable(doc, {
-      head: [['Fecha', 'Judoka', 'Concepto', 'Tipo', 'Monto', 'Estado', 'Fecha Pago / Vencimiento']],
+      head: [['Fecha', 'Futbolista', 'Concepto', 'Tipo', 'Monto', 'Estado', 'Fecha Pago / Vencimiento']],
       body: tableData,
       startY: 56, // Aumentado de 48 a 56 para dar espacio después de los totales
       styles: { fontSize: 8, cellPadding: 2 },
@@ -310,13 +310,13 @@ export default function ReportesPage() {
                   </Select>
                 </FormControl>
                 <FormControl size="small" fullWidth sx={{ backgroundColor: 'white' }}>
-                  <InputLabel>Sensei</InputLabel>
+                  <InputLabel>Entrenador</InputLabel>
                   <Select
                     value={senseiFiltro}
-                    label="Sensei"
+                    label="Entrenador"
                     onChange={(e) => setSenseiFiltro(e.target.value)}
                   >
-                    <MenuItem value="todos">Todos los senseis</MenuItem>
+                    <MenuItem value="todos">Todos los entrenadores</MenuItem>
                     {senseisList.map(name => (
                       <MenuItem key={name} value={name}>{name}</MenuItem>
                     ))}
@@ -366,7 +366,7 @@ export default function ReportesPage() {
                     <Chip size="small" label={`Tipo: ${getTipoLabel(tipoFiltro)}`} onDelete={() => setTipoFiltro('todos')} color="primary" variant="outlined" />
                   )}
                   {senseiFiltro !== 'todos' && (
-                    <Chip size="small" label={`Sensei: ${senseiFiltro}`} onDelete={() => setSenseiFiltro('todos')} color="primary" variant="outlined" />
+                    <Chip size="small" label={`Entrenador: ${senseiFiltro}`} onDelete={() => setSenseiFiltro('todos')} color="primary" variant="outlined" />
                   )}
                   {isAdmin && clubFiltro !== 'todos' && (
                     <Chip size="small" label={`Club: ${clubes.find(c => c.id === clubFiltro)?.nombre_club}`} onDelete={() => setClubFiltro('todos')} color="primary" variant="outlined" />
@@ -479,7 +479,7 @@ export default function ReportesPage() {
                 <TableHead>
                   <TableRow>
                     <TableCell>Fecha</TableCell>
-                    <TableCell>Judoka</TableCell>
+                    <TableCell>Futbolista</TableCell>
                     {isAdmin && <TableCell>Club</TableCell>}
                     <TableCell>Concepto</TableCell>
                     <TableCell>Tipo</TableCell>

@@ -10,8 +10,8 @@ export default function Header() {
   const menuItems = [
     { label: 'Inicio', path: '/' },
     { label: 'Clubes', path: '/clubes' },
-    { label: 'Senseis', path: '/senseis' },
-    { label: 'Judokas', path: '/judokas' },
+    { label: 'Entrenadores', path: '/entrenadores' },
+    { label: 'Futbolistas', path: '/futbolistas' },
     { label: 'Árbitros', path: '/arbitros' },
   ]
 

@@ -32,7 +32,7 @@ export default function SenseiCard({ sensei, onClick }: SenseiCardProps) {
         
         {sensei.grado_dan && (
           <Typography variant="body2" color="text.secondary" gutterBottom>
-            🥋 {sensei.grado_dan}
+            📋 {sensei.grado_dan}
           </Typography>
         )}
         

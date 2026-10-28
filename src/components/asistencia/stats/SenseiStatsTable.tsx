@@ -76,7 +76,7 @@ export default function SenseiStatsTable({ stats }: Props) {
 
   return (
     <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
-      <Table size="small" aria-label="Estadísticas de asistencia por estudiante">
+      <Table size="small" aria-label="Estadísticas de asistencia por futbolista">
         <TableHead>
           <TableRow sx={{ bgcolor: 'grey.50' }}>
             <TableCell>
@@ -85,7 +85,7 @@ export default function SenseiStatsTable({ stats }: Props) {
                 direction={sortKey === 'nombre' ? sortDir : 'asc'}
                 onClick={() => handleSort('nombre')}
               >
-                Judoka
+                Futbolista
               </TableSortLabel>
             </TableCell>
             <TableCell align="center">

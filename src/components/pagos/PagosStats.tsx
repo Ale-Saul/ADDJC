@@ -65,7 +65,7 @@ export default function PagosStats({ pagos }: PagosStatsProps) {
       })
       .reduce((sum, p) => sum + p.monto_final, 0)
 
-    // Judokas únicos con deuda (pendiente o vencido con estado real)
+    // Futbolistas únicos con deuda (pendiente o vencido con estado real)
     const judokasConDeuda = new Set(
       pagosConEstadoReal
         .filter(p => (p.estado === ESTADO_PAGO.PENDIENTE || p.estado === ESTADO_PAGO.VENCIDO) && p.activo)
@@ -172,7 +172,7 @@ export default function PagosStats({ pagos }: PagosStatsProps) {
           <Box display="flex" alignItems="center" mb={2}>
             <PeopleIcon sx={{ color: '#000', mr: 1, fontSize: 28 }} />
             <Typography variant="caption" color="#000" fontWeight="bold" sx={{ fontSize: '0.75rem', letterSpacing: 0.5 }}>
-              JUDOKAS CON DEUDA
+              FUTBOLISTAS CON DEUDA
             </Typography>
           </Box>
           <Typography variant="h4" fontWeight="bold" color="#000" sx={{ mb: 0.5 }}>

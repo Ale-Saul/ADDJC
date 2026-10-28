@@ -64,8 +64,8 @@ function audienciaPermitidaEncargado(audiencia: ComunicacionAudiencia[] | undefi
 function getAudienciaOpciones(rol?: string): (AudienciaOpcion & { esGlobal?: boolean })[] {
   const opciones: (AudienciaOpcion & { esGlobal?: boolean })[] = [
     { id: 'todos', label: rol === ROL.ENCARGADO ? 'Para mi club' : 'Todos' },
-    { id: 'judokas', label: 'Judokas' },
-    { id: 'senseis', label: 'Senseis' },
+    { id: 'judokas', label: 'Futbolistas' },
+    { id: 'senseis', label: 'Entrenadores' },
   ]
 
   if (rol !== ROL.ENCARGADO) {

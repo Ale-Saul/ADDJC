@@ -81,10 +81,10 @@ export default function SenseiList({
       if (response.success && response.data) {
         updateLocalSensei(sensei.id, response.data)
       } else {
-        alert(response.error || 'Error al afiliar sensei')
+        alert(response.error || 'Error al afiliar entrenador')
       }
     } catch (err) {
-      alert('Error inesperado al afiliar sensei')
+      alert('Error inesperado al afiliar entrenador')
     } finally {
       setActionLoading(null)
     }
@@ -97,10 +97,10 @@ export default function SenseiList({
       if (response.success && response.data) {
         updateLocalSensei(sensei.id, response.data)
       } else {
-        alert(response.error || 'Error al desafiliar sensei')
+        alert(response.error || 'Error al desafiliar entrenador')
       }
     } catch (err) {
-      alert('Error inesperado al desafiliar sensei')
+      alert('Error inesperado al desafiliar entrenador')
     } finally {
       setActionLoading(null)
     }
@@ -109,7 +109,7 @@ export default function SenseiList({
   const localFilteredData = useMemo(() => {
     const filtered = filteredData.filter(s => {
       if (clubId) {
-        // Si hay clubId (Encargado/Sensei), mostrar los del club y los sin club
+        // Si hay clubId (Encargado/Entrenador), mostrar los del club y los sin club
         return s.club_id === clubId || (showUnassigned && !s.club_id)
       }
       return true
@@ -131,7 +131,7 @@ export default function SenseiList({
     },
     {
       id: 'nombres',
-      label: 'Sensei',
+      label: 'Entrenador',
       render: (s: Sensei) => (
         <Box>
           <Typography variant="body2" fontWeight="bold">
@@ -388,7 +388,7 @@ export default function SenseiList({
             columns={columnsWithActions}
             isLoading={loading}
             keyExtractor={(s) => s.id}
-            emptyMessage="No se encontraron senseis"
+            emptyMessage="No se encontraron entrenadores"
           />
         </>
       )}
@@ -410,7 +410,7 @@ export default function SenseiList({
         updatedAt={auditItem?.updated_at}
         createdAt={auditItem?.created_at}
         updatedByNombre={auditItem?.modificado_por_nombre}
-        entityName="Sensei"
+        entityName="Entrenador"
       />
     </>
   )

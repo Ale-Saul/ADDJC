@@ -301,7 +301,7 @@ export const asistenciaService = {
       return { success: true, data: (data || []).map(mapDetalleRow) }
     } catch (error) {
       console.error('Error en asistenciaService.getHistorialByJudoka:', error)
-      return { success: false, error: error instanceof Error ? error.message : 'Error al obtener el historial del judoka' }
+      return { success: false, error: error instanceof Error ? error.message : 'Error al obtener el historial del futbolista' }
     }
   }
 }

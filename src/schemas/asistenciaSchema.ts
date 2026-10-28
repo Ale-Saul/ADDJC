@@ -12,7 +12,7 @@ export const estadoAsistenciaSchema = z.enum(['presente', 'ausente'])
  */
 export const createSesionSchema = z.object({
   club_id: z.string().uuid('ID de club inválido'),
-  sensei_id: z.string().uuid('ID de sensei inválido'),
+  sensei_id: z.string().uuid('ID de entrenador inválido'),
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de fecha inválido (YYYY-MM-DD)'),
   hora_inicio: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)(:([0-5]\d))?$/, 'Formato de hora inválido (HH:MM)').nullable().optional(),
   hora_fin: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)(:([0-5]\d))?$/, 'Formato de hora inválido (HH:MM)').nullable().optional(),
@@ -51,7 +51,7 @@ export const updateSesionSchema = z.object({
  * Esquema para marcar asistencia de un judoka (individual)
  */
 export const asistenciaDetalleSchema = z.object({
-  judoka_id: z.string().uuid('ID de judoka inválido'),
+  judoka_id: z.string().uuid('ID de futbolista inválido'),
   estado: estadoAsistenciaSchema,
   observacion: z.string().max(255, 'La observación no puede exceder 255 caracteres').nullable().optional(),
 })
@@ -61,7 +61,7 @@ export const asistenciaDetalleSchema = z.object({
  */
 export const asistenciaMasivaSchema = z.object({
   sesion_id: z.string().uuid('ID de sesión inválido'),
-  asistencias: z.array(asistenciaDetalleSchema).min(1, 'Debe haber al menos un judoka en la lista'),
+  asistencias: z.array(asistenciaDetalleSchema).min(1, 'Debe haber al menos un futbolista en la lista'),
 })
 
 /**

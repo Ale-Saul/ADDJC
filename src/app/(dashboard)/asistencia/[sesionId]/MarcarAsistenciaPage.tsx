@@ -194,7 +194,7 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
 
               {judokasElegibles.length > 0 && !isLoading && (
                 <Chip
-                  label={`${judokasElegibles.length} judokas`}
+                  label={`${judokasElegibles.length} futbolistas`}
                   size="small"
                   variant="outlined"
                   color="primary"
@@ -216,13 +216,13 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
           </Stack>
         ) : (judokasQuery.error || sesionQuery.error) ? (
           <Alert severity="error">
-            {judokasQuery.error ?? 'No se pudo cargar la lista de judokas.'}
+            {judokasQuery.error ?? 'No se pudo cargar la lista de futbolistas.'}
           </Alert>
         ) : judokasElegibles.length === 0 ? (
           <Alert severity="info">
             {isSensei
-              ? 'No tienes judokas asignados que estuvieran inscritos en la fecha de esta sesión.'
-              : 'No hay judokas del club inscritos en la fecha de esta sesión.'}
+              ? 'No tienes futbolistas asignados que estuvieran inscritos en la fecha de esta sesión.'
+              : 'No hay futbolistas del club inscritos en la fecha de esta sesión.'}
           </Alert>
         ) : (
           <MarcarAsistenciaForm

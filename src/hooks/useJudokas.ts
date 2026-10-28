@@ -88,7 +88,7 @@ export function useJudokas(options: UseJudokasOptions = {}) {
       setSelectedJudoka(response.data)
       return { success: true, data: response.data }
     } else {
-      setError(response.error || 'Error al cargar judoka')
+      setError(response.error || 'Error al cargar futbolista')
       return { success: false, error: response.error }
     }
   }
@@ -101,7 +101,7 @@ export function useJudokas(options: UseJudokasOptions = {}) {
       setJudokas(prev => [...prev, response.data!])
       return { success: true, data: response.data }
     } else {
-      setError(response.error || 'Error al crear judoka')
+      setError(response.error || 'Error al crear futbolista')
       return { success: false, error: response.error }
     }
   }
@@ -119,7 +119,7 @@ export function useJudokas(options: UseJudokasOptions = {}) {
       }
       return { success: true, data: response.data }
     } else {
-      setError(response.error || 'Error al actualizar judoka')
+      setError(response.error || 'Error al actualizar futbolista')
       return { success: false, error: response.error }
     }
   }
@@ -127,7 +127,7 @@ export function useJudokas(options: UseJudokasOptions = {}) {
   const deleteJudoka = async (id: string) => {
     const judoka = judokas.find(j => j.id === id)
     if (!judoka) {
-      return { success: false, error: 'Judoka no encontrado' }
+      return { success: false, error: 'Futbolista no encontrado' }
     }
 
     const confirmed = confirm(
@@ -145,7 +145,7 @@ export function useJudokas(options: UseJudokasOptions = {}) {
       setJudokas(prev => prev.filter(j => j.id !== id))
       return { success: true }
     } else {
-      setError(response.error || 'Error al eliminar judoka')
+      setError(response.error || 'Error al eliminar futbolista')
       return { success: false, error: response.error }
     }
   }

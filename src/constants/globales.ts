@@ -39,7 +39,7 @@ export const MUNICIPIOS = [
   'Tiraque',
 ] as const
 
-/** Especialidades para senseis */
+/** Especialidades para entrenadores */
 export const ESPECIALIDADES_SENSEI = [
   'Kata',
   'Katame-waza',
@@ -47,7 +47,7 @@ export const ESPECIALIDADES_SENSEI = [
   'Randori',
 ] as const
 
-/** Grados Dan para senseis */
+/** Grados Dan para entrenadores */
 export const GRADOS_DAN = [
   '1er Dan',
   '2do Dan',
@@ -134,8 +134,10 @@ export const ROUTES = {
   HOME: '/',
   LOGIN: '/login',
   PROFILE: '/perfil',
-  JUDOKAS: '/judokas',
-  SENSEIS: '/senseis',
+  JUDOKAS: '/futbolistas',
+  FUTBOLISTAS: '/futbolistas',
+  SENSEIS: '/entrenadores',
+  ENTRENADORES: '/entrenadores',
   ARBITROS: '/arbitros',
   CLUBES: '/clubes',
   ASOCIACION: '/asociacion',

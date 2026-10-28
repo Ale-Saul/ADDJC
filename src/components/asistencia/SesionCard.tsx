@@ -104,7 +104,7 @@ export default function SesionCard({ sesion, mostrarSensei, onEliminar, eliminar
             </Typography>
           )}
 
-          {/* Sensei (solo encargado/admin) */}
+          {/* Entrenador (solo encargado/admin) */}
           {mostrarSensei && sesion.nombre_sensei && (
             <Stack direction="row" alignItems="center" spacing={0.5}>
               <PersonIcon fontSize="small" color="action" />

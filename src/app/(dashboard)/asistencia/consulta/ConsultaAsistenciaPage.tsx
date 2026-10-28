@@ -133,7 +133,7 @@ function ResumenComision({
       </Stack>
 
       <Typography variant="body2" sx={{ lineHeight: 1.9 }}>
-        El judoka <strong>{judoka.apellidos}, {judoka.nombres}</strong>
+        El futbolista <strong>{judoka.apellidos}, {judoka.nombres}</strong>
         {judoka.ci ? ` (CI: ${judoka.ci})` : ''}{' '}
         registra una asistencia de{' '}
         <strong>{pct}%</strong> ({stats.presentes} de {stats.total_sesiones} sesiones
@@ -209,7 +209,7 @@ export default function ConsultaAsistenciaPage() {
               Consulta de Asistencia
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Historial de asistencia de un judoka para justificación en torneos
+              Historial de asistencia de un futbolista para justificación en torneos
             </Typography>
           </Box>
         </Stack>
@@ -217,7 +217,7 @@ export default function ConsultaAsistenciaPage() {
         {/* ── Buscador principal ── */}
         <Box mb={2}>
           <Typography variant="body2" fontWeight="600" color="text.secondary" mb={1}>
-            Buscar judoka
+            Buscar futbolista
           </Typography>
           <Autocomplete
             options={judokaOptions}
@@ -258,7 +258,7 @@ export default function ConsultaAsistenciaPage() {
               <TextField
                 {...params}
                 placeholder="Escribir nombre, apellido o CI…"
-                aria-label="Buscar judoka por nombre o CI"
+                aria-label="Buscar futbolista por nombre o CI"
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
@@ -272,7 +272,7 @@ export default function ConsultaAsistenciaPage() {
                 }}
               />
             )}
-            noOptionsText="Sin judokas encontrados"
+            noOptionsText="Sin futbolistas encontrados"
             loadingText="Cargando judokas…"
             isOptionEqualToValue={(a, b) => a.id === b.id}
             clearOnEscape
@@ -331,7 +331,7 @@ export default function ConsultaAsistenciaPage() {
           <Box sx={{ textAlign: 'center', py: 10, color: 'text.secondary' }}>
             <ManageSearchIcon sx={{ fontSize: 64, opacity: 0.2, mb: 2 }} />
             <Typography variant="h6" gutterBottom fontWeight="500">
-              Busca un judoka para comenzar
+              Busca un futbolista para comenzar
             </Typography>
             <Typography variant="body2" color="text.disabled">
               Escribe su nombre, apellido o CI en el buscador de arriba.
@@ -342,7 +342,7 @@ export default function ConsultaAsistenciaPage() {
         {/* ── Resultado ── */}
         {judokaSeleccionado && (
           <>
-            {/* Banner del judoka seleccionado */}
+            {/* Banner del futbolista seleccionado */}
             <JudokaInfoBanner judoka={judokaSeleccionado} />
 
             {statsQuery.error || historialQuery.error ? (
@@ -411,8 +411,8 @@ export default function ConsultaAsistenciaPage() {
             ) : (
               <Alert severity="info">
                 {hayFiltroFechas
-                  ? 'Sin registros de asistencia en el período seleccionado para este judoka.'
-                  : 'Este judoka no tiene sesiones de asistencia registradas.'}
+                  ? 'Sin registros de asistencia en el período seleccionado para este futbolista.'
+                  : 'Este futbolista no tiene sesiones de asistencia registradas.'}
               </Alert>
             )}
           </>

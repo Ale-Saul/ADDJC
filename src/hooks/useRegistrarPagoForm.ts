@@ -55,7 +55,7 @@ export function useRegistrarPagoForm(pagos: Pago[], userId: string | undefined, 
 
         // Generar un único comprobante con todos los pagos registrados
         const pagosRegistrados = results.map(r => r.data).filter(Boolean) as Pago[]
-        generatePagoReceipt(pagosRegistrados, judokaNombre || 'Judoka', clubNombre, usuarioNombre || 'Sistema')
+        generatePagoReceipt(pagosRegistrados, judokaNombre || 'Futbolista', clubNombre, usuarioNombre || 'Sistema')
 
         setSuccess(true)
         if (onSuccess) setTimeout(onSuccess, 1500)

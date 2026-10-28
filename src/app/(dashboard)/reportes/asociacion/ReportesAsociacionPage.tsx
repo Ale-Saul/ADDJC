@@ -66,7 +66,7 @@ export default function ReportesAsociacionPage() {
     const titulo = vistaDetalle === 'club' 
       ? 'Reporte Consolidado por Club - Asociación de Judo'
       : vistaDetalle === 'judokas'
-      ? 'Reporte Consolidado por Judoka - Asociación de Judo'
+      ? 'Reporte Consolidado por Futbolista - Koklub'
       : 'Reporte Detallado de Pagos - Asociación de Judo'
     doc.text(titulo, 14, 20)
     
@@ -95,7 +95,7 @@ export default function ReportesAsociacionPage() {
       ])
 
       autoTable(doc, {
-        head: [['Club', 'Judokas', 'Cobrado', 'Pendiente', 'Vencido']],
+        head: [['Club', 'Futbolistas', 'Cobrado', 'Pendiente', 'Vencido']],
         body: tableData,
         startY: 54,
         styles: { fontSize: 9, cellPadding: 3 },
@@ -149,7 +149,7 @@ export default function ReportesAsociacionPage() {
       })
 
       autoTable(doc, {
-        head: [['Judoka', 'Club', 'CI', 'Pagos', 'Cobrado', 'Pendiente', 'Vencido']],
+        head: [['Futbolista', 'Club', 'CI', 'Pagos', 'Cobrado', 'Pendiente', 'Vencido']],
         body: tableData,
         foot: [[
           'TOTAL',
@@ -219,7 +219,7 @@ export default function ReportesAsociacionPage() {
       ])
 
       autoTable(doc, {
-        head: [['Fecha', 'Judoka', 'Club', 'Concepto', 'Tipo', 'Monto', 'Estado', 'Fecha Pago / Venc.']],
+        head: [['Fecha', 'Futbolista', 'Club', 'Concepto', 'Tipo', 'Monto', 'Estado', 'Fecha Pago / Venc.']],
         body: tableData,
         foot: [[
           '',
@@ -272,7 +272,7 @@ export default function ReportesAsociacionPage() {
     let totalesRows: (string | number)[][]
 
     if (vistaDetalle === 'club') {
-      headers = ['Club', 'Judokas', 'Pagos', 'Total Cobrado', 'Total Pendiente', 'Total Vencido']
+      headers = ['Club', 'Futbolistas', 'Pagos', 'Total Cobrado', 'Total Pendiente', 'Total Vencido']
       rows = resumenesPorClub.map(r => [
         r.club.nombre_club,
         r.cantidadJudokas,
@@ -288,7 +288,7 @@ export default function ReportesAsociacionPage() {
         ['TOTALES', '', '', totalesGenerales.totalCobrado.toFixed(2), totalesGenerales.totalPendiente.toFixed(2), totalesGenerales.totalVencido.toFixed(2)]
       ]
     } else if (vistaDetalle === 'judokas') {
-      headers = ['Judoka', 'Club', 'CI', 'Pagos', 'Total Cobrado', 'Total Pendiente', 'Total Vencido', 'Total General']
+      headers = ['Futbolista', 'Club', 'CI', 'Pagos', 'Total Cobrado', 'Total Pendiente', 'Total Vencido', 'Total General']
       rows = resumenesPorJudoka.map(r => {
         const nombreClub = clubes.find(c => c.id === r.judoka.club_id)?.nombre_club || ''
         return [
@@ -313,7 +313,7 @@ export default function ReportesAsociacionPage() {
         ['TOTALES', '', '', '', totalCobradoJudokas.toFixed(2), totalPendienteJudokas.toFixed(2), totalVencidoJudokas.toFixed(2), (totalCobradoJudokas + totalPendienteJudokas).toFixed(2)]
       ]
     } else {
-      headers = ['Fecha', 'Judoka', 'Club', 'Concepto', 'Tipo', 'Monto Base', 'Descuento', 'Monto Final', 'Estado', 'Fecha Vencimiento', 'Fecha Pago']
+      headers = ['Fecha', 'Futbolista', 'Club', 'Concepto', 'Tipo', 'Monto Base', 'Descuento', 'Monto Final', 'Estado', 'Fecha Vencimiento', 'Fecha Pago']
       rows = pagosConDetalles.map(p => [
         formatters.formatDate(p.created_at),
         p.judoka_nombre || 'N/A',
@@ -456,7 +456,7 @@ export default function ReportesAsociacionPage() {
                     onChange={(e) => setVistaDetalle(e.target.value as 'club' | 'pagos' | 'judokas')}
                   >
                     <MenuItem value="club">Por Club</MenuItem>
-                    <MenuItem value="judokas">Por Judokas</MenuItem>
+                    <MenuItem value="judokas">Por Futbolistas</MenuItem>
                     <MenuItem value="pagos">Detalle de Pagos</MenuItem>
                   </Select>
                 </FormControl>
@@ -487,7 +487,7 @@ export default function ReportesAsociacionPage() {
                   )}
                   {vistaDetalle !== 'club' && (
                     <Chip
-                      label={`Vista: ${vistaDetalle === 'judokas' ? 'Por Judokas' : 'Detalle de Pagos'}`}
+                      label={`Vista: ${vistaDetalle === 'judokas' ? 'Por Futbolistas' : 'Detalle de Pagos'}`}
                       onDelete={() => setVistaDetalle('club')}
                       size="small"
                       color="primary"
@@ -561,7 +561,7 @@ export default function ReportesAsociacionPage() {
                 <TableHead>
                   <TableRow>
                     <TableCell>Club</TableCell>
-                    <TableCell align="center">Judokas</TableCell>
+                    <TableCell align="center">Futbolistas</TableCell>
                     <TableCell align="center">Pagos</TableCell>
                     <TableCell align="right">Total Cobrado</TableCell>
                     <TableCell align="right">Total Pendiente</TableCell>
@@ -625,15 +625,15 @@ export default function ReportesAsociacionPage() {
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" mb={2}>
               {clubSeleccionado === 'todos' 
-                ? 'Resumen por Judoka - Todos los Clubes'
-                : `Resumen por Judoka - ${clubes.find(c => c.id === clubSeleccionado)?.nombre_club}`
+                ? 'Resumen por Futbolista - Todos los Clubes'
+                : `Resumen por Futbolista - ${clubes.find(c => c.id === clubSeleccionado)?.nombre_club}`
               }
             </Typography>
             <TableContainer>
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Judoka</TableCell>
+                    <TableCell>Futbolista</TableCell>
                     <TableCell>Club</TableCell>
                     <TableCell align="center">CI</TableCell>
                     <TableCell align="center">Pagos</TableCell>
@@ -688,7 +688,7 @@ export default function ReportesAsociacionPage() {
                     <TableRow>
                       <TableCell colSpan={8} align="center">
                         <Typography color="text.secondary">
-                          No hay judokas con pagos en el período seleccionado
+                          No hay futbolistas con pagos en el período seleccionado
                         </Typography>
                       </TableCell>
                     </TableRow>

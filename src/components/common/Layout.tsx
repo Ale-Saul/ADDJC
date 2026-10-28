@@ -61,7 +61,7 @@ export default function Layout({ children }: LayoutProps) {
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem' }, fontWeight: 500 }}>
                 {user?.club_nombre
                   ? `Club ${user.club_nombre}`
-                  : 'Asociación Departamental de Judo'}
+                  : 'Koklub'}
               </Typography>
             </Box>
             

@@ -129,12 +129,18 @@ export default function LoginPage() {
             alignItems: 'center',
           }}
         >
-          <Typography component="h1" variant="h4" gutterBottom>
-            Iniciar Sesión
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Sistema de Gestión - Asociación de Judo
-          </Typography>
+          <Box
+            component="img"
+            src="/koklub-logo-trimmed.png"
+            alt="Koklub"
+            sx={{
+              width: 140,
+              height: 'auto',
+              maxHeight: 160,
+              objectFit: 'contain',
+              mb: 2.5,
+            }}
+          />
 
           {error && (
             <Alert severity="error" sx={{ width: '100%', mb: 2 }}>

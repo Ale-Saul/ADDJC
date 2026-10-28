@@ -243,7 +243,7 @@ export const userService = {
       const usuarioId = result.data?.usuarioId ?? result.data?.userId
       return { success: true, data: { userId: result.data!.userId, usuarioId: usuarioId as string } }
     } catch (error) {
-      console.error('Error al crear usuario de judoka:', error)
+      console.error('Error al crear usuario de futbolista:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear usuario'
       return { success: false, error: errorMessage }
     }

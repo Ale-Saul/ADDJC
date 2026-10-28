@@ -184,7 +184,7 @@ export function useSenseiForm(sensei?: Sensei | null, user?: User, onSuccess?: (
         }
         setLoading(false)
       } else {
-        setError(response.error || 'Error al guardar el sensei')
+        setError(response.error || 'Error al guardar el entrenador')
         setLoading(false)
       }
     } catch (err: any) {

@@ -116,10 +116,10 @@ export default function JudokaList({
       if (response.success && response.data) {
         updateLocalJudoka(judoka.id, response.data)
       } else {
-        alert(response.error || 'Error al afiliar judoka')
+        alert(response.error || 'Error al afiliar futbolista')
       }
     } catch (err) {
-      alert('Error inesperado al afiliar judoka')
+      alert('Error inesperado al afiliar futbolista')
     } finally {
       setActionLoading(null)
     }
@@ -132,10 +132,10 @@ export default function JudokaList({
       if (response.success && response.data) {
         updateLocalJudoka(judoka.id, response.data)
       } else {
-        alert(response.error || 'Error al desafiliar judoka')
+        alert(response.error || 'Error al desafiliar futbolista')
       }
     } catch (err) {
-      alert('Error inesperado al desafiliar judoka')
+      alert('Error inesperado al desafiliar futbolista')
     } finally {
       setActionLoading(null)
     }
@@ -210,10 +210,10 @@ export default function JudokaList({
         deleteLocalJudoka(pendingDelete.id)
         setPendingDelete(null)
       } else {
-        alert(response.error || 'Error al eliminar judoka')
+        alert(response.error || 'Error al eliminar futbolista')
       }
     } catch {
-      alert('Error inesperado al eliminar judoka')
+      alert('Error inesperado al eliminar futbolista')
     } finally {
       setConfirmLoading(false)
     }
@@ -233,7 +233,7 @@ export default function JudokaList({
       },
       {
         id: 'nombres',
-        label: 'Judoka',
+        label: 'Futbolista',
         render: (j: Judoka) => (
           <Box>
             <Typography variant="body2" fontWeight="bold">
@@ -514,7 +514,7 @@ export default function JudokaList({
         data={paginatedData}
         isLoading={isLoading}
         keyExtractor={(row) => row.id}
-        emptyMessage="No se encontraron judokas"
+        emptyMessage="No se encontraron futbolistas"
       />
 
       <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
@@ -531,7 +531,7 @@ export default function JudokaList({
       {!onDelete && (
         <ConfirmDialog
           open={!!pendingDelete}
-          title="Eliminar Judoka"
+          title="Eliminar Futbolista"
           message={pendingDelete ? `Estás seguro de eliminar al judoka "${pendingDelete.nombres} "?` : ''}
           confirmText="Eliminar"
           onConfirm={handleConfirmDelete}
@@ -546,7 +546,7 @@ export default function JudokaList({
         updatedAt={auditItem?.updated_at}
         createdAt={auditItem?.created_at}
         updatedByNombre={auditItem?.modificado_por_nombre}
-        entityName="Judoka"
+        entityName="Futbolista"
       />
     </>
   )

@@ -140,7 +140,7 @@ export const judokaSchema = baseUserObject.extend({
 }).refine(validateApellidos, apellidosErrorConfig)
 
 /**
- * Esquema específico para Senseis
+ * Esquema específico para Entrenadores
  */
 export const senseiSchema = baseUserObject.extend({
   // En vinculación silenciosa el email no aplica (el usuario directivo ya tiene cuenta)
@@ -245,7 +245,7 @@ export const miembroAsociacionSchema = baseUserObject.extend({
 // ─── Schemas para la capa de controllers ─────────────────────────────────────
 
 /**
- * Validación de nombres/apellidos en operaciones CREATE (sensei, judoka)
+ * Validación de nombres/apellidos en operaciones CREATE (entrenador, futbolista)
  */
 export const personNamesCreateSchema = z.object({
   nombres: z.string()

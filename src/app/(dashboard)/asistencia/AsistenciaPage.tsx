@@ -187,13 +187,13 @@ export default function AsistenciaPage() {
               />
               {filtros.senseiOptions.length > 0 && (
                 <FormControl size="small" fullWidth>
-                  <InputLabel>Filtrar por Sensei</InputLabel>
+                  <InputLabel>Filtrar por Entrenador</InputLabel>
                   <Select
-                    label="Filtrar por Sensei"
+                    label="Filtrar por Entrenador"
                     value={filtros.senseiId}
                     onChange={e => filtros.setSenseiId(e.target.value)}
                   >
-                    <MenuItem value="all">Todos los senseis del club</MenuItem>
+                    <MenuItem value="all">Todos los entrenadores del club</MenuItem>
                     {filtros.senseiOptions.map(opt => (
                       <MenuItem key={opt.value} value={opt.value}>
                         {opt.label}
@@ -296,7 +296,7 @@ export default function AsistenciaPage() {
                     sx={{ p: 3, textAlign: 'center', bgcolor: 'grey.50', borderStyle: 'dashed', borderRadius: 2 }}
                   >
                     <Typography variant="body2" color="text.secondary">
-                      No hay sesiones registradas para este sensei en el periodo seleccionado.
+                      No hay sesiones registradas para este entrenador en el periodo seleccionado.
                     </Typography>
                   </Paper>
                 )}

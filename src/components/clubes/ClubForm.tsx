@@ -210,7 +210,7 @@ export default function ClubForm({ club, onSuccess, onCancel }: ClubFormProps) {
         <Grid size={{ xs: 12, sm: 6 }} sx={gridFieldCellSx}>
           <FormAutocomplete
             name="director_tecnico_id"
-            label="Director Técnico (Sensei/Encargado)"
+            label="Director Técnico (Entrenador/Encargado)"
             control={control}
             disabled={submitting || loadingSenseis || state.isCreatingNewDirector}
             options={senseiOptions}

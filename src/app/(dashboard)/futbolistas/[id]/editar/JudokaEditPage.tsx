@@ -29,7 +29,7 @@ export default function JudokaEditPage({ params }: JudokaEditPageProps) {
     if (response.success && response.data) {
       setJudoka(response.data)
     } else {
-      setError(response.error || 'Error al cargar el judoka')
+      setError(response.error || 'Error al cargar el futbolista')
     }
 
     setLoading(false)
@@ -42,7 +42,7 @@ export default function JudokaEditPage({ params }: JudokaEditPageProps) {
   }, [id, loadJudoka])
 
   const handleSuccess = () => {
-    setSuccessMessage('Judoka actualizado exitosamente')
+    setSuccessMessage('Futbolista actualizado exitosamente')
     loadJudoka()
   }
 
@@ -69,14 +69,14 @@ export default function JudokaEditPage({ params }: JudokaEditPageProps) {
       <Box mb={3}>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => router.push(`/judokas`)}
+          onClick={() => router.push(`/futbolistas`)}
           sx={{ mb: 2 }}
         >
           Volver a la Lista
         </Button>
         
         <Typography variant="h4" component="h1">
-          Editar Judoka
+          Editar Futbolista
         </Typography>
       </Box>
 
@@ -84,7 +84,7 @@ export default function JudokaEditPage({ params }: JudokaEditPageProps) {
         <JudokaForm
           judoka={judoka}
           onSuccess={handleSuccess}
-          onCancel={() => router.push(`/judokas`)}
+          onCancel={() => router.push(`/futbolistas`)}
         />
       )}
 

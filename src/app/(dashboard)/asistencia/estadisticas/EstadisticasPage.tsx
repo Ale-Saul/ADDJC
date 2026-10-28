@@ -171,7 +171,7 @@ export default function EstadisticasPage() {
             headStyles: { fillColor: [25, 118, 210] }
         })
     } else if (vistaDesglose === 'judoka' && judokasClubQuery.data && judokasClubQuery.data.length > 0) {
-        doc.text('Desglose por Judoka:', 14, yPos)
+        doc.text('Desglose por Futbolista:', 14, yPos)
         yPos += 5
         
         const sortedJudokas = [...judokasClubQuery.data].sort((a, b) => {
@@ -189,7 +189,7 @@ export default function EstadisticasPage() {
 
         autoTable(doc, {
             startY: yPos,
-            head: [['Judoka', 'Presentes', 'Ausentes', '% Asistencia']],
+            head: [['Futbolista', 'Presentes', 'Ausentes', '% Asistencia']],
             body: body,
             theme: 'grid',
             headStyles: { fillColor: [25, 118, 210] }
@@ -407,8 +407,8 @@ export default function EstadisticasPage() {
                     subtitle={subtituloPeriodo}
                     icon={<EventIcon fontSize="small" />}
                     secondaryStats={[
-                      { label: 'Senseis activos', value: reporte.stats_por_sensei.length },
-                      { label: 'Prom. por sensei', value: reporte.stats_por_sensei.length > 0 ? Math.round(reporte.stats_globales.total_sesiones / reporte.stats_por_sensei.length) : 0 },
+                      { label: 'Entrenadores activos', value: reporte.stats_por_sensei.length },
+                      { label: 'Prom. por entrenador', value: reporte.stats_por_sensei.length > 0 ? Math.round(reporte.stats_globales.total_sesiones / reporte.stats_por_sensei.length) : 0 },
                     ]}
                   />
                 </Box>
@@ -423,13 +423,13 @@ export default function EstadisticasPage() {
                     {/* Filtro por sensei — ocupa todo el espacio disponible */}
                     {reporte.stats_por_sensei.length > 1 && (
                       <FormControl size="small" fullWidth>
-                        <InputLabel>Filtrar por sensei</InputLabel>
+                        <InputLabel>Filtrar por entrenador</InputLabel>
                         <Select
-                          label="Filtrar por sensei"
+                          label="Filtrar por entrenador"
                           value={senseiFiltroDesglose}
                           onChange={e => setSenseiFiltroDesglose(e.target.value)}
                         >
-                          <MenuItem value="all">Todos los senseis</MenuItem>
+                          <MenuItem value="all">Todos los entrenadores</MenuItem>
                           {reporte.stats_por_sensei.map(s => (
                             <MenuItem key={s.sensei_id} value={s.sensei_id}>{s.nombre}</MenuItem>
                           ))}
@@ -447,11 +447,11 @@ export default function EstadisticasPage() {
                     >
                       <ToggleButton value="sensei" aria-label="Por sensei">
                         <SchoolIcon fontSize="small" sx={{ mr: 0.5 }} />
-                        Por Sensei
+                        Por Entrenador
                       </ToggleButton>
-                      <ToggleButton value="judoka" aria-label="Por judoka">
+                      <ToggleButton value="judoka" aria-label="Por futbolista">
                         <PersonIcon fontSize="small" sx={{ mr: 0.5 }} />
-                        Por Judoka
+                        Por Futbolista
                       </ToggleButton>
                     </ToggleButtonGroup>
                   </Box>
@@ -463,10 +463,10 @@ export default function EstadisticasPage() {
                     <Alert severity="info">Sin sesiones en el período.</Alert>
                   ) : (
                     <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
-                      <Table size="small" aria-label="Estadísticas por sensei">
+                      <Table size="small" aria-label="Estadísticas por entrenador">
                         <TableHead>
                           <TableRow sx={{ bgcolor: 'grey.50' }}>
-                            <TableCell sx={{ fontWeight: 600 }}>Sensei</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Entrenador</TableCell>
                             <TableCell align="center" sx={{ fontWeight: 600 }}>Sesiones</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>% Asistencia prom.</TableCell>
                           </TableRow>
@@ -506,7 +506,7 @@ export default function EstadisticasPage() {
                       <Table size="small" aria-label="Estadísticas por judoka">
                         <TableHead>
                           <TableRow sx={{ bgcolor: 'grey.50' }}>
-                            <TableCell sx={{ fontWeight: 600 }}>Judoka</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Futbolista</TableCell>
                             <TableCell align="center" sx={{ fontWeight: 600 }}>Presentes</TableCell>
                             <TableCell align="center" sx={{ fontWeight: 600 }}>Ausentes</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>% Asistencia</TableCell>

@@ -58,7 +58,7 @@ export default function PagoMasivoForm({ judokas, onSuccess, onCancel }: PagoMas
   return (
     <Box component="form" onSubmit={form.handleSubmit(onSubmit)} sx={{ mt: 2 }}>
       <Typography variant="subtitle1" color="text.secondary" mb={3}>
-        Crear pago para <strong>{judokas.length} judokas</strong> seleccionados
+        Crear pago para <strong>{judokas.length} futbolistas</strong> seleccionados
       </Typography>
 
       {error && (
@@ -220,10 +220,10 @@ export default function PagoMasivoForm({ judokas, onSuccess, onCancel }: PagoMas
 
         <Box sx={{ p: 2, bgcolor: 'primary.main', color: 'white', borderRadius: 2, boxShadow: 2 }}>
           <Typography variant="h6" fontWeight="bold">
-            Monto Final por Judoka: Bs. {montoFinal.toFixed(2)}
+            Monto Final por Futbolista: Bs. {montoFinal.toFixed(2)}
           </Typography>
           <Typography variant="body2" sx={{ opacity: 0.9 }}>
-            Total a generar: Bs. {(montoFinal * judokas.length).toFixed(2)} para {judokas.length} judokas
+            Total a generar: Bs. {(montoFinal * judokas.length).toFixed(2)} para {judokas.length} futbolistas
           </Typography>
         </Box>
 
