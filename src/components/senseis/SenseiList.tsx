@@ -31,7 +31,7 @@ import Pagination from '@/components/common/Pagination'
 import AuditModal from '@/components/common/AuditModal'
 import { DataTable, Column, SearchBar, FilterSelect } from '@/components/ui'
 import ConfirmDialog from '@/components/common/ConfirmDialog'
-import { ESPECIALIDADES_SENSEI, GRADOS_DAN } from '@/constants/globales'
+import { CATEGORIES, GRADOS_DAN } from '@/constants/globales'
 import { senseiController } from '@/controllers/senseiController'
 import { useAuth } from '@/contexts/AuthContext'
 import { ROL } from '@/constants/roles'
@@ -190,14 +190,20 @@ export default function SenseiList({
       ),
     },
     {
-      id: 'grado_dan',
-      label: 'Grado Dan',
-      render: (s: Sensei) => <Typography variant="body2">{s.grado_dan}</Typography>
-    },
-    {
       id: 'especialidad',
-      label: 'Especialidad',
-      render: (s: Sensei) => <Typography variant="body2">{s.especialidad || '-'}</Typography>
+      label: 'Categorías',
+      render: (s: Sensei) => {
+        if (s.categorias && s.categorias.length > 0) {
+          return (
+            <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ maxWidth: 260 }}>
+              {s.categorias.map(cat => (
+                <Chip key={cat} label={cat} size="small" variant="outlined" color="primary" sx={{ fontSize: '0.72rem' }} />
+              ))}
+            </Stack>
+          )
+        }
+        return <Typography variant="body2">{s.especialidad || '-'}</Typography>
+      }
     },
     {
       id: 'estado',
@@ -346,29 +352,18 @@ export default function SenseiList({
             showFilters={state.showFilters}
           >
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, sm: 4 }}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FilterSelect
-                  label="Grado Dan"
-                  value={state.gradoDanFilter}
-                  onChange={(e) => dispatch({ type: 'SET_GRADO_DAN_FILTER', payload: e.target.value })}
-                  options={[
-                    { value: 'all', label: 'Todos los grados' },
-                    ...GRADOS_DAN.map(g => ({ value: g, label: g }))
-                  ]}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FilterSelect
-                  label="Especialidad"
+                  label="Categoría"
                   value={state.especialidadFilter}
                   onChange={(e) => dispatch({ type: 'SET_ESPECIALIDAD_FILTER', payload: e.target.value })}
                   options={[
-                    { value: 'all', label: 'Todas las especialidades' },
-                    ...ESPECIALIDADES_SENSEI.map(e => ({ value: e, label: e }))
+                    { value: 'all', label: 'Todas las categorías' },
+                    ...CATEGORIES.map((c: string) => ({ value: c, label: c }))
                   ]}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FilterSelect
                   label="Estado"
                   value={state.estadoFilter}

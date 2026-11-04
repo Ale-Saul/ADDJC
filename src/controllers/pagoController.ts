@@ -5,6 +5,7 @@ import { ESTADO_PAGO, TIPO_DESCUENTO } from '@/constants/pagos'
 import { createPagoSchema, updatePagoSchema } from '@/schemas/pagoSchema'
 import { comunicacionController } from '@/controllers/comunicacionController'
 import { comunicacionService } from '@/services/comunicacionService'
+import * as movimientoFinancieroService from '@/services/movimientoFinancieroService'
 
 export const pagoController = {
   /**
@@ -133,6 +134,12 @@ export const pagoController = {
 
     if (result.success && result.data) {
       const pago = result.data
+      const estadosPagados = new Set<string>([ESTADO_PAGO.PAGADO, 'pago', 'completado'])
+      if (estadosPagados.has(pago.estado)) {
+        movimientoFinancieroService.registrarIngresoDesdePago(pago).catch((err: any) => {
+          console.error('Error sincronizando ingreso desde pago creado:', err)
+        })
+      }
       const judokaResult = await pagoService.getUsuarioIdByJudoka(pago.judoka_id)
       if (judokaResult.success && judokaResult.data) {
         const fechaFormateada = new Date(pago.fecha_vencimiento).toLocaleDateString('es-BO', {
@@ -316,6 +323,11 @@ export const pagoController = {
 
     if (result.success && result.data && !estabaPagado && quedoPagado) {
       const pago = result.data
+      // Sincronizar automáticamente hacia movimientos_financieros como ingreso
+      movimientoFinancieroService.registrarIngresoDesdePago(pago).catch((err: any) => {
+        console.error('Error sincronizando ingreso desde pago:', err)
+      })
+
       const judokaResult = await pagoService.getUsuarioIdByJudoka(pago.judoka_id)
 
       if (judokaResult.success && judokaResult.data) {
@@ -334,6 +346,11 @@ export const pagoController = {
           console.error('No se pudo notificar la confirmación de pago:', notifResult.error)
         }
       }
+    } else if (result.success && result.data && estabaPagado && !quedoPagado) {
+      // Si el pago deja de estar pagado (ej: cancelado o reembolsado), anular el ingreso
+      movimientoFinancieroService.anularIngresoDePago(id).catch((err: any) => {
+        console.error('Error anulando ingreso de pago:', err)
+      })
     }
 
     return result
@@ -353,6 +370,13 @@ export const pagoController = {
       return { success: false, error: 'Pago no encontrado' }
     }
 
+    const estadosPagados = new Set<string>([ESTADO_PAGO.PAGADO, 'pago', 'completado'])
+    if (estadosPagados.has(existingPago.data.estado)) {
+      movimientoFinancieroService.anularIngresoDePago(id).catch((err: any) => {
+        console.error('Error anulando ingreso de pago eliminado:', err)
+      })
+    }
+
     return await pagoService.delete(id)
   },
 
@@ -364,6 +388,15 @@ export const pagoController = {
       return { success: false, error: 'ID del pago es requerido' }
     }
 
-    return await pagoService.restore(id)
+    const result = await pagoService.restore(id)
+    if (result.success && result.data) {
+      const estadosPagados = new Set<string>([ESTADO_PAGO.PAGADO, 'pago', 'completado'])
+      if (estadosPagados.has(result.data.estado)) {
+        movimientoFinancieroService.registrarIngresoDesdePago(result.data).catch((err: any) => {
+          console.error('Error sincronizando ingreso desde pago restaurado:', err)
+        })
+      }
+    }
+    return result
   }
 }

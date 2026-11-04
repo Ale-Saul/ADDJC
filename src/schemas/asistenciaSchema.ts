@@ -17,6 +17,7 @@ export const createSesionSchema = z.object({
   hora_inicio: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)(:([0-5]\d))?$/, 'Formato de hora inválido (HH:MM)').nullable().optional(),
   hora_fin: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)(:([0-5]\d))?$/, 'Formato de hora inválido (HH:MM)').nullable().optional(),
   titulo: z.string().max(120, 'El título no puede exceder 120 caracteres').refine(v => !/\s{2,}/.test(v), { message: 'No se permiten espacios consecutivos' }).nullable().optional(),
+  categoria: z.string().max(100, 'La categoría no puede exceder 100 caracteres').nullable().optional(),
   notas: z.string().max(500, 'Las notas no pueden exceder 500 caracteres').refine(v => !/\s{2,}/.test(v), { message: 'No se permiten espacios consecutivos' }).nullable().optional(),
 }).refine(data => {
   if (data.hora_inicio && data.hora_fin) {
@@ -33,6 +34,7 @@ export const createSesionSchema = z.object({
  */
 export const updateSesionSchema = z.object({
   titulo: z.string().max(120, 'El título no puede exceder 120 caracteres').nullable().optional(),
+  categoria: z.string().max(100, 'La categoría no puede exceder 100 caracteres').nullable().optional(),
   notas: z.string().max(500, 'Las notas no pueden exceder 500 caracteres').nullable().optional(),
   hora_inicio: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)(:([0-5]\d))?$/, 'Formato de hora inválido').nullable().optional(),
   hora_fin: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)(:([0-5]\d))?$/, 'Formato de hora inválido').nullable().optional(),

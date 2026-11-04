@@ -16,6 +16,7 @@ const SELECT_SESION_BASE = `
   hora_inicio, 
   hora_fin, 
   titulo, 
+  categoria, 
   notas, 
   cerrada_at, 
   activo, 
@@ -55,6 +56,7 @@ function mapSesionRow(row: any): AsistenciaSesion {
   
   return {
     ...row,
+    categoria: row.categoria || null,
     nombre_sensei: nombreSensei,
     nombre_club: row.clubes?.nombre_club
   }
@@ -160,6 +162,7 @@ export const asistenciaService = {
           hora_inicio: sesion.hora_inicio || null,
           hora_fin: sesion.hora_fin || null,
           titulo: sesion.titulo || null,
+          categoria: sesion.categoria || null,
           notas: sesion.notas || null,
           created_by: sesion.created_by || null,
           activo: true

@@ -45,6 +45,7 @@ export function useSenseiForm(sensei?: Sensei | null, user?: User, onSuccess?: (
       genero: '',
       grado_dan: '',
       especialidad: '',
+      categorias: [] as string[],
       activo: true,
     },
   })
@@ -131,6 +132,7 @@ export function useSenseiForm(sensei?: Sensei | null, user?: User, onSuccess?: (
         genero: s.genero || '',
         grado_dan: s.grado_dan || '',
         especialidad: s.especialidad || '',
+        categorias: Array.isArray(s.categorias) ? s.categorias : [],
         activo: s.activo,
       })
     } else if (user?.rol === 'encargado' && user.club_id) {
@@ -154,7 +156,8 @@ export function useSenseiForm(sensei?: Sensei | null, user?: User, onSuccess?: (
         ci: data.ci || null,
         genero: data.genero || null,
         grado_dan: data.grado_dan || null,
-        especialidad: data.especialidad || null,
+        especialidad: data.especialidad || (data.categorias && data.categorias.length > 0 ? data.categorias.join(', ') : null),
+        categorias: data.categorias || [],
         updated_by: user?.id || null,
       }
 

@@ -125,7 +125,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: bo
       label: 'Finanzas',
       path: '/contabilidad',
       icon: <AccountBalanceIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO],
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION],
       group: 'asociacion'
     },
     {
@@ -190,19 +190,19 @@ export default function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: bo
       label: 'Clubes',
       path: '/clubes',
       icon: <BusinessIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.JUDOKA, ROL.SENSEI, ROL.ENCARGADO, ROL.ARBITRO]
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ARBITRO]
     },
     {
       label: 'Árbitros',
       path: '/arbitros',
       icon: <GavelIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ARBITRO, ROL.SENSEI, ROL.ENCARGADO]
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ARBITRO]
     },
     {
       label: 'Entrenadores',
       path: '/entrenadores',
       icon: <SchoolIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.SENSEI, ROL.JUDOKA]
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.JUDOKA]
     },
     {
       label: 'Futbolistas',

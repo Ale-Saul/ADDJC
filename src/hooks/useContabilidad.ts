@@ -5,7 +5,12 @@ import * as movimientoFinancieroController from '@/controllers/movimientoFinanci
 import { clubController } from '@/controllers/clubController'
 import { ESTADO_MOVIMIENTO, TIPO_MOVIMIENTO } from '@/constants/contabilidad'
 
-export function useContabilidad() {
+export interface UseContabilidadOptions {
+  clubId?: string
+}
+
+export function useContabilidad(options?: UseContabilidadOptions) {
+  const clubId = options?.clubId
   const [movimientos, setMovimientos] = useState<MovimientoFinanciero[]>([])
   const [clubes, setClubes] = useState<Club[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,7 +43,7 @@ export function useContabilidad() {
     setError(null)
     try {
       const [movimientosResponse, clubesResponse] = await Promise.all([
-        movimientoFinancieroController.getAllMovimientos(),
+        movimientoFinancieroController.getAllMovimientos(clubId),
         clubController.getAllClubes()
       ])
 
@@ -60,7 +65,7 @@ export function useContabilidad() {
 
   useEffect(() => {
     cargarDatos()
-  }, [])
+  }, [clubId])
 
   // Filtrar movimientos
   const movimientosFiltrados = useMemo(() => {

@@ -340,29 +340,6 @@ export default function JudokaList({
         id: 'categoria',
         label: 'Categoría',
         render: (j: Judoka) => j.categoria || '-'
-      },
-      {
-        id: 'cinturon_actual',
-        label: 'Cinturón',
-        render: (j: Judoka) => {
-          const belt = j.cinturon_actual
-          if (!belt) return '-'
-          return (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Box
-                sx={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: '50%',
-                  backgroundColor: BELT_COLOR_MAP[belt] || '#ccc',
-                  border: belt === 'Blanco' ? '1px solid #ddd' : 'none',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
-                }}
-              />
-              {belt}
-            </Box>
-          )
-        }
       }
     ]
 
@@ -472,7 +449,7 @@ export default function JudokaList({
         showFilters={state.showFilters}
       >
         <Grid container spacing={2}>
-          <Grid size={{ xs: 12, sm: 4 }}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <FilterSelect
               label="Categoría"
               value={state.categoriaFilter}
@@ -483,18 +460,7 @@ export default function JudokaList({
               ]}
             />
           </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <FilterSelect
-              label="Cinturón"
-              value={state.cinturonFilter}
-              onChange={(e) => setFilter('cinturon', e.target.value)}
-              options={[
-                { value: 'all', label: 'Todos los cinturones' },
-                ...BELT_COLORS.map(c => ({ value: c, label: c }))
-              ]}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <FilterSelect
               label="Estado"
               value={state.estadoFilter}

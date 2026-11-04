@@ -154,7 +154,7 @@ export default function CambiarPasswordPage() {
               margin="normal"
               fullWidth
               disabled={loading || success}
-              helperText='La contraseña que recibiste por correo (Judo.[Carnet])'
+              helperText='La contraseña que recibiste por correo (Koklub.[Carnet])'
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">

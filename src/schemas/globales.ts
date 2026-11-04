@@ -149,6 +149,7 @@ export const senseiSchema = baseUserObject.extend({
   club_id: z.string().nullable().optional(),
   grado_dan: z.string().nullable().optional(),
   especialidad: z.string().nullable().optional(),
+  categorias: z.array(z.string()).optional(),
   certificacion_id: z.string().nullable().optional(),
   activo: z.boolean(),
   password: z.string().optional(),

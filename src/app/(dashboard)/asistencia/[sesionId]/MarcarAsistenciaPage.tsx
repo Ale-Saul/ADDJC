@@ -64,17 +64,27 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
     autoFetch: autoFetchJudokas,
   })
 
-  // Filtrar y ordenar judokas
+  // Filtro estricto por categoría de la sesión
   const sesionFecha = sesionQuery.data?.fecha
+  const sesionCategoria = sesionQuery.data?.categoria
+
+  // Filtrar y ordenar futbolistas
   const judokasElegibles = useMemo(() => {
     let filtered = judokasQuery.judokas
     if (sesionFecha) {
-      filtered = judokasQuery.judokas.filter(j => {
+      filtered = filtered.filter(j => {
         if (!j.created_at) return true
         const d = new Date(j.created_at)
         const inscripcionLocal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
         return inscripcionLocal <= sesionFecha
       })
+    }
+
+    // Filtrar estrictamente por la categoría de la sesión
+    if (sesionCategoria) {
+      filtered = filtered.filter(j => 
+        (j.categoria || '').trim().toLowerCase() === sesionCategoria.trim().toLowerCase()
+      )
     }
 
     // Ordenar por apellidos (alfabético)
@@ -86,7 +96,7 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
       }
       return (a.nombres || '').localeCompare(b.nombres || '', 'es', { sensitivity: 'base' })
     })
-  }, [judokasQuery.judokas, sesionFecha])
+  }, [judokasQuery.judokas, sesionFecha, sesionCategoria])
 
   // Mutation para guardar
   const guardarMutation = useRegistrarAsistencia(
@@ -192,15 +202,24 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
                 </Stack>
               )}
 
-              {judokasElegibles.length > 0 && !isLoading && (
-                <Chip
-                  label={`${judokasElegibles.length} futbolistas`}
-                  size="small"
-                  variant="outlined"
-                  color="primary"
-                  sx={{ alignSelf: 'flex-start', mt: 0.5 }}
-                />
-              )}
+              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ pt: 0.5 }}>
+                {sesion.categoria && (
+                  <Chip
+                    label={`Categoría: ${sesion.categoria}`}
+                    size="small"
+                    color="primary"
+                    sx={{ fontWeight: 'bold' }}
+                  />
+                )}
+                {judokasElegibles.length > 0 && !isLoading && (
+                  <Chip
+                    label={`${judokasElegibles.length} futbolista${judokasElegibles.length === 1 ? '' : 's'}`}
+                    size="small"
+                    variant="outlined"
+                    color="primary"
+                  />
+                )}
+              </Stack>
             </Stack>
           ) : null}
         </Paper>

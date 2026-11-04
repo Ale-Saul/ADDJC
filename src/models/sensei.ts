@@ -18,6 +18,7 @@ export interface Sensei {
   /** Nombre de la certificación (desde join con certificaciones, solo lectura) */
   certificacion?: string | null
   especialidad: string | null
+  categorias?: string[] | null
   avatar_url?: string | null
   activo: boolean
   total_certificaciones?: number
@@ -25,6 +26,8 @@ export interface Sensei {
   updated_at: string
   updated_by?: string | null
   modificado_por_nombre?: string
+  clubes?: { id: string; nombre_club: string } | null
+  nombre_club?: string | null
 }
 
 export interface SenseiCreate {
@@ -43,6 +46,7 @@ export interface SenseiCreate {
   grado_dan?: string | null
   certificacion_id?: string | null
   especialidad?: string | null
+  categorias?: string[] | null
   avatar_url?: string | null
   activo?: boolean
   isEncargado?: boolean
@@ -63,8 +67,8 @@ export interface SenseiUpdate {
   grado_dan?: string | null
   certificacion_id?: string | null
   especialidad?: string | null
+  categorias?: string[] | null
   avatar_url?: string | null
   activo?: boolean
   updated_by?: string | null
 }
-

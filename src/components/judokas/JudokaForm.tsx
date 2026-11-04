@@ -22,7 +22,7 @@ import {
   formatCelularInput,
   formatNameInput
 } from '@/utils/formatters'
-import { CATEGORIES, BELT_COLORS, GENDERS_LIST } from '@/constants/globales'
+import { CATEGORIES, GENDERS_LIST } from '@/constants/globales'
 import { FormInput, FormAutocomplete, FormDatePicker } from '@/components/ui'
 
 dayjs.locale('es')
@@ -299,21 +299,12 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
             disabled={loading || loadingSenseis || !watchClubId || isSensei}
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
+        <Grid size={{ xs: 12 }}>
           <FormAutocomplete
             name="categoria"
             label="Categoría"
             control={control}
             options={CATEGORIES.map(c => ({ value: c, label: c }))}
-            disabled={loading}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <FormAutocomplete
-            name="cinturon_actual"
-            label="Cinturón Actual"
-            control={control}
-            options={BELT_COLORS.map(c => ({ value: c, label: c }))}
             disabled={loading}
           />
         </Grid>

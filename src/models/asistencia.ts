@@ -13,6 +13,7 @@ export interface AsistenciaSesion {
   hora_inicio: string | null
   hora_fin: string | null
   titulo: string | null
+  categoria?: string | null
   notas: string | null
   cerrada_at: string | null
   activo: boolean
@@ -58,12 +59,14 @@ export interface AsistenciaSesionCreate {
   hora_inicio?: string | null
   hora_fin?: string | null
   titulo?: string | null
+  categoria?: string | null
   notas?: string | null
   created_by?: string | null
 }
 
 export interface AsistenciaSesionUpdate {
   titulo?: string | null
+  categoria?: string | null
   notas?: string | null
   hora_inicio?: string | null
   hora_fin?: string | null

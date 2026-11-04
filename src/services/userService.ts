@@ -229,10 +229,10 @@ export const userService = {
         const nombreLimpio = nombres.toLowerCase().replace(/\s+/g, '')
         const apellidoLimpio = (apellido_paterno + apellido_materno).toLowerCase().replace(/\s+/g, '')
         const timestamp = Date.now()
-        finalEmail = `${nombreLimpio}.${apellidoLimpio}.${timestamp}@judoka.local`
+        finalEmail = `${nombreLimpio}.${apellidoLimpio}.${timestamp}@koklub.local`
       }
       if (!finalPassword) {
-        finalPassword = `Judoka${Date.now()}!`
+        finalPassword = `Koklub${Date.now()}!`
       }
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(finalEmail)) {

@@ -30,15 +30,9 @@ export default function JudokaCard({ judoka, onClick }: JudokaCardProps) {
           />
         </Box>
         
-        {judoka.cinturon_actual && (
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            🥋 {judoka.cinturon_actual}
-          </Typography>
-        )}
-        
         {judoka.categoria && (
           <Typography variant="body2" color="text.secondary" gutterBottom>
-            📊 {judoka.categoria}
+            ⚽ {judoka.categoria}
           </Typography>
         )}
         

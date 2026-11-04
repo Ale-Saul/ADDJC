@@ -29,7 +29,7 @@ export async function sendEmail({ to, subject, html }: EmailOptions) {
     }
 
     const info = await transporter.sendMail({
-      from: `"Asociación Departamental de Judo" <${process.env.EMAIL_USER}>`,
+      from: `"Koklub" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       html,
@@ -46,15 +46,19 @@ export async function sendEmail({ to, subject, html }: EmailOptions) {
  * Genera el HTML para el correo de bienvenida con credenciales
  */
 export function getWelcomeEmailTemplate(nombre: string, carnet: string, password: string) {
+  const loginUrl = process.env.NEXT_PUBLIC_APP_URL
+    ? `${process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')}/login`
+    : 'https://koklub.vercel.app/login'
+
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
       <div style="text-align: center; margin-bottom: 20px;">
-        <h1 style="color: #1976d2;">Bienvenido a la Asociación de Judo</h1>
+        <h1 style="color: #1976d2;">Bienvenido a Koklub</h1>
       </div>
       
       <p>Hola <strong>${nombre}</strong>,</p>
       
-      <p>Tu cuenta ha sido creada exitosamente en el sistema de gestión de la Asociación Departamental de Judo.</p>
+      <p>Tu cuenta ha sido creada exitosamente en el sistema de gestión de Koklub.</p>
       
       <p>A continuación encontrarás tus credenciales de acceso:</p>
       
@@ -68,7 +72,7 @@ export function getWelcomeEmailTemplate(nombre: string, carnet: string, password
       <p>Por seguridad, el sistema te pedirá cambiar esta contraseña temporal la primera vez que inicies sesión.</p>
       
       <div style="text-align: center; margin-top: 30px;">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login" style="background-color: #1976d2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;">Iniciar Sesión</a>
+        <a href="${loginUrl}" style="background-color: #1976d2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;">Iniciar Sesión</a>
       </div>
       
       <hr style="margin-top: 40px; border: none; border-top: 1px solid #e0e0e0;" />

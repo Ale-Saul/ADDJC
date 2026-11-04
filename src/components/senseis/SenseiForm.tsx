@@ -7,7 +7,7 @@ import 'dayjs/locale/es'
 import { Sensei } from '@/models/sensei'
 import { useAuth } from '@/contexts/AuthContext'
 import { ROL } from '@/constants/roles'
-import { ESPECIALIDADES_SENSEI, GENDERS_LIST, GRADOS_DAN } from '@/constants/globales'
+import { CATEGORIES, GENDERS_LIST, GRADOS_DAN } from '@/constants/globales'
 import {
   formatCIInput,
   formatCIExtensionInput,
@@ -225,23 +225,54 @@ export default function SenseiForm({ sensei, onSuccess, onCancel }: SenseiFormPr
             )}
           />
         </Grid>
+        {/* Campo Grado Dan comentado / ocultado */}
+        {/*
         <Grid size={{ xs: 12, sm: 6 }}>
           <FormAutocomplete
             name="grado_dan"
             label="Grado Dan"
             control={control}
             disabled={loading}
-            required
             options={GRADOS_DAN.map(g => ({ value: g, label: g }))}
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <FormAutocomplete
-            name="especialidad"
-            label="Especialidad"
+        */}
+        <Grid size={{ xs: 12 }}>
+          <Controller
+            name="categorias"
             control={control}
-            disabled={loading}
-            options={ESPECIALIDADES_SENSEI.map(e => ({ value: e, label: e }))}
+            render={({ field }) => (
+              <Autocomplete
+                multiple
+                options={CATEGORIES}
+                value={field.value || []}
+                onChange={(_, newValue) => field.onChange(newValue)}
+                disabled={loading}
+                renderTags={(value: readonly string[], getTagProps) =>
+                  value.map((option: string, index: number) => {
+                    const { key, ...tagProps } = getTagProps({ index })
+                    return (
+                      <Chip
+                        key={key}
+                        variant="outlined"
+                        color="primary"
+                        size="small"
+                        label={option}
+                        {...tagProps}
+                      />
+                    )
+                  })
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Categorías de entrenamiento a cargo"
+                    placeholder="Selecciona las categorías..."
+                    helperText="El entrenador puede tener a su cargo varios grupos o categorías de futbolistas"
+                  />
+                )}
+              />
+            )}
           />
         </Grid>
       </Grid>

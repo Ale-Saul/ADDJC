@@ -27,8 +27,14 @@ import {
   TextField,
   InputAdornment,
   Checkbox,
-  Chip
+  Chip,
+  Tabs,
+  Tab
 } from '@mui/material'
+import PaymentIcon from '@mui/icons-material/Payment'
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
+import { getOperationalClubId } from '@/utils/roleAccess'
+import IngresosEgresosTab from '@/components/pagos/IngresosEgresosTab'
 import AddIcon from '@mui/icons-material/Add'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import HistoryIcon from '@mui/icons-material/History'
@@ -54,6 +60,8 @@ import Pagination from '@/components/common/Pagination'
 
 export default function PagosPage() {
   const { user } = useAuth()
+  const [tabIndex, setTabIndex] = useState<number>(0)
+  const operationalClubId = getOperationalClubId(user)
   const {
     isAdmin,
     judokas,
@@ -121,16 +129,39 @@ export default function PagosPage() {
 
   return (
     <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ENCARGADO]}>
-        <Box mb={4}>
+        <Box mb={3}>
           <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
-            Gestión de Pagos y Cuotas
+            Gestión de Pagos y Finanzas
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Administra las cuotas mensuales y pagos de los futbolistas
+            Administra las cuotas de futbolistas, la caja y los ingresos y egresos del club
           </Typography>
         </Box>
 
-        {loading && judokas.length === 0 ? (
+        <Tabs
+          value={tabIndex}
+          onChange={(_, newValue) => setTabIndex(newValue)}
+          sx={{
+            mb: 3.5,
+            borderBottom: 1,
+            borderColor: 'divider',
+            '& .MuiTab-root': { fontWeight: 'bold', textTransform: 'none', fontSize: '0.95rem' },
+          }}
+        >
+          <Tab
+            icon={<PaymentIcon sx={{ fontSize: 20 }} />}
+            iconPosition="start"
+            label="Cuotas de Futbolistas"
+          />
+          <Tab
+            icon={<AccountBalanceWalletIcon sx={{ fontSize: 20 }} />}
+            iconPosition="start"
+            label="Ingresos y Egresos (Caja del Club)"
+          />
+        </Tabs>
+
+        {tabIndex === 0 && (
+          loading && judokas.length === 0 ? (
           <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
             <CircularProgress />
           </Box>
@@ -412,6 +443,11 @@ export default function PagosPage() {
               </TableContainer>
             )}
           </>
+          )
+        )}
+
+        {tabIndex === 1 && (
+          <IngresosEgresosTab clubId={operationalClubId || undefined} isAdmin={isAdmin} />
         )}
 
         {/* Diálogos */}

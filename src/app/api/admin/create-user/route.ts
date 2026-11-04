@@ -236,7 +236,7 @@ export async function POST(request: NextRequest) {
         // IMPORTANTE: En Vercel (Lambdas) debemos usar await
         const result = await sendEmail({
           to: email,
-          subject: 'Bienvenido a la Asociación de Judo - Credenciales de Acceso',
+          subject: 'Bienvenido a Koklub - Credenciales de Acceso',
           html: emailHtml
         })
 

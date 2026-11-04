@@ -19,7 +19,7 @@ import { useRouter } from 'next/navigation'
 export default function ClubesPage() {
   const { user } = useAuth()
   const router = useRouter()
-  const isReadOnly = user?.rol === ROL.JUDOKA || user?.rol === ROL.SENSEI || user?.rol === ROL.ENCARGADO || user?.rol === ROL.ARBITRO
+  const isReadOnly = user?.rol === ROL.ARBITRO
   const isAdminOrAsoc = user?.rol === ROL.ADMIN || user?.rol === ROL.ASOCIACION
   const createDialog = useDialog()
   const editDialog = useDialog()
@@ -105,7 +105,7 @@ export default function ClubesPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.JUDOKA, ROL.SENSEI, ROL.ENCARGADO, ROL.ARBITRO]}>
+    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.ARBITRO]}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4" component="h1">
             Gestión de Clubes
@@ -122,7 +122,7 @@ export default function ClubesPage() {
         </Box>
 
         <ClubList
-          onEdit={isReadOnly ? (user?.rol === ROL.ENCARGADO ? handleView : undefined) : handleEdit}
+          onEdit={isReadOnly ? undefined : handleEdit}
           onDelete={isReadOnly ? undefined : handleDelete}
           onViewMiembros={isAdminOrAsoc ? handleViewMiembros : undefined}
           onViewDocumentos={handleViewDocumentos}

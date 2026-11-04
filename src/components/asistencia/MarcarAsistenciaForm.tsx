@@ -166,7 +166,7 @@ export default function MarcarAsistenciaForm({
       {/* Buscador */}
       <TextField
         size="small"
-        placeholder="Buscar judoka…"
+        placeholder="Buscar futbolista…"
         value={busqueda}
         onChange={e => setBusqueda(e.target.value)}
         InputProps={{
@@ -176,7 +176,7 @@ export default function MarcarAsistenciaForm({
             </InputAdornment>
           ),
         }}
-        aria-label="Buscar judoka en la lista"
+        aria-label="Buscar futbolista en la lista"
       />
 
       <Divider />
@@ -184,7 +184,7 @@ export default function MarcarAsistenciaForm({
       {/* Lista */}
       {judokasFiltrados.length === 0 ? (
         <Typography variant="body2" color="text.secondary" textAlign="center" py={2}>
-          No se encontraron judokas.
+          No se encontraron futbolistas.
         </Typography>
       ) : (
         <List disablePadding>

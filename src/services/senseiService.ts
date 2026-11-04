@@ -3,7 +3,7 @@ import { Sensei, SenseiCreate, SenseiUpdate } from '@/models/sensei'
 import { ApiResponse } from '@/types/globales'
 import { userService, getUsersNamesByIds } from './userService'
 
-const SENSEI_WITH_USER_COLUMNS = 'id, club_id, usuario_id, grado_dan, especialidad, created_at, updated_at, usuarios:usuario_id(id, nombre, apellido_paterno, apellido_materno, avatar_url, correo, fecha_nacimiento, numero_celular, ci, ci_extension, genero, activo, updated_by), clubes:club_id(id, nombre_club)'
+const SENSEI_WITH_USER_COLUMNS = 'id, club_id, usuario_id, grado_dan, especialidad, categorias, created_at, updated_at, usuarios:usuario_id(id, nombre, apellido_paterno, apellido_materno, avatar_url, correo, fecha_nacimiento, numero_celular, ci, ci_extension, genero, activo, updated_by), clubes:club_id(id, nombre_club)'
 
 function mapSenseiRow(row: any, certsCountMap: Record<string, number>): Sensei {
   const u = row.usuarios
@@ -31,6 +31,7 @@ function mapSenseiRow(row: any, certsCountMap: Record<string, number>): Sensei {
     avatar_url: u?.avatar_url ?? null,
     updated_by: u?.updated_by ?? null,
     modificado_por_nombre: undefined,
+    categorias: Array.isArray(row.categorias) ? row.categorias : [],
     certificacion: null,
     certificacion_id: null,
     total_certificaciones,
@@ -203,7 +204,8 @@ export const senseiService = {
           usuario_id: userId,
           club_id: sensei.club_id ?? null,
           grado_dan: sensei.grado_dan ?? null,
-          especialidad: sensei.especialidad ?? null,
+          especialidad: sensei.especialidad ?? (sensei.categorias && sensei.categorias.length > 0 ? sensei.categorias.join(', ') : null),
+          categorias: sensei.categorias ?? [],
         })
         .select('id')
         .single()
@@ -234,12 +236,15 @@ export const senseiService = {
       if (getError || !current) throw new Error('Sensei no encontrado')
 
       // 1. Actualizar tabla 'senseis' solo si hay datos específicos
-      const senseiFields = ['club_id', 'grado_dan', 'especialidad']
+      const senseiFields = ['club_id', 'grado_dan', 'especialidad', 'categorias']
       const senseiUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
       senseiFields.forEach(f => {
         if (senseiPayload[f] !== undefined) senseiUpdate[f] = senseiPayload[f]
       })
 
+      if (senseiPayload.categorias !== undefined && !senseiPayload.especialidad) {
+        senseiUpdate.especialidad = Array.isArray(senseiPayload.categorias) ? senseiPayload.categorias.join(', ') : null;
+      }
       if (Object.keys(senseiUpdate).length > 0) {
         const { error } = await client.from('senseis').update(senseiUpdate).eq('id', id)
         if (error) throw error

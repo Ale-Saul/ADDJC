@@ -48,7 +48,13 @@ export type MovimientoFormValues = {
   origenEntidad?: string | null
 }
 
-export function useMovimientoForm(movimiento: MovimientoFinanciero | null, onClose: () => void, onSave: () => void) {
+export function useMovimientoForm(
+  movimiento: MovimientoFinanciero | null,
+  onClose: () => void,
+  onSave: () => void,
+  defaultClubId?: string,
+  initialTipo?: 'ingreso' | 'egreso'
+) {
   const { user } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -62,13 +68,13 @@ export function useMovimientoForm(movimiento: MovimientoFinanciero | null, onClo
     resolver: zodResolver(movimientoSchema) as any,
     mode: 'onTouched',
     defaultValues: {
-      tipo: 'ingreso',
+      tipo: initialTipo || 'ingreso',
       categoria: 'otro',
       monto: '' as any,
       concepto: '',
       descripcion: '',
       fecha: new Date().toISOString().split('T')[0],
-      origenClubId: '',
+      origenClubId: defaultClubId || '',
       origenEntidad: '',
     }
   })
@@ -99,8 +105,10 @@ export function useMovimientoForm(movimiento: MovimientoFinanciero | null, onClo
     const requiresClub = isIngreso && (watchCategoria === 'pago_club' || watchCategoria === 'donacion_club')
     const requiresEntidad = isIngreso && (watchCategoria === 'aporte_estado' || watchCategoria === 'sponsor')
 
-    if (!requiresClub) {
+    if (!requiresClub && !defaultClubId) {
       form.setValue('origenClubId', '', { shouldValidate: true })
+    } else if (defaultClubId) {
+      form.setValue('origenClubId', defaultClubId, { shouldValidate: true })
     }
     if (!requiresEntidad) {
       form.setValue('origenEntidad', '', { shouldValidate: true })
@@ -124,13 +132,13 @@ export function useMovimientoForm(movimiento: MovimientoFinanciero | null, onClo
       setComprobanteNombre(movimiento.comprobante_nombre || '')
     } else {
       form.reset({
-        tipo: 'ingreso',
+        tipo: initialTipo || 'ingreso',
         categoria: 'otro',
         monto: '' as any,
         concepto: '',
         descripcion: '',
         fecha: new Date().toISOString().split('T')[0],
-        origenClubId: '',
+        origenClubId: defaultClubId || '',
         origenEntidad: '',
       })
       setComprobanteFile(null)
@@ -191,7 +199,7 @@ export function useMovimientoForm(movimiento: MovimientoFinanciero | null, onClo
         concepto: data.concepto.trim(),
         descripcion: data.descripcion?.trim() || undefined,
         fecha: data.fecha ? `${data.fecha}T${new Date().toLocaleTimeString('en-GB')}` : new Date().toISOString(),
-        origen_club_id: data.origenClubId || undefined,
+        origen_club_id: data.origenClubId || defaultClubId || undefined,
         origen_entidad: data.origenEntidad?.trim() || undefined,
         comprobante_url: finalComprobanteUrl || undefined,
         comprobante_nombre: finalComprobanteNombre || undefined,

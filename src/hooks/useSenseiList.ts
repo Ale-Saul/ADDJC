@@ -11,14 +11,14 @@ export function useSenseiList(initialSearch: string = '', refreshTrigger: number
 
   const filterFn = useCallback((s: Sensei, filters: Record<string, string>, search: string) => {
     const matchGradoDan = filters.gradoDan === 'all' || s.grado_dan === filters.gradoDan
-    const matchEspecialidad = filters.especialidad === 'all' || s.especialidad === filters.especialidad
+    const matchEspecialidad = filters.especialidad === 'all' || s.especialidad === filters.especialidad || (Array.isArray(s.categorias) && s.categorias.includes(filters.especialidad))
     const matchEstado = filters.estado === 'all' || (filters.estado === 'activo' ? s.activo : !s.activo)
     const matchSearch = Boolean(!search ||
       s.nombres?.toLowerCase().includes(search) ||
       s.apellidos?.toLowerCase().includes(search) ||
       s.ci?.toLowerCase().includes(search) ||
       s.grado_dan?.toLowerCase().includes(search) ||
-      s.especialidad?.toLowerCase().includes(search))
+      s.especialidad?.toLowerCase().includes(search) || (Array.isArray(s.categorias) && s.categorias.some(c => c.toLowerCase().includes(search))))
 
     return Boolean(matchGradoDan && matchEspecialidad && matchEstado && matchSearch)
   }, [])

@@ -31,24 +31,35 @@ interface MovimientoFormDialogProps {
   onClose: () => void
   onSave: () => void
   movimiento: MovimientoFinanciero | null
+  defaultClubId?: string
+  initialTipo?: 'ingreso' | 'egreso'
 }
 
 const CATEGORIAS_INGRESO = [
+  { value: 'cuota_mensual', label: 'Cuota Mensual / Mensualidad' },
+  { value: 'matricula_inscripcion', label: 'Matrícula / Inscripción' },
+  { value: 'venta_indumentaria', label: 'Venta de Indumentaria / Uniformes' },
+  { value: 'sponsor', label: 'Patrocinio / Sponsor' },
+  { value: 'donacion_club', label: 'Donación al Club' },
+  { value: 'evento', label: 'Evento / Torneo / Rifa' },
   { value: 'pago_club', label: 'Pago de Club' },
-  { value: 'inscripcion_torneo', label: 'Inscripción a Torneo' },
-  { value: 'donacion_club', label: 'Donación de Club' },
   { value: 'aporte_estado', label: 'Aporte del Estado' },
-  { value: 'sponsor', label: 'Sponsor/Patrocionio' },
   { value: 'otro', label: 'Otro Ingreso' }
 ]
 
 const CATEGORIAS_EGRESO = [
-  { value: 'pago_arbitro', label: 'Pago a Árbitro' },
-  { value: 'gastos_operativos', label: 'Gastos Operativos' },
-  { value: 'gasto_operativo', label: 'Gasto Operativo (Sistema)' },
-  { value: 'equipamiento', label: 'Compra de Equipamiento' },
+  { value: 'alquiler_cancha', label: 'Alquiler de Cancha / Instalaciones' },
+  { value: 'pago_entrenador', label: 'Pago a Entrenadores / Sueldos' },
+  { value: 'pago_arbitro', label: 'Pago de Arbitraje' },
+  { value: 'equipamiento', label: 'Compra de Material Deportivo' },
+  { value: 'indumentaria', label: 'Compra de Uniformes / Indumentaria' },
+  { value: 'transporte_viaticos', label: 'Transporte / Viáticos' },
+  { value: 'inscripcion_torneo', label: 'Inscripción a Torneo / Liga' },
   { value: 'mantenimiento', label: 'Mantenimiento' },
-  { value: 'evento', label: 'Gastos de Evento/Torneo' },
+  { value: 'gasto_operativo', label: 'Gasto Operativo' },
+  { value: 'gastos_operativos', label: 'Gastos Operativos' },
+  { value: 'pago_proveedor', label: 'Pago a Proveedor' },
+  { value: 'evento', label: 'Gastos de Evento / Torneo' },
   { value: 'otro', label: 'Otro Egreso' }
 ]
 
@@ -56,7 +67,9 @@ export const MovimientoFormDialog: React.FC<MovimientoFormDialogProps> = ({
   open,
   onClose,
   onSave,
-  movimiento
+  movimiento,
+  defaultClubId,
+  initialTipo
 }) => {
   const {
     form,
@@ -69,9 +82,7 @@ export const MovimientoFormDialog: React.FC<MovimientoFormDialogProps> = ({
     handleFileChange,
     clearComprobante,
     onSubmit
-  } = useMovimientoForm(movimiento, onClose, onSave)
-
-  const { form: typedForm } = useMovimientoForm(movimiento, onClose, onSave) as { form: any }
+  } = useMovimientoForm(movimiento, onClose, onSave, defaultClubId, initialTipo)
 
   const { clubes } = useClubes()
 
@@ -79,7 +90,7 @@ export const MovimientoFormDialog: React.FC<MovimientoFormDialogProps> = ({
   const categoria = useWatch({ control: form.control, name: 'categoria' })
 
   const isIngreso = tipo === 'ingreso'
-  const requiresClub = isIngreso && (categoria === 'pago_club' || categoria === 'donacion_club')
+  const requiresClub = !defaultClubId && isIngreso && (categoria === 'pago_club' || categoria === 'donacion_club')
   const requiresEntidad = isIngreso && (categoria === 'aporte_estado' || categoria === 'sponsor')
 
   const formatTextCapitalized = (val: string) => {

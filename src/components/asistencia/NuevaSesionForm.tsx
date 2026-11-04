@@ -1,15 +1,18 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Stack, Button, Alert, CircularProgress } from '@mui/material'
+import { Stack, Button, Alert, CircularProgress, Typography } from '@mui/material'
 import { FormInput } from '@/components/ui/FormInput'
 import { FormDatePicker } from '@/components/ui/FormDatePicker'
+import { FormAutocomplete } from '@/components/ui/FormAutocomplete'
+import { CATEGORIES } from '@/constants/globales'
 import { createSesionSchema } from '@/schemas/asistenciaSchema'
 import { AsistenciaSesionCreate } from '@/models/asistencia'
 import { clubController } from '@/controllers/clubController'
+import { senseiController } from '@/controllers/senseiController'
 import { formatHoraInput, formatHoraDbToInput, formatTextoInput } from '@/utils/formatters'
 import dayjs from 'dayjs'
 
@@ -24,11 +27,16 @@ interface Props {
 }
 
 export default function NuevaSesionForm({ clubId, senseiId, createdBy, onSuccess, onCancel }: Props) {
+  const [categoriasEntrenador, setCategoriasEntrenador] = useState<string[]>([])
+  const [cargandoCategorias, setCargandoCategorias] = useState(true)
+
   const {
     control,
     handleSubmit,
     setError,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting }
   } = useForm<FormValues>({
     resolver: zodResolver(createSesionSchema),
@@ -39,9 +47,41 @@ export default function NuevaSesionForm({ clubId, senseiId, createdBy, onSuccess
       hora_inicio: null,
       hora_fin: null,
       titulo: null,
+      categoria: null,
       notas: null,
     }
   })
+
+  // Cargar categorías asignadas al entrenador
+  useEffect(() => {
+    if (!senseiId) {
+      setCargandoCategorias(false)
+      return
+    }
+
+    let cancelled = false
+    const cargarCategorias = async () => {
+      setCargandoCategorias(true)
+      const res = await senseiController.getSenseiById(senseiId)
+      if (cancelled) return
+      if (res.success && res.data) {
+        const cats = Array.isArray(res.data.categorias) && res.data.categorias.length > 0
+          ? res.data.categorias
+          : []
+        setCategoriasEntrenador(cats)
+        if (cats.length === 1) {
+          setValue('categoria', cats[0])
+        }
+      }
+      setCargandoCategorias(false)
+    }
+
+    void cargarCategorias()
+
+    return () => {
+      cancelled = true
+    }
+  }, [senseiId, setValue])
 
   useEffect(() => {
     if (!clubId) return
@@ -70,11 +110,25 @@ export default function NuevaSesionForm({ clubId, senseiId, createdBy, onSuccess
     }
   }, [clubId, reset])
 
+  const opcionesCategoria = useMemo(() => {
+    if (categoriasEntrenador.length > 0) {
+      return [
+        { value: '', label: 'Seleccionar categoría…' },
+        ...categoriasEntrenador.map(c => ({ value: c, label: c }))
+      ]
+    }
+    // Si el entrenador no tiene categorías específicas en su perfil
+    return [
+      { value: '', label: 'Todas las categorías (general)' },
+      ...CATEGORIES.map(c => ({ value: c, label: c }))
+    ]
+  }, [categoriasEntrenador])
+
   const onSubmit = async (values: FormValues) => {
-    // Normalizar espacios y recortar bordes en campos de texto libre
     const payload: AsistenciaSesionCreate = {
       ...values,
       titulo: values.titulo ? values.titulo.replace(/\s+/g, ' ').trim() || null : null,
+      categoria: values.categoria?.trim() || null,
       notas: values.notas ? values.notas.replace(/\s+/g, ' ').trim() || null : null,
       created_by: createdBy,
     }
@@ -100,11 +154,26 @@ export default function NuevaSesionForm({ clubId, senseiId, createdBy, onSuccess
           maxDate={dayjs()}
         />
 
+        <FormAutocomplete
+          name="categoria"
+          control={control}
+          label="Categoría del entrenamiento"
+          options={opcionesCategoria}
+          disabled={cargandoCategorias}
+          helperText={
+            cargandoCategorias
+              ? 'Cargando categorías del entrenador…'
+              : categoriasEntrenador.length > 0
+              ? 'Mostrando solo las categorías a cargo de este entrenador'
+              : 'El entrenador no tiene categorías específicas asignadas en su perfil'
+          }
+        />
+
         <FormInput
           name="titulo"
           control={control}
           label="Título / tema (opcional)"
-          placeholder="Ej: Clase de técnica de pie"
+          placeholder="Ej: Entrenamiento táctico y definición"
           size="small"
           formatValue={formatTextoInput}
           inputProps={{ maxLength: 120 }}

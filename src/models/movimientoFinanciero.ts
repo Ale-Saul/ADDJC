@@ -12,7 +12,19 @@ export type CategoriaMovimiento =
   | 'sponsor'                // Patrocinio o sponsoreo
   | 'evento'                 // Ingreso/gasto de eventos
   | 'gasto_operativo'        // Gastos operativos generales
+  | 'gastos_operativos'      // Gastos operativos generales
   | 'pago_proveedor'         // Pago a proveedores
+  | 'pago_arbitro'           // Pago de arbitraje
+  | 'equipamiento'           // Compra de balones / material deportivo
+  | 'indumentaria'           // Compra de uniformes / indumentaria
+  | 'mantenimiento'          // Mantenimiento de canchas/instalaciones
+  | 'transporte_viaticos'    // Transporte o viáticos
+  | 'inscripcion_torneo'     // Inscripción a torneos
+  | 'alquiler_cancha'        // Alquiler de cancha / instalaciones
+  | 'pago_entrenador'        // Pago de sueldo o viático a entrenadores
+  | 'cuota_mensual'          // Cuota mensual de deportistas
+  | 'matricula_inscripcion'  // Matrícula o inscripción
+  | 'venta_indumentaria'     // Venta de camisetas/indumentaria
   | 'otro';                  // Otros conceptos
 
 export type EstadoMovimiento = 

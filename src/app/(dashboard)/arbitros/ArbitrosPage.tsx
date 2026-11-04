@@ -26,7 +26,7 @@ export default function ArbitrosPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
-  const isReadOnly = user?.rol === ROL.SENSEI || user?.rol === ROL.ENCARGADO || user?.rol === ROL.ARBITRO
+  const isReadOnly = user?.rol === ROL.ARBITRO
 
   const handleCreateSuccess = () => {
     createDialog.close()
@@ -73,7 +73,7 @@ export default function ArbitrosPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.ARBITRO, ROL.SENSEI, ROL.ENCARGADO]}>
+    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.ARBITRO]}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4" component="h1">
             Gestión de Árbitros

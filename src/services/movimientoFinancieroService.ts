@@ -4,6 +4,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client';
+import { Pago } from '@/models/pago';
 import {
   MovimientoFinanciero,
   MovimientoFinancieroInput,
@@ -42,9 +43,9 @@ interface MovimientoDB {
 /**
  * Obtener todos los movimientos financieros con información relacionada
  */
-export async function getAllMovimientos(): Promise<MovimientoFinanciero[]> {
+export async function getAllMovimientos(clubId?: string): Promise<MovimientoFinanciero[]> {
   const supabase = createClient()
-  const { data, error } = await supabase
+  let query = supabase
     .from('movimientos_financieros')
     .select(`
       id, tipo, categoria, monto, concepto, descripcion, fecha, origen_club_id, origen_entidad, comprobante_url, comprobante_nombre, estado, activo, notas, created_at, updated_at, created_by,
@@ -57,6 +58,12 @@ export async function getAllMovimientos(): Promise<MovimientoFinanciero[]> {
     `)
     .eq('activo', true)
     .order('created_at', { ascending: false });
+
+  if (clubId) {
+    query = query.eq('origen_club_id', clubId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('Error al obtener movimientos financieros:', error);
@@ -338,16 +345,23 @@ export async function anularMovimiento(id: string): Promise<MovimientoFinanciero
  */
 export async function getBalance(
   fechaInicio: string,
-  fechaFin: string
+  fechaFin: string,
+  clubId?: string
 ): Promise<BalanceFinanciero> {
   const supabase = createClient()
-  const { data, error } = await supabase
+  let query = supabase
     .from('movimientos_financieros')
     .select('tipo, monto')
     .gte('fecha', fechaInicio)
     .lte('fecha', fechaFin)
     .eq('activo', true)
     .neq('estado', 'anulado');
+
+  if (clubId) {
+    query = query.eq('origen_club_id', clubId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('Error al calcular balance:', error);
@@ -476,4 +490,101 @@ export async function getMovimientosPorMes(
   });
 
   return Object.values(agrupado).sort((a, b) => a.mes.localeCompare(b.mes));
+}
+
+
+/**
+ * Sincroniza un pago completado hacia movimientos_financieros como ingreso
+ */
+export async function registrarIngresoDesdePago(pago: Pago, defaultUserId?: string): Promise<void> {
+  const supabase = createClient()
+
+  // 1. Verificar si ya existe un movimiento asociado a este pago
+  const { data: existente } = await supabase
+    .from('movimientos_financieros')
+    .select('id, estado')
+    .like('notas', `%pago_id:${pago.id}%`)
+    .limit(1)
+
+  if (existente && existente.length > 0) {
+    // Si ya existe y estaba anulado, reactivarlo
+    if (existente[0].estado === 'anulado') {
+      await supabase
+        .from('movimientos_financieros')
+        .update({ estado: 'registrado', activo: true })
+        .eq('id', existente[0].id)
+    }
+    return
+  }
+
+  // 2. Obtener datos del futbolista (nombre)
+  let nombreJudoka = 'Futbolista'
+  let clubId = pago.club_id
+  if (pago.judoka_id) {
+    const { data: judoka } = await supabase
+      .from('judokas')
+      .select('club_id, usuarios:usuario_id(nombre, apellido_paterno, apellido_materno)')
+      .eq('id', pago.judoka_id)
+      .single()
+
+    if (judoka) {
+      if (!clubId && (judoka as any).club_id) clubId = (judoka as any).club_id
+      const u = (judoka as any).usuarios
+      if (u) {
+        nombreJudoka = [u.nombre, u.apellido_paterno, u.apellido_materno].filter(Boolean).join(' ')
+      }
+    }
+  }
+
+  const userId = pago.pagador_id || pago.creador_id || defaultUserId
+  const fecha = pago.fecha_pago 
+    ? pago.fecha_pago.split('T')[0] 
+    : new Date().toISOString().split('T')[0]
+
+  // 3. Insertar el movimiento financiero
+  await supabase
+    .from('movimientos_financieros')
+    .insert({
+      tipo: 'ingreso',
+      categoria: 'cuota_mensual',
+      monto: pago.monto_final,
+      concepto: `Cuota: ${nombreJudoka} (${pago.concepto})`,
+      descripcion: `Pago registrado vía tesorería. Método: ${pago.metodo_pago || 'Efectivo'}${pago.observaciones_pago ? ' | Obs: ' + pago.observaciones_pago : ''}`,
+      fecha: fecha,
+      origen_club_id: clubId || undefined,
+      comprobante_url: pago.comprobante_url || undefined,
+      estado: 'registrado',
+      activo: true,
+      notas: `pago_id:${pago.id}`,
+      created_by: userId || null
+    })
+}
+
+/**
+ * Anula el movimiento financiero correspondiente a un pago cancelado o eliminado
+ */
+export async function anularIngresoDePago(pagoId: string): Promise<void> {
+  const supabase = createClient()
+  await supabase
+    .from('movimientos_financieros')
+    .update({ estado: 'anulado' })
+    .like('notas', `%pago_id:${pagoId}%`)
+}
+
+/**
+ * Sincroniza pagos con estado 'pagado' que aún no estén en movimientos_financieros
+ */
+export async function sincronizarPagosExistentes(): Promise<void> {
+  const supabase = createClient()
+  const { data: pagosPagados } = await supabase
+    .from('pagos')
+    .select('*')
+    .in('estado', ['pagado', 'pago', 'completado'])
+    .eq('activo', true)
+
+  if (!pagosPagados || pagosPagados.length === 0) return
+
+  for (const pago of pagosPagados) {
+    await registrarIngresoDesdePago(pago as Pago)
+  }
 }

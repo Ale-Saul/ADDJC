@@ -21,9 +21,9 @@ import { CATEGORIAS_POR_TIPO, CATEGORIA_MOVIMIENTO_LABELS } from '@/constants/co
 /**
  * Obtener todos los movimientos financieros
  */
-export async function getAllMovimientos(): Promise<ApiResponse<MovimientoFinanciero[]>> {
+export async function getAllMovimientos(clubId?: string): Promise<ApiResponse<MovimientoFinanciero[]>> {
   try {
-    const data = await movimientoFinancieroService.getAllMovimientos();
+    const data = await movimientoFinancieroService.getAllMovimientos(clubId);
     return { success: true, data };
   } catch (error) {
     console.error('Error en controller al obtener movimientos:', error);
@@ -174,7 +174,8 @@ export async function anularMovimiento(id: string): Promise<ApiResponse<Movimien
  */
 export async function getBalance(
   fechaInicio: string,
-  fechaFin: string
+  fechaFin: string,
+  clubId?: string
 ): Promise<ApiResponse<BalanceFinanciero>> {
   // Validar fechas
   const inicio = new Date(fechaInicio);
@@ -189,7 +190,7 @@ export async function getBalance(
   }
 
   try {
-    const data = await movimientoFinancieroService.getBalance(fechaInicio, fechaFin);
+    const data = await movimientoFinancieroService.getBalance(fechaInicio, fechaFin, clubId);
     return { success: true, data };
   } catch (error) {
     console.error('Error en controller al obtener balance:', error);

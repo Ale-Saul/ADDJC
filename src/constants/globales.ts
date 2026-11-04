@@ -79,11 +79,19 @@ export const BELT_COLORS = [
 ] as const
 
 export const CATEGORIES = [
-  'Preinfantil',
-  'Infantil',
-  'Cadete',
-  'Junior',
-  'Senior',
+  'Club sub 7',
+  'Club sub 8',
+  'Club sub 9',
+  'Club sub 10',
+  'Club sub 11',
+  'Club sub 13',
+  'Club sub 15',
+  'Club sub 17',
+  'Club sub 13-15 femenina',
+  'Escuela sub 6-7',
+  'Escuela sub 8-9',
+  'Escuela sub 10-11',
+  'Escuela sub 13',
 ] as const
 
 export const PAGINATION = {
