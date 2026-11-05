@@ -202,13 +202,13 @@ export default function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: bo
       label: 'Entrenadores',
       path: '/entrenadores',
       icon: <SchoolIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.JUDOKA]
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO]
     },
     {
       label: 'Futbolistas',
       path: '/futbolistas',
       icon: <SportsSoccerIcon />,
-      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.SENSEI, ROL.JUDOKA, ROL.ENCARGADO]
+      allowedRoles: [ROL.ADMIN, ROL.ASOCIACION, ROL.SENSEI, ROL.ENCARGADO]
     }
   ]
 
@@ -246,7 +246,9 @@ export default function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: bo
   const visibleComunicacionItems = comunicacionItems.filter(item => hasAccess(item.allowedRoles, item.path))
   const showComunicacionMenu = visibleComunicacionItems.length > 0
 
-  const visibleAfiliadosItems = afiliadosItems.filter(item => hasAccess(item.allowedRoles, item.path))
+  const visibleAfiliadosItems = user?.rol === ROL.JUDOKA
+    ? []
+    : afiliadosItems.filter(item => hasAccess(item.allowedRoles, item.path))
   const showAfiliadosMenu = visibleAfiliadosItems.length > 0
   
   // Para las expansiones (pueden venir de estados)

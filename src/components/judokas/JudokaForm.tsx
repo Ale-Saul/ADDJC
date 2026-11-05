@@ -22,7 +22,7 @@ import {
   formatCelularInput,
   formatNameInput
 } from '@/utils/formatters'
-import { CATEGORIES, GENDERS_LIST } from '@/constants/globales'
+import { CATEGORIES, POSICIONES_FUTBOL, GENDERS_LIST } from '@/constants/globales'
 import { FormInput, FormAutocomplete, FormDatePicker } from '@/components/ui'
 
 dayjs.locale('es')
@@ -45,6 +45,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     defaultValues: {
       club_id: '',
       entrenador_id: '',
+      entrenador_secundario_id: '',
       nombres: '',
       apellido_paterno: '',
       apellido_materno: '',
@@ -55,6 +56,9 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
       ci_extension: '',
       genero: '',
       categoria: '',
+      categoria_secundaria: '',
+      posicion: '',
+      tutor: '',
       cinturon_actual: '',
       activo: true,
     },
@@ -86,12 +90,16 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         ...data,
         club_id: data.club_id || null,
         entrenador_id: data.entrenador_id || null,
+        entrenador_secundario_id: data.entrenador_secundario_id || null,
         apellido_paterno: data.apellido_paterno?.trim() || null,
         apellido_materno: data.apellido_materno?.trim() || null,
         fecha_nacimiento: data.fecha_nacimiento || null,
         numero_celular: data.numero_celular || null,
         genero: data.genero || null,
         categoria: data.categoria || null,
+        categoria_secundaria: data.categoria_secundaria || null,
+        posicion: data.posicion?.trim() || null,
+        tutor: data.tutor?.trim() || null,
         cinturon_actual: data.cinturon_actual || null,
         updated_by: user?.id || null
       }
@@ -126,6 +134,7 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
       reset({
         club_id: judoka.club_id || '',
         entrenador_id: judoka.entrenador_id || '',
+        entrenador_secundario_id: judoka.entrenador_secundario_id || '',
         nombres: judoka.nombres || '',
         apellido_paterno: judoka.apellido_paterno || '',
         apellido_materno: judoka.apellido_materno || '',
@@ -136,6 +145,9 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         ci_extension: judoka.ci_extension || '',
         genero: judoka.genero || '',
         categoria: judoka.categoria || '',
+        categoria_secundaria: judoka.categoria_secundaria || '',
+        posicion: judoka.posicion || '',
+        tutor: judoka.tutor || '',
         cinturon_actual: judoka.cinturon_actual || '',
         activo: judoka.activo ?? true,
       })
@@ -290,21 +302,57 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
             disabled={loading || loadingClubes || isClubManager || isSensei}
           />
         </Grid>
-        <Grid size={{ xs: 12 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormAutocomplete
             name="entrenador_id"
-            label="Entrenador"
+            label="Entrenador Principal"
             control={control}
             options={senseis.map(s => ({ value: s.id, label: s.nombres + ' ' + (s.apellidos || '') }))}
             disabled={loading || loadingSenseis || !watchClubId || isSensei}
           />
         </Grid>
-        <Grid size={{ xs: 12 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormAutocomplete
+            name="entrenador_secundario_id"
+            label="2do Entrenador (Opcional / Arqueros)"
+            control={control}
+            options={senseis.map(s => ({ value: s.id, label: s.nombres + ' ' + (s.apellidos || '') }))}
+            disabled={loading || loadingSenseis || !watchClubId}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormAutocomplete
             name="categoria"
-            label="Categoría"
+            label="Categoría Principal"
             control={control}
             options={CATEGORIES.map(c => ({ value: c, label: c }))}
+            disabled={loading}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormAutocomplete
+            name="categoria_secundaria"
+            label="2da Categoría (Opcional / Arqueros)"
+            control={control}
+            options={CATEGORIES.map(c => ({ value: c, label: c }))}
+            disabled={loading}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormAutocomplete
+            name="posicion"
+            label="Posición"
+            control={control}
+            options={POSICIONES_FUTBOL.map(p => ({ value: p, label: p }))}
+            disabled={loading}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormInput
+            name="tutor"
+            label="Nombre del Tutor"
+            control={control}
+            placeholder="Ej. Juan Pérez"
             disabled={loading}
           />
         </Grid>

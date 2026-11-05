@@ -133,7 +133,11 @@ export const baseUserSchema = baseUserObject.refine(validateApellidos, apellidos
 export const judokaSchema = baseUserObject.extend({
   club_id: z.string().nullable().optional(),
   entrenador_id: z.string().nullable().optional(),
+  entrenador_secundario_id: z.string().nullable().optional(),
   categoria: z.string().nullable().optional(),
+  categoria_secundaria: z.string().nullable().optional(),
+  posicion: z.string().nullable().optional(),
+  tutor: z.string().nullable().optional(),
   cinturon_actual: z.string().nullable().optional(),
   activo: z.boolean(),
   password: z.string().optional(),

@@ -92,6 +92,17 @@ export const CATEGORIES = [
   'Escuela sub 8-9',
   'Escuela sub 10-11',
   'Escuela sub 13',
+  'Arqueros',
+] as const
+
+export const POSICIONES_FUTBOL = [
+  'Arquero',
+  'Defensa Central',
+  'Lateral',
+  'Mediocampista',
+  'Medio Ofensivo',
+  'Extremo',
+  'Delantero',
 ] as const
 
 export const PAGINATION = {

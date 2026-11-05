@@ -87,7 +87,7 @@ export default function SenseiCertificacionesPage({ params }: SenseiCertificacio
   }
 
   return (
-    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.SENSEI, ROL.JUDOKA]}>
+    <ProtectedRoute allowedRoles={[ROL.ADMIN, ROL.ASOCIACION, ROL.ENCARGADO, ROL.SENSEI]}>
         {loadingSensei ? (
           <Box display="flex" justifyContent="center" alignItems="center" minHeight={300}>
             <CircularProgress />

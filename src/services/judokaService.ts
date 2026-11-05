@@ -3,7 +3,7 @@ import { Judoka, JudokaCreate, JudokaUpdate } from '@/models/judoka'
 import { ApiResponse } from '@/types/globales'
 import { userService, getUsersNamesByIds } from './userService'
 
-const selectJudokasWithUsuario = 'id, usuario_id, club_id, entrenador_id, activo, peso_competitivo, cinturon_actual, categoria, created_at, updated_at, usuarios:usuario_id(id, nombre, apellido_paterno, apellido_materno, avatar_url, correo, fecha_nacimiento, numero_celular, ci, ci_extension, genero, activo, updated_by), senseis:entrenador_id(usuarios:usuario_id(nombre, apellido_paterno, apellido_materno)), clubes:club_id(nombre_club)'
+const selectJudokasWithUsuario = 'id, usuario_id, club_id, entrenador_id, entrenador_secundario_id, activo, peso_competitivo, cinturon_actual, categoria, categoria_secundaria, posicion, tutor, created_at, updated_at, usuarios:usuario_id(id, nombre, apellido_paterno, apellido_materno, avatar_url, correo, fecha_nacimiento, numero_celular, ci, ci_extension, genero, activo, updated_by), senseis:entrenador_id(usuarios:usuario_id(nombre, apellido_paterno, apellido_materno)), senseis_secundario:entrenador_secundario_id(usuarios:usuario_id(nombre, apellido_paterno, apellido_materno)), clubes:club_id(nombre_club)'
 
 function mapJudokaRow(row: any): Judoka {
   const u = row.usuarios
@@ -15,6 +15,8 @@ function mapJudokaRow(row: any): Judoka {
 
   const s = row.senseis?.usuarios
   const nombreEntrenador = s ? [s.nombre, s.apellido_paterno, s.apellido_materno].filter(Boolean).join(' ') : undefined
+  const sSec = row.senseis_secundario?.usuarios
+  const nombreEntrenadorSecundario = sSec ? [sSec.nombre, sSec.apellido_paterno, sSec.apellido_materno].filter(Boolean).join(' ') : undefined
   const nombreClub = row.clubes?.nombre_club
 
   return {
@@ -32,7 +34,12 @@ function mapJudokaRow(row: any): Judoka {
     activo: u?.activo ?? true,
     avatar_url: u?.avatar_url ?? null,
     nombre_entrenador: nombreEntrenador,
-    nombre_club: nombreClub,
+    nombre_entrenador_secundario: nombreEntrenadorSecundario,
+    entrenador_secundario_id: row.entrenador_secundario_id ?? null,
+    categoria_secundaria: row.categoria_secundaria ?? null,
+    nombreClub,
+    posicion: row.posicion ?? null,
+    tutor: row.tutor ?? null,
     updated_by: u?.updated_by ?? null,
     modificado_por_nombre: undefined
   }
@@ -96,7 +103,7 @@ export const judokaService = {
       const { data, error } = await client
         .from('judokas')
         .select(selectJudokasWithUsuario)
-        .eq('entrenador_id', entrenadorId)
+        .or(`entrenador_id.eq.${entrenadorId},entrenador_secundario_id.eq.${entrenadorId}`)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -142,7 +149,11 @@ export const judokaService = {
           usuario_id: userId,
           club_id: judoka.club_id ?? null,
           entrenador_id: judoka.entrenador_id ?? null,
+          entrenador_secundario_id: judoka.entrenador_secundario_id ?? null,
           categoria: judoka.categoria ?? null,
+          categoria_secundaria: judoka.categoria_secundaria ?? null,
+          posicion: judoka.posicion ?? null,
+          tutor: judoka.tutor ?? null,
           peso_competitivo: judoka.peso_competitivo ?? null,
           cinturon_actual: judoka.cinturon_actual ?? null,
         })
@@ -173,7 +184,7 @@ export const judokaService = {
       const { data: current, error: getError } = await client.from('judokas').select('usuario_id').eq('id', id).single()
       if (getError || !current) throw new Error('Futbolista no encontrado')
 
-      const judokaFields = ['club_id', 'entrenador_id', 'categoria', 'peso_competitivo', 'cinturon_actual']
+      const judokaFields = ['club_id', 'entrenador_id', 'entrenador_secundario_id', 'categoria', 'categoria_secundaria', 'posicion', 'tutor', 'peso_competitivo', 'cinturon_actual']
       const judokaUpdate: Record<string, any> = { updated_at: new Date().toISOString() }
       judokaFields.forEach(f => {
         if (judokaPayload[f] !== undefined) judokaUpdate[f] = judokaPayload[f]

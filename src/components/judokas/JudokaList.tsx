@@ -15,6 +15,7 @@ import {
   DialogContent,
   DialogActions,
   Divider,
+  Chip,
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -339,7 +340,14 @@ export default function JudokaList({
       {
         id: 'categoria',
         label: 'Categoría',
-        render: (j: Judoka) => j.categoria || '-'
+        render: (j: Judoka) => (
+          <Box>
+            <Typography variant="body2">{j.categoria || '-'}</Typography>
+            {j.categoria_secundaria && (
+              <Chip label={j.categoria_secundaria} size="small" color="secondary" variant="outlined" sx={{ height: 18, fontSize: '0.65rem', mt: 0.5 }} />
+            )}
+          </Box>
+        )
       }
     ]
 

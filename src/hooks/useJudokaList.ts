@@ -20,7 +20,9 @@ export function useJudokaList(options: {
   const filterFn = useCallback((j: Judoka, filters: Record<string, string>, search: string) => {
     const normalizedSearch = search.toLowerCase()
     
-    const matchCategoria = filters.categoria === 'all' || j.categoria === filters.categoria
+    const matchCategoria = filters.categoria === 'all' || 
+      j.categoria === filters.categoria || 
+      j.categoria_secundaria === filters.categoria
     const matchCinturon = filters.cinturon === 'all' || j.cinturon_actual === filters.cinturon
     
     // El filtro de estado solo actúa si el usuario lo selecciona explícitamente en el dropdown.

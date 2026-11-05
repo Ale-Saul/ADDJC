@@ -19,7 +19,12 @@ export interface Judoka {
   peso_competitivo: number | null
   cinturon_actual: string | null
   categoria?: string | null
+  posicion?: string | null
+  tutor?: string | null
+  entrenador_secundario_id?: string | null
+  categoria_secundaria?: string | null
   nombre_entrenador?: string
+  nombre_entrenador_secundario?: string
   nombre_club?: string
   updated_by?: string | null
   modificado_por_nombre?: string
@@ -42,6 +47,10 @@ export interface JudokaCreate {
   ci_extension?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   categoria?: string | null
+  posicion?: string | null
+  tutor?: string | null
+  entrenador_secundario_id?: string | null
+  categoria_secundaria?: string | null
   peso_competitivo?: number | null
   cinturon_actual?: string | null
   avatar_url?: string | null
@@ -61,6 +70,10 @@ export interface JudokaUpdate {
   ci_extension?: string | null
   genero?: 'Masculino' | 'Femenino' | 'Otro' | 'Prefiero no decir' | null
   categoria?: string | null
+  posicion?: string | null
+  tutor?: string | null
+  entrenador_secundario_id?: string | null
+  categoria_secundaria?: string | null
   peso_competitivo?: number | null
   cinturon_actual?: string | null
   avatar_url?: string | null

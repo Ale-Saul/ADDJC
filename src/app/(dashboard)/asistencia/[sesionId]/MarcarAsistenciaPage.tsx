@@ -13,13 +13,22 @@ import {
   Snackbar,
   Tooltip,
   Paper,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Autocomplete,
+  TextField,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import PersonIcon from '@mui/icons-material/Person'
+import PersonAddIcon from '@mui/icons-material/PersonAdd'
 import ChecklistIcon from '@mui/icons-material/Checklist'
 import { useRouter } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import { ROL } from '@/constants/roles'
 import { useAuth } from '@/contexts/AuthContext'
@@ -27,8 +36,10 @@ import { getOperationalClubId, resolveAsistenciaView } from '@/utils/roleAccess'
 import { useSesionById } from '@/hooks/useAsistenciaSesiones'
 import { useDetalleSesion, useRegistrarAsistencia } from '@/hooks/useAsistenciaDetalle'
 import { useJudokas } from '@/hooks/useJudokas'
+import { judokaController } from '@/controllers/judokaController'
 import MarcarAsistenciaForm from '@/components/asistencia/MarcarAsistenciaForm'
 import { AsistenciaDetalleUpsert } from '@/models/asistencia'
+import { Judoka } from '@/models/judoka'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
 
@@ -64,11 +75,25 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
     autoFetch: autoFetchJudokas,
   })
 
-  // Filtro estricto por categoría de la sesión
+  // Filtro estricto por categoría de la sesión (primaria o secundaria)
   const sesionFecha = sesionQuery.data?.fecha
   const sesionCategoria = sesionQuery.data?.categoria
 
-  // Filtrar y ordenar futbolistas
+  // Estado para futbolistas invitados adicionales
+  const [invitados, setInvitados] = useState<Judoka[]>([])
+  const [openModalInvitado, setOpenModalInvitado] = useState(false)
+  const [invitadoSeleccionado, setInvitadoSeleccionado] = useState<Judoka | null>(null)
+
+  // Consultar todos los futbolistas del club para el selector de invitados y para hidratar detalles existentes
+  const clubId = sesionQuery.data?.club_id || operationalClubId || user?.club_id
+  const { data: todosClubRes } = useQuery({
+    queryKey: ['judokas', 'club', clubId],
+    queryFn: () => clubId ? judokaController.getJudokasByClub(clubId) : judokaController.getAllJudokas(),
+    enabled: openModalInvitado || (detalleQuery.data?.length ?? 0) > 0,
+  })
+  const todosClubJudokas = useMemo(() => todosClubRes?.data || [], [todosClubRes])
+
+  // Filtrar y ordenar futbolistas asignados
   const judokasElegibles = useMemo(() => {
     let filtered = judokasQuery.judokas
     if (sesionFecha) {
@@ -80,15 +105,40 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
       })
     }
 
-    // Filtrar estrictamente por la categoría de la sesión
+    // Filtrar por la categoría de la sesión (primaria o secundaria, case-insensitive)
     if (sesionCategoria) {
+      const catLower = sesionCategoria.trim().toLowerCase()
       filtered = filtered.filter(j => 
-        (j.categoria || '').trim().toLowerCase() === sesionCategoria.trim().toLowerCase()
+        (j.categoria || '').trim().toLowerCase() === catLower ||
+        (j.categoria_secundaria || '').trim().toLowerCase() === catLower
       )
     }
 
-    // Ordenar por apellidos (alfabético)
-    return [...filtered].sort((a, b) => {
+    return filtered
+  }, [judokasQuery.judokas, sesionFecha, sesionCategoria])
+
+  // Lista consolidada: elegibles + historial existente en la sesión + invitados manuales
+  const listaConsolidada = useMemo(() => {
+    const map = new Map<string, Judoka>()
+
+    // 1. Agregar elegibles
+    judokasElegibles.forEach(j => map.set(j.id, j))
+
+    // 2. Si ya hay registros guardados en esta sesión y están en la bd del club, agregarlos
+    if (detalleQuery.data && detalleQuery.data.length > 0 && todosClubJudokas.length > 0) {
+      detalleQuery.data.forEach(d => {
+        if (!map.has(d.judoka_id)) {
+          const found = todosClubJudokas.find(j => j.id === d.judoka_id)
+          if (found) map.set(found.id, found)
+        }
+      })
+    }
+
+    // 3. Agregar invitados seleccionados en esta pantalla
+    invitados.forEach(j => map.set(j.id, j))
+
+    // Ordenar alfabéticamente por apellido
+    return Array.from(map.values()).sort((a, b) => {
       const apellidoA = (a.apellidos || '').trim().toLowerCase()
       const apellidoB = (b.apellidos || '').trim().toLowerCase()
       if (apellidoA !== apellidoB) {
@@ -96,7 +146,21 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
       }
       return (a.nombres || '').localeCompare(b.nombres || '', 'es', { sensitivity: 'base' })
     })
-  }, [judokasQuery.judokas, sesionFecha, sesionCategoria])
+  }, [judokasElegibles, detalleQuery.data, todosClubJudokas, invitados])
+
+  // Lista de posibles invitados (futbolistas del club que aún no están en la lista)
+  const candidatosInvitados = useMemo(() => {
+    const idsActuales = new Set(listaConsolidada.map(j => j.id))
+    return todosClubJudokas.filter(j => !idsActuales.has(j.id))
+  }, [todosClubJudokas, listaConsolidada])
+
+  const handleAgregarInvitado = () => {
+    if (invitadoSeleccionado) {
+      setInvitados(prev => [...prev, invitadoSeleccionado])
+      setInvitadoSeleccionado(null)
+      setOpenModalInvitado(false)
+    }
+  }
 
   // Mutation para guardar
   const guardarMutation = useRegistrarAsistencia(
@@ -112,7 +176,6 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
     const res = await guardarMutation.mutateAsync({ sesionId, asistencias })
     if (res.success) {
       setSnackbar({ open: true, message: 'Asistencia guardada correctamente', severity: 'success' })
-      // Esperar un poco para que el usuario vea el mensaje y luego volver
       setTimeout(() => {
         router.push('/asistencia')
       }, 1000)
@@ -170,7 +233,7 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
               No se pudo cargar la sesión. Intenta volver y abrirla de nuevo.
             </Alert>
           ) : sesion ? (
-            <Stack spacing={0.75}>
+            <Stack spacing={1}>
               {sesion.titulo && (
                 <Typography variant="h6" fontWeight="600" lineHeight={1.3}>
                   {sesion.titulo}
@@ -202,23 +265,43 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
                 </Stack>
               )}
 
-              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ pt: 0.5 }}>
-                {sesion.categoria && (
-                  <Chip
-                    label={`Categoría: ${sesion.categoria}`}
-                    size="small"
-                    color="primary"
-                    sx={{ fontWeight: 'bold' }}
-                  />
-                )}
-                {judokasElegibles.length > 0 && !isLoading && (
-                  <Chip
-                    label={`${judokasElegibles.length} futbolista${judokasElegibles.length === 1 ? '' : 's'}`}
-                    size="small"
-                    variant="outlined"
-                    color="primary"
-                  />
-                )}
+              <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" flexWrap="wrap" sx={{ pt: 1 }}>
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                  {sesion.categoria && (
+                    <Chip
+                      label={`Categoría: ${sesion.categoria}`}
+                      size="small"
+                      color="primary"
+                      sx={{ fontWeight: 'bold' }}
+                    />
+                  )}
+                  {listaConsolidada.length > 0 && !isLoading && (
+                    <Chip
+                      label={`${listaConsolidada.length} futbolista${listaConsolidada.length === 1 ? '' : 's'}`}
+                      size="small"
+                      variant="outlined"
+                      color="primary"
+                    />
+                  )}
+                  {invitados.length > 0 && (
+                    <Chip
+                      label={`+${invitados.length} invitado${invitados.length === 1 ? '' : 's'}`}
+                      size="small"
+                      color="secondary"
+                    />
+                  )}
+                </Stack>
+
+                <Button
+                  variant="outlined"
+                  size="small"
+                  color="secondary"
+                  startIcon={<PersonAddIcon />}
+                  onClick={() => setOpenModalInvitado(true)}
+                  sx={{ textTransform: 'none', fontWeight: 600 }}
+                >
+                  + Agregar Invitado
+                </Button>
               </Stack>
             </Stack>
           ) : null}
@@ -237,22 +320,81 @@ export default function MarcarAsistenciaPage({ sesionId }: Props) {
           <Alert severity="error">
             {judokasQuery.error ?? 'No se pudo cargar la lista de futbolistas.'}
           </Alert>
-        ) : judokasElegibles.length === 0 ? (
-          <Alert severity="info">
-            {isSensei
-              ? 'No tienes futbolistas asignados que estuvieran inscritos en la fecha de esta sesión.'
-              : 'No hay futbolistas del club inscritos en la fecha de esta sesión.'}
-          </Alert>
+        ) : listaConsolidada.length === 0 ? (
+          <Stack spacing={2}>
+            <Alert severity="info">
+              {isSensei
+                ? 'No hay futbolistas asignados a esta categoría en la fecha de la sesión. Puedes agregar futbolistas invitados con el botón superior.'
+                : 'No hay futbolistas inscritos para esta sesión. Puedes agregar futbolistas invitados con el botón superior.'}
+            </Alert>
+            <Button
+              variant="contained"
+              color="secondary"
+              startIcon={<PersonAddIcon />}
+              onClick={() => setOpenModalInvitado(true)}
+              sx={{ alignSelf: 'flex-start', textTransform: 'none' }}
+            >
+              Agregar Futbolista Invitado
+            </Button>
+          </Stack>
         ) : (
           <MarcarAsistenciaForm
             sesionId={sesionId}
             marcadoPor={user?.id ?? ''}
-            judokas={judokasElegibles}
+            judokas={listaConsolidada}
             detalleExistente={detalleQuery.data ?? []}
             onGuardar={handleGuardar}
             guardandoLoading={guardarMutation.isPending}
           />
         )}
+
+        {/* ── Modal de Agregar Invitado ── */}
+        <Dialog
+          open={openModalInvitado}
+          onClose={() => setOpenModalInvitado(false)}
+          fullWidth
+          maxWidth="xs"
+        >
+          <DialogTitle sx={{ fontWeight: 'bold' }}>
+            Agregar Futbolista Invitado
+          </DialogTitle>
+          <DialogContent sx={{ pt: 1 }}>
+            <Typography variant="body2" color="text.secondary" mb={2}>
+              Selecciona un jugador del club que participe en este entrenamiento:
+            </Typography>
+            <Autocomplete
+              options={candidatosInvitados}
+              getOptionLabel={(option) =>
+                `${option.nombres} ${option.apellidos} (${option.categoria || 'Sin cat'}${option.posicion ? ' - ' + option.posicion : ''})`
+              }
+              value={invitadoSeleccionado}
+              onChange={(_, value) => setInvitadoSeleccionado(value)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Buscar jugador por nombre o carnet"
+                  placeholder="Escribe el nombre..."
+                  size="small"
+                  autoFocus
+                />
+              )}
+              noOptionsText="No se encontraron jugadores disponibles"
+            />
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={() => setOpenModalInvitado(false)} color="inherit">
+              Cancelar
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              disabled={!invitadoSeleccionado}
+              onClick={handleAgregarInvitado}
+            >
+              Agregar a la Sesión
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* ── Snackbar ── */}
         <Snackbar

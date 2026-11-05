@@ -219,13 +219,32 @@ export default function MarcarAsistenciaForm({
                   </Avatar>
                   <ListItemText
                     primary={
-                      <Typography variant="body2" fontWeight="500">
-                        {judoka.apellidos}, {judoka.nombres}
-                      </Typography>
+                      <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
+                        <Typography variant="body2" fontWeight="500">
+                          {judoka.apellidos}, {judoka.nombres}
+                        </Typography>
+                        {judoka.posicion && (
+                          <Chip
+                            label={judoka.posicion}
+                            size="small"
+                            variant="outlined"
+                            sx={{ height: 20, fontSize: '0.65rem' }}
+                          />
+                        )}
+                        {judoka.categoria && (
+                          <Chip
+                            label={judoka.categoria}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                            sx={{ height: 20, fontSize: '0.65rem' }}
+                          />
+                        )}
+                      </Stack>
                     }
                     secondary={
-                      judoka.cinturon_actual
-                        ? <Typography variant="caption" color="text.secondary">{judoka.cinturon_actual}</Typography>
+                      judoka.categoria_secundaria
+                        ? <Typography variant="caption" color="text.secondary">2da Cat: {judoka.categoria_secundaria}</Typography>
                         : undefined
                     }
                   />

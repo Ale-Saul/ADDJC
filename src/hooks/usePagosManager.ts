@@ -121,7 +121,7 @@ export function usePagosManager(user: User | null | undefined) {
     }
     
     if (categoriaFilter !== 'all') {
-      filtered = filtered.filter(j => j.categoria === categoriaFilter)
+      filtered = filtered.filter(j => j.categoria === categoriaFilter || j.categoria_secundaria === categoriaFilter)
     }
 
     if (isAdmin && clubFilter !== 'all') {
