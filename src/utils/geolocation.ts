@@ -10,53 +10,123 @@ export interface GeolocationResult {
   error?: string
 }
 
-/**
- * Obtiene las coordenadas actuales del dispositivo usando la API de Geolocalización del navegador.
- */
-export function getCurrentCoordinates(): Promise<GeolocationResult> {
-  return new Promise((resolve) => {
-    if (typeof window === 'undefined' || !navigator.geolocation) {
-      resolve({
-        success: false,
-        error: 'Tu navegador o dispositivo no soporta geolocalización GPS.',
-      })
-      return
-    }
+let cachedPosition: { lat: number; lng: number; accuracy: number; timestamp: number } | null = null
 
+/**
+ * Pre-calienta el sensor GPS en segundo plano para que la marcación sea instantánea.
+ */
+export function prewarmGeolocation(): void {
+  if (typeof window === 'undefined' || !navigator.geolocation) return
+  try {
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({
-          success: true,
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          accuracy: Math.round(position.coords.accuracy),
-        })
-      },
-      (error) => {
-        let message = 'No se pudo obtener la ubicación GPS.'
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            message = 'Permiso de ubicación denegado. Por favor habilita el GPS en tu navegador para registrar la constancia.'
-            break
-          case error.POSITION_UNAVAILABLE:
-            message = 'La señal de ubicación no está disponible en este momento.'
-            break
-          case error.TIMEOUT:
-            message = 'Se agotó el tiempo de espera para obtener la ubicación.'
-            break
+      (pos) => {
+        cachedPosition = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: Math.round(pos.coords.accuracy),
+          timestamp: Date.now(),
         }
-        resolve({
-          success: false,
-          error: message,
-        })
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 12000,
-        maximumAge: 0,
-      }
+      () => {},
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
     )
-  })
+  } catch {
+    // Silencioso en prewarm
+  }
+}
+
+/**
+ * Obtiene las coordenadas actuales con estrategia progresiva:
+ * 1. Usa caché reciente (< 45s) si existe.
+ * 2. Intenta GPS satelital de alta precisión (5s).
+ * 3. Si falla o da timeout, recurre inmediatamente a triangulación de red/antenas/Wi-Fi (6s).
+ */
+export async function getCurrentCoordinates(): Promise<GeolocationResult> {
+  if (typeof window === 'undefined' || !navigator.geolocation) {
+    return {
+      success: false,
+      error: 'Tu navegador o dispositivo no soporta geolocalización GPS.',
+    }
+  }
+
+  // 1. Verificar si tenemos una posición reciente (< 45 segundos)
+  if (cachedPosition && Date.now() - cachedPosition.timestamp < 45000) {
+    return {
+      success: true,
+      lat: cachedPosition.lat,
+      lng: cachedPosition.lng,
+      accuracy: cachedPosition.accuracy,
+    }
+  }
+
+  const tryGetPosition = (options: PositionOptions): Promise<GeolocationPosition> => {
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, options)
+    })
+  }
+
+  // 2. Intento de alta precisión (satelital rápido)
+  try {
+    const pos = await tryGetPosition({
+      enableHighAccuracy: true,
+      timeout: 6000,
+      maximumAge: 30000,
+    })
+    cachedPosition = {
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude,
+      accuracy: Math.round(pos.coords.accuracy),
+      timestamp: Date.now(),
+    }
+    return {
+      success: true,
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude,
+      accuracy: Math.round(pos.coords.accuracy),
+    }
+  } catch (err: any) {
+    // Si el usuario denegó permisos explícitamente, no reintentamos
+    if (err && err.code === 1) {
+      return {
+        success: false,
+        error: 'Permiso de ubicación denegado. Por favor habilita el GPS y otorga permiso de ubicación en tu navegador.',
+      }
+    }
+  }
+
+  // 3. Fallback inmediato a precisión estándar / triangulación de red (funciona en interiores)
+  try {
+    const pos = await tryGetPosition({
+      enableHighAccuracy: false,
+      timeout: 7000,
+      maximumAge: 60000,
+    })
+    cachedPosition = {
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude,
+      accuracy: Math.round(pos.coords.accuracy),
+      timestamp: Date.now(),
+    }
+    return {
+      success: true,
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude,
+      accuracy: Math.round(pos.coords.accuracy),
+    }
+  } catch (err: any) {
+    let message = 'No se pudo capturar la señal de ubicación GPS.'
+    if (err?.code === 1) {
+      message = 'Permiso de ubicación denegado en tu navegador.'
+    } else if (err?.code === 2) {
+      message = 'Ubicación no disponible. Por favor activa la ubicación/GPS de tu celular.'
+    } else if (err?.code === 3) {
+      message = 'Tiempo de espera agotado buscando señal GPS. Activa tu ubicación y reintenta.'
+    }
+    return {
+      success: false,
+      error: message,
+    }
+  }
 }
 
 /**
@@ -75,4 +145,5 @@ export function formatAccuracy(accuracy?: number | null): string {
   if (accuracy < 100) return `±${accuracy}m (Media precisión)`
   return `±${accuracy}m (Aproximada)`
 }
+
 

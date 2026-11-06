@@ -18,8 +18,8 @@ export default function Header() {
   return (
     <AppBar position="static">
       <Toolbar>
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-          Asociación de Judo
+        <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
+          Cochabamba FC
         </Typography>
         <Box>
           {menuItems.map((item) => (

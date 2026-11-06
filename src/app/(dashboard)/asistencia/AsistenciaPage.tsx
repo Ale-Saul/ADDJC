@@ -22,6 +22,8 @@ import {
   Paper,
   Tabs,
   Tab,
+  ToggleButtonGroup,
+  ToggleButton,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import ChecklistIcon from '@mui/icons-material/Checklist'
@@ -36,6 +38,8 @@ import SesionCard from '@/components/asistencia/SesionCard'
 import NuevaSesionForm from '@/components/asistencia/NuevaSesionForm'
 import MarcarAsistenciaEntrenadorCard from '@/components/asistencia/entrenadores/MarcarAsistenciaEntrenadorCard'
 import HistorialAsistenciaEntrenadores from '@/components/asistencia/entrenadores/HistorialAsistenciaEntrenadores'
+import ConvocatoriaSemanalTab from '@/components/asistencia/ConvocatoriaSemanalTab'
+import SportsSoccerIcon from '@mui/icons-material/SportsSoccer'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
@@ -62,6 +66,15 @@ export default function AsistenciaPage() {
     eliminarLoading,
     crearLoading,
     sesionesAgrupadas,
+    periodoEntrenador,
+    setPeriodoEntrenador,
+    sesionesEntrenador,
+    lunesEstaSemana,
+    domingoEstaSemana,
+    lunesProximaSemana,
+    domingoProximaSemana,
+    conteoEstaSemana,
+    conteoHoy,
     snackbar,
     cerrarSnackbar,
   } = useAsistenciaPage()
@@ -140,10 +153,17 @@ export default function AsistenciaPage() {
               label="Clases y Alumnos"
             />
             <Tab
-              icon={<LocationOnIcon sx={{ fontSize: 20 }} />}
+              icon={<SportsSoccerIcon sx={{ fontSize: 20 }} />}
               iconPosition="start"
-              label="Asistencia de Entrenadores (GPS)"
+              label="Convocatoria Semanal (Habilitados)"
             />
+            {(isEncargado || isAdmin) && (
+              <Tab
+                icon={<LocationOnIcon sx={{ fontSize: 20 }} />}
+                iconPosition="start"
+                label="Asistencia de Entrenadores (GPS)"
+              />
+            )}
           </Tabs>
 
           {/* ════════ PESTAÑA 0: CLASES Y ALUMNOS ════════ */}
@@ -287,17 +307,91 @@ export default function AsistenciaPage() {
                   )}
                 </Box>
               ) : isSensei ? (
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2 }}>
-                  {sesiones.map(sesion => (
-                    <SesionCard
-                      key={sesion.id}
-                      sesion={sesion}
-                      mostrarSensei={false}
-                      onEliminar={handleEliminarSesion}
-                      eliminarLoading={eliminarLoading}
-                    />
-                  ))}
-                </Box>
+                <Stack spacing={2.5}>
+                  {/* Barra de control para el Entrenador: Mantiene la pantalla limpia */}
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 2,
+                      display: 'flex',
+                      flexDirection: { xs: 'column', md: 'row' },
+                      alignItems: { xs: 'stretch', md: 'center' },
+                      justifyContent: 'space-between',
+                      gap: 1.5,
+                      bgcolor: 'background.paper',
+                    }}
+                  >
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        Mis Entrenamientos
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {periodoEntrenador === 'esta_semana'
+                          ? `Semana en curso: ${lunesEstaSemana.format('DD/MM')} al ${domingoEstaSemana.format('DD/MM/YYYY')} (orden cronológico)`
+                          : periodoEntrenador === 'hoy'
+                          ? `Clases de hoy (${dayjs().format('dddd DD/MM/YYYY')})`
+                          : periodoEntrenador === 'proxima_semana'
+                          ? `Próxima semana: ${lunesProximaSemana.format('DD/MM')} al ${domingoProximaSemana.format('DD/MM/YYYY')}`
+                          : periodoEntrenador === 'anteriores'
+                          ? 'Historial de semanas anteriores'
+                          : 'Todas las clases registradas'}
+                      </Typography>
+                    </Box>
+
+                    <ToggleButtonGroup
+                      value={periodoEntrenador}
+                      exclusive
+                      onChange={(_: React.MouseEvent<HTMLElement>, val: any) => val && setPeriodoEntrenador(val)}
+                      size="small"
+                      sx={{ flexWrap: 'wrap' }}
+                    >
+                      <ToggleButton value="esta_semana" sx={{ textTransform: 'none', px: 1.5, fontWeight: 600 }}>
+                        Esta semana ({conteoEstaSemana})
+                      </ToggleButton>
+                      <ToggleButton value="hoy" sx={{ textTransform: 'none', px: 1.5, fontWeight: 600 }}>
+                        Hoy ({conteoHoy})
+                      </ToggleButton>
+                      <ToggleButton value="proxima_semana" sx={{ textTransform: 'none', px: 1.5, fontWeight: 600 }}>
+                        Próxima semana
+                      </ToggleButton>
+                      <ToggleButton value="anteriores" sx={{ textTransform: 'none', px: 1.5, fontWeight: 600 }}>
+                        Anteriores
+                      </ToggleButton>
+                      <ToggleButton value="todas" sx={{ textTransform: 'none', px: 1.5, fontWeight: 600 }}>
+                        Todas
+                      </ToggleButton>
+                    </ToggleButtonGroup>
+                  </Paper>
+
+                  {/* Lista de tarjetas en orden cronológico (de la que ya se va a cumplir a la que falta más) */}
+                  {sesionesEntrenador.length === 0 ? (
+                    <Paper
+                      variant="outlined"
+                      sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.50', borderStyle: 'dashed', borderRadius: 2 }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        {periodoEntrenador === 'hoy'
+                          ? 'No tienes clases programadas para hoy.'
+                          : periodoEntrenador === 'esta_semana'
+                          ? 'No tienes clases programadas para esta semana.'
+                          : 'No se encontraron clases para el período seleccionado.'}
+                      </Typography>
+                    </Paper>
+                  ) : (
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+                      {sesionesEntrenador.map(sesion => (
+                        <SesionCard
+                          key={sesion.id}
+                          sesion={sesion}
+                          mostrarSensei={false}
+                          onEliminar={handleEliminarSesion}
+                          eliminarLoading={eliminarLoading}
+                        />
+                      ))}
+                    </Box>
+                  )}
+                </Stack>
               ) : (
                 <Stack spacing={4}>
                   {sesionesAgrupadas?.map(grupo => (
@@ -354,37 +448,32 @@ export default function AsistenciaPage() {
             </Box>
           )}
 
-          {/* ════════ PESTAÑA 1: ASISTENCIA DE ENTRENADORES (GPS) ════════ */}
+          {/* ════════ PESTAÑA 1: CONVOCATORIA SEMANAL (HABILITADOS) ════════ */}
           {tabIndex === 1 && (
-            <Stack spacing={3}>
-              {/* Si es entrenador, mostrar su tarjeta de check-in / check-out */}
-              {isSensei && senseiId && clubId && (
-                <Box>
-                  <MarcarAsistenciaEntrenadorCard
-                    entrenadorId={senseiId}
-                    clubId={clubId}
-                  />
-                </Box>
-              )}
+            <ConvocatoriaSemanalTab
+              clubId={clubId}
+              isSensei={isSensei}
+              isEncargado={isEncargado}
+              isAdmin={isAdmin}
+              senseiId={senseiId}
+            />
+          )}
 
-              {/* Título de la sección de historial */}
+          {/* ════════ PESTAÑA 2: ASISTENCIA DE ENTRENADORES (GPS) - Solo Encargados y Admin ════════ */}
+          {(isEncargado || isAdmin) && tabIndex === 2 && (
+            <Stack spacing={3}>
               <Box>
                 <Typography variant="h6" fontWeight="bold">
-                  {isSensei
-                    ? 'Mi Historial de Marcaciones'
-                    : 'Control de Asistencias y Ubicaciones GPS de Entrenadores'}
+                  Control de Asistencias y Ubicaciones GPS de Entrenadores
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {isSensei
-                    ? 'Registro de entradas y salidas de tus entrenamientos y partidos con constancia satelital.'
-                    : 'Supervisa los horarios y las ubicaciones en Google Maps donde marcaron los profesores.'}
+                  Supervisa los horarios y las ubicaciones en Google Maps donde marcaron los profesores.
                 </Typography>
               </Box>
 
               <HistorialAsistenciaEntrenadores
                 clubId={clubId || undefined}
-                entrenadorId={isSensei ? senseiId : undefined}
-                mostrarFiltroEntrenador={!isSensei}
+                mostrarFiltroEntrenador={true}
                 entrenadoresDisponibles={filtros.senseiOptions.map(o => ({ id: o.value, nombre: o.label }))}
               />
             </Stack>

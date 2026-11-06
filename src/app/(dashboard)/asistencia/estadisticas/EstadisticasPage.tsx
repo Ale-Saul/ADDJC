@@ -133,7 +133,7 @@ export default function EstadisticasPage() {
     
     // Título
     doc.setFontSize(18)
-    doc.text('Estadísticas de Asistencia', 14, 20)
+    doc.text('Estadísticas de Asistencia - Cochabamba FC', 14, 20)
     
     // Información del período
     doc.setFontSize(11)
@@ -146,14 +146,14 @@ export default function EstadisticasPage() {
     // Totales globales
     doc.setFont('helvetica', 'bold')
     doc.text(`Sesiones en el período: ${reporte.stats_globales.total_sesiones}`, 14, 48)
-    doc.text(`Promedio Asistencia del Club: ${reporte.stats_globales.promedio_asistencia.toFixed(2)}%`, 80, 48)
+    doc.text(`Promedio Asistencia General: ${reporte.stats_globales.promedio_asistencia.toFixed(2)}%`, 80, 48)
     
     doc.setFont('helvetica', 'normal')
     
     let yPos = 56
 
     if (vistaDesglose === 'sensei' && reporte.stats_por_sensei.length > 0) {
-        doc.text('Desglose por Sensei:', 14, yPos)
+        doc.text('Desglose por Entrenador:', 14, yPos)
         yPos += 5
         const body = reporte.stats_por_sensei
             .filter(s => senseiFiltroDesglose === 'all' || s.sensei_id === senseiFiltroDesglose)
@@ -165,7 +165,7 @@ export default function EstadisticasPage() {
         
         autoTable(doc, {
             startY: yPos,
-            head: [['Sensei', 'Sesiones', '% Asistencia Promedio']],
+            head: [['Entrenador', 'Sesiones', '% Asistencia Promedio']],
             body: body,
             theme: 'grid',
             headStyles: { fillColor: [25, 118, 210] }

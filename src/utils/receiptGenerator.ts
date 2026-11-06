@@ -26,7 +26,7 @@ export const generatePagoReceipt = (pagos: Pago | Pago[], judokaNombre: string, 
   
   doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
-  doc.text('ASOCIACIÓN DE JUDO', pageWidth / 2, 25, { align: 'center' })
+  doc.text('COCHABAMBA FC', pageWidth / 2, 25, { align: 'center' })
   
   if (clubNombre) {
     doc.setFontSize(8)
@@ -56,9 +56,9 @@ export const generatePagoReceipt = (pagos: Pago | Pago[], judokaNombre: string, 
   
   doc.setFontSize(9)
   doc.setFont('helvetica', 'bold')
-  doc.text('JUDOKA:', margin + 4, 54.5)
+  doc.text('FUTBOLISTA:', margin + 4, 54.5)
   doc.setFont('helvetica', 'normal')
-  doc.text(judokaNombre.toUpperCase(), margin + 20, 54.5)
+  doc.text(judokaNombre.toUpperCase(), margin + 24, 54.5)
 
   // --- Detalle de Pagos ---
   doc.setFontSize(8)
@@ -143,7 +143,7 @@ export const generatePagoReceipt = (pagos: Pago | Pago[], judokaNombre: string, 
   // --- Pie de página ---
   doc.setFontSize(7)
   doc.setFont('helvetica', 'normal')
-  doc.text('Este es un comprobante digital generado automáticamente por la Asociación de Judo.', pageWidth / 2, doc.internal.pageSize.getHeight() - 12, { align: 'center' })
+  doc.text('Este es un comprobante digital generado automáticamente por Cochabamba FC.', pageWidth / 2, doc.internal.pageSize.getHeight() - 12, { align: 'center' })
   doc.text('Gracias por su pago.', pageWidth / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' })
 
   // Guardar el PDF

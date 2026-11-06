@@ -120,7 +120,7 @@ export default function ReportesPage() {
     
     // Título
     doc.setFontSize(18)
-    doc.text('Reporte de Pagos y Cuotas', 14, 20)
+    doc.text('Reporte de Pagos y Cuotas - Cochabamba FC', 14, 20)
     
     // Información del período
     doc.setFontSize(11)

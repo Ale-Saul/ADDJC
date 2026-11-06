@@ -78,7 +78,7 @@ export default function ContabilidadPage() {
 
     // Título
     doc.setFontSize(18)
-    doc.text('Reporte de Finanzas - Asociación de Judo', 14, 20)
+    doc.text('Reporte de Finanzas - Cochabamba FC', 14, 20)
 
     // Información general
     doc.setFontSize(11)
@@ -203,7 +203,7 @@ export default function ContabilidadPage() {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <AccountBalanceIcon sx={{ fontSize: 40, color: 'primary.main' }} />
               <Typography variant="h4" component="h1">
-                Finanzas de la Asociación
+                Finanzas de Cochabamba FC
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 2, width: { xs: '100%', md: 'auto' } }}>

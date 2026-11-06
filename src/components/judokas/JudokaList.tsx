@@ -506,7 +506,7 @@ export default function JudokaList({
         <ConfirmDialog
           open={!!pendingDelete}
           title="Eliminar Futbolista"
-          message={pendingDelete ? `Estás seguro de eliminar al judoka "${pendingDelete.nombres} "?` : ''}
+          message={pendingDelete ? `¿Estás seguro de eliminar al futbolista "${pendingDelete.nombres}"?` : ''}
           confirmText="Eliminar"
           onConfirm={handleConfirmDelete}
           onClose={() => setPendingDelete(null)}

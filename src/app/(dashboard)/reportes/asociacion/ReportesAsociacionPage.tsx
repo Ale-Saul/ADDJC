@@ -64,10 +64,10 @@ export default function ReportesAsociacionPage() {
     // Título
     doc.setFontSize(18)
     const titulo = vistaDetalle === 'club' 
-      ? 'Reporte Consolidado por Club - Asociación de Judo'
+      ? 'Reporte Consolidado por Categoría - Cochabamba FC'
       : vistaDetalle === 'judokas'
-      ? 'Reporte Consolidado por Futbolista - Koklub'
-      : 'Reporte Detallado de Pagos - Asociación de Judo'
+      ? 'Reporte Consolidado por Futbolista - Cochabamba FC'
+      : 'Reporte Detallado de Pagos - Cochabamba FC'
     doc.text(titulo, 14, 20)
     
     // Información
@@ -379,7 +379,7 @@ export default function ReportesAsociacionPage() {
             <Box display="flex" alignItems="center" gap={2}>
               <AssessmentIcon sx={{ fontSize: 40, color: 'primary.main' }} />
               <Typography variant="h4" component="h1">
-                Reportes Consolidados - Asociación
+                Reportes Consolidados - Cochabamba FC
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 2, width: { xs: '100%', md: 'auto' } }}>

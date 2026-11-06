@@ -4,7 +4,20 @@ import { useState, useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Stack, Button, Alert, CircularProgress, Typography } from '@mui/material'
+import {
+  Stack,
+  Button,
+  Alert,
+  CircularProgress,
+  Typography,
+  Box,
+  ToggleButtonGroup,
+  ToggleButton,
+  Chip,
+  Paper,
+} from '@mui/material'
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
+import DateRangeIcon from '@mui/icons-material/DateRange'
 import { FormInput } from '@/components/ui/FormInput'
 import { FormDatePicker } from '@/components/ui/FormDatePicker'
 import { FormAutocomplete } from '@/components/ui/FormAutocomplete'
@@ -22,13 +35,24 @@ interface Props {
   clubId: string
   senseiId: string
   createdBy: string
-  onSuccess: (data: AsistenciaSesionCreate) => Promise<{ success: boolean; error?: string }>
+  onSuccess: (data: AsistenciaSesionCreate | AsistenciaSesionCreate[]) => Promise<{ success: boolean; error?: string }>
   onCancel: () => void
 }
+
+const DIAS_SEMANA = [
+  { id: 1, label: 'Lunes', short: 'Lun' },
+  { id: 2, label: 'Martes', short: 'Mar' },
+  { id: 3, label: 'Miércoles', short: 'Mié' },
+  { id: 4, label: 'Jueves', short: 'Jue' },
+  { id: 5, label: 'Viernes', short: 'Vie' },
+  { id: 6, label: 'Sábado', short: 'Sáb' },
+]
 
 export default function NuevaSesionForm({ clubId, senseiId, createdBy, onSuccess, onCancel }: Props) {
   const [categoriasEntrenador, setCategoriasEntrenador] = useState<string[]>([])
   const [cargandoCategorias, setCargandoCategorias] = useState(true)
+  const [modoCreacion, setModoCreacion] = useState<'dia' | 'semana'>('dia')
+  const [diasSeleccionados, setDiasSeleccionados] = useState<number[]>([1, 2, 3, 4, 5]) // L-V por defecto
 
   const {
     control,
@@ -51,6 +75,22 @@ export default function NuevaSesionForm({ clubId, senseiId, createdBy, onSuccess
       notas: null,
     }
   })
+
+  const watchFecha = watch('fecha')
+
+  // Obtener el lunes de la semana de la fecha seleccionada
+  const lunesSemana = useMemo(() => {
+    const d = dayjs(watchFecha || undefined)
+    const day = d.day() // 0 = Dom, 1 = Lun, ...
+    const diff = day === 0 ? -6 : 1 - day
+    return d.add(diff, 'day').startOf('day')
+  }, [watchFecha])
+
+  const toggleDia = (id: number) => {
+    setDiasSeleccionados(prev =>
+      prev.includes(id) ? prev.filter(d => d !== id) : [...prev, id].sort()
+    )
+  }
 
   // Cargar categorías asignadas al entrenador
   useEffect(() => {
@@ -125,16 +165,40 @@ export default function NuevaSesionForm({ clubId, senseiId, createdBy, onSuccess
   }, [categoriasEntrenador])
 
   const onSubmit = async (values: FormValues) => {
-    const payload: AsistenciaSesionCreate = {
-      ...values,
-      titulo: values.titulo ? values.titulo.replace(/\s+/g, ' ').trim() || null : null,
-      categoria: values.categoria?.trim() || null,
-      notas: values.notas ? values.notas.replace(/\s+/g, ' ').trim() || null : null,
-      created_by: createdBy,
+    if (modoCreacion === 'semana' && diasSeleccionados.length === 0) {
+      setError('root', { message: 'Debes seleccionar al menos un día de la semana para planificar.' })
+      return
     }
-    const res = await onSuccess(payload)
-    if (!res.success) {
-      setError('root', { message: res.error || 'Error al crear la sesión' })
+
+    if (modoCreacion === 'semana') {
+      const payloads: AsistenciaSesionCreate[] = diasSeleccionados.map(diaNum => {
+        const fechaDia = lunesSemana.add(diaNum - 1, 'day').format('YYYY-MM-DD')
+        return {
+          ...values,
+          fecha: fechaDia,
+          titulo: values.titulo ? values.titulo.replace(/\s+/g, ' ').trim() || null : null,
+          categoria: values.categoria?.trim() || null,
+          notas: values.notas ? values.notas.replace(/\s+/g, ' ').trim() || null : null,
+          created_by: createdBy,
+        }
+      })
+
+      const res = await onSuccess(payloads)
+      if (!res.success) {
+        setError('root', { message: res.error || 'Error al crear las sesiones semanales' })
+      }
+    } else {
+      const payload: AsistenciaSesionCreate = {
+        ...values,
+        titulo: values.titulo ? values.titulo.replace(/\s+/g, ' ').trim() || null : null,
+        categoria: values.categoria?.trim() || null,
+        notas: values.notas ? values.notas.replace(/\s+/g, ' ').trim() || null : null,
+        created_by: createdBy,
+      }
+      const res = await onSuccess(payload)
+      if (!res.success) {
+        setError('root', { message: res.error || 'Error al crear la sesión' })
+      }
     }
   }
 
@@ -147,12 +211,111 @@ export default function NuevaSesionForm({ clubId, senseiId, createdBy, onSuccess
           </Alert>
         )}
 
-        <FormDatePicker
-          name="fecha"
-          control={control}
-          label="Fecha de la clase *"
-          maxDate={dayjs()}
-        />
+        {/* Selector de Modalidad: Día único vs Toda la semana */}
+        <Box>
+          <Typography variant="caption" color="text.secondary" fontWeight="600" display="block" mb={0.8}>
+            Modalidad de creación:
+          </Typography>
+          <ToggleButtonGroup
+            value={modoCreacion}
+            exclusive
+            onChange={(_, val) => val && setModoCreacion(val)}
+            fullWidth
+            size="small"
+          >
+            <ToggleButton value="dia" sx={{ py: 1, textTransform: 'none', fontWeight: 600 }}>
+              <CalendarTodayIcon sx={{ mr: 1, fontSize: 18 }} />
+              Día único
+            </ToggleButton>
+            <ToggleButton value="semana" sx={{ py: 1, textTransform: 'none', fontWeight: 600 }}>
+              <DateRangeIcon sx={{ mr: 1, fontSize: 18 }} />
+              Planificar toda la semana
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+
+        {modoCreacion === 'dia' ? (
+          <FormDatePicker
+            name="fecha"
+            control={control}
+            label="Fecha del entrenamiento *"
+          />
+        ) : (
+          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(25, 118, 210, 0.03)', borderColor: 'primary.light' }}>
+            <Stack spacing={1.5}>
+              <Typography variant="subtitle2" color="primary" fontWeight="bold">
+                📅 Planificación semanal de entrenamientos
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Semana seleccionada: <strong>Lunes {lunesSemana.format('DD/MM')}</strong> al <strong>Sábado {lunesSemana.add(5, 'day').format('DD/MM/YYYY')}</strong>
+              </Typography>
+
+              <FormDatePicker
+                name="fecha"
+                control={control}
+                label="Referencia / Semana del *"
+              />
+
+              <Box>
+                <Typography variant="caption" color="text.secondary" fontWeight="600" display="block" mb={0.5}>
+                  Días de entrenamiento a generar ({diasSeleccionados.length} seleccionados):
+                </Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ gap: 0.8 }}>
+                  {DIAS_SEMANA.map(dia => {
+                    const isSelected = diasSeleccionados.includes(dia.id)
+                    const fechaDelDia = lunesSemana.add(dia.id - 1, 'day').format('DD/MM')
+                    return (
+                      <Chip
+                        key={dia.id}
+                        label={`${dia.label} (${fechaDelDia})`}
+                        color={isSelected ? 'primary' : 'default'}
+                        variant={isSelected ? 'filled' : 'outlined'}
+                        onClick={() => toggleDia(dia.id)}
+                        sx={{ fontWeight: isSelected ? 'bold' : 'normal', cursor: 'pointer' }}
+                      />
+                    )
+                  })}
+                </Stack>
+              </Box>
+
+              {/* Atajos rápidos */}
+              <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ gap: 0.5, pt: 0.5 }}>
+                <Button
+                  size="small"
+                  variant="text"
+                  onClick={() => setDiasSeleccionados([1, 2, 3, 4, 5])}
+                  sx={{ fontSize: '0.72rem', py: 0.2 }}
+                >
+                  Lun a Vie
+                </Button>
+                <Button
+                  size="small"
+                  variant="text"
+                  onClick={() => setDiasSeleccionados([1, 3, 5])}
+                  sx={{ fontSize: '0.72rem', py: 0.2 }}
+                >
+                  Lun, Mié, Vie
+                </Button>
+                <Button
+                  size="small"
+                  variant="text"
+                  onClick={() => setDiasSeleccionados([2, 4])}
+                  sx={{ fontSize: '0.72rem', py: 0.2 }}
+                >
+                  Mar y Jue
+                </Button>
+                <Button
+                  size="small"
+                  variant="text"
+                  onClick={() => setDiasSeleccionados([1, 2, 3, 4, 5, 6])}
+                  sx={{ fontSize: '0.72rem', py: 0.2 }}
+                >
+                  Toda la semana (L-S)
+                </Button>
+              </Stack>
+            </Stack>
+          </Paper>
+        )}
 
         <FormAutocomplete
           name="categoria"
@@ -225,10 +388,14 @@ export default function NuevaSesionForm({ clubId, senseiId, createdBy, onSuccess
             variant="contained"
             disabled={isSubmitting}
             startIcon={isSubmitting ? <CircularProgress size={16} color="inherit" /> : undefined}
-            sx={{ minHeight: '44px' }}
+            sx={{ minHeight: '44px', fontWeight: 'bold' }}
             aria-label="Crear sesión de asistencia"
           >
-            {isSubmitting ? 'Creando…' : 'Crear sesión'}
+            {isSubmitting
+              ? 'Creando…'
+              : modoCreacion === 'semana'
+              ? `Crear ${diasSeleccionados.length} sesiones de la semana`
+              : 'Crear sesión'}
           </Button>
         </Stack>
       </Stack>

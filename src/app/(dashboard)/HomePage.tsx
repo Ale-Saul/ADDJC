@@ -1,7 +1,7 @@
 'use client'
 
 import { Box, Typography, Button } from '@mui/material'
-import SportsKabaddiIcon from '@mui/icons-material/SportsKabaddi'
+import SportsSoccerIcon from '@mui/icons-material/SportsSoccer'
 import { useRouter } from 'next/navigation'
 
 export default function HomePage() {
@@ -9,12 +9,12 @@ export default function HomePage() {
 
   return (
     <Box textAlign="center" py={8}>
-      <SportsKabaddiIcon sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
+      <SportsSoccerIcon sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
       <Typography variant="h3" component="h1" gutterBottom fontWeight="bold">
-        Asociación de Judo
+        Cochabamba FC
       </Typography>
       <Typography variant="h6" color="text.secondary" paragraph>
-        Sistema de Gestión de Afiliados
+        Sistema de Gestión Deportiva
       </Typography>
 
       <Box sx={{ mt: 4 }}>

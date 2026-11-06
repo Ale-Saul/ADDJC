@@ -19,8 +19,12 @@ import {
   Divider,
   ToggleButtonGroup,
   ToggleButton,
+  IconButton,
+  Tooltip,
 } from '@mui/material'
 import LocationOnIcon from '@mui/icons-material/LocationOn'
+import GpsFixedIcon from '@mui/icons-material/GpsFixed'
+import RefreshIcon from '@mui/icons-material/Refresh'
 import SportsSoccerIcon from '@mui/icons-material/SportsSoccer'
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
@@ -49,6 +53,8 @@ export default function MarcarAsistenciaEntrenadorCard({
     activa,
     loading,
     gpsLoading,
+    gpsInfo,
+    refrescarUbicacion,
     error,
     duracionMinutos,
     marcarEntrada,
@@ -169,8 +175,82 @@ export default function MarcarAsistenciaEntrenadorCard({
           )}
         </Stack>
 
+        {/* Estado del GPS */}
+        <Box
+          sx={{
+            mb: 2,
+            p: 1.25,
+            borderRadius: 2,
+            bgcolor: gpsInfo?.success
+              ? 'rgba(46, 125, 50, 0.08)'
+              : gpsLoading
+              ? 'rgba(2, 136, 209, 0.08)'
+              : 'rgba(237, 108, 2, 0.08)',
+            border: '1px solid',
+            borderColor: gpsInfo?.success
+              ? 'success.light'
+              : gpsLoading
+              ? 'info.light'
+              : 'warning.light',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Stack direction="row" alignItems="center" spacing={1}>
+            {gpsLoading ? (
+              <CircularProgress size={16} />
+            ) : (
+              <GpsFixedIcon
+                fontSize="small"
+                color={gpsInfo?.success ? 'success' : 'warning'}
+              />
+            )}
+            <Box>
+              <Typography variant="caption" fontWeight="bold" display="block">
+                {gpsLoading
+                  ? 'Sincronizando satélites GPS...'
+                  : gpsInfo?.success
+                  ? `Ubicación GPS lista ${formatAccuracy(gpsInfo.accuracy)}`
+                  : 'Ubicación GPS obligatoria para marcar'}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {gpsInfo?.success
+                  ? 'Se adjuntará automáticamente a tu marcación.'
+                  : 'Debes tener activada la ubicación y dar permiso en el navegador.'}
+              </Typography>
+            </Box>
+          </Stack>
+
+          <Tooltip title="Calibrar / Actualizar GPS">
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => refrescarUbicacion()}
+                disabled={gpsLoading || loading}
+                color="primary"
+              >
+                <RefreshIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Box>
+
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert
+            severity="error"
+            sx={{ mb: 2 }}
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => refrescarUbicacion()}
+                disabled={gpsLoading}
+              >
+                Reintentar GPS
+              </Button>
+            }
+          >
             {error}
           </Alert>
         )}

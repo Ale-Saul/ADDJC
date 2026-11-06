@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -11,12 +11,18 @@ import {
   Alert,
   Box,
   IconButton,
-  Stack
+  Stack,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material'
 import {
   CloudUpload as CloudUploadIcon,
   Delete as DeleteIcon,
-  Description as DescriptionIcon
+  Description as DescriptionIcon,
+  Person as PersonIcon,
+  CalendarMonth as CalendarMonthIcon
 } from '@mui/icons-material'
 import { FormProvider, useWatch } from 'react-hook-form'
 
@@ -25,6 +31,8 @@ import { useClubes } from '@/hooks/useClubes'
 import { FormInput, FormSelect } from '@/components/ui'
 import { useMovimientoForm, MovimientoFormValues } from '@/hooks/useMovimientoForm'
 import { SubmitHandler } from 'react-hook-form'
+import { senseiController } from '@/controllers/senseiController'
+import { Sensei } from '@/models/sensei'
 
 interface MovimientoFormDialogProps {
   open: boolean
@@ -63,6 +71,11 @@ const CATEGORIAS_EGRESO = [
   { value: 'otro', label: 'Otro Egreso' }
 ]
 
+const MESES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+]
+
 export const MovimientoFormDialog: React.FC<MovimientoFormDialogProps> = ({
   open,
   onClose,
@@ -88,10 +101,82 @@ export const MovimientoFormDialog: React.FC<MovimientoFormDialogProps> = ({
 
   const tipo = useWatch({ control: form.control, name: 'tipo' })
   const categoria = useWatch({ control: form.control, name: 'categoria' })
+  const fechaVal = useWatch({ control: form.control, name: 'fecha' })
 
   const isIngreso = tipo === 'ingreso'
   const requiresClub = !defaultClubId && isIngreso && (categoria === 'pago_club' || categoria === 'donacion_club')
   const requiresEntidad = isIngreso && (categoria === 'aporte_estado' || categoria === 'sponsor')
+
+  // Estado para autocompletar pago a entrenador (ej: "Enero profe Alvaro")
+  const [entrenadores, setEntrenadores] = useState<Sensei[]>([])
+  const [entrenadorSeleccionadoId, setEntrenadorSeleccionadoId] = useState<string>('')
+  const [mesSueldo, setMesSueldo] = useState<string>(() => {
+    const mesIndex = new Date().getMonth()
+    return MESES[mesIndex] || 'Enero'
+  })
+
+  // Cargar entrenadores cuando el modal se abre
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    const loadSenseis = async () => {
+      const res = defaultClubId
+        ? await senseiController.getSenseisByClub(defaultClubId)
+        : await senseiController.getAllSenseis(true)
+      if (cancelled) return
+      if (res.success && res.data) {
+        const ordenados = [...res.data].sort((a, b) =>
+          (a.nombres || '').localeCompare(b.nombres || '')
+        )
+        setEntrenadores(ordenados)
+      }
+    }
+    void loadSenseis()
+    return () => {
+      cancelled = true
+    }
+  }, [open, defaultClubId])
+
+  // Sincronizar mes por defecto según la fecha del formulario
+  useEffect(() => {
+    if (fechaVal) {
+      const partes = fechaVal.split('-')
+      if (partes.length === 3) {
+        const mIndex = parseInt(partes[1], 10) - 1
+        if (mIndex >= 0 && mIndex < 12) {
+          setMesSueldo(MESES[mIndex])
+        }
+      }
+    }
+  }, [fechaVal])
+
+  const actualizarConceptoEntrenador = (nuevoEntrenadorId: string, nuevoMes: string) => {
+    if (!nuevoEntrenadorId) return
+    const ent = entrenadores.find((e) => e.id === nuevoEntrenadorId)
+    if (ent) {
+      const primerNombre = (ent.nombres || '').trim().split(' ')[0]
+      const conceptoGenerado = `${nuevoMes} profe ${primerNombre}`
+      form.setValue('concepto', conceptoGenerado, { shouldValidate: true })
+
+      const descActual = form.getValues('descripcion')
+      if (!descActual || descActual.startsWith('Pago de honorarios / sueldo a profe')) {
+        form.setValue(
+          'descripcion',
+          `Pago de honorarios / sueldo a profe ${ent.nombres} ${ent.apellidos}`
+        )
+      }
+    }
+  }
+
+  const handleEntrenadorChange = (id: string) => {
+    setEntrenadorSeleccionadoId(id)
+    actualizarConceptoEntrenador(id, mesSueldo)
+  }
+
+  const handleMesChange = (m: string) => {
+    setMesSueldo(m)
+    actualizarConceptoEntrenador(entrenadorSeleccionadoId, m)
+  }
 
   const formatTextCapitalized = (val: string) => {
     if (!val) return ''
@@ -146,6 +231,67 @@ export const MovimientoFormDialog: React.FC<MovimientoFormDialogProps> = ({
                 />
               </Box>
 
+              {!isIngreso && categoria === 'pago_entrenador' && (
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    bgcolor: 'rgba(25, 118, 210, 0.05)',
+                    border: '1px solid',
+                    borderColor: 'primary.light',
+                  }}
+                >
+                  <Stack spacing={1.5}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <PersonIcon color="primary" fontSize="small" />
+                      <Typography variant="subtitle2" color="primary" fontWeight="bold">
+                        Asistente de Pago a Entrenador
+                      </Typography>
+                    </Stack>
+                    <Typography variant="caption" color="text.secondary">
+                      Selecciona el mes y el entrenador para autocompletar el concepto (ej: &quot;Enero profe Alvaro&quot;):
+                    </Typography>
+
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                      <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 } }}>
+                        <InputLabel id="mes-select-label">Mes</InputLabel>
+                        <Select
+                          labelId="mes-select-label"
+                          label="Mes"
+                          value={mesSueldo}
+                          onChange={(e) => handleMesChange(e.target.value)}
+                        >
+                          {MESES.map((m) => (
+                            <MenuItem key={m} value={m}>
+                              {m}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+
+                      <FormControl fullWidth size="small">
+                        <InputLabel id="entrenador-select-label">Entrenador a pagar</InputLabel>
+                        <Select
+                          labelId="entrenador-select-label"
+                          label="Entrenador a pagar"
+                          value={entrenadorSeleccionadoId}
+                          onChange={(e) => handleEntrenadorChange(e.target.value)}
+                        >
+                          <MenuItem value="">
+                            <em>{entrenadores.length > 0 ? 'Selecciona un entrenador...' : 'Cargando entrenadores...'}</em>
+                          </MenuItem>
+                          {entrenadores.map((ent) => (
+                            <MenuItem key={ent.id} value={ent.id}>
+                              {ent.nombres} {ent.apellidos}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Stack>
+                  </Stack>
+                </Box>
+              )}
+
               <Box>
                 <FormInput control={form.control}
                   name="monto"
@@ -170,7 +316,7 @@ export const MovimientoFormDialog: React.FC<MovimientoFormDialogProps> = ({
                 <FormInput control={form.control}
                   name="concepto"
                   label="Concepto"
-                  placeholder="Ej: Pago de cuota enero 2024"
+                  placeholder={!isIngreso && categoria === 'pago_entrenador' ? 'Ej: Enero profe Alvaro' : 'Ej: Pago de cuota enero 2024'}
                   fullWidth
                   formatValue={formatTextCapitalized}
                 />
