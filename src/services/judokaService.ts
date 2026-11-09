@@ -100,11 +100,30 @@ export const judokaService = {
   async getByEntrenador(entrenadorId: string): Promise<ApiResponse<Judoka[]>> {
     try {
       const client = createClient()
-      const { data, error } = await client
+
+      // Obtener categorías asignadas al entrenador para incluir también a los futbolistas de sus categorías compartidas
+      const { data: senseiData } = await client
+        .from('senseis')
+        .select('categorias')
+        .eq('id', entrenadorId)
+        .maybeSingle()
+
+      const categorias = Array.isArray(senseiData?.categorias)
+        ? (senseiData.categorias as string[]).filter(Boolean)
+        : []
+
+      let query = client
         .from('judokas')
         .select(selectJudokasWithUsuario)
-        .or(`entrenador_id.eq.${entrenadorId},entrenador_secundario_id.eq.${entrenadorId}`)
-        .order('created_at', { ascending: false })
+
+      if (categorias.length > 0) {
+        const catConditions = categorias.map(c => `"${c}"`).join(',')
+        query = query.or(`entrenador_id.eq.${entrenadorId},entrenador_secundario_id.eq.${entrenadorId},categoria.in.(${catConditions})`)
+      } else {
+        query = query.or(`entrenador_id.eq.${entrenadorId},entrenador_secundario_id.eq.${entrenadorId}`)
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false })
 
       if (error) throw error
       const mapped = await populateEditors((data || []).map(mapJudokaRow))

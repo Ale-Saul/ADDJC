@@ -290,7 +290,10 @@ export default function ConvocatoriaSemanalTab({
 
       // 3. Filtro por entrenador (solo encargado / admin)
       if (entrenadorFiltro !== 'all') {
-        if (j.entrenador_id !== entrenadorFiltro && j.entrenador_secundario_id !== entrenadorFiltro) {
+        const senseiSeleccionado = entrenadores.find(s => s.id === entrenadorFiltro)
+        const senseiCats = Array.isArray(senseiSeleccionado?.categorias) ? senseiSeleccionado.categorias : []
+        const esDeSuCategoria = Array.isArray(senseiCats) && j.categoria && senseiCats.includes(j.categoria)
+        if (j.entrenador_id !== entrenadorFiltro && j.entrenador_secundario_id !== entrenadorFiltro && !esDeSuCategoria) {
           return false
         }
       }
