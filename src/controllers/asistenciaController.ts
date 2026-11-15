@@ -35,6 +35,8 @@ export const asistenciaController = {
           return {
             ...s,
             total_presentes: detRes.data.filter(d => d.estado === 'presente').length,
+            total_tardes: detRes.data.filter(d => d.estado === 'tarde').length,
+            total_permisos: detRes.data.filter(d => d.estado === 'permiso').length,
             total_judokas: detRes.data.length
           }
         }
@@ -63,6 +65,8 @@ export const asistenciaController = {
           return {
             ...s,
             total_presentes: detRes.data.filter(d => d.estado === 'presente').length,
+            total_tardes: detRes.data.filter(d => d.estado === 'tarde').length,
+            total_permisos: detRes.data.filter(d => d.estado === 'permiso').length,
             total_judokas: detRes.data.length
           }
         }
@@ -188,8 +192,11 @@ export const asistenciaController = {
 
     const total = historialRes.data.length
     const presentes = historialRes.data.filter(d => d.estado === 'presente').length
-    const ausentes = total - presentes
-    const porcentaje = total > 0 ? (presentes / total) * 100 : 0
+    const tardes = historialRes.data.filter(d => d.estado === 'tarde').length
+    const permisos = historialRes.data.filter(d => d.estado === 'permiso').length
+    const ausentes = historialRes.data.filter(d => d.estado === 'ausente').length
+    const asistenciasEfectivas = presentes + tardes
+    const porcentaje = total > 0 ? (asistenciasEfectivas / total) * 100 : 0
 
     return {
       success: true,
@@ -197,6 +204,8 @@ export const asistenciaController = {
         judoka_id: judokaId,
         total_sesiones: total,
         presentes,
+        tardes,
+        permisos,
         ausentes,
         porcentaje: Number(porcentaje.toFixed(2))
       }
@@ -242,10 +251,13 @@ export const asistenciaController = {
       .flatMap(r => r.data!)
 
     // 3. Agrupar por judoka_id, acumulando nombre
-    const statsMap = new Map<string, { presentes: number; total: number; nombre: string; apellido: string }>()
+    const statsMap = new Map<string, { presentes: number; tardes: number; permisos: number; ausentes: number; total: number; nombre: string; apellido: string }>()
     todasAsistencias.forEach(a => {
       const current = statsMap.get(a.judoka_id) || {
         presentes: 0,
+        tardes: 0,
+        permisos: 0,
+        ausentes: 0,
         total: 0,
         nombre: a.nombre_judoka ?? '',
         apellido: a.apellido_judoka ?? ''
@@ -253,19 +265,27 @@ export const asistenciaController = {
       statsMap.set(a.judoka_id, {
         ...current,
         presentes: current.presentes + (a.estado === 'presente' ? 1 : 0),
+        tardes: current.tardes + (a.estado === 'tarde' ? 1 : 0),
+        permisos: current.permisos + (a.estado === 'permiso' ? 1 : 0),
+        ausentes: current.ausentes + (a.estado === 'ausente' ? 1 : 0),
         total: current.total + 1
       })
     })
 
-    const result: AsistenciaStatsJudoka[] = Array.from(statsMap.entries()).map(([jId, s]) => ({
-      judoka_id: jId,
-      nombre_judoka: s.nombre,
-      apellido_judoka: s.apellido,
-      total_sesiones: s.total,
-      presentes: s.presentes,
-      ausentes: s.total - s.presentes,
-      porcentaje: Number(((s.presentes / s.total) * 100).toFixed(2))
-    }))
+    const result: AsistenciaStatsJudoka[] = Array.from(statsMap.entries()).map(([jId, s]) => {
+      const efectivas = s.presentes + s.tardes
+      return {
+        judoka_id: jId,
+        nombre_judoka: s.nombre,
+        apellido_judoka: s.apellido,
+        total_sesiones: s.total,
+        presentes: s.presentes,
+        tardes: s.tardes,
+        permisos: s.permisos,
+        ausentes: s.ausentes,
+        porcentaje: s.total > 0 ? Number(((efectivas / s.total) * 100).toFixed(2)) : 0
+      }
+    })
 
     return { success: true, data: result }
   },
@@ -301,7 +321,7 @@ export const asistenciaController = {
 
     const judokaMap = new Map<string, {
       nombre: string; apellido: string
-      sesiones: Set<string>; presentes: number; total: number
+      sesiones: Set<string>; presentes: number; tardes: number; permisos: number; ausentes: number; total: number
     }>()
 
     detalles.forEach((res, i) => {
@@ -313,25 +333,36 @@ export const asistenciaController = {
           apellido: d.apellido_judoka ?? '',
           sesiones: new Set<string>(),
           presentes: 0,
+          tardes: 0,
+          permisos: 0,
+          ausentes: 0,
           total: 0,
         }
         entry.sesiones.add(sesionId)
         entry.total++
         if (d.estado === 'presente') entry.presentes++
+        else if (d.estado === 'tarde') entry.tardes++
+        else if (d.estado === 'permiso') entry.permisos++
+        else if (d.estado === 'ausente') entry.ausentes++
         judokaMap.set(d.judoka_id, entry)
       })
     })
 
     const data: AsistenciaStatsJudoka[] = Array.from(judokaMap.entries())
-      .map(([id, j]) => ({
-        judoka_id: id,
-        nombre_judoka: j.nombre,
-        apellido_judoka: j.apellido,
-        total_sesiones: j.sesiones.size,
-        presentes: j.presentes,
-        ausentes: j.total - j.presentes,
-        porcentaje: j.total > 0 ? Number(((j.presentes / j.total) * 100).toFixed(2)) : 0,
-      }))
+      .map(([id, j]) => {
+        const efectivas = j.presentes + j.tardes
+        return {
+          judoka_id: id,
+          nombre_judoka: j.nombre,
+          apellido_judoka: j.apellido,
+          total_sesiones: j.sesiones.size,
+          presentes: j.presentes,
+          tardes: j.tardes,
+          permisos: j.permisos,
+          ausentes: j.ausentes,
+          porcentaje: j.total > 0 ? Number(((efectivas / j.total) * 100).toFixed(2)) : 0,
+        }
+      })
       .sort((a, b) => (a.apellido_judoka ?? '').localeCompare(b.apellido_judoka ?? ''))
 
     return { success: true, data }
@@ -381,7 +412,7 @@ export const asistenciaController = {
         entry.sesiones.add(s.id)
         detRes.data.forEach(d => {
           entry.total++
-          if (d.estado === 'presente') entry.presentes++
+          if (d.estado === 'presente' || d.estado === 'tarde') entry.presentes++
         })
         senseiMap.set(s.sensei_id, entry)
       }

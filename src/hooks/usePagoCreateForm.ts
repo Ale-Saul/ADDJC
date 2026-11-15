@@ -3,9 +3,15 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { pagoController } from '@/controllers/pagoController'
-import { ESTADO_PAGO, RAZON_DESCUENTO, TIPO_DESCUENTO, TIPO_PAGO } from '@/constants/pagos'
+import { ESTADO_PAGO, RAZON_DESCUENTO, TIPO_DESCUENTO, TIPO_PAGO, MONTO_MENSUALIDAD_DEFAULT } from '@/constants/pagos'
 import { generatePagoReceipt } from '@/utils/receiptGenerator'
 import { clubController } from '@/controllers/clubController'
+import dayjs from 'dayjs'
+
+const MESES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+]
 
 // Un pequeño schema adaptado a los strings del formulario
 const uiPagoSchema = z.object({
@@ -32,6 +38,9 @@ const uiPagoSchema = z.object({
     .transform(val => (val === '' || val === undefined || val === null) ? null : typeof val === 'string' ? parseFloat(val) : val)
     .pipe(z.number().min(0).nullable()),
   razon_descuento: z.string().optional().nullable(),
+  cobrar_inmediato: z.boolean().optional().default(false),
+  metodo_pago: z.string().optional().nullable(),
+  observaciones_pago: z.string().optional().nullable(),
 })
 
 export type PagoCreateFormValues = {
@@ -47,31 +56,49 @@ export type PagoCreateFormValues = {
   descuento_porcentaje?: number | null
   descuento_monto?: number | null
   razon_descuento?: string | null
+  cobrar_inmediato?: boolean
+  metodo_pago?: string | null
+  observaciones_pago?: string | null
 }
 
-export function usePagoCreateForm(judokaId: string, clubId: string | undefined, userId: string | undefined, onSuccess?: () => void) {
+export function usePagoCreateForm(
+  judokaId: string,
+  clubId: string | undefined,
+  userId: string | undefined,
+  onSuccess?: () => void,
+  judokaNombre?: string,
+  usuarioNombre?: string
+) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [montoFinal, setMontoFinal] = useState(0)
+  const [montoFinal, setMontoFinal] = useState(MONTO_MENSUALIDAD_DEFAULT)
+
+  const mesActual = MESES[new Date().getMonth()]
+  const anioActual = new Date().getFullYear()
+  const defaultConcepto = `Mensualidad ${mesActual} ${anioActual}`
+  const defaultVencimiento = dayjs().endOf('month').format('YYYY-MM-DD')
 
   const form = useForm<PagoCreateFormValues>({
     resolver: zodResolver(uiPagoSchema) as any,
     mode: 'onTouched',
-      defaultValues: {
-        judoka_id: judokaId,
-        club_id: clubId || '',
-        tipo_pago: TIPO_PAGO.MENSUALIDAD,
-        concepto: '',
-        descripcion: null,
-        monto_base: '' as any,
-        tiene_descuento: false,
-        tipo_descuento: TIPO_DESCUENTO.NINGUNO,
-        descuento_porcentaje: null,
-        descuento_monto: null,
-        razon_descuento: RAZON_DESCUENTO.NINGUNO,
-        fecha_vencimiento: '',
-      },
+    defaultValues: {
+      judoka_id: judokaId,
+      club_id: clubId || '',
+      tipo_pago: TIPO_PAGO.MENSUALIDAD,
+      concepto: defaultConcepto,
+      descripcion: null,
+      monto_base: MONTO_MENSUALIDAD_DEFAULT,
+      tiene_descuento: false,
+      tipo_descuento: TIPO_DESCUENTO.MONTO_FIJO,
+      descuento_porcentaje: null,
+      descuento_monto: null,
+      razon_descuento: RAZON_DESCUENTO.PROMOCION,
+      fecha_vencimiento: defaultVencimiento,
+      cobrar_inmediato: false,
+      metodo_pago: 'efectivo',
+      observaciones_pago: '',
+    },
   })
 
   // Actualizar club_id si llega por lazy loading
@@ -81,11 +108,26 @@ export function usePagoCreateForm(judokaId: string, clubId: string | undefined, 
     }
   }, [clubId, form])
 
+  const watchTipoPago = form.watch('tipo_pago')
   const watchMontoBase = form.watch('monto_base')
   const watchTieneDescuento = form.watch('tiene_descuento')
   const watchTipoDescuento = form.watch('tipo_descuento')
   const watchDescuentoPorcentaje = form.watch('descuento_porcentaje')
   const watchDescuentoMonto = form.watch('descuento_monto')
+
+  // Si cambia a Mensualidad, auto-cargar monto fijo de 140 Bs
+  useEffect(() => {
+    if (watchTipoPago === TIPO_PAGO.MENSUALIDAD) {
+      const currentBase = form.getValues('monto_base')
+      if (!currentBase || currentBase === 0) {
+        form.setValue('monto_base', MONTO_MENSUALIDAD_DEFAULT, { shouldValidate: true })
+      }
+      const currentConcepto = form.getValues('concepto')
+      if (!currentConcepto || currentConcepto.trim() === '') {
+        form.setValue('concepto', defaultConcepto, { shouldValidate: true })
+      }
+    }
+  }, [watchTipoPago, form, defaultConcepto])
 
   useEffect(() => {
     let final = watchMontoBase || 0
@@ -101,41 +143,73 @@ export function usePagoCreateForm(judokaId: string, clubId: string | undefined, 
     setMontoFinal(Math.max(0, final))
   }, [watchMontoBase, watchTieneDescuento, watchTipoDescuento, watchDescuentoPorcentaje, watchDescuentoMonto])
 
-  const onSubmit = useCallback(async (data: PagoCreateFormValues) => {
+  const onSubmit = useCallback(async (
+    data: PagoCreateFormValues,
+    options?: { cobrarInmediato?: boolean; metodoPago?: string }
+  ) => {
     setLoading(true)
     setError(null)
     setSuccess(false)
 
     try {
-      const pagoData = {
-        ...data,
+      const tieneDescReal = !!data.tiene_descuento && (
+        (data.tipo_descuento === TIPO_DESCUENTO.PORCENTAJE && !!data.descuento_porcentaje && data.descuento_porcentaje > 0) ||
+        (data.tipo_descuento === TIPO_DESCUENTO.MONTO_FIJO && !!data.descuento_monto && data.descuento_monto > 0)
+      )
+
+      const esCobroInmediato = options?.cobrarInmediato ?? !!data.cobrar_inmediato
+      const metodoPago = options?.metodoPago ?? data.metodo_pago ?? 'efectivo'
+      const ahora = new Date().toISOString()
+
+      const pagoData: any = {
+        judoka_id: data.judoka_id,
+        club_id: data.club_id,
+        tipo_pago: data.tipo_pago,
+        concepto: data.concepto,
+        descripcion: data.descripcion || null,
+        monto_base: data.monto_base,
         monto_final: montoFinal,
-        estado: ESTADO_PAGO.PENDIENTE as any,
+        estado: esCobroInmediato ? ESTADO_PAGO.PAGADO : ESTADO_PAGO.PENDIENTE,
+        fecha_vencimiento: data.fecha_vencimiento,
+        fecha_pago: esCobroInmediato ? ahora : null,
+        metodo_pago: esCobroInmediato ? metodoPago : null,
+        observaciones_pago: data.observaciones_pago || (esCobroInmediato ? 'Cobro inmediato en ventanilla' : null),
         creador_id: userId || '',
+        pagador_id: esCobroInmediato ? (userId || null) : null,
         activo: true,
-        tipo_pago: data.tipo_pago as any,
-        tipo_descuento: data.tipo_descuento as any,
-        razon_descuento: data.razon_descuento as any
+        tiene_descuento: tieneDescReal,
+        tipo_descuento: tieneDescReal ? (data.tipo_descuento || TIPO_DESCUENTO.MONTO_FIJO) : TIPO_DESCUENTO.NINGUNO,
+        descuento_porcentaje: tieneDescReal && data.tipo_descuento === TIPO_DESCUENTO.PORCENTAJE ? data.descuento_porcentaje : null,
+        descuento_monto: tieneDescReal && data.tipo_descuento === TIPO_DESCUENTO.MONTO_FIJO ? data.descuento_monto : null,
+        razon_descuento: tieneDescReal ? (data.razon_descuento || RAZON_DESCUENTO.PROMOCION) : RAZON_DESCUENTO.NINGUNO,
       }
 
-      const response = await pagoController.createPago(pagoData as any)
+      const response = await pagoController.createPago(pagoData)
 
       if (response.success && response.data) {
-        // Generar el comprobante de pago automáticamente
-        let clubNombre = ''
-        if (data.club_id) {
-          const clubResponse = await clubController.getClubById(data.club_id)
-          if (clubResponse.success && clubResponse.data) {
-            clubNombre = clubResponse.data.nombre_club
+        // Si fue cobro inmediato, generar automáticamente el comprobante de pago
+        if (esCobroInmediato) {
+          let clubNombre = ''
+          if (data.club_id) {
+            const clubResponse = await clubController.getClubById(data.club_id)
+            if (clubResponse.success && clubResponse.data) {
+              clubNombre = clubResponse.data.nombre_club
+            }
+          }
+          try {
+            generatePagoReceipt(
+              response.data,
+              judokaNombre || 'Futbolista',
+              clubNombre,
+              usuarioNombre || 'Sistema'
+            )
+          } catch (pdfErr) {
+            console.error('Error generando comprobante PDF:', pdfErr)
           }
         }
-        
-        // El nombre del judoka lo pasamos desde el componente
-        // pero aquí necesitamos una forma de obtenerlo si no lo tenemos.
-        // Por ahora, asumimos que el componente lo manejará o lo pasamos como prop.
-        
+
         setSuccess(true)
-        return response.data // Retornamos el pago creado para que el componente pueda usarlo
+        return response.data
       } else {
         setError(response.error || 'Error al crear el pago')
         return null
@@ -147,7 +221,7 @@ export function usePagoCreateForm(judokaId: string, clubId: string | undefined, 
     } finally {
       setLoading(false)
     }
-  }, [montoFinal, userId])
+  }, [montoFinal, userId, judokaNombre, usuarioNombre])
 
   return {
     form,

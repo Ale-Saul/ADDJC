@@ -3,13 +3,14 @@
 import { Box, Typography, CircularProgress, Paper, Stack, Divider } from '@mui/material'
 import { ReactNode } from 'react'
 
-type Color = 'success' | 'warning' | 'error' | 'primary' | 'default'
+type Color = 'success' | 'warning' | 'error' | 'primary' | 'info' | 'default'
 
 const COLOR_MAP: Record<Color, { track: string; text: string; bg: string }> = {
   success: { track: '#4caf50', text: '#2e7d32', bg: '#e8f5e9' },
   warning: { track: '#ff9800', text: '#e65100', bg: '#fff3e0' },
   error:   { track: '#f44336', text: '#c62828', bg: '#ffebee' },
   primary: { track: '#1976d2', text: '#1565c0', bg: '#e3f2fd' },
+  info:    { track: '#0288d1', text: '#01579b', bg: '#e1f5fe' },
   default: { track: '#9e9e9e', text: '#616161', bg: '#f5f5f5' },
 }
 

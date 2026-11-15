@@ -34,6 +34,20 @@ export default function HistorialTable({ historial, maxRows }: Props) {
     )
   }
 
+  const getChipProps = (estado: string) => {
+    switch (estado) {
+      case 'presente':
+        return { label: 'Presente', color: 'success' as const }
+      case 'tarde':
+        return { label: 'Tarde', color: 'warning' as const }
+      case 'permiso':
+        return { label: 'Permiso', color: 'info' as const }
+      case 'ausente':
+      default:
+        return { label: 'Ausente', color: 'error' as const }
+    }
+  }
+
   return (
     <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
       <Table size="small" aria-label="Historial de asistencia">
@@ -45,38 +59,41 @@ export default function HistorialTable({ historial, maxRows }: Props) {
           </TableRow>
         </TableHead>
         <TableBody>
-          {rows.map(row => (
-            <TableRow
-              key={row.id}
-              sx={{
-                '&:last-child td': { border: 0 },
-                transition: 'background-color 150ms ease',
-                '&:hover': { bgcolor: 'action.hover' },
-              }}
-            >
-              <TableCell>
-                <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
-                  {row.sesion_fecha
-                    ? dayjs(row.sesion_fecha).format('ddd D MMM YYYY')
-                    : '—'}
-                </Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="body2" color={row.sesion_titulo ? 'text.primary' : 'text.disabled'}>
-                  {row.sesion_titulo ?? 'Sin título'}
-                </Typography>
-              </TableCell>
-              <TableCell align="center">
-                <Chip
-                  label={row.estado === 'presente' ? 'Presente' : 'Ausente'}
-                  color={row.estado === 'presente' ? 'success' : 'error'}
-                  size="small"
-                  variant="outlined"
-                  sx={{ minWidth: 80 }}
-                />
-              </TableCell>
-            </TableRow>
-          ))}
+          {rows.map(row => {
+            const chip = getChipProps(row.estado)
+            return (
+              <TableRow
+                key={row.id}
+                sx={{
+                  '&:last-child td': { border: 0 },
+                  transition: 'background-color 150ms ease',
+                  '&:hover': { bgcolor: 'action.hover' },
+                }}
+              >
+                <TableCell>
+                  <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
+                    {row.sesion_fecha
+                      ? dayjs(row.sesion_fecha).format('ddd D MMM YYYY')
+                      : '—'}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" color={row.sesion_titulo ? 'text.primary' : 'text.disabled'}>
+                    {row.sesion_titulo ?? 'Sin título'}
+                  </Typography>
+                </TableCell>
+                <TableCell align="center">
+                  <Chip
+                    label={chip.label}
+                    color={chip.color}
+                    size="small"
+                    variant="outlined"
+                    sx={{ minWidth: 80 }}
+                  />
+                </TableCell>
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
     </TableContainer>

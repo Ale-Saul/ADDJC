@@ -69,12 +69,13 @@ export function useCheckinEntrenador(entrenadorId?: string, clubId?: string) {
     return () => clearInterval(timer)
   }, [activa])
 
-  // Marcar Entrada con GPS OBLIGATORIO
+  // Marcar Entrada (con GPS preferente, pero permite omitir si hay error de permisos en el celular)
   const marcarEntrada = async (params: {
     tipo_evento: TipoEventoEntrenador
     categoria?: string | null
     titulo?: string | null
     notas?: string | null
+    permitirSinGps?: boolean
   }) => {
     if (!entrenadorId || !clubId) {
       setError('Falta información del entrenador o club.')
@@ -82,31 +83,48 @@ export function useCheckinEntrenador(entrenadorId?: string, clubId?: string) {
     }
 
     setError(null)
-    setGpsLoading(true)
+    let lat: number | null = null
+    let lng: number | null = null
+    let acc: number | null = null
 
-    // Obtener GPS
-    const gps = await getCurrentCoordinates()
-    setGpsLoading(false)
-    setGpsInfo(gps)
+    // Si ya tenemos GPS exitoso en el estado, lo usamos
+    if (gpsInfo?.success && gpsInfo.lat != null && gpsInfo.lng != null) {
+      lat = gpsInfo.lat
+      lng = gpsInfo.lng
+      acc = gpsInfo.accuracy ?? null
+    } else if (!params.permitirSinGps) {
+      // Intentar obtener GPS
+      setGpsLoading(true)
+      const gps = await getCurrentCoordinates()
+      setGpsLoading(false)
+      setGpsInfo(gps)
 
-    // OBLIGATORIEDAD DE GPS: No se permite guardar sin ubicación
-    if (!gps.success || gps.lat == null || gps.lng == null) {
-      const err = gps.error || 'La ubicación GPS es obligatoria para registrar la asistencia. Activa tu GPS e intenta de nuevo.'
-      setError(err)
-      return { success: false, error: err }
+      if (gps.success && gps.lat != null && gps.lng != null) {
+        lat = gps.lat
+        lng = gps.lng
+        acc = gps.accuracy ?? null
+      } else {
+        const err = gps.error || 'No se pudo obtener la ubicación GPS.'
+        setError(err)
+        return { success: false, error: err, gpsError: true }
+      }
     }
 
     setLoading(true)
+    const notaTexto = params.permitirSinGps && !lat
+      ? [params.notas, '(Registro sin GPS por bloqueo de permisos/burbujas en celular)'].filter(Boolean).join(' - ')
+      : params.notas || null
+
     const res = await asistenciaEntrenadorService.marcarEntrada({
       club_id: clubId,
       entrenador_id: entrenadorId,
       tipo_evento: params.tipo_evento,
       categoria: params.categoria || null,
       titulo: params.titulo || null,
-      latitud: gps.lat,
-      longitud: gps.lng,
-      precision: gps.accuracy ?? null,
-      notas: params.notas || null,
+      latitud: lat,
+      longitud: lng,
+      precision: acc,
+      notas: notaTexto,
     })
 
     setLoading(false)
@@ -119,34 +137,49 @@ export function useCheckinEntrenador(entrenadorId?: string, clubId?: string) {
     }
   }
 
-  // Marcar Salida con GPS OBLIGATORIO
-  const marcarSalida = async (notas?: string) => {
+  // Marcar Salida (con GPS preferente, pero permite omitir si hay error de permisos)
+  const marcarSalida = async (notas?: string, permitirSinGps?: boolean) => {
     if (!activa) {
       return { success: false, error: 'No hay ninguna sesión activa para marcar salida.' }
     }
 
     setError(null)
-    setGpsLoading(true)
+    let lat: number | null = null
+    let lng: number | null = null
+    let acc: number | null = null
 
-    // Obtener GPS
-    const gps = await getCurrentCoordinates()
-    setGpsLoading(false)
-    setGpsInfo(gps)
+    if (gpsInfo?.success && gpsInfo.lat != null && gpsInfo.lng != null) {
+      lat = gpsInfo.lat
+      lng = gpsInfo.lng
+      acc = gpsInfo.accuracy ?? null
+    } else if (!permitirSinGps) {
+      setGpsLoading(true)
+      const gps = await getCurrentCoordinates()
+      setGpsLoading(false)
+      setGpsInfo(gps)
 
-    // OBLIGATORIEDAD DE GPS: No se permite guardar sin ubicación
-    if (!gps.success || gps.lat == null || gps.lng == null) {
-      const err = gps.error || 'La ubicación GPS es obligatoria para registrar la salida. Activa tu GPS e intenta de nuevo.'
-      setError(err)
-      return { success: false, error: err }
+      if (gps.success && gps.lat != null && gps.lng != null) {
+        lat = gps.lat
+        lng = gps.lng
+        acc = gps.accuracy ?? null
+      } else {
+        const err = gps.error || 'No se pudo obtener la ubicación GPS.'
+        setError(err)
+        return { success: false, error: err, gpsError: true }
+      }
     }
 
     setLoading(true)
+    const notaFinal = permitirSinGps && !lat
+      ? [notas || activa.notas, '(Salida sin GPS por bloqueo de permisos en celular)'].filter(Boolean).join(' - ')
+      : notas || activa.notas || null
+
     const res = await asistenciaEntrenadorService.marcarSalida({
       id: activa.id,
-      latitud: gps.lat,
-      longitud: gps.lng,
-      precision: gps.accuracy ?? null,
-      notas: notas || activa.notas || null,
+      latitud: lat,
+      longitud: lng,
+      precision: acc,
+      notas: notaFinal,
     })
 
     setLoading(false)

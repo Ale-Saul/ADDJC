@@ -16,6 +16,8 @@ import FilterListIcon from '@mui/icons-material/FilterList'
 import ClearIcon from '@mui/icons-material/Clear'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import HighlightOffIcon from '@mui/icons-material/HighlightOff'
+import AccessTimeIcon from '@mui/icons-material/AccessTime'
+import EventNoteIcon from '@mui/icons-material/EventNote'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import EventAvailableIcon from '@mui/icons-material/EventAvailable'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
@@ -160,33 +162,49 @@ export default function MiAsistenciaPage() {
             Tu perfil de futbolista no está vinculado. Contacta al encargado de tu club.
           </Alert>
         ) : stats ? (
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2, mb: 4 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' }, gap: 2, mb: 4 }}>
             <KpiCard
-              label="Rendimiento de Asistencia"
+              label="Rendimiento"
               value={stats.porcentaje}
               color={getColorByPct(stats.porcentaje)}
               subtitle={
                 hayFiltros
                   ? `Periodo: ${fechaInicio ? dayjs(fechaInicio).format('DD/MM') : '—'} al ${fechaFin ? dayjs(fechaFin).format('DD/MM/YY') : 'hoy'}`
-                  : 'Resumen histórico total'
+                  : 'Resumen histórico'
               }
               icon={<TrendingUpIcon />}
               sx={{ borderLeft: 6, borderColor: `${getColorByPct(stats.porcentaje)}.main` }}
             />
             <KpiCard
-              label="Clases Asistidas"
+              label="Presentes"
               value={stats.presentes}
               isPercentage={false}
               color="success"
-              subtitle={`De un total de ${stats.total_sesiones} clases`}
+              subtitle={`De ${stats.total_sesiones} clases`}
               icon={<CheckCircleOutlineIcon color="success" />}
+            />
+            <KpiCard
+              label="Tardes"
+              value={stats.tardes ?? 0}
+              isPercentage={false}
+              color="warning"
+              subtitle="Llegadas tarde"
+              icon={<AccessTimeIcon color="warning" />}
+            />
+            <KpiCard
+              label="Permisos"
+              value={stats.permisos ?? 0}
+              isPercentage={false}
+              color="info"
+              subtitle="Con justificativo"
+              icon={<EventNoteIcon color="info" />}
             />
             <KpiCard
               label="Inasistencias"
               value={stats.ausentes}
               isPercentage={false}
               color={stats.ausentes === 0 ? 'success' : stats.ausentes <= 2 ? 'warning' : 'error'}
-              subtitle={stats.ausentes === 0 ? '¡Excelente asistencia!' : `Has faltado a ${stats.ausentes} clase${stats.ausentes === 1 ? '' : 's'}`}
+              subtitle={stats.ausentes === 0 ? '¡Excelente!' : `${stats.ausentes} clase${stats.ausentes === 1 ? '' : 's'} ausente`}
               icon={<HighlightOffIcon color={stats.ausentes === 0 ? 'success' : 'error'} />}
             />
           </Box>

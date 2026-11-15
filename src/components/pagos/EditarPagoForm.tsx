@@ -20,7 +20,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 import { Controller, useWatch } from 'react-hook-form'
 import { FormInput, FormSelect, FormDatePicker, FormAutocomplete } from '@/components/ui'
-import { TIPO_DESCUENTO, TIPO_PAGO_LABELS, TIPO_DESCUENTO_LABELS, RAZON_DESCUENTO_LABELS } from '@/constants/pagos'
+import { TIPO_PAGO, TIPO_DESCUENTO, TIPO_PAGO_LABELS, TIPO_DESCUENTO_LABELS, RAZON_DESCUENTO_LABELS, MONTO_MENSUALIDAD_DEFAULT } from '@/constants/pagos'
 import { useEditarPagoForm } from '@/hooks/useEditarPagoForm'
 import { formatNameWithNumbersInput } from '@/utils/formatters'
 
@@ -48,6 +48,7 @@ export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPago
     setError
   } = useEditarPagoForm(pago, onSuccess)
 
+  const watchTipoPago = useWatch({ control: form.control, name: 'tipo_pago' })
   const watchTieneDescuento = useWatch({ control: form.control, name: 'tiene_descuento' })
   const watchTipoDescuento = useWatch({ control: form.control, name: 'tipo_descuento' })
 
@@ -77,6 +78,13 @@ export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPago
           options={TIPO_PAGO_OPTIONS}
           disabled={loading}
           required
+          onChange={(_, val) => {
+            const v = (val as any)?.value
+            form.setValue('tipo_pago', v)
+            if (v === TIPO_PAGO.MENSUALIDAD && (!form.getValues('monto_base') || Number(form.getValues('monto_base')) === 0)) {
+              form.setValue('monto_base', MONTO_MENSUALIDAD_DEFAULT, { shouldValidate: true })
+            }
+          }}
         />
 
         <FormInput
@@ -105,6 +113,7 @@ export default function EditarPagoForm({ pago, onSuccess, onCancel }: EditarPago
             label="Monto Base"
             type="number"
             disabled={loading}
+            helperText={watchTipoPago === TIPO_PAGO.MENSUALIDAD ? 'Monto fijo mensualidad: Bs. 140' : undefined}
             InputProps={{
               startAdornment: <InputAdornment position="start">Bs.</InputAdornment>,
             }}

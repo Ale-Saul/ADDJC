@@ -7,6 +7,8 @@ export const TIPO_PAGO = {
   OTRO: 'otro',
 } as const
 
+export const MONTO_MENSUALIDAD_DEFAULT = 140
+
 export const ESTADO_PAGO = {
   PENDIENTE: 'pendiente',
   PAGADO: 'pagado',

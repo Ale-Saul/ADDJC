@@ -57,6 +57,7 @@ export const createPagoSchema = z.object({
   comprobante_url: z.string().nullable().optional(),
   observaciones_pago: z.string().nullable().optional(),
   creador_id: z.string().min(1, 'El ID del creador es requerido'),
+  pagador_id: z.string().nullable().optional(),
   activo: z.boolean().default(true)
 }).superRefine((data, ctx) => {
   if (data.tiene_descuento) {

@@ -23,8 +23,18 @@ export async function POST(request: NextRequest) {
       rol,
     } = body
 
-    // Validaciones con mensajes específicos
-    if (!email) {
+    // Permitir email y contraseña opcionales para futbolistas
+    let emailFinal = typeof email === 'string' ? email.trim() : ''
+    let passwordFinal = typeof password === 'string' ? password.trim() : ''
+
+    if (!emailFinal && (rol === 'judoka' || !rol)) {
+      const cleanStr = (s?: string | null) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
+      const nombreLimpio = cleanStr((nombres || '').split(' ')[0]) || 'futbolista'
+      const rand = Math.floor(1000 + Math.random() * 9000)
+      emailFinal = `${nombreLimpio}.${rand}@cochabambafc.com`
+    }
+
+    if (!emailFinal) {
       console.error('Email faltante en la solicitud')
       return NextResponse.json(
         { success: false, error: 'Email es requerido' },
@@ -32,7 +42,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!password) {
+    if (!passwordFinal && (rol === 'judoka' || !rol)) {
+      passwordFinal = 'Cochabamba2026!'
+    }
+
+    if (!passwordFinal) {
       console.error('Password faltante en la solicitud')
       return NextResponse.json(
         { success: false, error: 'Contraseña es requerida' },
@@ -132,8 +146,8 @@ export async function POST(request: NextRequest) {
       }
       
       const result = await supabaseAdmin.auth.admin.createUser({
-        email,
-        password,
+        email: emailFinal,
+        password: passwordFinal,
         email_confirm: true,
         user_metadata: userMetadata,
       })

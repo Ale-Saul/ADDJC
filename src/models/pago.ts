@@ -57,6 +57,7 @@ export interface PagoCreate {
   notas?: string | null
   observaciones_pago?: string | null
   creador_id: string
+  pagador_id?: string | null
   activo?: boolean
 }
 

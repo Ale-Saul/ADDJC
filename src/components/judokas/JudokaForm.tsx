@@ -88,6 +88,9 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
     try {
       const payload = {
         ...data,
+        ci: data.ci?.trim() || null,
+        ci_extension: data.ci_extension?.trim() || null,
+        email: data.email?.trim() || null,
         club_id: data.club_id || null,
         entrenador_id: data.entrenador_id || null,
         entrenador_secundario_id: data.entrenador_secundario_id || null,
@@ -198,12 +201,11 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
         <Grid size={{ xs: 12, sm: 8 }}>
           <FormInput 
             name="ci" 
-            label="Carnet de Identidad" 
+            label="Carnet de Identidad (Opcional)" 
             control={control} 
             formatValue={formatCIInput} 
             disabled={loading} 
             inputProps={{ maxLength: 7 }} 
-            required
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
@@ -249,10 +251,9 @@ export default function JudokaForm({ judoka, onSuccess, onCancel }: JudokaFormPr
           <Grid size={{ xs: 12 }}>
             <FormInput 
               name="email" 
-              label="Correo Electrónico" 
+              label="Correo Electrónico (Opcional)" 
               control={control} 
               disabled={loading} 
-              required 
               inputProps={{ type: 'email' }}
             />
           </Grid>

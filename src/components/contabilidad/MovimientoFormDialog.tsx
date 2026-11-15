@@ -150,6 +150,16 @@ export const MovimientoFormDialog: React.FC<MovimientoFormDialogProps> = ({
     }
   }, [fechaVal])
 
+  // Si es ingreso por cuota mensual, sugerir monto fijo de 140 Bs
+  useEffect(() => {
+    if (isIngreso && categoria === 'cuota_mensual' && !movimiento) {
+      const cur = form.getValues('monto')
+      if (!cur || Number(cur) === 0) {
+        form.setValue('monto', 140 as any, { shouldValidate: true })
+      }
+    }
+  }, [isIngreso, categoria, movimiento, form])
+
   const actualizarConceptoEntrenador = (nuevoEntrenadorId: string, nuevoMes: string) => {
     if (!nuevoEntrenadorId) return
     const ent = entrenadores.find((e) => e.id === nuevoEntrenadorId)
@@ -298,6 +308,7 @@ export const MovimientoFormDialog: React.FC<MovimientoFormDialogProps> = ({
                   label="Monto"
                   type="number"
                   inputProps={{ step: '0.01', min: '0.01' }}
+                  helperText={isIngreso && categoria === 'cuota_mensual' ? 'Monto fijo mensualidad: Bs. 140' : undefined}
                   fullWidth
                 />
               </Box>

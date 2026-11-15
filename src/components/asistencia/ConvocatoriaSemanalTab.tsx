@@ -37,6 +37,8 @@ import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos'
 import TodayIcon from '@mui/icons-material/Today'
 import DownloadIcon from '@mui/icons-material/Download'
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents'
+import AccessTimeIcon from '@mui/icons-material/AccessTime'
+import EventNoteIcon from '@mui/icons-material/EventNote'
 import { CATEGORIES } from '@/constants/globales'
 import { judokaController } from '@/controllers/judokaController'
 import { senseiController } from '@/controllers/senseiController'
@@ -55,12 +57,21 @@ interface Props {
   senseiId?: string
 }
 
+export interface FechaAsistida {
+  fecha: string
+  titulo?: string | null
+  estado: 'presente' | 'tarde' | 'permiso'
+}
+
 interface ItemConvocatoria {
   judoka: Judoka
   asistencias: number
+  presentesCount: number
+  tardesCount: number
+  permisosCount: number
   totalSesionesDisponibles: number
-  fechasAsistidas: { fecha: string; titulo?: string | null }[]
-  habilitado: boolean // asistencias >= 2
+  fechasAsistidas: FechaAsistida[]
+  habilitado: boolean // asistencias >= 2 (contando presente, tarde o permiso)
 }
 
 const getLunesSemana = (d: dayjs.Dayjs) => {
@@ -195,7 +206,7 @@ export default function ConvocatoriaSemanalTab({
             .from('asistencia_detalle')
             .select('sesion_id, judoka_id, estado')
             .in('sesion_id', sesionIds)
-            .eq('estado', 'presente')
+            .in('estado', ['presente', 'tarde', 'permiso'])
 
           if (errDetalles) throw errDetalles
           if (cancelled) return
@@ -225,26 +236,30 @@ export default function ConvocatoriaSemanalTab({
     const mapSesiones = new Map<string, any>()
     sesionesSemana.forEach(s => mapSesiones.set(s.id, s))
 
-    // Mapa de asistencias por judoka: judokaId -> sesiones asistidas
-    const mapAsistencias = new Map<string, any[]>()
+    // Mapa de asistencias por judoka: judokaId -> sesiones asistidas con su estado
+    const mapAsistencias = new Map<string, { sesion: any; estado: 'presente' | 'tarde' | 'permiso' }[]>()
     asistenciasPresentes.forEach(a => {
       const arr = mapAsistencias.get(a.judoka_id) || []
       const ses = mapSesiones.get(a.sesion_id)
-      if (ses) arr.push(ses)
+      if (ses) arr.push({ sesion: ses, estado: a.estado })
       mapAsistencias.set(a.judoka_id, arr)
     })
 
     return judokasClub.map(j => {
       const sesionesAsistidas = mapAsistencias.get(j.id) || []
-      // Fechas únicas asistidas
-      const fechasMap = new Map<string, { fecha: string; titulo?: string | null }>()
-      sesionesAsistidas.forEach(s => {
+      // Fechas únicas registradas (presente, tarde o permiso)
+      const fechasMap = new Map<string, FechaAsistida>()
+      sesionesAsistidas.forEach(item => {
+        const s = item.sesion
         if (!fechasMap.has(s.fecha)) {
-          fechasMap.set(s.fecha, { fecha: s.fecha, titulo: s.titulo })
+          fechasMap.set(s.fecha, { fecha: s.fecha, titulo: s.titulo, estado: item.estado })
         }
       })
       const fechasArray = Array.from(fechasMap.values()).sort((a, b) => a.fecha.localeCompare(b.fecha))
       const totalAsistencias = fechasArray.length
+      const presentesCount = fechasArray.filter(f => f.estado === 'presente').length
+      const tardesCount = fechasArray.filter(f => f.estado === 'tarde').length
+      const permisosCount = fechasArray.filter(f => f.estado === 'permiso').length
 
       // Total de sesiones dictadas para su categoría en la semana
       const sesionesDeCategoria = sesionesSemana.filter(s => !s.categoria || !j.categoria || s.categoria === j.categoria)
@@ -252,9 +267,12 @@ export default function ConvocatoriaSemanalTab({
       return {
         judoka: j,
         asistencias: totalAsistencias,
+        presentesCount,
+        tardesCount,
+        permisosCount,
         totalSesionesDisponibles: sesionesDeCategoria.length,
         fechasAsistidas: fechasArray,
-        habilitado: totalAsistencias >= 2, // REGLA: MÍNIMO 2 ASISTENCIAS
+        habilitado: totalAsistencias >= 2, // REGLA: MÍNIMO 2 SESIONES (PRESENTE, TARDE O PERMISO)
       }
     })
   }, [judokasClub, sesionesSemana, asistenciasPresentes])
@@ -355,7 +373,12 @@ export default function ConvocatoriaSemanalTab({
 
     const tableData = itemsFiltrados.map((item, idx) => {
       const j = item.judoka
-      const diasStr = item.fechasAsistidas.map(f => dayjs(f.fecha).format('ddd DD')).join(', ') || 'Sin asistencias'
+      const diasStr = item.fechasAsistidas.map(f => {
+        const dia = dayjs(f.fecha).format('ddd DD')
+        if (f.estado === 'tarde') return `${dia} (Tarde)`
+        if (f.estado === 'permiso') return `${dia} (Permiso)`
+        return dia
+      }).join(', ') || 'Sin asistencias'
       return [
         (idx + 1).toString(),
         `${j.apellidos}, ${j.nombres}`.toUpperCase(),
@@ -719,21 +742,37 @@ export default function ConvocatoriaSemanalTab({
                       </TableCell>
                     )}
 
-                    {/* Días Asistidos */}
+                    {/* Días Asistidos / Justificados */}
                     <TableCell>
                       {item.fechasAsistidas.length > 0 ? (
                         <Stack direction="row" spacing={0.8} flexWrap="wrap" sx={{ gap: 0.5 }}>
-                          {item.fechasAsistidas.map((fa, idx) => (
-                            <Chip
-                              key={idx}
-                              icon={<CheckCircleIcon sx={{ fontSize: '13px !important' }} />}
-                              label={`${dayjs(fa.fecha).format('ddd DD/MM')}`}
-                              size="small"
-                              color="success"
-                              variant="outlined"
-                              sx={{ fontSize: '0.72rem', height: 22 }}
-                            />
-                          ))}
+                          {item.fechasAsistidas.map((fa, idx) => {
+                            let icon = <CheckCircleIcon sx={{ fontSize: '13px !important' }} />
+                            let color: 'success' | 'warning' | 'info' = 'success'
+                            let label = dayjs(fa.fecha).format('ddd DD/MM')
+
+                            if (fa.estado === 'tarde') {
+                              icon = <AccessTimeIcon sx={{ fontSize: '13px !important' }} />
+                              color = 'warning'
+                              label += ' (Tarde)'
+                            } else if (fa.estado === 'permiso') {
+                              icon = <EventNoteIcon sx={{ fontSize: '13px !important' }} />
+                              color = 'info'
+                              label += ' (Permiso)'
+                            }
+
+                            return (
+                              <Chip
+                                key={idx}
+                                icon={icon}
+                                label={label}
+                                size="small"
+                                color={color}
+                                variant="outlined"
+                                sx={{ fontSize: '0.72rem', height: 22 }}
+                              />
+                            )
+                          })}
                         </Stack>
                       ) : (
                         <Typography variant="caption" color="text.secondary">

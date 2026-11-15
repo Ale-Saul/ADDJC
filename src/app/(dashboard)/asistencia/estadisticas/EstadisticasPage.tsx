@@ -183,13 +183,15 @@ export default function EstadisticasPage() {
         const body = sortedJudokas.map(j => [
             `${j.apellido_judoka} ${j.nombre_judoka}`,
             j.presentes.toString(),
+            (j.tardes ?? 0).toString(),
+            (j.permisos ?? 0).toString(),
             j.ausentes.toString(),
             `${Math.round(j.porcentaje)}%`
         ])
 
         autoTable(doc, {
             startY: yPos,
-            head: [['Futbolista', 'Presentes', 'Ausentes', '% Asistencia']],
+            head: [['Futbolista', 'Presentes', 'Tardes', 'Permisos', 'Ausentes', '% Asistencia']],
             body: body,
             theme: 'grid',
             headStyles: { fillColor: [25, 118, 210] }
@@ -214,8 +216,8 @@ export default function EstadisticasPage() {
         csv += `Sensei,Sesiones,% Asistencia Promedio\n`
         csv += data.map(s => `"${s.nombre}",${s.total_sesiones},${Math.round(s.promedio_asistencia)}%`).join('\n')
     } else if (vistaDesglose === 'judoka' && judokasClubQuery.data) {
-        csv += `Judoka,Presentes,Ausentes,% Asistencia\n`
-        csv += judokasClubQuery.data.map(j => `"${j.apellido_judoka} ${j.nombre_judoka}",${j.presentes},${j.ausentes},${Math.round(j.porcentaje)}%`).join('\n')
+        csv += `Judoka,Presentes,Tardes,Permisos,Ausentes,% Asistencia\n`
+        csv += judokasClubQuery.data.map(j => `"${j.apellido_judoka} ${j.nombre_judoka}",${j.presentes},${j.tardes ?? 0},${j.permisos ?? 0},${j.ausentes},${Math.round(j.porcentaje)}%`).join('\n')
     }
 
     const BOM = '\uFEFF'
@@ -508,6 +510,8 @@ export default function EstadisticasPage() {
                           <TableRow sx={{ bgcolor: 'grey.50' }}>
                             <TableCell sx={{ fontWeight: 600 }}>Futbolista</TableCell>
                             <TableCell align="center" sx={{ fontWeight: 600 }}>Presentes</TableCell>
+                            <TableCell align="center" sx={{ fontWeight: 600 }}>Tardes</TableCell>
+                            <TableCell align="center" sx={{ fontWeight: 600 }}>Permisos</TableCell>
                             <TableCell align="center" sx={{ fontWeight: 600 }}>Ausentes</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>% Asistencia</TableCell>
                           </TableRow>
@@ -530,15 +534,45 @@ export default function EstadisticasPage() {
                                     </Typography>
                                   </TableCell>
                                   <TableCell align="center">
-                                    <Chip label={j.presentes} size="small" color="success" variant="outlined" />
+                                    <Chip
+                                      label={j.presentes}
+                                      size="small"
+                                      color={j.presentes > 0 ? 'success' : 'default'}
+                                      variant={j.presentes > 0 ? 'filled' : 'outlined'}
+                                      sx={{ minWidth: 32, height: 22, fontSize: '0.75rem' }}
+                                    />
                                   </TableCell>
                                   <TableCell align="center">
-                                    <Chip label={j.ausentes} size="small" color={j.ausentes === 0 ? 'default' : 'error'} variant="outlined" />
+                                    <Chip
+                                      label={j.tardes ?? 0}
+                                      size="small"
+                                      color={(j.tardes ?? 0) > 0 ? 'warning' : 'default'}
+                                      variant={(j.tardes ?? 0) > 0 ? 'filled' : 'outlined'}
+                                      sx={{ minWidth: 32, height: 22, fontSize: '0.75rem' }}
+                                    />
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Chip
+                                      label={j.permisos ?? 0}
+                                      size="small"
+                                      color={(j.permisos ?? 0) > 0 ? 'info' : 'default'}
+                                      variant={(j.permisos ?? 0) > 0 ? 'filled' : 'outlined'}
+                                      sx={{ minWidth: 32, height: 22, fontSize: '0.75rem' }}
+                                    />
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Typography
+                                      variant="body2"
+                                      color={j.ausentes > 0 ? 'error.main' : 'text.secondary'}
+                                      fontWeight={j.ausentes > 0 ? 600 : 400}
+                                    >
+                                      {j.ausentes}
+                                    </Typography>
                                   </TableCell>
                                   <TableCell>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 140 }}>
                                       <LinearProgress variant="determinate" value={pct} color={getColorByPct(pct) as 'success' | 'warning' | 'error' | 'primary'} sx={{ flex: 1, height: 8, borderRadius: 4 }} />
-                                      <Chip label={`${pct}%`} color={getColorByPct(pct) as 'success' | 'warning' | 'error' | 'primary'} size="small" variant="outlined" sx={{ minWidth: 54 }} />
+                                      <Chip label={`${pct}%`} color={getColorByPct(pct) as 'success' | 'warning' | 'error' | 'primary'} size="small" variant="outlined" sx={{ minWidth: 54, fontWeight: 600 }} />
                                     </Box>
                                   </TableCell>
                                 </TableRow>

@@ -5,7 +5,7 @@ import { z } from 'zod'
  */
 
 // Estado de asistencia
-export const estadoAsistenciaSchema = z.enum(['presente', 'ausente'])
+export const estadoAsistenciaSchema = z.enum(['presente', 'ausente', 'tarde', 'permiso'])
 
 /**
  * Esquema para crear una sesión de asistencia

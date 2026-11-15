@@ -90,29 +90,45 @@ export default function MarcarAsistenciaEntrenadorCard({
   const [titulo, setTitulo] = useState<string>('')
   const [notasSalida, setNotasSalida] = useState<string>('')
   const [mensajeExito, setMensajeExito] = useState<string | null>(null)
+  const [mostrarOpcionSinGps, setMostrarOpcionSinGps] = useState(false)
 
-  const handleEntrada = async () => {
+  const handleEntrada = async (permitirSinGps = false) => {
     setMensajeExito(null)
     const res = await marcarEntrada({
       tipo_evento: tipoEvento,
       categoria: categoria || null,
       titulo: titulo.trim() || null,
+      permitirSinGps,
     })
 
     if (res.success) {
       setTitulo('')
-      setMensajeExito('¡Entrada registrada con éxito con constancia de ubicación!')
+      setMostrarOpcionSinGps(false)
+      setMensajeExito(
+        permitirSinGps
+          ? '¡Entrada registrada con éxito! (Registrado sin GPS por bloqueo de permisos)'
+          : '¡Entrada registrada con éxito con constancia de ubicación GPS!'
+      )
       if (onRegistroExitoso) onRegistroExitoso()
+    } else if (res.gpsError) {
+      setMostrarOpcionSinGps(true)
     }
   }
 
-  const handleSalida = async () => {
+  const handleSalida = async (permitirSinGps = false) => {
     setMensajeExito(null)
-    const res = await marcarSalida(notasSalida.trim() || undefined)
+    const res = await marcarSalida(notasSalida.trim() || undefined, permitirSinGps)
     if (res.success) {
       setNotasSalida('')
-      setMensajeExito('¡Salida registrada con éxito! Tu jornada ha quedado completada.')
+      setMostrarOpcionSinGps(false)
+      setMensajeExito(
+        permitirSinGps
+          ? '¡Salida registrada con éxito! (Completada sin GPS)'
+          : '¡Salida registrada con éxito! Tu jornada ha quedado completada.'
+      )
       if (onRegistroExitoso) onRegistroExitoso()
+    } else if (res.gpsError) {
+      setMostrarOpcionSinGps(true)
     }
   }
 
@@ -238,7 +254,7 @@ export default function MarcarAsistenciaEntrenadorCard({
 
         {error && (
           <Alert
-            severity="error"
+            severity="warning"
             sx={{ mb: 2 }}
             action={
               <Button
@@ -251,7 +267,12 @@ export default function MarcarAsistenciaEntrenadorCard({
               </Button>
             }
           >
-            {error}
+            <Typography variant="body2" fontWeight="500">
+              {error}
+            </Typography>
+            <Typography variant="caption" display="block" sx={{ mt: 0.5, opacity: 0.9 }}>
+              💡 Si tu celular dice &quot;Cierra las burbujas o superposiciones&quot;, cierra los chats flotantes de WhatsApp/Messenger, o toca el candado/ajustes arriba al lado de la dirección web y pon Ubicación en &quot;Permitir&quot;.
+            </Typography>
           </Alert>
         )}
 
@@ -346,7 +367,7 @@ export default function MarcarAsistenciaEntrenadorCard({
               size="large"
               fullWidth
               startIcon={gpsLoading || loading ? <CircularProgress size={20} color="inherit" /> : <CheckCircleIcon />}
-              onClick={handleSalida}
+              onClick={() => handleSalida(false)}
               disabled={loading || gpsLoading}
               sx={{ minHeight: 48, fontWeight: 'bold' }}
             >
@@ -356,6 +377,20 @@ export default function MarcarAsistenciaEntrenadorCard({
                 ? 'Registrando salida...'
                 : 'Marcar Salida (Finalizar con GPS)'}
             </Button>
+
+            {mostrarOpcionSinGps && (
+              <Button
+                variant="outlined"
+                color="warning"
+                size="medium"
+                fullWidth
+                onClick={() => handleSalida(true)}
+                disabled={loading || gpsLoading}
+                sx={{ textTransform: 'none', fontWeight: 600 }}
+              >
+                ⚠️ Registrar Salida de todas formas (Sin GPS por bloqueo de celular)
+              </Button>
+            )}
           </Stack>
         ) : (
           /* ── Vista 2: SIN SESIÓN ACTIVA (Marcar Entrada) ── */
@@ -422,7 +457,7 @@ export default function MarcarAsistenciaEntrenadorCard({
               size="large"
               fullWidth
               startIcon={gpsLoading || loading ? <CircularProgress size={20} color="inherit" /> : <LocationOnIcon />}
-              onClick={handleEntrada}
+              onClick={() => handleEntrada(false)}
               disabled={loading || gpsLoading}
               sx={{ minHeight: 48, fontWeight: 'bold' }}
             >
@@ -432,6 +467,20 @@ export default function MarcarAsistenciaEntrenadorCard({
                 ? 'Registrando...'
                 : `Marcar Entrada de ${tipoEvento === 'partido' ? 'Partido' : 'Entrenamiento'} (Check-In GPS)`}
             </Button>
+
+            {mostrarOpcionSinGps && (
+              <Button
+                variant="outlined"
+                color="warning"
+                size="medium"
+                fullWidth
+                onClick={() => handleEntrada(true)}
+                disabled={loading || gpsLoading}
+                sx={{ textTransform: 'none', fontWeight: 600 }}
+              >
+                ⚠️ Registrar Entrada de todas formas (Sin GPS por bloqueo de celular)
+              </Button>
+            )}
 
             <Typography variant="caption" color="text.secondary" textAlign="center" display="block">
               ℹ️ Tu navegador solicitará permiso de ubicación para guardar las coordenadas como constancia.

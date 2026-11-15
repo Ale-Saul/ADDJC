@@ -57,12 +57,20 @@ export function useEditarPagoForm(pago: Pago, onSuccess?: () => void) {
     setSuccess(false)
 
     try {
+      const tieneDescReal = !!data.tiene_descuento && (
+        (data.tipo_descuento === TIPO_DESCUENTO.PORCENTAJE && !!data.descuento_porcentaje && Number(data.descuento_porcentaje) > 0) ||
+        (data.tipo_descuento === TIPO_DESCUENTO.MONTO_FIJO && !!data.descuento_monto && Number(data.descuento_monto) > 0)
+      )
+
       const response = await pagoController.updatePago(pago.id, {
         ...data,
         monto_final: montoFinal,
-        tipo_descuento: data.tipo_descuento as TipoDescuento,
+        tiene_descuento: tieneDescReal,
+        tipo_descuento: tieneDescReal ? (data.tipo_descuento as TipoDescuento || TIPO_DESCUENTO.MONTO_FIJO) : TIPO_DESCUENTO.NINGUNO,
+        descuento_porcentaje: tieneDescReal && data.tipo_descuento === TIPO_DESCUENTO.PORCENTAJE ? data.descuento_porcentaje : null,
+        descuento_monto: tieneDescReal && data.tipo_descuento === TIPO_DESCUENTO.MONTO_FIJO ? data.descuento_monto : null,
         tipo_pago: data.tipo_pago as any,
-        razon_descuento: data.razon_descuento as RazonDescuento
+        razon_descuento: tieneDescReal ? (data.razon_descuento as RazonDescuento || RAZON_DESCUENTO.PROMOCION) : RAZON_DESCUENTO.NINGUNO
       })
 
       if (response.success) {

@@ -156,7 +156,19 @@ export const judokaService = {
     try {
       let userId = judoka.usuario_id
       if (!userId || userId === 'temp-user-id') {
-        const userResult = await userService.createJudokaUser(judoka.nombres, judoka.apellido_paterno, judoka.apellido_materno, judoka.email!, judoka.password!, undefined, judoka.fecha_nacimiento, judoka.numero_celular, judoka.genero, judoka.ci, judoka.ci_extension)
+        const userResult = await userService.createJudokaUser(
+          judoka.nombres,
+          judoka.apellido_paterno,
+          judoka.apellido_materno,
+          judoka.email?.trim() || undefined,
+          judoka.password || undefined,
+          judoka.club_id || undefined,
+          judoka.fecha_nacimiento,
+          judoka.numero_celular,
+          judoka.genero,
+          judoka.ci?.trim() || null,
+          judoka.ci_extension?.trim() || null
+        )
         if (!userResult.success || !userResult.data) return { success: false, error: userResult.error || 'Error al crear usuario' }
         userId = userResult.data.usuarioId as string
       }
@@ -218,11 +230,11 @@ export const judokaService = {
       if (nombres !== undefined) userUpdate.nombre = nombres
       if (apellido_paterno !== undefined) userUpdate.apellido_paterno = apellido_paterno
       if (apellido_materno !== undefined) userUpdate.apellido_materno = apellido_materno
-      if (email !== undefined) userUpdate.correo = email
-      if (fecha_nacimiento !== undefined) userUpdate.fecha_nacimiento = fecha_nacimiento
-      if (numero_celular !== undefined) userUpdate.numero_celular = numero_celular
-      if (ci !== undefined) userUpdate.ci = ci
-      if (judoka.ci_extension !== undefined) userUpdate.ci_extension = judoka.ci_extension
+      if (email !== undefined) userUpdate.correo = email ? email.trim() : null
+      if (fecha_nacimiento !== undefined) userUpdate.fecha_nacimiento = fecha_nacimiento || null
+      if (numero_celular !== undefined) userUpdate.numero_celular = numero_celular || null
+      if (ci !== undefined) userUpdate.ci = ci ? ci.trim() : null
+      if (judoka.ci_extension !== undefined) userUpdate.ci_extension = judoka.ci_extension ? judoka.ci_extension.trim() : null
       if (genero !== undefined) userUpdate.genero = genero
       if (activo !== undefined) userUpdate.activo = activo
       if (avatar_url !== undefined) userUpdate.avatar_url = avatar_url

@@ -107,12 +107,13 @@ function ResumenComision({
   judoka,
   periodo,
 }: {
-  stats: { porcentaje: number; total_sesiones: number; presentes: number; ausentes: number }
+  stats: { porcentaje: number; total_sesiones: number; presentes: number; ausentes: number; tardes?: number; permisos?: number }
   judoka: Judoka
   periodo: { inicio: string; fin: string } | null
 }) {
   const pct = Math.round(stats.porcentaje)
   const apto = pct >= 75
+  const asistenciasEfectivas = stats.presentes + (stats.tardes ?? 0)
 
   return (
     <Paper
@@ -136,7 +137,9 @@ function ResumenComision({
         El futbolista <strong>{judoka.apellidos}, {judoka.nombres}</strong>
         {judoka.ci ? ` (CI: ${judoka.ci})` : ''}{' '}
         registra una asistencia de{' '}
-        <strong>{pct}%</strong> ({stats.presentes} de {stats.total_sesiones} sesiones
+        <strong>{pct}%</strong> ({asistenciasEfectivas} de {stats.total_sesiones} sesiones
+        {stats.tardes ? ` con ${stats.tardes} llegada${stats.tardes > 1 ? 's' : ''} tarde` : ''}
+        {stats.permisos ? ` y ${stats.permisos} permiso${stats.permisos > 1 ? 's' : ''}` : ''}
         {periodo
           ? ` del ${dayjs(periodo.inicio).format('D [de] MMMM YYYY')} al ${dayjs(periodo.fin).format('D [de] MMMM YYYY')}`
           : ' en todos los registros disponibles'}
@@ -358,7 +361,7 @@ export default function ConsultaAsistenciaPage() {
             ) : stats && stats.total_sesiones > 0 ? (
               <>
                 {/* KPIs */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2, mb: 4 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' }, gap: 2, mb: 4 }}>
                   <KpiCard
                     label="% Asistencia"
                     value={stats.porcentaje}
@@ -370,24 +373,31 @@ export default function ConsultaAsistenciaPage() {
                     }
                   />
                   <KpiCard
-                    label="Total sesiones"
-                    value={stats.total_sesiones}
-                    isPercentage={false}
-                    color="primary"
-                    secondaryStats={[
-                      { label: 'Presentes', value: stats.presentes },
-                      { label: 'Ausentes', value: stats.ausentes },
-                    ]}
-                  />
-                  <KpiCard
-                    label="Sesiones presentes"
+                    label="Presentes"
                     value={stats.presentes}
                     isPercentage={false}
-                    color={
-                      stats.presentes === stats.total_sesiones && stats.total_sesiones > 0
-                        ? 'success'
-                        : 'default'
-                    }
+                    color="success"
+                    subtitle={`de ${stats.total_sesiones} sesiones`}
+                  />
+                  <KpiCard
+                    label="Tardes"
+                    value={stats.tardes ?? 0}
+                    isPercentage={false}
+                    color="warning"
+                    subtitle="Llegadas tarde"
+                  />
+                  <KpiCard
+                    label="Permisos"
+                    value={stats.permisos ?? 0}
+                    isPercentage={false}
+                    color="info"
+                    subtitle="Con justificativo"
+                  />
+                  <KpiCard
+                    label="Ausentes"
+                    value={stats.ausentes}
+                    isPercentage={false}
+                    color={stats.ausentes === 0 ? 'success' : 'error'}
                     subtitle={`de ${stats.total_sesiones} sesiones`}
                   />
                 </Box>

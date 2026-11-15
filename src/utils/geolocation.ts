@@ -89,7 +89,7 @@ export async function getCurrentCoordinates(): Promise<GeolocationResult> {
     if (err && err.code === 1) {
       return {
         success: false,
-        error: 'Permiso de ubicación denegado. Por favor habilita el GPS y otorga permiso de ubicación en tu navegador.',
+        error: 'Permiso denegado: si te pide cerrar burbujas, cierra los chats flotantes de WhatsApp/Messenger o activa la ubicación tocando el candado/ajustes arriba junto a la URL.',
       }
     }
   }
@@ -116,9 +116,9 @@ export async function getCurrentCoordinates(): Promise<GeolocationResult> {
   } catch (err: any) {
     let message = 'No se pudo capturar la señal de ubicación GPS.'
     if (err?.code === 1) {
-      message = 'Permiso de ubicación denegado en tu navegador.'
+      message = 'Permiso denegado: si te aparece que cierres burbujas, cierra los chats flotantes de WhatsApp/Messenger o activa la ubicación tocando el ícono de candado/ajustes arriba al lado del link.'
     } else if (err?.code === 2) {
-      message = 'Ubicación no disponible. Por favor activa la ubicación/GPS de tu celular.'
+      message = 'Ubicación no disponible. Por favor activa la ubicación / GPS en los ajustes rápidos de tu celular.'
     } else if (err?.code === 3) {
       message = 'Tiempo de espera agotado buscando señal GPS. Activa tu ubicación y reintenta.'
     }

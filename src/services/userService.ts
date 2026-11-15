@@ -223,16 +223,17 @@ export const userService = {
     ci_extension?: string | null
   ): Promise<ApiResponse<{ userId: string; usuarioId?: string }>> {
     try {
-      let finalEmail = email
+      let finalEmail = email?.trim()
       let finalPassword = password
       if (!finalEmail) {
-        const nombreLimpio = nombres.toLowerCase().replace(/\s+/g, '')
-        const apellidoLimpio = (apellido_paterno + apellido_materno).toLowerCase().replace(/\s+/g, '')
-        const timestamp = Date.now()
-        finalEmail = `${nombreLimpio}.${apellidoLimpio}.${timestamp}@koklub.local`
+        const cleanStr = (s?: string | null) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
+        const nombreLimpio = cleanStr(nombres.split(' ')[0]) || 'futbolista'
+        const apellidoLimpio = cleanStr(apellido_paterno || apellido_materno) || 'fc'
+        const rand = Math.floor(1000 + Math.random() * 9000)
+        finalEmail = `${nombreLimpio}.${apellidoLimpio}.${rand}@cochabambafc.com`
       }
       if (!finalPassword) {
-        finalPassword = `Koklub${Date.now()}!`
+        finalPassword = 'Cochabamba2026!'
       }
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(finalEmail)) {

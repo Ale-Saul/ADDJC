@@ -125,11 +125,27 @@ export default function SesionCard({ sesion, mostrarSensei, onEliminar, eliminar
           )}
 
           {/* Stats chips */}
-          <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ pt: 0.5 }}>
+          <Stack direction="row" spacing={0.75} flexWrap="wrap" sx={{ pt: 0.5, gap: 0.5 }}>
             {porcentaje !== null && (
               <Chip
                 label={`${presentes}/${total} presentes (${porcentaje}%)`}
                 color={colorPorcentaje as 'default' | 'success' | 'warning' | 'error'}
+                size="small"
+                variant="outlined"
+              />
+            )}
+            {(sesion.total_tardes ?? 0) > 0 && (
+              <Chip
+                label={`${sesion.total_tardes} tarde`}
+                color="warning"
+                size="small"
+                variant="outlined"
+              />
+            )}
+            {(sesion.total_permisos ?? 0) > 0 && (
+              <Chip
+                label={`${sesion.total_permisos} permiso`}
+                color="info"
                 size="small"
                 variant="outlined"
               />

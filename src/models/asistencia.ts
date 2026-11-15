@@ -3,7 +3,7 @@
  * Alineados con el esquema de base de datos en Supabase.
  */
 
-export type EstadoAsistencia = 'presente' | 'ausente'
+export type EstadoAsistencia = 'presente' | 'ausente' | 'tarde' | 'permiso'
 
 export interface AsistenciaSesion {
   id: string
@@ -26,6 +26,8 @@ export interface AsistenciaSesion {
   nombre_sensei?: string
   nombre_club?: string
   total_presentes?: number
+  total_tardes?: number
+  total_permisos?: number
   total_judokas?: number
 }
 
@@ -93,6 +95,8 @@ export interface AsistenciaStatsJudoka {
   apellido_judoka?: string
   total_sesiones: number
   presentes: number
+  tardes?: number
+  permisos?: number
   ausentes: number
   porcentaje: number
 }

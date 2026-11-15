@@ -17,7 +17,7 @@ import {
 import { useState } from 'react'
 import { AsistenciaStatsJudoka } from '@/models/asistencia'
 
-type SortKey = 'nombre' | 'porcentaje' | 'total_sesiones' | 'presentes'
+type SortKey = 'nombre' | 'porcentaje' | 'total_sesiones' | 'presentes' | 'tardes' | 'permisos' | 'ausentes'
 type SortDir = 'asc' | 'desc'
 
 interface Props {
@@ -57,8 +57,8 @@ export default function SenseiStatsTable({ stats }: Props) {
       va = `${a.apellido_judoka ?? ''} ${a.nombre_judoka ?? ''}`.toLowerCase()
       vb = `${b.apellido_judoka ?? ''} ${b.nombre_judoka ?? ''}`.toLowerCase()
     } else {
-      va = a[sortKey]
-      vb = b[sortKey]
+      va = (a[sortKey] ?? 0) as number
+      vb = (b[sortKey] ?? 0) as number
     }
 
     if (va < vb) return sortDir === 'asc' ? -1 : 1
@@ -106,6 +106,33 @@ export default function SenseiStatsTable({ stats }: Props) {
                 Presentes
               </TableSortLabel>
             </TableCell>
+            <TableCell align="center">
+              <TableSortLabel
+                active={sortKey === 'tardes'}
+                direction={sortKey === 'tardes' ? sortDir : 'desc'}
+                onClick={() => handleSort('tardes')}
+              >
+                Tardes
+              </TableSortLabel>
+            </TableCell>
+            <TableCell align="center">
+              <TableSortLabel
+                active={sortKey === 'permisos'}
+                direction={sortKey === 'permisos' ? sortDir : 'desc'}
+                onClick={() => handleSort('permisos')}
+              >
+                Permisos
+              </TableSortLabel>
+            </TableCell>
+            <TableCell align="center">
+              <TableSortLabel
+                active={sortKey === 'ausentes'}
+                direction={sortKey === 'ausentes' ? sortDir : 'desc'}
+                onClick={() => handleSort('ausentes')}
+              >
+                Ausentes
+              </TableSortLabel>
+            </TableCell>
             <TableCell>
               <TableSortLabel
                 active={sortKey === 'porcentaje'}
@@ -131,7 +158,7 @@ export default function SenseiStatsTable({ stats }: Props) {
                 }}
               >
                 <TableCell>
-                  <Typography variant="body2" fontWeight="500">
+                  <Typography variant="body2" fontWeight="600">
                     {row.apellido_judoka
                       ? `${row.apellido_judoka}, ${row.nombre_judoka ?? ''}`
                       : (row.nombre_judoka ?? row.judoka_id)}
@@ -141,7 +168,40 @@ export default function SenseiStatsTable({ stats }: Props) {
                   <Typography variant="body2">{row.total_sesiones}</Typography>
                 </TableCell>
                 <TableCell align="center">
-                  <Typography variant="body2">{row.presentes}</Typography>
+                  <Chip
+                    label={row.presentes}
+                    size="small"
+                    color={row.presentes > 0 ? 'success' : 'default'}
+                    variant={row.presentes > 0 ? 'filled' : 'outlined'}
+                    sx={{ minWidth: 32, height: 22, fontSize: '0.75rem', fontWeight: 600 }}
+                  />
+                </TableCell>
+                <TableCell align="center">
+                  <Chip
+                    label={row.tardes ?? 0}
+                    size="small"
+                    color={(row.tardes ?? 0) > 0 ? 'warning' : 'default'}
+                    variant={(row.tardes ?? 0) > 0 ? 'filled' : 'outlined'}
+                    sx={{ minWidth: 32, height: 22, fontSize: '0.75rem', fontWeight: 600 }}
+                  />
+                </TableCell>
+                <TableCell align="center">
+                  <Chip
+                    label={row.permisos ?? 0}
+                    size="small"
+                    color={(row.permisos ?? 0) > 0 ? 'info' : 'default'}
+                    variant={(row.permisos ?? 0) > 0 ? 'filled' : 'outlined'}
+                    sx={{ minWidth: 32, height: 22, fontSize: '0.75rem', fontWeight: 600 }}
+                  />
+                </TableCell>
+                <TableCell align="center">
+                  <Typography
+                    variant="body2"
+                    color={row.ausentes > 0 ? 'error.main' : 'text.secondary'}
+                    fontWeight={row.ausentes > 0 ? 600 : 400}
+                  >
+                    {row.ausentes}
+                  </Typography>
                 </TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 120 }}>
@@ -157,7 +217,7 @@ export default function SenseiStatsTable({ stats }: Props) {
                       color={color}
                       size="small"
                       variant="outlined"
-                      sx={{ minWidth: 54 }}
+                      sx={{ minWidth: 54, fontWeight: 600 }}
                     />
                   </Box>
                 </TableCell>

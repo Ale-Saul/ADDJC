@@ -131,6 +131,21 @@ export const baseUserSchema = baseUserObject.refine(validateApellidos, apellidos
  * Esquema específico para Judokas
  */
 export const judokaSchema = baseUserObject.extend({
+  // Email y Carnet de Identidad opcionales para futbolistas
+  email: z.string()
+    .optional()
+    .nullable()
+    .or(z.literal(''))
+    .refine((val) => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), {
+      message: 'El formato del email no es válido'
+    }),
+  ci: z.string()
+    .optional()
+    .nullable()
+    .or(z.literal(''))
+    .refine((val) => !val || /^\d{1,7}$/.test(val), {
+      message: 'El CI debe tener entre 1 y 7 números'
+    }),
   club_id: z.string().nullable().optional(),
   entrenador_id: z.string().nullable().optional(),
   entrenador_secundario_id: z.string().nullable().optional(),
